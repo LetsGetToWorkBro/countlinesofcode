@@ -79,6 +79,74 @@ describe('countLines - C family', () => {
     expectCounts(src, 'JavaScript', { lines: 4, code: 3, comment: 1, blank: 0 });
   });
 
+  it('does not let a regex literal containing /* open a block comment', () => {
+    // Real case from source-map/lib/util.js, which cloc also gets wrong.
+    const src = ['if (root.match(/^([^\\/]+:\\/)?\\/*$/)) {', '  return path;', '}'].join('\n');
+    expectCounts(src, 'JavaScript', { lines: 3, code: 3, comment: 0, blank: 0 });
+  });
+
+  it('does not let a regex literal containing // open a line comment', () => {
+    const src = ['const proto = url.replace(/^https?:\\/\\//, "");', 'next();'].join('\n');
+    expectCounts(src, 'JavaScript', { lines: 2, code: 2, comment: 0, blank: 0 });
+  });
+
+  it('still treats /* as a comment where a regex would also be legal', () => {
+    const src = ['const a = /* block', 'comment only', '*/ 5;'].join('\n');
+    expectCounts(src, 'JavaScript', { lines: 3, code: 2, comment: 1, blank: 0 });
+  });
+
+  it('treats division as division, not as a regex', () => {
+    // If `/ count;` were read as a regex it would swallow the `/*`, and the
+    // block comment on line 2 would be counted as code.
+    const src = ['const ratio = total / count; /* trailing', 'still comment */', 'done();'].join('\n');
+    expectCounts(src, 'JavaScript', { lines: 3, code: 2, comment: 1, blank: 0 });
+  });
+
+  it('allows a regex after a keyword', () => {
+    const src = ['function f(s) {', '  return /a\\/b/.test(s); // ok', '}'].join('\n');
+    expectCounts(src, 'JavaScript', { lines: 3, code: 3, comment: 0, blank: 0 });
+  });
+
+  it('handles a slash inside a regex character class', () => {
+    expectCounts('const re = /[a/b]+/g;\n', 'JavaScript', { lines: 1, code: 1, comment: 0, blank: 0 });
+  });
+
+  it('does not read a closing HTML tag as a regex', () => {
+    // `</p>` after `<` used to start a "regex" that ate the rest of the line,
+    // including the backtick that closed the template literal.
+    const src = [
+      'const html = `<p>${x}</p>`;',
+      '// a real comment',
+      'done();',
+    ].join('\n');
+    expectCounts(src, 'TypeScript', { lines: 3, code: 2, comment: 1, blank: 0 });
+  });
+
+  it('handles template literals nested inside ${ } interpolation', () => {
+    const src = [
+      'const out = `${hint ? `<p>${esc(hint)}</p>` : \'\'}',
+      'tail`;',
+      '// still a comment',
+    ].join('\n');
+    expectCounts(src, 'TypeScript', { lines: 3, code: 2, comment: 1, blank: 0 });
+  });
+
+  it('keeps brace depth inside an interpolation', () => {
+    const src = ['const a = `${ obj.map(x => ({ k: x })) }`;', '// comment'].join('\n');
+    expectCounts(src, 'TypeScript', { lines: 2, code: 1, comment: 1, blank: 0 });
+  });
+
+  it('allows a regex directly after an arrow', () => {
+    const src = ['const hits = xs.filter(x => /a\\/b/.test(x));', '// comment'].join('\n');
+    expectCounts(src, 'JavaScript', { lines: 2, code: 1, comment: 1, blank: 0 });
+  });
+
+  it('does not apply regex rules to languages without regex literals', () => {
+    // Go: `/` is always division, so `/*` after `=` is a block comment.
+    const src = ['x := a / b', 'y := /* note */ 2'].join('\n');
+    expectCounts(src, 'Go', { lines: 2, code: 2, comment: 0, blank: 0 });
+  });
+
   it('does not nest C block comments', () => {
     const src = '/* a /* b */\ncode();\n';
     expectCounts(src, 'C', { lines: 2, code: 1, comment: 1, blank: 0 });

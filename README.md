@@ -33,10 +33,17 @@ owner/repo                                          [fresh]
   doing any work, and displays it. Same sha + same `counter_version` = same
   numbers, forever.
 * **Real comment parsing.** A single-pass state machine per file that tracks
-  string literals, nested block comments, and Python/Elixir docstrings — so
-  `//` inside `"http://x"` is not a comment, and `#` inside a shell string is
-  not either. ~90 languages have comment rules; the rest are counted blank vs
-  non-blank and the result page **says which ones**.
+  string literals, nested block comments, Python/Elixir docstrings, JavaScript
+  regex literals and template-literal interpolation — so `//` inside
+  `"http://x"` is not a comment, `#` inside a shell string is not either, and
+  `/^([^\/]+:\/)?\/*$/` does not open a block comment. ~90 languages have
+  comment rules; the rest are counted blank vs non-blank and the result page
+  **says which ones**.
+* **Checked against `cloc`.** Over a ~30,000 line corpus (this repo plus zod,
+  chai, source-map, busboy), 125 of 127 files matched exactly on
+  code/comment/blank. Both disagreements are cloc bugs: a regex literal
+  containing `/*`, and comment markers inside a string literal. See
+  `test/corpus.test.ts`.
 * **Honest skipping.** Vendored dirs, build output, minified bundles, codegen,
   lockfiles and binaries are excluded by default, each counted under its own
   reason so you can see what was dropped.
@@ -137,7 +144,7 @@ npm run dev                                        # http://localhost:8787
 anonymous GitHub (60 requests/hour) and skips caching. It just gets slow.
 
 ```bash
-npm test          # 163 tests, no network access required
+npm test          # 179 tests, no network access required
 npm run typecheck
 npm run check     # both
 ```

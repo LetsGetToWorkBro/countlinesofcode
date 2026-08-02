@@ -38,7 +38,14 @@ export const ZERO: LineCounts = { lines: 0, code: 0, comment: 0, blank: 0 };
 type Mode =
   | { kind: 'normal' }
   | { kind: 'block'; open: string; close: string; depth: number; nested: boolean }
-  | { kind: 'string'; close: string; escape: boolean; multiline: boolean };
+  | { kind: 'string'; close: string; escape: boolean; multiline: boolean; interpolate: boolean };
+
+/** A `${ ... }` region suspended inside a template literal. */
+interface Interpolation {
+  string: Extract<Mode, { kind: 'string' }>;
+  /** Nesting depth of `{` inside the expression, so `}` closes the right one. */
+  braceDepth: number;
+}
 
 const NORMAL: Mode = { kind: 'normal' };
 
@@ -69,6 +76,34 @@ interface CompiledSyntax {
   nested: boolean;
   strings: StringSpec[];
   embeds: { open: string; close: string; syntax: string }[];
+  regex: boolean;
+}
+
+/**
+ * A `/` starts a regex literal only where a value may begin. This is the
+ * standard heuristic (the same one syntax highlighters use): look at the last
+ * significant character, or the last word if it was a keyword.
+ *
+ * `)` and `]` are deliberately absent — `(a + b) / 2` and `xs[0] / 2` are
+ * division. `{` and `}` are present: `{ re: /x/ }` and `function f(){} /x/`.
+ *
+ * `<` and `>` are also absent, even though `a < /re/.source` parses: closing
+ * tags (`</p>`) in JSX and in HTML-bearing template literals are orders of
+ * magnitude more common than comparing against a regex, and treating `</` as a
+ * literal swallows the rest of the line. Arrow functions are handled
+ * separately, since `xs.filter(x => /a/.test(x))` is genuinely common.
+ */
+const REGEX_PRECEDING = new Set([
+  '', '(', ',', '=', ':', '[', '!', '&', '|', '?', '{', '}', ';', '+', '-', '*', '%', '~', '^',
+]);
+
+const REGEX_KEYWORDS = new Set([
+  'return', 'typeof', 'instanceof', 'in', 'of', 'new', 'delete', 'void', 'throw',
+  'case', 'do', 'else', 'yield', 'await',
+]);
+
+function isWordChar(ch: string): boolean {
+  return /[A-Za-z0-9_$]/.test(ch);
 }
 
 const compiledCache = new Map<Syntax, CompiledSyntax>();
@@ -84,6 +119,7 @@ function compile(syntax: Syntax): CompiledSyntax {
     nested: syntax.nestedBlock === true,
     strings: [...syntax.strings].sort((a, b) => b.open.length - a.open.length),
     embeds: syntax.embeds ?? [],
+    regex: syntax.regex === true,
   };
   compiledCache.set(syntax, compiled);
   return compiled;
@@ -148,8 +184,14 @@ function classify(text: string, rootSyntax: Syntax): LineCounts {
 
   let mode: Mode = NORMAL;
   let active = compile(rootSyntax);
+  /** Last significant code characters, and last word, for regex disambiguation. */
+  let prevSignificant = '';
+  let prevSignificant2 = '';
+  let prevWord = '';
   /** Stack of (syntax, closing tag) for HTML <script>/<style> regions. */
   const embedStack: { syntax: CompiledSyntax; close: string }[] = [];
+  /** Stack of template literals suspended by `${`. */
+  const interpolations: Interpolation[] = [];
 
   let i = 0;
   while (i < n) {
@@ -202,9 +244,23 @@ function classify(text: string, rootSyntax: Syntax): LineCounts {
         i += text[i + 1] === '\n' || i + 1 >= n ? 1 : 2;
         continue;
       }
+      // `${` suspends a template literal and returns to real code, which may
+      // itself contain nested template literals. Without this the backticks
+      // stop balancing and everything after the first `${`x`}` is misread.
+      if (mode.interpolate && ch === '$' && text[i + 1] === '{') {
+        interpolations.push({ string: mode, braceDepth: 0 });
+        mode = NORMAL;
+        prevSignificant = '';
+        prevWord = '';
+        i += 2;
+        continue;
+      }
       if (startsWith(text, mode.close, i)) {
         i += mode.close.length;
         mode = NORMAL;
+        // A string is a value: `"a" / 2` is division, not a regex.
+        prevSignificant = 'x';
+        prevWord = '';
         continue;
       }
       i++;
@@ -214,12 +270,34 @@ function classify(text: string, rootSyntax: Syntax): LineCounts {
     // ---- normal mode -------------------------------------------------------
     sawNonSpace = true;
 
+    // Closing brace of a `${ ... }` returns to the template literal it opened in.
+    const interpolation = interpolations[interpolations.length - 1];
+    if (interpolation !== undefined && (ch === '{' || ch === '}')) {
+      sawCode = true;
+      if (ch === '{') {
+        interpolation.braceDepth++;
+      } else if (interpolation.braceDepth === 0) {
+        interpolations.pop();
+        mode = interpolation.string;
+        i++;
+        continue;
+      } else {
+        interpolation.braceDepth--;
+      }
+      prevSignificant = ch;
+      prevWord = '';
+      i++;
+      continue;
+    }
+
     // Leaving an embedded <script>/<style> region.
     const top = embedStack[embedStack.length - 1];
     if (top && startsWithCI(text, top.close, i)) {
       embedStack.pop();
       active = embedStack.length > 0 ? embedStack[embedStack.length - 1]!.syntax : compile(rootSyntax);
       sawCode = true;
+      prevSignificant = 'x';
+      prevWord = '';
       i += top.close.length;
       continue;
     }
@@ -246,7 +324,7 @@ function classify(text: string, rootSyntax: Syntax): LineCounts {
       for (const [open, close] of active.docString) {
         if (!startsWith(text, open, i)) continue;
         if (sawCode) {
-          mode = { kind: 'string', close, escape: true, multiline: true };
+          mode = { kind: 'string', close, escape: true, multiline: true, interpolate: false };
         } else {
           sawComment = true;
           mode = { kind: 'block', open, close, depth: 1, nested: false };
@@ -285,6 +363,37 @@ function classify(text: string, rootSyntax: Syntax): LineCounts {
       if (matched) continue;
     }
 
+    // Regex literals. This runs *after* the comment checks, so `x = /* c */ 1`
+    // is still a comment; it only claims a `/` that is not `//` or `/*`. Once
+    // claimed, the whole literal is consumed, which is what stops a `/*` inside
+    // a pattern from opening a block comment.
+    const afterArrow = prevSignificant === '>' && prevSignificant2 === '=';
+    if (
+      active.regex &&
+      ch === '/' &&
+      (REGEX_KEYWORDS.has(prevWord) || REGEX_PRECEDING.has(prevSignificant) || afterArrow)
+    ) {
+      sawCode = true;
+      i++;
+      let inClass = false;
+      while (i < n) {
+        const c = text[i]!;
+        if (c === '\n') break; // regex literals cannot span lines: recover
+        if (c === '\\') {
+          i += text[i + 1] === '\n' || i + 1 >= n ? 1 : 2;
+          continue;
+        }
+        i++;
+        if (c === '[') inClass = true;
+        else if (c === ']') inClass = false;
+        else if (c === '/' && !inClass) break;
+      }
+      // A regex is a value, so a following `/` is division.
+      prevSignificant = 'x';
+      prevWord = '';
+      continue;
+    }
+
     // Entering an embedded region.
     if (active.embeds.length > 0 && ch === '<') {
       let matched = false;
@@ -306,6 +415,9 @@ function classify(text: string, rootSyntax: Syntax): LineCounts {
           const compiled = compile(inner);
           embedStack.push({ syntax: compiled, close: embed.close });
           active = compiled;
+          // A fresh program starts here, so a leading regex literal is legal.
+          prevSignificant = '';
+          prevWord = '';
         }
         matched = true;
         break;
@@ -318,7 +430,13 @@ function classify(text: string, rootSyntax: Syntax): LineCounts {
       for (const spec of active.strings) {
         if (!startsWith(text, spec.open, i)) continue;
         sawCode = true;
-        mode = { kind: 'string', close: spec.close, escape: spec.escape, multiline: spec.multiline };
+        mode = {
+          kind: 'string',
+          close: spec.close,
+          escape: spec.escape,
+          multiline: spec.multiline,
+          interpolate: spec.interpolate === true,
+        };
         i += spec.open.length;
         matched = true;
         break;
@@ -327,6 +445,9 @@ function classify(text: string, rootSyntax: Syntax): LineCounts {
     }
 
     sawCode = true;
+    prevSignificant2 = prevSignificant;
+    prevSignificant = ch;
+    prevWord = isWordChar(ch) ? prevWord + ch : '';
     i++;
   }
 

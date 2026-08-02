@@ -17,6 +17,12 @@ export interface StringSpec {
   escape: boolean;
   /** May the literal span lines? (template literals, heredocs, python triples) */
   multiline: boolean;
+  /**
+   * `${ ... }` interpolation returns to real code, which may contain further
+   * template literals. Only true for ECMAScript template literals; Go's
+   * backtick strings are raw.
+   */
+  interpolate?: boolean;
 }
 
 export interface EmbedSpec {
@@ -46,11 +52,20 @@ export interface Syntax {
   docString?: [string, string][];
   /** Sub-language regions (HTML <script>/<style>). Best effort. */
   embeds?: EmbedSpec[];
+  /**
+   * ECMAScript-style `/.../` regex literals. Needed so that a regex containing
+   * `/*` — e.g. `str.match(/^([^\/]+:\/)?\/*$/)` — is not read as the start of a
+   * block comment. Only set for the JS family: in languages without regex
+   * literals every `/` is division, and enabling this would create false
+   * positives.
+   */
+  regex?: boolean;
 }
 
 const DQ: StringSpec = { open: '"', close: '"', escape: true, multiline: false };
 const SQ: StringSpec = { open: "'", close: "'", escape: true, multiline: false };
 const BACKTICK: StringSpec = { open: '`', close: '`', escape: true, multiline: true };
+const JS_BACKTICK: StringSpec = { open: '`', close: '`', escape: true, multiline: true, interpolate: true };
 const DQ_RAW: StringSpec = { open: '"', close: '"', escape: false, multiline: false };
 const SQ_RAW: StringSpec = { open: "'", close: "'", escape: false, multiline: false };
 
@@ -64,6 +79,14 @@ const C_LIKE_TEMPLATE: Syntax = {
   line: ['//'],
   block: [['/*', '*/']],
   strings: [DQ, SQ, BACKTICK],
+};
+
+/** C-like plus template literals plus regex literals: the JavaScript family. */
+const JS_LIKE: Syntax = {
+  line: ['//'],
+  block: [['/*', '*/']],
+  strings: [DQ, SQ, JS_BACKTICK],
+  regex: true,
 };
 
 const HASH: Syntax = {
@@ -116,10 +139,10 @@ export const SYNTAX: Record<string, Syntax> = {
   'Go': C_LIKE_TEMPLATE,
   'Rust': { line: ['//'], block: [['/*', '*/']], nestedBlock: true, strings: [DQ, SQ] },
   'Swift': { line: ['//'], block: [['/*', '*/']], nestedBlock: true, strings: [DQ] },
-  'JavaScript': C_LIKE_TEMPLATE,
-  'JSX': C_LIKE_TEMPLATE,
-  'TypeScript': C_LIKE_TEMPLATE,
-  'TSX': C_LIKE_TEMPLATE,
+  'JavaScript': JS_LIKE,
+  'JSX': JS_LIKE,
+  'TypeScript': JS_LIKE,
+  'TSX': JS_LIKE,
   'JSON with Comments': C_LIKE,
   'Dart': C_LIKE_TEMPLATE,
   'PHP': { line: ['//', '#'], block: [['/*', '*/']], strings: [DQ, SQ] },
