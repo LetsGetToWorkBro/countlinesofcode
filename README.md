@@ -218,6 +218,15 @@ repositories you need the OAuth flow below, not this token.
 
 ## Deploy
 
+> Following this start to finish with nothing installed? **[DEPLOY.md](DEPLOY.md)**
+> is the step-by-step version, verified from a clean clone.
+
+**Requires the Workers Paid plan ($5/month).** Counting is CPU-bound and the free
+plan allows 10 ms of CPU per request; the classifier runs at ~200 lines/ms, so
+10 ms is about 2,000 lines. Paid allows 30 s (a million-line repo needs ~5 s).
+Local `wrangler dev` has no such limit. Full reasoning and measurements:
+**[DEPLOY.md](DEPLOY.md)**.
+
 The KV namespace already exists and its id is committed in `wrangler.toml`, so a
 deploy is three commands:
 

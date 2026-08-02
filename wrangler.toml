@@ -22,6 +22,21 @@ html_handling = "none"
 [observability]
 enabled = true
 
+# --- Plan requirement -------------------------------------------------------
+# This Worker needs the Workers PAID plan ($5/month). Counting is CPU-bound and
+# the free plan allows only 10 ms of CPU per request; the classifier runs at
+# roughly 200 lines per millisecond, so 10 ms is about 2,000 lines — smaller
+# than most single files. On free you get HTTP 1102 "Worker exceeded resource
+# limits" for anything real. Paid allows 30 s by default (up to 5 min).
+#
+# Free also caps external subrequests at 50 (paid: 10,000), which is why
+# MAX_BLOB_FETCHES defaults to 40.
+#
+# On the paid plan you may raise the CPU ceiling for very large repositories.
+# Leave this commented out on the free plan: `limits` requires Standard Usage.
+# [limits]
+# cpu_ms = 120_000
+
 # --- KV: result cache, ref->sha cache, OAuth sessions, IP rate limits --------
 # Create with:  npx wrangler kv namespace create LOC_KV
 #               npx wrangler kv namespace create LOC_KV --preview
