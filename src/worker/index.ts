@@ -190,6 +190,22 @@ async function performCount(
   const client = new GitHubClient(token);
   const cache = new ResultCache(env.LOC_KV);
 
+  // Fast path: an explicit 40-hex ref is already immutable, so a cached result
+  // is served without touching GitHub at all. This is what makes shared /r/
+  // links free — they cost no rate-limit quota even with no token configured.
+  //
+  // Restricted to public repositories: for a private one the `getRepo` call in
+  // resolveTarget is what proves the caller may see it, and skipping it would
+  // leak a cached private result to anyone holding the URL.
+  if (!target.fresh && target.ref && /^[0-9a-f]{40}$/i.test(target.ref)) {
+    const hit = await cache.get(target.owner, target.repo, target.ref.toLowerCase(), target.options);
+    if (hit && !hit.repo_meta.private) {
+      logEvent({ event: 'count', cached: true, repo: hit.full_name, sha: hit.sha, ms: Date.now() - started, github_requests: 0 });
+      onProgress?.({ phase: 'done', message: 'Served from cache.' });
+      return { ...hit, cached: true, duration_ms: Date.now() - started };
+    }
+  }
+
   onProgress?.({ phase: 'resolve', message: 'Resolving repository…' });
   const resolved = await resolveTarget(client, target.owner, target.repo, target.ref, cache);
   onProgress?.({ phase: 'resolve', message: `Pinned to ${resolved.sha.slice(0, 10)}…` });

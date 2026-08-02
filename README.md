@@ -141,10 +141,31 @@ npm run dev                                        # http://localhost:8787
 ```
 
 `npm run dev` works without any KV namespace or token — counting falls back to
-anonymous GitHub (60 requests/hour) and skips caching. It just gets slow.
+anonymous GitHub and skips caching.
+
+A token is **optional**, not required. What changes without one:
+
+| | anonymous | with `GITHUB_TOKEN` |
+|---|---|---|
+| GitHub quota | 60 requests/hour, **per IP** | 5,000 requests/hour |
+| Cost per uncached count | 5 requests (tarball) / 3 + one per file (blobs) | same |
+| Cost per cached share link | 0 | 0 |
+| Roughly | ~10 fresh counts/hour | ~1,000 fresh counts/hour |
+| Private repositories | no | no — that needs OAuth |
+
+For **local testing that is usually fine**: your own IP has its own allowance.
+For a **deployed Worker it usually is not** — Cloudflare's egress IPs are shared
+across many customers, so the anonymous pool is often already exhausted by
+someone else. (Counting from this build's CI container hit exactly that: every
+anonymous request came back rate-limited.) Set a token before deploying, or have
+visitors connect their own GitHub account.
+
+Two things keep quota use low either way: results are cached by immutable commit
+sha, and a request for an explicit sha that is already cached returns without
+contacting GitHub at all — so shared `/r/` links are free.
 
 ```bash
-npm test          # 179 tests, no network access required
+npm test          # 181 tests, no network access required
 npm run typecheck
 npm run check     # both
 ```

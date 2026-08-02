@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run test",
-    "verify:live": "vite-node scripts/live-check.ts"
+    "verify:live": "vite-node scripts/live-check.ts",
+    "preview": "vite-node scripts/preview-result.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250109.0",

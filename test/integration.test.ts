@@ -152,6 +152,34 @@ describe('caching', () => {
     expect(fresh.cached).toBe(false);
   });
 
+  it('serves a cached sha with no GitHub requests at all', async () => {
+    await countJson('/api/count/acme/widget');
+    const before = github.requests.length;
+
+    const bySha = await countJson(`/api/count/acme/widget?ref=${SAMPLE_REPO.sha}`);
+    expect(bySha.cached).toBe(true);
+    // Shared /r/ links must not spend rate-limit quota.
+    expect(github.requests.length).toBe(before);
+  });
+
+  it('still authorises private repositories on the cached fast path', async () => {
+    github.restore();
+    github = installFakeGitHub([{ ...SAMPLE_REPO, private: true }]);
+
+    const first = await countJson('/api/count/acme/widget', makeEnv());
+    expect(first.repo_meta.private).toBe(true);
+
+    // Same KV, but the repo is now unreachable for this caller: the fast path
+    // must not hand back the cached private result.
+    const sharedEnv = env;
+    await countJson('/api/count/acme/widget', sharedEnv).catch(() => undefined);
+    github.restore();
+    github = installFakeGitHub([]); // caller can no longer see the repo
+
+    const response = await call(`/api/count/acme/widget?ref=${SAMPLE_REPO.sha}`, {}, sharedEnv);
+    expect(response.status).toBe(404);
+  });
+
   it('caches under the immutable sha, so a sha request hits the branch entry', async () => {
     const branch = await countJson('/api/count/acme/widget');
     const bySha = await countJson(`/api/count/acme/widget?ref=${branch.sha}`);
