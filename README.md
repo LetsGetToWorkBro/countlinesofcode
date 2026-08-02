@@ -218,16 +218,78 @@ repositories you need the OAuth flow below, not this token.
 
 ## Deploy
 
+The KV namespace already exists and its id is committed in `wrangler.toml`, so a
+deploy is three commands:
+
 ```bash
-npx wrangler kv namespace create LOC_KV        # once; put the id in wrangler.toml
-npx wrangler secret put GITHUB_TOKEN           # optional but strongly recommended
-npx wrangler secret put GITHUB_CLIENT_ID       # optional (enables Connect GitHub)
-npx wrangler secret put GITHUB_CLIENT_SECRET
+npx wrangler login                                    # once per machine
+npx wrangler secret put GITHUB_TOKEN --env production # paste the token, press enter
 npx wrangler deploy --env production
 ```
 
-Set `APP_BASE_URL` in `[env.production.vars]` to the deployed origin before
-enabling OAuth — it is used to build the `redirect_uri`.
+That prints the live URL (`https://loc1999.<your-subdomain>.workers.dev`). Check
+it with:
+
+```bash
+curl https://loc1999.<your-subdomain>.workers.dev/api/meta
+# {"counter_version":"1.1.0","server_token":true,...}
+```
+
+`server_token: true` confirms the secret landed. Then count something.
+
+**Before deploying**, `--dry-run` validates the config, bundles the Worker and
+lists every binding without uploading anything:
+
+```bash
+npx wrangler deploy --env production --dry-run
+```
+
+### What is already configured
+
+| Setting | Value | Why |
+|---|---|---|
+| KV namespace `LOC_KV` | `8c82bc2e…4212` (preview `ee8bb66d…a055`) | result cache, ref cache, sessions, rate limits |
+| Static assets | `./public`, `not_found_handling = "none"` | unmatched paths fall through to the Worker so `/r/…` renders |
+| | `html_handling = "none"` | keeps `/how.html` at `/how.html` instead of 307-ing to `/how` |
+| `[observability]` | enabled | structured logs visible in the dashboard and `wrangler tail` |
+| `APP_BASE_URL` | deliberately unset | the OAuth `redirect_uri` is derived from the request origin, so it is correct on localhost, `*.workers.dev` and a custom domain with no edit |
+| Bundle size | ~220 KiB, 45 KiB gzipped | well inside the 1 MiB (gzipped) free-plan limit |
+
+Nothing else needs changing to go live. The tunables (`MAX_FILES`,
+`FETCH_CONCURRENCY`, `RATE_LIMIT_PER_MINUTE`, …) are plain vars in
+`[env.production.vars]` and take effect on the next deploy.
+
+### Secrets
+
+Secrets are set with `wrangler secret put`, never in `wrangler.toml` — that file
+is committed.
+
+```bash
+npx wrangler secret put GITHUB_TOKEN --env production          # recommended
+npx wrangler secret put GITHUB_CLIENT_ID --env production      # optional: OAuth
+npx wrangler secret put GITHUB_CLIENT_SECRET --env production
+npx wrangler secret list --env production                      # names only, never values
+```
+
+Rotating one is the same command again; the new value takes effect immediately,
+with no redeploy.
+
+### Custom domain (optional)
+
+Workers dashboard → your Worker → **Settings** → **Domains & Routes** → **Add** →
+**Custom domain**. Cloudflare issues the certificate and routes it. If you use
+one with OAuth, update the callback URL in the GitHub OAuth App to match;
+nothing in this repository needs editing.
+
+### Watching it run
+
+```bash
+npx wrangler tail --env production --format pretty
+```
+
+Every count logs one structured line: cache hit or miss, strategy, file and line
+totals, and the `resolve/tree/fetch/parse` timing spans. No tokens, no cookies,
+no file contents.
 
 > **A note on Pages.** This ships as a Worker with a static-assets binding
 > (`[assets]` in `wrangler.toml`), which is the current form of what used to be

@@ -27,12 +27,14 @@ enabled = true
 #               npx wrangler kv namespace create LOC_KV --preview
 [[kv_namespaces]]
 binding = "LOC_KV"
-id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
-preview_id = "REPLACE_WITH_YOUR_PREVIEW_KV_NAMESPACE_ID"
+id = "8c82bc2efc104b72b9b7e55aaebb4212"
+preview_id = "ee8bb66dee884755b2487fbe011ca055"
 
 [vars]
-# Public base URL, used to build the OAuth redirect_uri. Override per env.
-APP_BASE_URL = "http://localhost:8787"
+# APP_BASE_URL is deliberately not set anywhere: the Worker derives the OAuth
+# redirect_uri from the origin of the incoming request, so it is correct on
+# localhost, on *.workers.dev and on a custom domain without any edit. Set it
+# only when a proxy in front rewrites the Host header.
 # Hard limits (strings so they can be overridden per-environment).
 MAX_FILES = "20000"
 MAX_TOTAL_BYTES = "67108864"      # 64 MiB of decoded text
@@ -50,7 +52,11 @@ RATE_LIMIT_PER_MINUTE = "20"      # per IP, unauthenticated
 name = "loc1999"
 
 [env.production.vars]
-APP_BASE_URL = "https://loc1999.example.workers.dev"
+# APP_BASE_URL is intentionally unset: the Worker falls back to the origin of
+# the incoming request, so OAuth works on whatever hostname you deploy to
+# (loc1999.<your-subdomain>.workers.dev, or a custom domain) with no edit.
+# Set it explicitly only if you serve the app behind a proxy that rewrites Host.
+# APP_BASE_URL = "https://loc.example.com"
 MAX_FILES = "20000"
 MAX_TOTAL_BYTES = "67108864"
 MAX_FILE_BYTES = "4194304"
@@ -60,7 +66,7 @@ RATE_LIMIT_PER_MINUTE = "20"
 
 [[env.production.kv_namespaces]]
 binding = "LOC_KV"
-id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+id = "8c82bc2efc104b72b9b7e55aaebb4212"
 
 [env.production.assets]
 directory = "./public"
