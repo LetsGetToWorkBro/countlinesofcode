@@ -31,7 +31,23 @@ export interface CountLimits {
   /** Above this many candidate files we switch from blobs to the tarball. */
   maxBlobFetches: number;
   concurrency: number;
+  /**
+   * Pre-flight CPU guard, in bytes of countable text.
+   *
+   * Classification runs at roughly 7 KB of source per millisecond of CPU, and
+   * Cloudflare terminates a Worker that exceeds its plan's CPU budget — 10 ms
+   * on the free plan, 30 s on paid. A terminated isolate cannot return our own
+   * error page: the caller gets Cloudflare's raw `error code: 1102` instead.
+   *
+   * So we estimate from the tree before fetching anything and refuse loudly if
+   * the repository cannot fit. Better a clear message than a 503 with no
+   * explanation.
+   */
+  maxCountBytes: number;
 }
+
+/** Measured throughput of the classifier, used for the pre-flight estimate. */
+export const BYTES_PER_CPU_MS = 7000;
 
 export const DEFAULT_LIMITS: CountLimits = {
   maxFiles: 20000,
@@ -39,6 +55,9 @@ export const DEFAULT_LIMITS: CountLimits = {
   maxFileBytes: 4 * 1024 * 1024,
   maxBlobFetches: 40,
   concurrency: 12,
+  // 32 MiB of text is roughly a million lines, about 5 s of CPU — comfortable
+  // on the Workers Paid plan. Lower it drastically on the free plan.
+  maxCountBytes: 32 * 1024 * 1024,
 };
 
 export type ProgressPhase = 'resolve' | 'tree' | 'fetch' | 'count' | 'done';
@@ -108,6 +127,27 @@ export async function resolveTarget(
 
 type SkipCounts = Record<SkipReason, number>;
 
+/**
+ * Raised before any content is fetched when a repository cannot fit inside the
+ * deployment's CPU budget. Carries the numbers so the message can be specific.
+ */
+export class TooLargeError extends GitHubError {
+  constructor(
+    readonly bytes: number,
+    readonly limit: number,
+    readonly estimated = false,
+  ) {
+    const mb = (n: number) => `${(n / (1024 * 1024)).toFixed(1)} MiB`;
+    const seconds = (bytes / BYTES_PER_CPU_MS / 1000).toFixed(1);
+    super(
+      'too_large',
+      `This repository has ${estimated ? 'about ' : ''}${mb(bytes)} of countable text, ` +
+        `above this deployment's ${mb(limit)} limit. Counting it would need roughly ` +
+        `${seconds}s of CPU, which would be terminated mid-count.`,
+    );
+  }
+}
+
 const SYMLINK_MODE = '120000';
 
 export async function runCount(
@@ -167,6 +207,10 @@ export async function runCount(
       }
       candidates.push({ path: entry.path, sha: entry.sha, size: entry.size });
     }
+    const candidateBytes = candidates.reduce((sum, c) => sum + c.size, 0);
+    if (candidateBytes > limits.maxCountBytes) {
+      throw new TooLargeError(candidateBytes, limits.maxCountBytes);
+    }
     if (candidates.length > limits.maxFiles) {
       skipped.other += candidates.length - limits.maxFiles;
       candidates.length = limits.maxFiles;
@@ -177,6 +221,13 @@ export async function runCount(
       message: `${candidates.length} candidate files (${tree.entries.length} tree entries).`,
       total: candidates.length,
     });
+  }
+
+  if (tree.truncated) {
+    const approxBytes = repoInfo.size_kb * 1024;
+    if (approxBytes > limits.maxCountBytes) {
+      throw new TooLargeError(approxBytes, limits.maxCountBytes, true);
+    }
   }
 
   const hitLimits = { files: hitFileLimitEarly, bytes: false };

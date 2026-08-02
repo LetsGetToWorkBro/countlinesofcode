@@ -9,6 +9,7 @@ export interface Env {
   MAX_TOTAL_BYTES?: string;
   MAX_FILE_BYTES?: string;
   MAX_BLOB_FETCHES?: string;
+  MAX_COUNT_BYTES?: string;
   FETCH_CONCURRENCY?: string;
   RATE_LIMIT_PER_MINUTE?: string;
 
@@ -30,6 +31,7 @@ export function limitsFromEnv(env: Env): CountLimits {
     maxTotalBytes: intVar(env.MAX_TOTAL_BYTES, DEFAULT_LIMITS.maxTotalBytes),
     maxFileBytes: intVar(env.MAX_FILE_BYTES, DEFAULT_LIMITS.maxFileBytes),
     maxBlobFetches: intVar(env.MAX_BLOB_FETCHES, DEFAULT_LIMITS.maxBlobFetches),
+    maxCountBytes: intVar(env.MAX_COUNT_BYTES, DEFAULT_LIMITS.maxCountBytes),
     concurrency: intVar(env.FETCH_CONCURRENCY, DEFAULT_LIMITS.concurrency),
   };
 }

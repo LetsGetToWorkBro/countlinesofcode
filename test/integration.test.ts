@@ -412,3 +412,33 @@ describe('SSRF posture', () => {
     }
   });
 });
+
+describe('oversized repositories', () => {
+  it('refuses before fetching content, with a specific message', async () => {
+    // Budget below the fixture's size: the guard must fire on the tree alone.
+    const tiny = makeEnv({ MAX_COUNT_BYTES: '10' });
+    const response = await call('/api/count/acme/widget', {}, tiny);
+
+    expect(response.status).toBe(413);
+    const body = (await response.json()) as { error: { code: string; message: string; hint?: string } };
+    expect(body.error.code).toBe('too_large');
+    expect(body.error.message).toMatch(/countable text/);
+    expect(body.error.message).toMatch(/s of CPU/);
+    expect(body.error.hint).toMatch(/MAX_COUNT_BYTES/);
+  });
+
+  it('does not fetch any blobs when refusing', async () => {
+    const tiny = makeEnv({ MAX_COUNT_BYTES: '10' });
+    const before = github.requests.length;
+    await call('/api/count/acme/widget', {}, tiny);
+    const made = github.requests.slice(before);
+    // repo + sha + tree only: no blob or tarball request.
+    expect(made.some((u) => u.includes('/git/blobs/') || u.includes('/tarball/'))).toBe(false);
+  });
+
+  it('reports the guard in /api/meta', async () => {
+    const response = await call('/api/meta');
+    const body = (await response.json()) as { limits: { max_count_bytes: number } };
+    expect(body.limits.max_count_bytes).toBeGreaterThan(0);
+  });
+});

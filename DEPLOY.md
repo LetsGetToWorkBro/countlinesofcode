@@ -60,6 +60,24 @@ document) — `wrangler dev` has no CPU limit.
 
 Upgrade at **Workers & Pages** → **Plans** in the Cloudflare dashboard.
 
+### Staying on the free plan
+
+It works for small repositories, and there is a guard so the failure is
+readable. Set this in `[env.production.vars]` and redeploy:
+
+```toml
+MAX_COUNT_BYTES = "2097152"   # 2 MiB of text
+```
+
+Anything larger is then refused *before* fetching content, with a plain
+explanation of how much text it found and how much CPU that would need, instead
+of Cloudflare killing the request and returning a bare `error code: 1102`.
+
+Measured on a live free-plan deployment: `expressjs/express` (26,700 lines,
+0.68 MiB, ~102 ms of CPU) completes — isolates tolerate occasional overruns —
+while `facebook/react` and `vercel/next.js` are terminated. The free plan is
+therefore usable for small repositories and unreliable in the middle.
+
 ---
 
 ## 1. Get the code
@@ -260,7 +278,7 @@ it takes effect immediately, with no redeploy.
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `Error 1102 Worker exceeded resource limits` | free plan's 10 ms CPU cap | upgrade to Workers Paid — see "Why the paid plan is required" |
+| `Error 1102 Worker exceeded resource limits` | free plan's 10 ms CPU cap | upgrade to Workers Paid, or set `MAX_COUNT_BYTES = "2097152"` to fail politely instead |
 | `"server_token":false` at `/api/meta` | secret not set, or set on the wrong environment | re-run step 5 **with** `--env production` |
 | Counts fail with `rate_limited` | no token, or the token is exhausted | check `server_token`, or wait for the hourly reset |
 | `Bad credentials` | token expired, revoked, or mistyped | generate a new one, re-run step 5 |

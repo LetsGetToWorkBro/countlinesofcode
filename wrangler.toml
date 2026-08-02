@@ -55,6 +55,14 @@ MAX_FILES = "20000"
 MAX_TOTAL_BYTES = "67108864"      # 64 MiB of decoded text
 MAX_FILE_BYTES = "4194304"        # 4 MiB — bigger single files are skipped
 MAX_BLOB_FETCHES = "40"           # above this many files we switch to tarball mode
+# Pre-flight CPU guard. Above this much countable text we refuse with a clear
+# message instead of letting Cloudflare kill the isolate (raw "error code 1102").
+# 32 MiB ~= 1M lines ~= 5 s CPU: right for the PAID plan.
+# On the FREE plan set this to about "2097152" (2 MiB) — measured, a 0.68 MiB
+# repository (expressjs/express, 26.7k lines, ~102 ms CPU) still completes there
+# thanks to the isolate's tolerance for occasional overruns, while anything
+# large is terminated.
+MAX_COUNT_BYTES = "33554432"
 FETCH_CONCURRENCY = "12"
 RATE_LIMIT_PER_MINUTE = "20"      # per IP, unauthenticated
 
@@ -81,6 +89,8 @@ MAX_FILE_BYTES = "4194304"
 MAX_BLOB_FETCHES = "40"
 FETCH_CONCURRENCY = "16"
 RATE_LIMIT_PER_MINUTE = "20"
+# Workers PAID default. On the free plan lower this to "2097152".
+MAX_COUNT_BYTES = "33554432"
 
 [[env.production.kv_namespaces]]
 binding = "LOC_KV"

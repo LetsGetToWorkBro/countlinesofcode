@@ -379,6 +379,7 @@ function metaResponse(env: Env): Response {
         max_total_bytes: limits.maxTotalBytes,
         max_file_bytes: limits.maxFileBytes,
         blob_strategy_max_files: limits.maxBlobFetches,
+        max_count_bytes: limits.maxCountBytes,
       },
       rate_limit_per_minute: rateLimitPerMinute(env),
     },
@@ -448,8 +449,8 @@ function toApiError(error: unknown): ApiError {
         return {
           status: 413,
           code: 'too_large',
-          message: 'That repository is too large for a single request.',
-          hint: 'Try a smaller ref, or count a subdirectory-heavy fork.',
+          message: error.message,
+          hint: 'Raise MAX_COUNT_BYTES for this deployment, or count a smaller repository.',
         };
       case 'server':
         return { status: 502, code: 'github_down', message: 'GitHub returned a server error. Try again.' };
