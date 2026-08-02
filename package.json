@@ -1,0 +1,25 @@
+{
+  "name": "loc1999",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LOC.1999 — count the lines of code in any GitHub repository. Ugly on purpose.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm run test"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8",
+    "wrangler": "^3.101.0"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  }
+}

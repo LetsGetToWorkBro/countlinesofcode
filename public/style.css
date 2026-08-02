@@ -1,0 +1,247 @@
+/* LOC.1999 stylesheet. Roughly the amount of CSS a browser in 1999 could      */
+/* survive. No frameworks, no variables, no dark mode. Ugly on purpose.        */
+
+body {
+  background: #ffffff;
+  color: #000000;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 16px;
+  line-height: 1.35;
+  margin: 12px;
+}
+
+#page {
+  max-width: 680px;
+}
+
+h1 {
+  font-size: 28px;
+  margin: 0 0 2px 0;
+  letter-spacing: 1px;
+}
+
+h2 {
+  font-size: 20px;
+  margin: 18px 0 6px 0;
+}
+
+h3 {
+  font-size: 17px;
+  margin: 16px 0 4px 0;
+}
+
+p {
+  margin: 6px 0;
+}
+
+a {
+  color: #0000ee;
+}
+
+a:visited {
+  color: #551a8b;
+}
+
+a:hover {
+  color: #0000ee;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #808080;
+  margin: 10px 0;
+}
+
+.tagline {
+  margin: 0 0 6px 0;
+}
+
+form {
+  margin: 8px 0;
+}
+
+label {
+  display: inline-block;
+  min-width: 130px;
+}
+
+input[type="text"] {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 14px;
+  width: 380px;
+  max-width: 100%;
+  border: 1px solid #000000;
+  padding: 2px;
+  background: #ffffff;
+  color: #000000;
+}
+
+input[type="checkbox"] {
+  margin-right: 4px;
+}
+
+button {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 15px;
+  padding: 2px 10px;
+  border: 2px outset #c0c0c0;
+  background: #c0c0c0;
+  color: #000000;
+  cursor: pointer;
+}
+
+button:active {
+  border-style: inset;
+}
+
+button:disabled {
+  color: #666666;
+  cursor: default;
+}
+
+:focus {
+  outline: 2px solid #000000;
+}
+
+fieldset {
+  border: 1px solid #808080;
+  margin: 8px 0;
+  padding: 6px 8px;
+}
+
+legend {
+  font-weight: bold;
+  padding: 0 4px;
+}
+
+table {
+  border-collapse: collapse;
+  border: 1px solid #000000;
+  margin: 6px 0 10px 0;
+  width: 100%;
+  font-size: 15px;
+}
+
+caption {
+  text-align: left;
+  font-weight: bold;
+  padding: 2px 0;
+}
+
+th,
+td {
+  border: 1px solid #808080;
+  padding: 2px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+thead th {
+  background: #e0e0e0;
+}
+
+th[scope="row"] {
+  background: #f0f0f0;
+  font-weight: normal;
+  width: 40%;
+}
+
+td.n,
+th.n {
+  text-align: right;
+  font-family: "Courier New", Courier, monospace;
+}
+
+td.big {
+  font-weight: bold;
+  font-size: 17px;
+}
+
+code {
+  font-family: "Courier New", Courier, monospace;
+}
+
+pre {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+  border: 1px solid #808080;
+  background: #f4f4f4;
+  padding: 6px;
+  overflow-x: auto;
+}
+
+.error {
+  color: #cc0000;
+  font-weight: bold;
+}
+
+.note {
+  font-size: 14px;
+  color: #333333;
+}
+
+.footer {
+  font-size: 13px;
+  color: #333333;
+}
+
+.status {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 14px;
+  color: #000080;
+  min-height: 1.2em;
+}
+
+.badge {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  border: 1px solid #000000;
+  padding: 0 4px;
+  vertical-align: middle;
+}
+
+.badge.cached {
+  background: #ffffcc;
+}
+
+.badge.fresh {
+  background: #ccffcc;
+}
+
+.warnings {
+  color: #aa5500;
+  font-size: 14px;
+  margin: 6px 0;
+  padding-left: 20px;
+}
+
+.blink {
+  color: #cc0000;
+  font-weight: bold;
+  animation: blink 1.2s steps(2, start) infinite;
+}
+
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blink {
+    animation: none;
+  }
+}
+
+ul.plain {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.quickpick {
+  font-size: 14px;
+}
+
+.hidden {
+  display: none;
+}

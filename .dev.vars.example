@@ -1,0 +1,16 @@
+# Copy to .dev.vars for local development (`wrangler dev` loads it automatically).
+# .dev.vars is gitignored. Never commit real values.
+#
+# In production set these with:  npx wrangler secret put NAME
+
+# Optional. A classic PAT or fine-grained token with public repo read access.
+# Used for anonymous visitors so they get 5,000 req/h instead of 60 req/h.
+# Leave empty to run fully unauthenticated.
+GITHUB_TOKEN=
+
+# GitHub OAuth App credentials (optional — enables "Connect GitHub").
+# Create at: https://github.com/settings/developers -> New OAuth App
+#   Homepage URL:               http://localhost:8787
+#   Authorization callback URL: http://localhost:8787/api/auth/callback
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=

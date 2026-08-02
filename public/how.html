@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LOC.1999 - how we count</title>
+<meta name="description" content="Methodology: how LOC.1999 counts lines of code, what it skips, and where it is imprecise.">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<div id="page">
+
+<h1>How we count</h1>
+<p class="tagline">No fake precision. Here is exactly what happens.</p>
+
+<hr>
+
+<h2>1. We do not use GitHub's language bar</h2>
+<p>
+GitHub's <code>/languages</code> endpoint reports <em>bytes</em> per language, computed by Linguist.
+Bytes are not lines, and Linguist's exclusions are not ours. We read the actual file contents and
+count actual lines.
+</p>
+
+<h2>2. Pinned to one commit</h2>
+<p>
+Your input is resolved to a repository, then to a ref (your branch/tag/sha, or the default branch),
+then to a single 40-character commit sha. Everything after that is computed against that sha, and the
+sha is displayed with the result. Two people counting the same sha get the same numbers, forever
+&mdash; that is what the <code>counter_version</code> field is for: it changes when the algorithm
+changes, so cached results can never silently mean something different.
+</p>
+
+<h2>3. Which files are counted</h2>
+<p>
+We list the repository with the Git Trees API (<code>?recursive=1</code>) and drop entries before
+fetching anything. A file is skipped when it is:
+</p>
+<ul class="plain">
+  <li><strong>vendored / build output</strong> &mdash; any path with a segment such as
+    <code>node_modules</code>, <code>vendor</code>, <code>third_party</code>, <code>dist</code>,
+    <code>build</code>, <code>target</code>, <code>.next</code>, <code>venv</code>,
+    <code>__pycache__</code>, <code>Pods</code>, <code>coverage</code> and friends;</li>
+  <li><strong>generated</strong> &mdash; minified bundles (<code>*.min.js</code>,
+    <code>*.min.css</code>), source maps, protobuf/codegen output (<code>*.pb.go</code>,
+    <code>*_pb2.py</code>, <code>*.g.dart</code>, <code>*_generated.ts</code>&hellip;), snapshot
+    files, and <strong>lockfiles</strong>;</li>
+  <li><strong>binary</strong> &mdash; by extension (images, fonts, archives, objects, model weights,
+    databases&hellip;) and then again by content: a NUL byte or a high proportion of control bytes in
+    the first 8&nbsp;KiB means binary;</li>
+  <li><strong>too large</strong> &mdash; above the per-file cap (4&nbsp;MiB by default);</li>
+  <li><strong>symlinks and submodules</strong> &mdash; they are pointers, not code.</li>
+</ul>
+<p class="note">
+Lockfile policy: <strong>lockfiles are skipped by default</strong> and reported under
+&ldquo;generated&rdquo;. They are machine-written dependency graphs, and one
+<code>package-lock.json</code> can be larger than an entire project. Tick <em>&ldquo;count
+lockfiles&rdquo;</em> on the form (or pass <code>?lockfiles=1</code>) to include them; they are then
+counted as data, with every non-blank line as code. The same applies to
+<em>&ldquo;count vendored dirs&rdquo;</em> / <code>?vendored=1</code>.
+</p>
+
+<h2>4. How a line is classified</h2>
+<p>Each line lands in exactly one bucket, so <code>lines = code + comment + blank</code>:</p>
+<table>
+<tbody>
+<tr><th scope="row">blank</th><td>Nothing but whitespace &mdash; including blank lines inside a block comment (this matches <code>cloc</code>).</td></tr>
+<tr><th scope="row">comment</th><td>Non-blank, and every non-whitespace character on it was inside a comment.</td></tr>
+<tr><th scope="row">code</th><td>Anything else. A line with code <em>and</em> a trailing comment counts as code.</td></tr>
+</tbody>
+</table>
+<p>
+The classifier is a single-pass state machine that tracks string literals, so <code>//</code> inside
+<code>"https://example.com"</code> is not a comment, and <code>#</code> inside a shell string is not
+either. Block comments nest where the language nests them (Rust, Swift, Haskell, Julia, Nim,
+OCaml&hellip;). Python and Elixir triple-quoted strings count as <em>comments</em> when they open a
+line (docstrings) and as code when they appear mid-expression.
+</p>
+
+<h3>Languages with full comment rules</h3>
+<p class="note">
+JavaScript, TypeScript, JSX/TSX, Python, Go, Rust, Java, Kotlin, Scala, C, C++, C#, Objective-C,
+Swift, Ruby, PHP, Perl, CSS/SCSS/Sass/Less, HTML/XML/Vue/Svelte/Astro, Shell, Fish, PowerShell,
+Batch, Lua, SQL, Haskell, Elm, PureScript, OCaml, F#, Clojure, Lisp, Scheme, Racket, Elixir, Erlang,
+Julia, Nim, Zig, Dart, Groovy, R, MATLAB, Fortran, Assembly, Terraform/HCL, Nix, YAML, TOML, INI,
+Makefile, CMake, Dockerfile, GraphQL, Protocol Buffers, Solidity, Verilog, VHDL, Vim script,
+CoffeeScript, Visual Basic, Pascal, Markdown, and more.
+</p>
+
+<h3>Languages without comment rules</h3>
+<p class="note">
+JSON, CSV, plain text, <code>.env</code>, ignore files, checksum files, diffs, reStructuredText,
+AsciiDoc, TeX, Jupyter notebooks and unrecognised extensions are counted as <strong>blank vs
+non-blank only</strong> &mdash; every non-blank line is reported as code, comments as zero. Every
+result page lists exactly which languages this applied to. We would rather say &ldquo;we did not
+detect comments here&rdquo; than invent a number.
+</p>
+
+<h3>Known limitations</h3>
+<ul class="plain">
+  <li><strong>Mixed HTML</strong>: <code>&lt;script&gt;</code> and <code>&lt;style&gt;</code> regions
+    switch to JavaScript and CSS rules respectively. Inline event handler attributes are counted as
+    HTML. Templating languages embedded in HTML (ERB, EJS, Blade) are treated as HTML.</li>
+  <li><strong>Heredocs</strong> (shell, PHP, Ruby, Perl) are treated as ordinary code lines, not as
+    strings. A <code>#</code> inside a shell heredoc may be reported as a comment.</li>
+  <li><strong>Raw string literals</strong> with custom delimiters (<code>R"delim(...)delim"</code> in
+    C++, <code>r#"..."#</code> in Rust) are approximated by the plain quoted form.</li>
+  <li><strong>Regex literals</strong> in JavaScript are not tracked; a <code>/</code> pair containing
+    <code>//</code> can, in rare cases, be misread.</li>
+  <li><strong>Jupyter notebooks</strong> are counted as JSON, not as their embedded source.</li>
+  <li><strong>Unicode</strong>: files are decoded as UTF-8 with replacement. UTF-16 source files
+    sniff as binary and are skipped.</li>
+</ul>
+
+<h2>5. How the content is fetched</h2>
+<p>
+Two strategies, picked automatically per repository:
+</p>
+<table>
+<tbody>
+<tr><th scope="row">blobs</th><td>Up to a few dozen files: one Git Blobs API request each, run through a bounded concurrency pool with exponential backoff on 403/429.</td></tr>
+<tr><th scope="row">tarball</th><td>Everything bigger: one request for the repository archive at the pinned sha, gunzipped and parsed as a stream. Cloudflare caps sub-requests per request, and a single archive is faster anyway. Nothing is ever cloned or executed.</td></tr>
+</tbody>
+</table>
+<p>
+If GitHub reports the recursive tree as <strong>truncated</strong> (it caps around 100k entries), we
+say so in the result and enumerate from the archive instead, so totals stay complete.
+</p>
+
+<h2>6. Caching</h2>
+<p>
+Results are cached in Cloudflare KV under <code>owner/repo@sha</code> plus the counter version and
+your option flags, for 7 days. Because the key is an immutable commit, a cache hit can never be
+stale. Branch&rarr;sha lookups are cached for 60 seconds, so counting a moving branch always
+re-resolves promptly. Every result is labelled <span class="badge cached">cached</span> or
+<span class="badge fresh">fresh</span>. Tick <em>&ldquo;ignore cache&rdquo;</em> to force a recount.
+</p>
+
+<h2>7. Limits</h2>
+<p>
+Defaults, visible at <a href="/api/meta">/api/meta</a>: 20,000 files, 64&nbsp;MiB of decoded text,
+4&nbsp;MiB per file, 20 counts per minute per IP for anonymous users. Hitting a cap produces a
+warning on the result &mdash; partial totals are always labelled as partial.
+</p>
+
+<h2>8. API</h2>
+<pre>POST /api/count
+     {"url": "https://github.com/owner/repo", "ref": "main"}
+
+GET  /api/count/{owner}/{repo}?ref=main&amp;lockfiles=1&amp;vendored=1&amp;fresh=1
+GET  /api/stream?input=owner/repo&amp;ref=main        (server-sent events)
+GET  /api/meta                                     (limits, versions)
+GET  /r/{owner}/{repo}/{sha}                       (shareable HTML result)</pre>
+
+<hr>
+<p class="footer">
+Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spite for bloat<br>
+<a href="/">back to the counter</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LOC.1999 - count the lines of code in a GitHub repository</title>
+<meta name="description" content="Paste a GitHub repository URL. Get accurate line-of-code totals: code, comments, blank, by language. No accounts, no bloat.">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<!--
+  EXPECTED LAYOUT (single column, ~680px, left aligned):
+
+    LOC.1999
+    Enter a repository. We will count the lines. That is all.
+    ------------------------------------------------------------
+    Repository: [ https://github.com/owner/repo            ]
+    Branch/tag: [ (default branch)   ]  [ Count Lines ]
+    [ ] count lockfiles   [ ] count vendored dirs
+    ------------------------------------------------------------
+    Listing tree... Counting files 120/400...
+    ------------------------------------------------------------
+    owner/repo  [fresh]
+    +----------------------+-----------+--------+
+    | Total lines          |   120,440 | 100.0% |
+    | Code                 |    98,112 |  81.5% |
+    ...
+    ------------------------------------------------------------
+    Hosted on Cloudflare - Not affiliated with GitHub - ...
+-->
+<div id="page">
+
+<h1>LOC.1999</h1>
+<p class="tagline">Enter a repository. We will count the lines. That is all.</p>
+
+<hr>
+
+<form id="count-form">
+  <p>
+    <label for="repo-input">Repository:</label>
+    <input type="text" id="repo-input" name="repo" required
+           autocapitalize="off" autocorrect="off" spellcheck="false"
+           placeholder="https://github.com/owner/repo  or  owner/repo"
+           aria-describedby="repo-help">
+  </p>
+  <p id="repo-help" class="note">
+    Accepts <code>owner/repo</code>, a full URL, a <code>/tree/branch</code> URL, or <code>git@github.com:owner/repo.git</code>.
+  </p>
+  <p>
+    <label for="ref-input">Branch / tag / sha:</label>
+    <input type="text" id="ref-input" name="ref"
+           autocapitalize="off" autocorrect="off" spellcheck="false"
+           placeholder="(default branch)">
+  </p>
+  <p>
+    <button type="submit" id="submit-button">Count Lines</button>
+    <span id="cancel-wrap" class="hidden"><button type="button" id="cancel-button">Stop</button></span>
+  </p>
+
+  <fieldset>
+    <legend>Options</legend>
+    <p>
+      <input type="checkbox" id="opt-lockfiles" name="lockfiles">
+      <label for="opt-lockfiles" style="min-width:auto">Count lockfiles (package-lock.json, Cargo.lock, ...)</label>
+    </p>
+    <p>
+      <input type="checkbox" id="opt-vendored" name="vendored">
+      <label for="opt-vendored" style="min-width:auto">Count vendored &amp; build dirs (node_modules, dist, vendor, ...)</label>
+    </p>
+    <p>
+      <input type="checkbox" id="opt-fresh" name="fresh">
+      <label for="opt-fresh" style="min-width:auto">Ignore cache and recount</label>
+    </p>
+    <p class="note">Defaults skip both. See <a href="/how.html">how we count</a>.</p>
+  </fieldset>
+</form>
+
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<p id="error" class="error" role="alert"></p>
+
+<div id="results"></div>
+
+<hr>
+
+<h2>Connect GitHub <span class="blink">NEW</span></h2>
+<p id="auth-block" class="note">Checking sign-in status&hellip;</p>
+<div id="quickpick" class="quickpick"></div>
+
+<hr>
+
+<p class="footer">
+Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spite for bloat<br>
+<a href="/how.html">how we count</a> |
+<a href="/api/meta">limits (json)</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

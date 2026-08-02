@@ -1,0 +1,69 @@
+#
+# LOC.1999 — Cloudflare Worker (API) + static assets (the 1999 UI).
+#
+# The `[assets]` block is Cloudflare's current static-hosting story (it is what
+# Pages became). Static files in ./public are served straight from the edge;
+# anything that does not match a file falls through to the Worker in src/worker.
+#
+name = "loc1999"
+main = "src/worker/index.ts"
+compatibility_date = "2024-11-06"
+workers_dev = true
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+# Unmatched paths must reach the Worker (it renders /r/:owner/:repo/:sha).
+not_found_handling = "none"
+# Serve /how.html at /how.html instead of 307-ing to /how. "/" is mapped to
+# index.html by the Worker itself (see serveAsset in src/worker/index.ts).
+html_handling = "none"
+
+[observability]
+enabled = true
+
+# --- KV: result cache, ref->sha cache, OAuth sessions, IP rate limits --------
+# Create with:  npx wrangler kv namespace create LOC_KV
+#               npx wrangler kv namespace create LOC_KV --preview
+[[kv_namespaces]]
+binding = "LOC_KV"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+preview_id = "REPLACE_WITH_YOUR_PREVIEW_KV_NAMESPACE_ID"
+
+[vars]
+# Public base URL, used to build the OAuth redirect_uri. Override per env.
+APP_BASE_URL = "http://localhost:8787"
+# Hard limits (strings so they can be overridden per-environment).
+MAX_FILES = "20000"
+MAX_TOTAL_BYTES = "67108864"      # 64 MiB of decoded text
+MAX_FILE_BYTES = "4194304"        # 4 MiB — bigger single files are skipped
+MAX_BLOB_FETCHES = "40"           # above this many files we switch to tarball mode
+FETCH_CONCURRENCY = "12"
+RATE_LIMIT_PER_MINUTE = "20"      # per IP, unauthenticated
+
+# Secrets (never put these here — use `wrangler secret put` / .dev.vars):
+#   GITHUB_TOKEN            optional server token for anonymous requests
+#   GITHUB_CLIENT_ID        OAuth app client id
+#   GITHUB_CLIENT_SECRET    OAuth app client secret
+
+[env.production]
+name = "loc1999"
+
+[env.production.vars]
+APP_BASE_URL = "https://loc1999.example.workers.dev"
+MAX_FILES = "20000"
+MAX_TOTAL_BYTES = "67108864"
+MAX_FILE_BYTES = "4194304"
+MAX_BLOB_FETCHES = "40"
+FETCH_CONCURRENCY = "16"
+RATE_LIMIT_PER_MINUTE = "20"
+
+[[env.production.kv_namespaces]]
+binding = "LOC_KV"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+
+[env.production.assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "none"
+html_handling = "none"

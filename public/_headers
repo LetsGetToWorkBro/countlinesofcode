@@ -1,0 +1,7 @@
+# Security headers for statically served assets. Worker-rendered responses set
+# the same set in src/worker/index.ts; keep the two in sync.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'
