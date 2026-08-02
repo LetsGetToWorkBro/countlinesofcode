@@ -50,6 +50,9 @@ RATE_LIMIT_PER_MINUTE = "20"      # per IP, unauthenticated
 
 [env.production]
 name = "loc1999"
+# Explicit rather than inherited: this is what gives you the
+# https://loc1999.<your-subdomain>.workers.dev URL after `wrangler deploy`.
+workers_dev = true
 
 [env.production.vars]
 # APP_BASE_URL is intentionally unset: the Worker falls back to the origin of
