@@ -153,6 +153,46 @@ Tests run against an in-memory GitHub fixture (`test/fixtures/fake-github.ts`)
 that serves repo metadata, refs, trees, blobs and a real gzipped tarball, so CI
 never touches api.github.com and never needs a token.
 
+### Verifying against the real GitHub API
+
+The test suite is deliberately offline, so one command exercises the real thing:
+
+```bash
+GITHUB_TOKEN=ghp_xxx npm run verify:live -- vercel/next.js
+GITHUB_TOKEN=ghp_xxx npm run verify:live -- torvalds/linux master
+env -u GITHUB_TOKEN npm run verify:live -- octocat/Hello-World   # anonymous
+```
+
+It runs the production pipeline outside the Worker — no KV, no cache — streams
+the same progress the UI shows, prints the totals and language breakdown, and
+asserts `code + comment + blank === lines` before exiting. Non-zero exit means
+the invariant broke or GitHub refused.
+
+Without a token you get GitHub's 60 requests/hour anonymous allowance, which is
+shared per IP and frequently already exhausted on cloud hosts and CI runners.
+
+### Getting a `GITHUB_TOKEN`
+
+For public repositories the token needs **no scopes at all** — being
+authenticated is what raises the limit from 60 to 5,000 requests/hour.
+
+1. GitHub → **Settings** → **Developer settings** → **Personal access tokens** →
+   **Tokens (classic)** → **Generate new token (classic)**.
+2. Give it a name and an expiry, and **tick no scopes**. (A fine-grained token
+   with *Public Repositories (read-only)* works equally well.)
+3. Copy the `ghp_…` value — GitHub shows it exactly once.
+
+Then put it where it is needed:
+
+```bash
+echo 'GITHUB_TOKEN=ghp_xxx' >> .dev.vars            # local dev (gitignored)
+npx wrangler secret put GITHUB_TOKEN --env production   # deployed
+```
+
+The server token is only ever used for visitors who have not connected their own
+GitHub account; signed-in users spend their own quota. To count **private**
+repositories you need the OAuth flow below, not this token.
+
 ---
 
 ## Deploy
