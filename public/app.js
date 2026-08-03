@@ -392,6 +392,11 @@
 
   // ------------------------------------------------------------------ auth
   function renderAuth(me) {
+    var flag = document.getElementById('auth-flag');
+    // The marker follows reality: it only says NEW once sign-in actually works,
+    // so enabling it later needs no edit here.
+    if (flag) flag.textContent = me.oauth_available || me.authenticated ? 'NEW' : 'SOON';
+
     if (me.authenticated) {
       authBlock.innerHTML = 'Connected as <strong>' + esc(me.login) + '</strong>. ' +
         'Private repositories you can access are countable, and you use your own ' +
@@ -415,8 +420,10 @@
         '. Your token is kept server-side and never sent to the browser &mdash; ' +
         '<a href="/security.html">what that means, and how to check it</a>.';
     } else {
-      authBlock.textContent = 'GitHub sign-in is not configured on this deployment. ' +
-        'Public repositories still work.';
+      authBlock.innerHTML = 'Coming soon. It will let you count <strong>private</strong> ' +
+        'repositories and use your own GitHub rate limit. Public repositories work now, ' +
+        'with no account. What it will ask for, and how to check it: ' +
+        '<a href="/security.html">connecting GitHub</a>.';
     }
   }
 
