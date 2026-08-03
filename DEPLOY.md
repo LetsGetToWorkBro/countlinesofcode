@@ -240,11 +240,23 @@ id; the browser only ever holds that id, in an HttpOnly cookie.
 
 ---
 
-## Optional: custom domain
+## Custom domain
+
+This deployment serves <https://1999loc.com>, added through the dashboard. The
+`www` subdomain is not set up; add it the same way if you want it.
+
+### How it was done
 
 Cloudflare dashboard → **Workers & Pages** → `loc1999` → **Settings** →
 **Domains & Routes** → **Add** → **Custom domain**. Cloudflare issues the
-certificate and routes it automatically.
+certificate and routes it automatically. The domain must already be a zone in
+the same Cloudflare account.
+
+The `*.workers.dev` URL keeps working alongside it. That is convenient for
+testing but means two public addresses serve the same pages, so the static pages
+carry a `<link rel="canonical">` pointing at the custom domain. To collapse to
+one address entirely, set `workers_dev = false` in `wrangler.toml` and redeploy
+— at the cost of losing the workers.dev URL and per-deploy preview URLs.
 
 Nothing in this repository needs editing — the app derives its own base URL from
 the incoming request. If you are using OAuth, update the callback URL in the

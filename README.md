@@ -1,5 +1,7 @@
 # LOC.1999
 
+**Live at [1999loc.com](https://1999loc.com)**
+
 Count the lines of code in any GitHub repository. Paste a URL, get accurate
 totals. Runs entirely on Cloudflare's edge.
 

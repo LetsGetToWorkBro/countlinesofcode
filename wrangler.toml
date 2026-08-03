@@ -28,19 +28,23 @@ html_handling = "none"
 enabled = true
 
 # --- Custom domain ----------------------------------------------------------
-# Easiest path is the dashboard: Workers & Pages -> loc1999 -> Settings ->
-# Domains & Routes -> Add -> Custom domain. Cloudflare issues the certificate
-# and routes it, and nothing here needs to change.
+# Live at https://1999loc.com, added through the dashboard (Workers & Pages ->
+# loc1999 -> Settings -> Domains & Routes -> Add -> Custom domain). Nothing here
+# needs to change for it: the Worker derives its own base URL from the request.
 #
-# To manage it from this file instead, uncomment below — but only once the zone
-# is active in the same Cloudflare account, or every deploy will fail.
+# To manage domains from this file instead, uncomment below — but only while the
+# zone is active in the same Cloudflare account, otherwise EVERY deploy fails,
+# including the automatic ones from GitHub.
 # [[routes]]
-# pattern = "example.com"
+# pattern = "1999loc.com"
 # custom_domain = true
 #
 # [[routes]]
-# pattern = "www.example.com"
+# pattern = "www.1999loc.com"
 # custom_domain = true
+#
+# The apex is live; www is not. Add it the same way as the apex, or leave it —
+# a bare domain with no www is a defensible 1999 choice.
 
 # --- Plan notes -------------------------------------------------------------
 # Counting is CPU-bound. Cloudflare allows 10 ms of CPU per request on the FREE
