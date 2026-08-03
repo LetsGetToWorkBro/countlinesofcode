@@ -19,13 +19,18 @@ function varOf(name: string): number {
   return Number(match[1]);
 }
 
-/** Workers Paid allows 30 s of CPU per request; free allows 10 ms. */
-const PAID_CPU_MS = 30_000;
+/**
+ * What this deployment's isolate actually survives, measured rather than read
+ * off a pricing page. 32 MiB was tried on 2026-08-03 and failed most requests
+ * with `error code: 1102`; ~2 MiB of text is reliable. See the plan notes in
+ * wrangler.toml for the full table.
+ */
+const MEASURED_SAFE_CPU_MS = 320;
 
 describe('wrangler.toml', () => {
-  it('caps counting well inside the paid plan CPU budget', () => {
+  it('caps counting at what this deployment can actually finish', () => {
     const estimatedMs = varOf('MAX_COUNT_BYTES') / BYTES_PER_CPU_MS;
-    expect(estimatedMs).toBeLessThan(PAID_CPU_MS / 2);
+    expect(estimatedMs).toBeLessThanOrEqual(MEASURED_SAFE_CPU_MS);
   });
 
   it('does not promise to count more text than it will read', () => {

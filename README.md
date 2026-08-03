@@ -403,8 +403,15 @@ boards need 25 stars, ratio boards need 1,000 lines, and a repository appears
 once at its most recent commit. Repositories too large for the server are
 counted in your browser and are **not** ranked — the server never sees those
 numbers and will not rank what it cannot verify. That is why `MAX_COUNT_BYTES`
-matters beyond convenience: it decides what can be ranked at all, which is what
-the Workers Paid plan buys here (32 MiB of text, ~1M lines, ~4.8 s of CPU).
+matters beyond convenience: it decides what can be ranked at all.
+
+Raising it was tried and measured. At 32 MiB, repositories above roughly 2 MiB
+of text failed most requests with Cloudflare's `error code: 1102` — the isolate
+killed for exceeding resource limits, which no handler here can catch. Whatever
+CPU this deployment gets is far below the paid plan's 30 s, and `[limits]` is
+rejected at build time, so the cap stays at the measured-safe 2 MiB. The plan
+notes in `wrangler.toml` carry the numbers, and `test/config.test.ts` fails if
+the cap drifts back above them.
 
 Private repositories never appear on the boards or in the sitemap. They share
 the cache prefix both enumerate, so the listings fail closed: an entry is
