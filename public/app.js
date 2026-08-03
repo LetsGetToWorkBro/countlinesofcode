@@ -169,8 +169,8 @@
       '</tbody></table>';
 
     // Whether this count reached the leaderboards, said plainly at the moment
-    // it is answerable. Only two things keep a result off them, and the client
-    // knows both without asking the server again.
+    // it is answerable. Everything that decides it is already in the result, so
+    // none of this costs another request.
     if (result.strategy === 'browser') {
       html += '<p class="note">Counted locally, so there is no shareable link for this one: ' +
         'the server never saw these numbers. That also keeps it off ' +
@@ -182,10 +182,15 @@
         esc('/r/' + result.owner + '/' + result.repo + '/' + shortSha) + '</a> &middot; ' +
         '<a href="/api/count/' + esc(result.owner) + '/' + esc(result.repo) + '?ref=' +
         esc(result.sha) + '">JSON</a></p>';
-      html += result.repo_meta.private
-        ? '<p class="note">Private, so it stays off <a href="/board">the standings</a>. ' +
-          'Counting a repository is not publishing it.</p>'
-        : '<p class="note">Now on <a href="/board">the standings</a>.</p>';
+      if (result.repo_meta.private) {
+        html += '<p class="note">Private, so it stays off <a href="/board">the standings</a>. ' +
+          'Counting a repository is not publishing it.</p>';
+      } else if (result.repo_meta.fork) {
+        html += '<p class="note">A fork, so it is listed but not ranked on ' +
+          '<a href="/board">the standings</a>.</p>';
+      } else {
+        html += '<p class="note">Now on <a href="/board">the standings</a>.</p>';
+      }
     }
 
     resultsEl.innerHTML = html;
