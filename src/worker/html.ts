@@ -87,13 +87,21 @@ Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spit
 </p>`;
 }
 
-export function errorPage(status: number, code: string, message: string, hint?: string): string {
+export function errorPage(
+  status: number,
+  code: string,
+  message: string,
+  hint?: string,
+  /** An offered way forward, when one exists. */
+  action?: { href: string; label: string },
+): string {
   return page(
     `LOC.1999 - ${escapeHtml(code)}`,
     `${siteHeader()}
 <h2>Error</h2>
 <p class="error">${escapeHtml(message)}</p>
 ${hint ? `<p>${escapeHtml(hint)}</p>` : ''}
+${action ? `<p><a href="${escapeHtml(action.href)}">${escapeHtml(action.label)}</a></p>` : ''}
 <p><a href="/">Back to the form</a></p>
 ${siteFooter()}`,
     { noindex: true },

@@ -372,7 +372,16 @@ async function resultPage(request: Request, env: Env, ctx: ExecutionContext, pat
     });
   } catch (error) {
     const mapped = toApiError(error);
-    return htmlResponse(errorPage(mapped.status, mapped.code, mapped.message, mapped.hint), mapped.status);
+    // Oversized repositories can still be counted in the browser, so send the
+    // visitor to the form with the repository pre-filled rather than stopping.
+    const action =
+      mapped.code === 'too_large'
+        ? { href: `/?repo=${encodeURIComponent(`${owner}/${repo}`)}`, label: 'Count it in my browser' }
+        : undefined;
+    return htmlResponse(
+      errorPage(mapped.status, mapped.code, mapped.message, mapped.hint, action),
+      mapped.status,
+    );
   }
 }
 
@@ -687,7 +696,9 @@ function toApiError(error: unknown): ApiError {
           status: 413,
           code: 'too_large',
           message: error.message,
-          hint: 'Raise MAX_COUNT_BYTES for this deployment, or count a smaller repository.',
+          hint:
+            'Count it from the front page instead: your browser has no such limit, ' +
+            'and it will offer to do the counting there.',
         };
       case 'server':
         return { status: 502, code: 'github_down', message: 'GitHub returned a server error. Try again.' };

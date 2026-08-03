@@ -425,7 +425,7 @@ describe('oversized repositories', () => {
     expect(body.error.code).toBe('too_large');
     expect(body.error.message).toMatch(/countable text/);
     expect(body.error.message).toMatch(/s of CPU/);
-    expect(body.error.hint).toMatch(/MAX_COUNT_BYTES/);
+    expect(body.error.hint).toMatch(/browser/i);
   });
 
   it('does not fetch any blobs when refusing', async () => {
@@ -674,5 +674,31 @@ describe('GitHub connection privileges', () => {
     const methods = github.methods;
     expect(methods.length).toBeGreaterThan(0);
     expect(methods.every((m) => m === 'GET')).toBe(true);
+  });
+});
+
+describe('oversized repositories, from a user\'s point of view', () => {
+  const tiny = () => makeEnv({ MAX_COUNT_BYTES: '10' });
+
+  it('tells the visitor what to do, not the operator', async () => {
+    const body = (await (await call('/api/count/acme/widget', {}, tiny())).json()) as {
+      error: { hint: string };
+    };
+    // The hint is shown to visitors, so it must not name internal config.
+    expect(body.error.hint).not.toMatch(/MAX_COUNT_BYTES/);
+    expect(body.error.hint).toMatch(/browser/i);
+  });
+
+  it('offers a way forward on a shared link instead of dead-ending', async () => {
+    const html = await (await call(`/r/acme/widget/${SAMPLE_REPO.sha}`, {}, tiny())).text();
+    expect(html).toContain('Count it in my browser');
+    // Pre-filled, so the front page starts on the right repository.
+    expect(html).toContain('href="/?repo=acme%2Fwidget"');
+  });
+
+  it('still explains the actual numbers', async () => {
+    const html = await (await call(`/r/acme/widget/${SAMPLE_REPO.sha}`, {}, tiny())).text();
+    expect(html).toMatch(/countable text/);
+    expect(html).toMatch(/s of CPU/);
   });
 });
