@@ -44,6 +44,13 @@ interface ResultMetadata {
   stars?: number;
   fork?: boolean;
   not_yours?: number;
+  /**
+   * Private repositories share this prefix, so anything that enumerates the
+   * cache has to know which entries may never be shown to the public. Absent on
+   * entries written before this field existed, which is why the public listings
+   * below fail closed rather than assuming public.
+   */
+  private?: boolean;
 }
 
 /** Inverse of `resultKey`, for default-option entries only. */
@@ -94,6 +101,7 @@ export class ResultCache {
         fork: result.repo_meta.fork,
         // Files present but not written here: vendored plus generated.
         not_yours: result.skipped.vendored + result.skipped.generated,
+        private: result.repo_meta.private,
       },
     });
   }
@@ -102,6 +110,10 @@ export class ResultCache {
    * Cached results, newest-listing-first, for the sitemap. Only entries counted
    * with the default options are returned: the option variants render the same
    * page at the same URL, so including them would emit duplicates.
+   *
+   * Private repositories are excluded — a sitemap advertising `owner/secret`
+   * leaks the repository's existence even though the page itself refuses to
+   * render for anyone without access.
    */
   async listForSitemap(limit = 1000): Promise<{ owner: string; repo: string; sha: string; lastmod?: string }[]> {
     if (!this.kv) return [];
@@ -112,7 +124,10 @@ export class ResultCache {
     const out: { owner: string; repo: string; sha: string; lastmod?: string }[] = [];
     for (const key of listed.keys) {
       const parsed = parseResultKey(key.name);
-      if (!parsed) continue;
+      // Fail closed: an entry written before `private` was recorded is skipped
+      // rather than assumed public. It costs at most one result TTL of sitemap
+      // coverage, which is the cheaper mistake by a wide margin.
+      if (!parsed || key.metadata?.private !== false) continue;
       // Prefer the stored casing; the key itself is normalised to lowercase.
       const owner = key.metadata?.owner ?? parsed.owner;
       const repo = key.metadata?.repo ?? parsed.repo;
@@ -128,7 +143,9 @@ export class ResultCache {
 
   /**
    * Every cached result, as leaderboard rows, from one list() call. Entries
-   * written before the metadata existed are skipped rather than guessed at.
+   * written before the metadata existed are skipped rather than guessed at,
+   * and private repositories never appear: the boards are public, and someone
+   * counting their own private repository is not publishing it.
    */
   async listForBoard(limit = 1000): Promise<BoardEntry[]> {
     if (!this.kv) return [];
@@ -141,6 +158,7 @@ export class ResultCache {
       const parsed = parseResultKey(key.name);
       const meta = key.metadata;
       if (!parsed || !meta || typeof meta.lines !== 'number') continue;
+      if (meta.private !== false) continue;
       out.push({
         owner: meta.owner ?? parsed.owner,
         repo: meta.repo ?? parsed.repo,

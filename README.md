@@ -397,6 +397,10 @@ once at its most recent commit. Repositories too large for the server are
 counted in your browser and are **not** ranked — the server never sees those
 numbers and will not rank what it cannot verify.
 
+Private repositories never appear on the boards or in the sitemap. They share
+the cache prefix both enumerate, so the listings fail closed: an entry is
+published only if it recorded `private: false`, never merely by omitting it.
+
 ---
 
 ## Why not Supabase

@@ -752,4 +752,27 @@ describe('the standings', () => {
     const xml = await (await call('/sitemap.xml')).text();
     expect(xml).toContain('<loc>https://loc.example/board</loc>');
   });
+
+  it('never publishes a private repository', async () => {
+    // Private results share the cache prefix the boards and sitemap enumerate.
+    // Counting your own private repository must not announce it exists.
+    github.restore();
+    github = installFakeGitHub([
+      { ...SAMPLE_REPO, owner: 'acme', repo: 'secret', stars: 500, private: true },
+    ]);
+    await countJson('/api/count/acme/secret');
+
+    const html = await (await call('/board')).text();
+    expect(html).not.toContain('secret');
+
+    const body = (await (await call('/api/board')).json()) as {
+      counted: number;
+      boards: { rows: { repo: string }[] }[];
+    };
+    expect(body.counted).toBe(0);
+    expect(body.boards.every((b) => b.rows.length === 0)).toBe(true);
+
+    const xml = await (await call('/sitemap.xml')).text();
+    expect(xml).not.toContain('secret');
+  });
 });
