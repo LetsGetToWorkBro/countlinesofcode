@@ -585,3 +585,38 @@ describe('search engine plumbing', () => {
     expect(html).toContain('<meta name="robots" content="noindex">');
   });
 });
+
+describe('www handling', () => {
+  async function get(url: string, useEnv: Env = env) {
+    const ctx = fakeCtx();
+    const response = await worker.fetch(new Request(url, { headers: { 'cf-connecting-ip': '203.0.113.7' } }), useEnv, ctx);
+    await ctx.settled();
+    return response;
+  }
+
+  it('301s www to the apex, keeping path and query', async () => {
+    const response = await get('https://www.loc.example/r/acme/widget/' + SAMPLE_REPO.sha + '?lockfiles=1');
+    expect(response.status).toBe(301);
+    expect(response.headers.get('location')).toBe(
+      `https://loc.example/r/acme/widget/${SAMPLE_REPO.sha}?lockfiles=1`,
+    );
+  });
+
+  it('serves the apex normally', async () => {
+    const response = await get('https://loc.example/api/meta');
+    expect(response.status).toBe(200);
+  });
+
+  it('leaves other hosts alone, so workers.dev and previews keep working', async () => {
+    for (const host of ['loc1999.someone.workers.dev', '1a2b3c-loc1999.someone.workers.dev', 'localhost:8787']) {
+      const response = await get(`https://${host}/api/meta`);
+      expect(response.status, host).toBe(200);
+    }
+  });
+
+  it('does nothing when no canonical origin is configured', async () => {
+    const noCanonical = makeEnv({ CANONICAL_ORIGIN: undefined });
+    const response = await get('https://www.loc.example/api/meta', noCanonical);
+    expect(response.status).toBe(200);
+  });
+});

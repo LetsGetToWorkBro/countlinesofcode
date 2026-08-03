@@ -243,7 +243,13 @@ id; the browser only ever holds that id, in an HttpOnly cookie.
 ## Custom domain
 
 This deployment serves <https://1999loc.com>, added through the dashboard. The
-`www` subdomain is not set up; add it the same way if you want it.
+bare domain is canonical.
+
+`www.1999loc.com` is optional. The Worker already 301s it to the apex, so it
+never dead-ends and only one address gets indexed — but that redirect can only
+run if www reaches the Worker. To enable it, add `www.1999loc.com` as a second
+custom domain exactly like the apex. No page rule or redirect rule is required;
+leaving www unregistered is also fine.
 
 ### How it was done
 

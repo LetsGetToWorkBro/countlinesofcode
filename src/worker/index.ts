@@ -44,6 +44,13 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname;
 
+    // www -> apex, so the bare domain stays the single canonical address and
+    // anyone who types www still arrives. Deliberately narrow: only the www
+    // form of CANONICAL_ORIGIN redirects, so *.workers.dev and per-deploy
+    // preview URLs keep serving normally.
+    const wwwRedirect = redirectFromWww(url, env);
+    if (wwwRedirect) return wwwRedirect;
+
     try {
       if (path === '/api/count' && request.method === 'POST') return await postCount(request, env, ctx);
       if (path.startsWith('/api/count/') && request.method === 'GET') return await getCount(request, env, ctx, path);
@@ -551,6 +558,34 @@ function escapeXml(value: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
+}
+
+/**
+ * If this request arrived on `www.<canonical host>`, send it to the apex.
+ * Returns null when there is nothing to do — including when CANONICAL_ORIGIN is
+ * unset, which is the case for local development.
+ */
+function redirectFromWww(url: URL, env: Env): Response | null {
+  const configured = env.CANONICAL_ORIGIN;
+  if (!configured || !/^https?:\/\//.test(configured)) return null;
+
+  let canonical: URL;
+  try {
+    canonical = new URL(configured);
+  } catch {
+    return null;
+  }
+  if (url.hostname !== `www.${canonical.hostname}`) return null;
+
+  const target = new URL(url.pathname + url.search, canonical.origin);
+  return new Response(null, {
+    status: 301,
+    headers: {
+      location: target.toString(),
+      'cache-control': 'public, max-age=3600',
+      ...SECURITY_HEADERS,
+    },
+  });
 }
 
 /**
