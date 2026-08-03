@@ -22,14 +22,13 @@ Node 20+; nothing else here is version-sensitive.
 
 You also need:
 
-* a **Cloudflare account** on the **Workers Paid plan** ($5/month) — see below
+* a **Cloudflare account** — the free plan is enough, see below
 * a **GitHub personal access token** — see step 3
 
-### Why the paid plan is required
+### Which plan you need
 
-This is the one thing that cannot be worked around, so know it before you start.
-
-Counting is CPU-bound, and Cloudflare limits CPU time per request:
+The free plan works. Counting is CPU-bound, and Cloudflare limits CPU time per
+request:
 
 | | Workers Free | Workers Paid ($5/mo) |
 |---|---|---|
@@ -47,36 +46,27 @@ millisecond**:
 | 100,000 lines | ~0.5 s |
 | 1,000,000 lines | ~4.9 s |
 
-So the free plan's 10 ms budget covers roughly **2,000 lines** — smaller than
-many single source files — and that is before gzip and tar parsing. On the free
-plan anything real returns HTTP 1102, `Worker exceeded resource limits`.
+Waiting on GitHub does **not** count toward CPU time, only computation does.
 
-On the paid plan the 30 second default is ample: a million-line repository uses
-about 5 seconds. Waiting on GitHub does **not** count toward CPU time, only
-actual computation does.
+`MAX_COUNT_BYTES` in `wrangler.toml` is set to 2 MiB, which is what the free
+plan can finish. Larger repositories are refused *before* any content is
+fetched — with a plain explanation, not Cloudflare's bare `error code: 1102` —
+and the page then offers to **count them in the visitor's browser**, which has
+no CPU limit at all. So on the free plan:
 
-If you only want to try it out, run it locally instead (see the end of this
-document) — `wrangler dev` has no CPU limit.
-
-Upgrade at **Workers & Pages** → **Plans** in the Cloudflare dashboard.
-
-### Staying on the free plan
-
-It works for small repositories, and there is a guard so the failure is
-readable. Set this in `[env.production.vars]` and redeploy:
-
-```toml
-MAX_COUNT_BYTES = "2097152"   # 2 MiB of text
-```
-
-Anything larger is then refused *before* fetching content, with a plain
-explanation of how much text it found and how much CPU that would need, instead
-of Cloudflare killing the request and returning a bare `error code: 1102`.
+| | where it runs | cached & shareable |
+|---|---|---|
+| up to ~2 MiB of text | server | yes |
+| anything larger | the visitor's browser | no |
 
 Measured on a live free-plan deployment: `expressjs/express` (26,700 lines,
-0.68 MiB, ~102 ms of CPU) completes — isolates tolerate occasional overruns —
-while `facebook/react` and `vercel/next.js` are terminated. The free plan is
-therefore usable for small repositories and unreliable in the middle.
+0.68 MiB) counts server-side in about a second; `facebook/react` and
+`vercel/next.js` go to browser mode.
+
+Upgrading to **Workers Paid** ($5/month) raises the CPU ceiling to 30 s, so
+raising `MAX_COUNT_BYTES` to `"33554432"` moves roughly a million lines back to
+the server, where results are cached and links are shareable. Upgrade at
+**Workers & Pages** → **Plans**.
 
 ---
 
@@ -106,7 +96,7 @@ Cloudflare:
 npm test
 ```
 
-Expect `Tests  181 passed (181)`. These run entirely offline — no GitHub, no
+Expect `Tests  192 passed (192)`. These run entirely offline — no GitHub, no
 Cloudflare, no token needed.
 
 ---
@@ -149,7 +139,7 @@ npx wrangler whoami
 ## 5. Store the token as a secret
 
 ```bash
-npx wrangler secret put GITHUB_TOKEN --env production
+npx wrangler secret put GITHUB_TOKEN
 ```
 
 It prompts for the value. Paste the `ghp_…` token and press enter. **Nothing
@@ -166,13 +156,13 @@ Validate first — this bundles the Worker and checks every binding without
 uploading anything:
 
 ```bash
-npx wrangler deploy --env production --dry-run
+npx wrangler deploy --dry-run
 ```
 
 Then go live:
 
 ```bash
-npx wrangler deploy --env production
+npx wrangler deploy
 ```
 
 The last line of output is your URL:
@@ -196,7 +186,7 @@ URL in a browser, paste `vercel/next.js` (or anything) into the form, and press
 Watch the logs live while you do it:
 
 ```bash
-npx wrangler tail --env production --format pretty
+npx wrangler tail --format pretty
 ```
 
 One structured line per count: cache hit or miss, strategy, totals, and timing
@@ -239,9 +229,9 @@ repos.
 4. Register, then copy the Client ID and generate a Client Secret.
 
 ```bash
-npx wrangler secret put GITHUB_CLIENT_ID --env production
-npx wrangler secret put GITHUB_CLIENT_SECRET --env production
-npx wrangler deploy --env production
+npx wrangler secret put GITHUB_CLIENT_ID
+npx wrangler secret put GITHUB_CLIENT_SECRET
+npx wrangler deploy
 ```
 
 The "Connect GitHub" section on the homepage switches from "not configured" to a
@@ -266,11 +256,36 @@ GitHub OAuth App to the new domain.
 
 ```bash
 git pull
-npx wrangler deploy --env production
+npx wrangler deploy
 ```
 
 Secrets survive deploys. To rotate the token, run `wrangler secret put` again —
 it takes effect immediately, with no redeploy.
+
+### Automatic deploys from GitHub
+
+Connecting the repository in **Workers & Pages -> loc1999 -> Settings -> Build**
+makes every push to the production branch deploy itself. Settings that matter:
+
+| Field | Value |
+|---|---|
+| Production branch | `main` |
+| Build command | `npm ci && npm run build:client` |
+| Deploy command | `npx wrangler deploy` |
+| Root directory | *(blank)* |
+
+Two things make this work:
+
+* **One configuration.** `wrangler.toml` has no `[env.production]` block, on
+  purpose. Workers Builds runs a bare `npx wrangler deploy`, so a second
+  environment would mean pushes and manual deploys shipped different settings to
+  the same Worker.
+* **Secrets are not in the repository.** `GITHUB_TOKEN` and the OAuth
+  credentials live on the Worker and survive every deploy, automatic or not. An
+  automatic deploy never needs them re-entered.
+
+The build command is optional — `public/bigcount.js` is committed — but running
+it means a forgotten rebuild cannot ship stale counting rules to the browser.
 
 ---
 
@@ -278,8 +293,8 @@ it takes effect immediately, with no redeploy.
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `Error 1102 Worker exceeded resource limits` | free plan's 10 ms CPU cap | upgrade to Workers Paid, or set `MAX_COUNT_BYTES = "2097152"` to fail politely instead |
-| `"server_token":false` at `/api/meta` | secret not set, or set on the wrong environment | re-run step 5 **with** `--env production` |
+| `Error 1102 Worker exceeded resource limits` | `MAX_COUNT_BYTES` set too high for the plan | lower it to `"2097152"` on free; large repos then fall back to browser mode |
+| `"server_token":false` at `/api/meta` | secret not set | re-run step 5, then redeploy |
 | Counts fail with `rate_limited` | no token, or the token is exhausted | check `server_token`, or wait for the hourly reset |
 | `Bad credentials` | token expired, revoked, or mistyped | generate a new one, re-run step 5 |
 | `not_found` on a repo you can see | it is private | private repos need the OAuth flow, not the server token |

@@ -5,6 +5,11 @@
 # Pages became). Static files in ./public are served straight from the edge;
 # anything that does not match a file falls through to the Worker in src/worker.
 #
+# ONE configuration, deliberately. Cloudflare's GitHub integration (Workers
+# Builds) runs a plain `npx wrangler deploy`, with no `--env` flag. A separate
+# `[env.production]` block would mean pushes deployed a different set of vars
+# than manual deploys did, to the same Worker name — so there is only this one.
+#
 name = "loc1999"
 main = "src/worker/index.ts"
 compatibility_date = "2024-11-06"
@@ -22,19 +27,34 @@ html_handling = "none"
 [observability]
 enabled = true
 
+# --- Custom domain ----------------------------------------------------------
+# Easiest path is the dashboard: Workers & Pages -> loc1999 -> Settings ->
+# Domains & Routes -> Add -> Custom domain. Cloudflare issues the certificate
+# and routes it, and nothing here needs to change.
+#
+# To manage it from this file instead, uncomment below — but only once the zone
+# is active in the same Cloudflare account, or every deploy will fail.
+# [[routes]]
+# pattern = "example.com"
+# custom_domain = true
+#
+# [[routes]]
+# pattern = "www.example.com"
+# custom_domain = true
+
 # --- Plan notes -------------------------------------------------------------
 # Counting is CPU-bound. Cloudflare allows 10 ms of CPU per request on the FREE
 # plan and 30 s on PAID; the classifier runs at ~7 KB of source per ms.
 #
-#   FREE  works for small repositories. MAX_COUNT_BYTES below refuses anything
-#         larger up front, with an explanation, instead of letting Cloudflare
-#         terminate the isolate (which surfaces as a bare "error code 1102").
-#         Measured: expressjs/express (0.68 MiB, 26.7k lines) completes;
-#         facebook/react and vercel/next.js do not.
-#   PAID  handles everything: raise MAX_COUNT_BYTES to "33554432" (~1M lines).
+#   FREE  counts small repositories on the server. Anything above
+#         MAX_COUNT_BYTES is refused up front with an explanation, and the page
+#         offers to count it in the visitor's browser instead — which has no
+#         CPU limit, so no repository is out of reach.
+#   PAID  raise MAX_COUNT_BYTES to "33554432" (~1M lines) to do more of it
+#         server-side, where results are cached and shareable.
 #
 # Free also caps external subrequests at 50 (paid: 10,000), which is why
-# MAX_BLOB_FETCHES defaults to 40.
+# MAX_BLOB_FETCHES is 40.
 #
 # On the paid plan only, the CPU ceiling itself can be raised. `limits` requires
 # Standard Usage, so leave this commented out on free.
@@ -42,19 +62,17 @@ enabled = true
 # cpu_ms = 120_000
 
 # --- KV: result cache, ref->sha cache, OAuth sessions, IP rate limits --------
-# Create with:  npx wrangler kv namespace create LOC_KV
-#               npx wrangler kv namespace create LOC_KV --preview
+# Created with:  npx wrangler kv namespace create LOC1999_KV
 [[kv_namespaces]]
 binding = "LOC_KV"
 id = "8c82bc2efc104b72b9b7e55aaebb4212"
 preview_id = "ee8bb66dee884755b2487fbe011ca055"
 
 [vars]
-# APP_BASE_URL is deliberately not set anywhere: the Worker derives the OAuth
+# APP_BASE_URL is deliberately not set: the Worker derives the OAuth
 # redirect_uri from the origin of the incoming request, so it is correct on
 # localhost, on *.workers.dev and on a custom domain without any edit. Set it
 # only when a proxy in front rewrites the Host header.
-# Hard limits (strings so they can be overridden per-environment).
 MAX_FILES = "20000"
 MAX_TOTAL_BYTES = "67108864"      # 64 MiB of decoded text
 MAX_FILE_BYTES = "4194304"        # 4 MiB — bigger single files are skipped
@@ -65,40 +83,9 @@ MAX_COUNT_BYTES = "2097152"
 FETCH_CONCURRENCY = "12"
 RATE_LIMIT_PER_MINUTE = "20"      # per IP, unauthenticated
 
-# Secrets (never put these here — use `wrangler secret put` / .dev.vars):
-#   GITHUB_TOKEN            optional server token for anonymous requests
-#   GITHUB_CLIENT_ID        OAuth app client id
-#   GITHUB_CLIENT_SECRET    OAuth app client secret
-
-[env.production]
-name = "loc1999"
-# Explicit rather than inherited: this is what gives you the
-# https://loc1999.<your-subdomain>.workers.dev URL after `wrangler deploy`.
-workers_dev = true
-
-[env.production.vars]
-# APP_BASE_URL is intentionally unset: the Worker falls back to the origin of
-# the incoming request, so OAuth works on whatever hostname you deploy to
-# (loc1999.<your-subdomain>.workers.dev, or a custom domain) with no edit.
-# Set it explicitly only if you serve the app behind a proxy that rewrites Host.
-# APP_BASE_URL = "https://loc.example.com"
-MAX_FILES = "20000"
-MAX_TOTAL_BYTES = "67108864"
-MAX_FILE_BYTES = "4194304"
-MAX_BLOB_FETCHES = "40"
-FETCH_CONCURRENCY = "16"
-RATE_LIMIT_PER_MINUTE = "20"
-# Set for the Workers FREE plan (10 ms CPU per request). Anything larger is
-# refused with a clear message instead of Cloudflare killing the isolate.
-# On the Paid plan raise this to "33554432" (32 MiB, ~1M lines).
-MAX_COUNT_BYTES = "2097152"
-
-[[env.production.kv_namespaces]]
-binding = "LOC_KV"
-id = "8c82bc2efc104b72b9b7e55aaebb4212"
-
-[env.production.assets]
-directory = "./public"
-binding = "ASSETS"
-not_found_handling = "none"
-html_handling = "none"
+# Secrets (never put these here — this file is committed):
+#   npx wrangler secret put GITHUB_TOKEN
+#   npx wrangler secret put GITHUB_CLIENT_ID
+#   npx wrangler secret put GITHUB_CLIENT_SECRET
+# Secrets are stored on the Worker and survive every deploy, including
+# automatic ones from GitHub.

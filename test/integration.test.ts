@@ -485,3 +485,27 @@ describe('browser counting support', () => {
     expect((await call(`/api/archive/acme/widget/${SAMPLE_REPO.sha}`, {}, limited)).status).toBe(429);
   });
 });
+
+describe('renamed repositories', () => {
+  // GitHub 301s /repos/facebook/react to /repos/react/react, on api.github.com
+  // itself, before the archive request ever reaches codeload.
+  beforeEach(() => {
+    github.restore();
+    github = installFakeGitHub([{ ...SAMPLE_REPO, renamedFrom: ['old/widget'] }]);
+  });
+
+  it('streams the archive through an api.github.com redirect', async () => {
+    const response = await call(`/api/archive/old/widget/${SAMPLE_REPO.sha}`);
+    expect(response.status).toBe(200);
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    expect(bytes[0]).toBe(0x1f);
+    expect(bytes[1]).toBe(0x8b);
+  });
+
+  it('never sends the token to the archive host', async () => {
+    await call(`/api/archive/old/widget/${SAMPLE_REPO.sha}`, {}, makeEnv({ GITHUB_TOKEN: 'ghp_secret' }));
+    const authByHost = github.authHeaders;
+    expect(authByHost.some((h) => h.host === 'codeload.github.com' && h.authorization !== null)).toBe(false);
+    expect(authByHost.some((h) => h.host === 'api.github.com' && h.authorization !== null)).toBe(true);
+  });
+});

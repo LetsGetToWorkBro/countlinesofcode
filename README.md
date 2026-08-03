@@ -234,7 +234,7 @@ Then put it where it is needed:
 
 ```bash
 echo 'GITHUB_TOKEN=ghp_xxx' >> .dev.vars            # local dev (gitignored)
-npx wrangler secret put GITHUB_TOKEN --env production   # deployed
+npx wrangler secret put GITHUB_TOKEN   # deployed
 ```
 
 The server token is only ever used for visitors who have not connected their own
@@ -259,8 +259,8 @@ deploy is three commands:
 
 ```bash
 npx wrangler login                                    # once per machine
-npx wrangler secret put GITHUB_TOKEN --env production # paste the token, press enter
-npx wrangler deploy --env production
+npx wrangler secret put GITHUB_TOKEN # paste the token, press enter
+npx wrangler deploy
 ```
 
 That prints the live URL (`https://loc1999.<your-subdomain>.workers.dev`). Check
@@ -277,7 +277,7 @@ curl https://loc1999.<your-subdomain>.workers.dev/api/meta
 lists every binding without uploading anything:
 
 ```bash
-npx wrangler deploy --env production --dry-run
+npx wrangler deploy --dry-run
 ```
 
 ### What is already configured
@@ -301,10 +301,10 @@ Secrets are set with `wrangler secret put`, never in `wrangler.toml` — that fi
 is committed.
 
 ```bash
-npx wrangler secret put GITHUB_TOKEN --env production          # recommended
-npx wrangler secret put GITHUB_CLIENT_ID --env production      # optional: OAuth
-npx wrangler secret put GITHUB_CLIENT_SECRET --env production
-npx wrangler secret list --env production                      # names only, never values
+npx wrangler secret put GITHUB_TOKEN          # recommended
+npx wrangler secret put GITHUB_CLIENT_ID      # optional: OAuth
+npx wrangler secret put GITHUB_CLIENT_SECRET
+npx wrangler secret list                      # names only, never values
 ```
 
 Rotating one is the same command again; the new value takes effect immediately,
@@ -320,7 +320,7 @@ nothing in this repository needs editing.
 ### Watching it run
 
 ```bash
-npx wrangler tail --env production --format pretty
+npx wrangler tail --format pretty
 ```
 
 Every count logs one structured line: cache hit or miss, strategy, file and line

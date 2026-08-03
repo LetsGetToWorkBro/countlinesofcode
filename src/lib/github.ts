@@ -306,42 +306,58 @@ export class GitHubClient {
    * signed URL, and sending both mechanisms is an error.
    */
   async openTarball(owner: string, repo: string, sha: string, signal?: AbortSignal): Promise<ReadableStream<Uint8Array>> {
-    const url = `${GITHUB_API}/repos/${owner}/${repo}/tarball/${sha}`;
-    this.requestCount++;
-    const first = await fetch(url, {
-      headers: this.headers('application/vnd.github+json'),
-      redirect: 'manual',
-      signal,
-    });
-    this.captureRateLimit(first);
+    let url = `${GITHUB_API}/repos/${owner}/${repo}/tarball/${sha}`;
+    // Renamed or transferred repositories 301 within the API first
+    // (/repos/facebook/react -> /repos/react/react), and only then 302 out to
+    // codeload. So follow redirects manually, deciding per hop whether the
+    // Authorization header may travel: yes to GitHub's API, never to the
+    // archive host, which authenticates via its signed URL and rejects both.
+    let sendAuth = true;
 
-    let response = first;
-    if (first.status >= 300 && first.status < 400) {
-      const location = first.headers.get('location');
-      await first.body?.cancel();
-      if (!location) throw new GitHubError('bad_response', 'GitHub archive redirect had no location.');
-      let target: URL;
-      try {
-        target = new URL(location, GITHUB_API);
-      } catch {
-        throw new GitHubError('bad_response', 'GitHub archive redirect was not a URL.');
-      }
-      if (target.protocol !== 'https:' || !ARCHIVE_HOSTS.has(target.hostname)) {
-        throw new GitHubError('bad_response', `Refusing to follow archive redirect to ${target.hostname}.`);
-      }
+    for (let hop = 0; hop < 5; hop++) {
       this.requestCount++;
-      response = await fetch(target.toString(), {
-        headers: { 'User-Agent': USER_AGENT, Accept: 'application/x-gzip' },
+      const response = await fetch(url, {
+        headers: sendAuth
+          ? this.headers('application/vnd.github+json')
+          : { 'User-Agent': USER_AGENT, Accept: 'application/x-gzip' },
+        redirect: 'manual',
         signal,
       });
+      this.captureRateLimit(response);
+
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get('location');
+        await response.body?.cancel();
+        if (!location) throw new GitHubError('bad_response', 'GitHub archive redirect had no location.');
+        let target: URL;
+        try {
+          target = new URL(location, url);
+        } catch {
+          throw new GitHubError('bad_response', 'GitHub archive redirect was not a URL.');
+        }
+        if (target.protocol !== 'https:') {
+          throw new GitHubError('bad_response', 'Refusing to follow a non-HTTPS archive redirect.');
+        }
+        if (target.hostname === 'api.github.com') {
+          sendAuth = true;
+        } else if (ARCHIVE_HOSTS.has(target.hostname)) {
+          sendAuth = false;
+        } else {
+          throw new GitHubError('bad_response', `Refusing to follow archive redirect to ${target.hostname}.`);
+        }
+        url = target.toString();
+        continue;
+      }
+
+      if (!response.ok) {
+        const detail = await safeErrorMessage(response);
+        throw new GitHubError(kindForStatus(response.status), detail, response.status);
+      }
+      if (!response.body) throw new GitHubError('bad_response', 'GitHub archive response had no body.');
+      return response.body;
     }
 
-    if (!response.ok) {
-      const detail = await safeErrorMessage(response);
-      throw new GitHubError(kindForStatus(response.status), detail, response.status);
-    }
-    if (!response.body) throw new GitHubError('bad_response', 'GitHub archive response had no body.');
-    return response.body;
+    throw new GitHubError('bad_response', 'Too many redirects fetching the repository archive.');
   }
 
   async getAuthenticatedUser(): Promise<GitHubUser> {
