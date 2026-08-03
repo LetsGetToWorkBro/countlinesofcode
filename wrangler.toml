@@ -22,18 +22,22 @@ html_handling = "none"
 [observability]
 enabled = true
 
-# --- Plan requirement -------------------------------------------------------
-# This Worker needs the Workers PAID plan ($5/month). Counting is CPU-bound and
-# the free plan allows only 10 ms of CPU per request; the classifier runs at
-# roughly 200 lines per millisecond, so 10 ms is about 2,000 lines — smaller
-# than most single files. On free you get HTTP 1102 "Worker exceeded resource
-# limits" for anything real. Paid allows 30 s by default (up to 5 min).
+# --- Plan notes -------------------------------------------------------------
+# Counting is CPU-bound. Cloudflare allows 10 ms of CPU per request on the FREE
+# plan and 30 s on PAID; the classifier runs at ~7 KB of source per ms.
+#
+#   FREE  works for small repositories. MAX_COUNT_BYTES below refuses anything
+#         larger up front, with an explanation, instead of letting Cloudflare
+#         terminate the isolate (which surfaces as a bare "error code 1102").
+#         Measured: expressjs/express (0.68 MiB, 26.7k lines) completes;
+#         facebook/react and vercel/next.js do not.
+#   PAID  handles everything: raise MAX_COUNT_BYTES to "33554432" (~1M lines).
 #
 # Free also caps external subrequests at 50 (paid: 10,000), which is why
 # MAX_BLOB_FETCHES defaults to 40.
 #
-# On the paid plan you may raise the CPU ceiling for very large repositories.
-# Leave this commented out on the free plan: `limits` requires Standard Usage.
+# On the paid plan only, the CPU ceiling itself can be raised. `limits` requires
+# Standard Usage, so leave this commented out on free.
 # [limits]
 # cpu_ms = 120_000
 
@@ -55,14 +59,9 @@ MAX_FILES = "20000"
 MAX_TOTAL_BYTES = "67108864"      # 64 MiB of decoded text
 MAX_FILE_BYTES = "4194304"        # 4 MiB — bigger single files are skipped
 MAX_BLOB_FETCHES = "40"           # above this many files we switch to tarball mode
-# Pre-flight CPU guard. Above this much countable text we refuse with a clear
-# message instead of letting Cloudflare kill the isolate (raw "error code 1102").
-# 32 MiB ~= 1M lines ~= 5 s CPU: right for the PAID plan.
-# On the FREE plan set this to about "2097152" (2 MiB) — measured, a 0.68 MiB
-# repository (expressjs/express, 26.7k lines, ~102 ms CPU) still completes there
-# thanks to the isolate's tolerance for occasional overruns, while anything
-# large is terminated.
-MAX_COUNT_BYTES = "33554432"
+# Pre-flight CPU guard — see "Plan notes" above. 2 MiB suits the free plan;
+# raise to "33554432" (32 MiB, ~1M lines) on paid.
+MAX_COUNT_BYTES = "2097152"
 FETCH_CONCURRENCY = "12"
 RATE_LIMIT_PER_MINUTE = "20"      # per IP, unauthenticated
 
@@ -89,8 +88,10 @@ MAX_FILE_BYTES = "4194304"
 MAX_BLOB_FETCHES = "40"
 FETCH_CONCURRENCY = "16"
 RATE_LIMIT_PER_MINUTE = "20"
-# Workers PAID default. On the free plan lower this to "2097152".
-MAX_COUNT_BYTES = "33554432"
+# Set for the Workers FREE plan (10 ms CPU per request). Anything larger is
+# refused with a clear message instead of Cloudflare killing the isolate.
+# On the Paid plan raise this to "33554432" (32 MiB, ~1M lines).
+MAX_COUNT_BYTES = "2097152"
 
 [[env.production.kv_namespaces]]
 binding = "LOC_KV"
