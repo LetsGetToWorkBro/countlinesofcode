@@ -90,10 +90,16 @@ enabled = true
 # Free also caps external subrequests at 50 (paid: 10,000), which is why
 # MAX_BLOB_FETCHES is 40.
 #
-# On the paid plan only, the CPU ceiling itself can be raised. `limits` requires
-# Standard Usage, so leave this commented out on free.
-# [limits]
-# cpu_ms = 120_000
+# The CPU ceiling, set explicitly rather than left to whatever this Worker's
+# usage model defaults to. Counting is the only thing here that spends real CPU,
+# and an isolate killed for exceeding it returns a raw `error code: 1102` that no
+# handler in this codebase can catch — so the ceiling wants to be well clear of
+# MAX_COUNT_BYTES / BYTES_PER_CPU_MS (~4.8 s at the current cap).
+#
+# `limits` requires the paid plan's Standard usage model; wrangler rejects the
+# deploy on free, which is the loudest possible way to find out.
+[limits]
+cpu_ms = 30000
 
 # --- KV: result cache, ref->sha cache, OAuth sessions, IP rate limits --------
 # Created with:  npx wrangler kv namespace create LOC1999_KV
