@@ -161,16 +161,21 @@
       row2('Other', num(result.skipped.other)) +
       '</tbody></table>';
 
-    var permalink = '/r/' + result.owner + '/' + result.repo + '/' + result.sha;
-    html += '<p class="note">Permalink: <a href="' + esc(permalink) + '">' +
-      esc('/r/' + result.owner + '/' + result.repo + '/' + shortSha) + '</a> &middot; ' +
-      '<a href="/api/count/' + esc(result.owner) + '/' + esc(result.repo) + '?ref=' +
-      esc(result.sha) + '">JSON</a></p>';
+    if (result.strategy === 'browser') {
+      html += '<p class="note">Counted locally, so there is no shareable link for this one: ' +
+        'the server never saw these numbers.</p>';
+    } else {
+      var permalink = '/r/' + result.owner + '/' + result.repo + '/' + result.sha;
+      html += '<p class="note">Permalink: <a href="' + esc(permalink) + '">' +
+        esc('/r/' + result.owner + '/' + result.repo + '/' + shortSha) + '</a> &middot; ' +
+        '<a href="/api/count/' + esc(result.owner) + '/' + esc(result.repo) + '?ref=' +
+        esc(result.sha) + '">JSON</a></p>';
+    }
 
     resultsEl.innerHTML = html;
 
-    if (window.history && window.history.replaceState) {
-      window.history.replaceState({}, '', permalink);
+    if (result.strategy !== 'browser' && window.history && window.history.replaceState) {
+      window.history.replaceState({}, '', '/r/' + result.owner + '/' + result.repo + '/' + result.sha);
     }
     document.title = 'LOC.1999 - ' + result.full_name + ' - ' + num(t.code) + ' lines of code';
   }
@@ -234,7 +239,8 @@
 
     source.addEventListener('failure', function (event) {
       var payload = JSON.parse(event.data);
-      fail(payload.error.message, payload.error.hint);
+      fail(payload.error.message, payload.error.code === 'too_large' ? '' : payload.error.hint);
+      if (payload.error.code === 'too_large') offerBrowserCount(input, ref);
       stopQuietly();
     });
 
@@ -287,6 +293,88 @@
       .catch(function () {
         setBusy(false);
         fail('Could not reach the counter.');
+      });
+  }
+
+  // ------------------------------------------------- big repos, in the browser
+  // The server refuses repositories bigger than its CPU budget. The browser has
+  // no such budget, so we offer to do the work here instead: the Worker streams
+  // the archive through untouched, and bigcount.js — built from the very same
+  // counting modules — does the gunzip, tar parsing and classification locally.
+
+  var bigScriptLoading = null;
+
+  function loadBigCounter() {
+    if (window.LOC1999_BIG) return Promise.resolve();
+    if (bigScriptLoading) return bigScriptLoading;
+    bigScriptLoading = new Promise(function (resolve, reject) {
+      var script = document.createElement('script');
+      script.src = '/bigcount.js';
+      script.onload = resolve;
+      script.onerror = function () { reject(new Error('Could not load the browser counter.')); };
+      document.head.appendChild(script);
+    });
+    return bigScriptLoading;
+  }
+
+  function offerBrowserCount(input, ref) {
+    if (typeof window.DecompressionStream !== 'function') {
+      errorEl.textContent += ' This browser cannot decompress the archive, so counting it here is not possible either.';
+      return;
+    }
+    resultsEl.innerHTML =
+      '<p>This repository is bigger than the server will process. ' +
+      'Your browser has no such limit &mdash; it can do the counting locally, ' +
+      'using exactly the same code.</p>' +
+      '<p><button type="button" id="big-count">Count it in my browser</button></p>' +
+      '<p class="note">Downloads the repository archive (can be large) and counts it on this page. ' +
+      'Nothing is uploaded, and the result is not cached or shareable.</p>';
+    document.getElementById('big-count').addEventListener('click', function () {
+      runBrowserCount(input, ref);
+    });
+  }
+
+  function runBrowserCount(input, ref) {
+    errorEl.textContent = '';
+    resultsEl.innerHTML = '';
+    statusEl.textContent = 'Loading the browser counter…';
+    setBusy(true);
+
+    var params = new URLSearchParams();
+    params.set('input', input);
+    if (ref) params.set('ref', ref);
+
+    loadBigCounter()
+      .then(function () {
+        statusEl.textContent = 'Resolving repository…';
+        return fetch('/api/resolve?' + params.toString());
+      })
+      .then(function (response) {
+        return response.json().then(function (body) {
+          if (!response.ok) throw new Error(body.error ? body.error.message : 'Could not resolve that repository.');
+          return body;
+        });
+      })
+      .then(function (resolved) {
+        statusEl.textContent = 'Downloading archive…';
+        var url = '/api/archive/' + encodeURIComponent(resolved.owner) + '/' +
+          encodeURIComponent(resolved.repo) + '/' + encodeURIComponent(resolved.sha);
+        return window.LOC1999_BIG.countArchive(url, resolved, {
+          includeLockfiles: optLockfiles.checked,
+          includeVendored: optVendored.checked,
+          onProgress: function (files) {
+            statusEl.textContent = 'Counting files ' + files.toLocaleString() + '… (in your browser)';
+          }
+        });
+      })
+      .then(function (result) {
+        statusEl.textContent = 'Counted in ' + (result.duration_ms / 1000).toFixed(2) + 's, in your browser.';
+        renderResults(result);
+        setBusy(false);
+      })
+      .catch(function (error) {
+        setBusy(false);
+        fail(error.message || 'Counting in the browser failed.');
       });
   }
 

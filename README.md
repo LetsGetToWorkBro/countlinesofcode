@@ -89,6 +89,33 @@ Full methodology, including known limitations: **[`/how.html`](public/how.html)*
                   blobs, user)            allowlisted, no auth header)
 ```
 
+### Big repositories: counted in your browser
+
+Counting is CPU-bound and Cloudflare caps CPU per request (10 ms free, 30 s
+paid), so past a certain size the server cannot finish. Streaming bytes,
+however, costs essentially no CPU — the runtime pipes a response body without
+JavaScript touching it.
+
+So when the server refuses a repository as too large, the page offers to do it
+locally: `/api/archive/:owner/:repo/:sha` streams the GitHub tarball straight
+through, and `public/bigcount.js` does the gunzip, tar parsing and
+classification in the tab. There is no repository size it cannot handle, on any
+plan.
+
+That bundle is built from `src/client/bigcount.ts`, which imports the *same*
+`count.ts`, `ignore.ts` and `tar.ts` the Worker uses — there is no second
+implementation to drift. Verified in Chromium against a real archive: browser
+and server produce identical totals to the line.
+
+Trade-offs, stated on the page itself: the archive downloads to the visitor,
+and the result is not cached or shareable, because the server cannot verify
+numbers it did not compute and accepting client-submitted totals would let
+anyone poison the shared cache.
+
+`public/bigcount.js` is a committed build artifact (`npm run build:client`),
+since `wrangler deploy` runs no build step. `test/client-bundle.test.ts`
+rebuilds and compares, so a stale bundle fails the suite.
+
 ### Why two content strategies
 
 Cloudflare caps **sub-requests per request** (50 on the free plan, 1000 on

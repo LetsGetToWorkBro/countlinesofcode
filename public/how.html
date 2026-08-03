@@ -138,7 +138,25 @@ If GitHub reports the recursive tree as <strong>truncated</strong> (it caps arou
 say so in the result and enumerate from the archive instead, so totals stay complete.
 </p>
 
-<h2>6. Caching</h2>
+<h2>6. Big repositories</h2>
+<p>
+Counting is CPU-bound, and this app runs on Cloudflare Workers, which cap CPU time per request.
+Past a certain size the server refuses up front &mdash; it tells you how much text it found and
+roughly how much CPU that needs &mdash; rather than being cut off mid-count.
+</p>
+<p>
+When that happens the page offers to count it <strong>in your browser</strong> instead. The server
+streams the repository archive through without reading it (piping bytes costs no measurable CPU),
+and your browser does the decompression, tar parsing and classification, using the exact same code
+this server runs. Numbers are identical; there is no second implementation.
+</p>
+<p class="note">
+Trade-offs: the archive downloads to your machine, and the result is not cached or shareable,
+because the server never saw it. We do not accept counts computed elsewhere &mdash; that would let
+anyone put made-up numbers into the shared cache.
+</p>
+
+<h2>7. Caching</h2>
 <p>
 Results are cached in Cloudflare KV under <code>owner/repo@sha</code> plus the counter version and
 your option flags, for 7 days. Because the key is an immutable commit, a cache hit can never be
@@ -147,21 +165,23 @@ re-resolves promptly. Every result is labelled <span class="badge cached">cached
 <span class="badge fresh">fresh</span>. Tick <em>&ldquo;ignore cache&rdquo;</em> to force a recount.
 </p>
 
-<h2>7. Limits</h2>
+<h2>8. Limits</h2>
 <p>
 Defaults, visible at <a href="/api/meta">/api/meta</a>: 20,000 files, 64&nbsp;MiB of decoded text,
 4&nbsp;MiB per file, 20 counts per minute per IP for anonymous users. Hitting a cap produces a
 warning on the result &mdash; partial totals are always labelled as partial.
 </p>
 
-<h2>8. API</h2>
+<h2>9. API</h2>
 <pre>POST /api/count
      {"url": "https://github.com/owner/repo", "ref": "main"}
 
 GET  /api/count/{owner}/{repo}?ref=main&amp;lockfiles=1&amp;vendored=1&amp;fresh=1
 GET  /api/stream?input=owner/repo&amp;ref=main        (server-sent events)
 GET  /api/meta                                     (limits, versions)
-GET  /r/{owner}/{repo}/{sha}                       (shareable HTML result)</pre>
+GET  /r/{owner}/{repo}/{sha}                       (shareable HTML result)
+GET  /api/resolve?input=owner/repo                 (repo + pinned sha, no counting)
+GET  /api/archive/{owner}/{repo}/{sha}             (tarball passthrough)</pre>
 
 <hr>
 <p class="footer">

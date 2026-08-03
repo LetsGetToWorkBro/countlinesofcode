@@ -2,7 +2,7 @@
   "name": "loc1999",
   "version": "1.0.0",
   "private": true,
-  "description": "LOC.1999 — count the lines of code in any GitHub repository. Ugly on purpose.",
+  "description": "LOC.1999 \u2014 count the lines of code in any GitHub repository. Ugly on purpose.",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -11,13 +11,15 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm run test",
+    "check": "npm run typecheck && npm run build:client && npm run test",
     "verify:live": "vite-node scripts/live-check.ts",
-    "preview": "vite-node scripts/preview-result.ts"
+    "preview": "vite-node scripts/preview-result.ts",
+    "build:client": "node scripts/build-client.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260801.1",
     "@types/node": "^22.20.1",
+    "esbuild": "^0.28.1",
     "typescript": "^5.7.3",
     "vitest": "^4.1.10",
     "wrangler": "^4.118.0"

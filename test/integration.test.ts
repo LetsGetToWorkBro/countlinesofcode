@@ -442,3 +442,46 @@ describe('oversized repositories', () => {
     expect(body.limits.max_count_bytes).toBeGreaterThan(0);
   });
 });
+
+describe('browser counting support', () => {
+  it('resolves a repository from free-form input without counting', async () => {
+    const before = github.requests.length;
+    const response = await call('/api/resolve?input=https://github.com/acme/widget');
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { sha: string; full_name: string; repo_meta: { stars: number } };
+    expect(body.sha).toBe(SAMPLE_REPO.sha);
+    expect(body.full_name).toBe('acme/widget');
+    expect(body.repo_meta.stars).toBeGreaterThan(0);
+
+    // Resolve must not fetch a tree, blobs or the archive.
+    const made = github.requests.slice(before);
+    expect(made.some((u) => u.includes('/git/trees/') || u.includes('/git/blobs/') || u.includes('/tarball/'))).toBe(false);
+  });
+
+  it('rejects a non-GitHub input on resolve', async () => {
+    const response = await call('/api/resolve?input=https://gitlab.com/a/b');
+    expect(response.status).toBe(400);
+  });
+
+  it('streams the archive for a pinned sha', async () => {
+    const response = await call(`/api/archive/acme/widget/${SAMPLE_REPO.sha}`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('gzip');
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    // gzip magic number: the real archive, streamed through untouched.
+    expect(bytes[0]).toBe(0x1f);
+    expect(bytes[1]).toBe(0x8b);
+  });
+
+  it('refuses an archive request without a valid sha', async () => {
+    expect((await call('/api/archive/acme/widget/main')).status).toBe(400);
+    expect((await call('/api/archive/acme/widget')).status).toBe(400);
+    expect((await call('/api/archive/-bad/widget/' + SAMPLE_REPO.sha)).status).toBe(400);
+  });
+
+  it('rate limits the archive endpoint like everything else', async () => {
+    const limited = makeEnv({ RATE_LIMIT_PER_MINUTE: '1' });
+    expect((await call(`/api/archive/acme/widget/${SAMPLE_REPO.sha}`, {}, limited)).status).toBe(200);
+    expect((await call(`/api/archive/acme/widget/${SAMPLE_REPO.sha}`, {}, limited)).status).toBe(429);
+  });
+});

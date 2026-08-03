@@ -6,6 +6,8 @@
  *   GET  /api/count/:owner/:repo?ref=     idempotent, shareable
  *   GET  /api/stream?owner&repo&ref       Server-Sent Events with progress
  *   GET  /api/auth/{login,callback,me,repos}, POST /api/auth/logout
+ *   GET  /api/resolve?input= | /:owner/:repo   repo + pinned sha, no counting
+ *   GET  /api/archive/:owner/:repo/:sha   tarball passthrough for browser mode
  *   GET  /r/:owner/:repo/:sha             server-rendered 1999 results page
  *   *                                     static assets from ./public
  */
@@ -47,6 +49,9 @@ export default {
       if (path.startsWith('/api/count/') && request.method === 'GET') return await getCount(request, env, ctx, path);
       if (path === '/api/stream' && request.method === 'GET') return await streamCount(request, env, ctx);
       if (path === '/api/meta' && request.method === 'GET') return metaResponse(env);
+      if (path === '/api/resolve' && request.method === 'GET') return await resolveOnly(request, env, path);
+      if (path.startsWith('/api/resolve/') && request.method === 'GET') return await resolveOnly(request, env, path);
+      if (path.startsWith('/api/archive/') && request.method === 'GET') return await streamArchive(request, env, path);
 
       if (path === '/api/auth/login' && request.method === 'GET') return await handleLogin(request, env);
       if (path === '/api/auth/callback' && request.method === 'GET') return await handleCallback(request, env);
@@ -366,6 +371,138 @@ async function resultPage(request: Request, env: Env, ctx: ExecutionContext, pat
 // ---------------------------------------------------------------------------
 // Misc
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Browser-side counting support
+//
+// Counting is CPU-bound, and Cloudflare caps CPU per request (10 ms free,
+// 30 s paid). Streaming bytes through a Worker, by contrast, costs essentially
+// no CPU — the runtime pipes the body without JavaScript touching it. So for
+// repositories too large for the server budget we hand the archive to the
+// browser, which runs the identical counting code with no limit at all.
+//
+// Two endpoints support that: one cheap resolve, and one pure passthrough.
+// ---------------------------------------------------------------------------
+
+/** Repository metadata + pinned sha. No content is fetched, so no real CPU. */
+async function resolveOnly(request: Request, env: Env, path: string): Promise<Response> {
+  const url = new URL(request.url);
+  const segments = path.split('/').filter(Boolean); // api, resolve[, owner, repo]
+  let owner = segments[2];
+  let repo = segments[3];
+
+  // `?input=` accepts anything the main form accepts (URL, owner/repo, ssh).
+  const raw = url.searchParams.get('input');
+  if (raw !== null) {
+    try {
+      const parsed = parseRepoInput(raw);
+      owner = parsed.owner;
+      repo = parsed.repo;
+      if (!url.searchParams.get('ref') && parsed.ref) url.searchParams.set('ref', parsed.ref);
+    } catch (error) {
+      return jsonError({
+        status: 400,
+        code: 'bad_input',
+        message: error instanceof ParseError ? error.message : 'Could not parse that input.',
+      });
+    }
+  }
+
+  if (!owner || !repo || !isValidOwner(owner) || !isValidRepo(repo)) {
+    return jsonError({ status: 400, code: 'bad_input', message: 'Use /api/resolve?input= or /api/resolve/{owner}/{repo}' });
+  }
+  const ref = url.searchParams.get('ref') ?? undefined;
+  if (ref !== undefined && !isValidRef(ref)) {
+    return jsonError({ status: 400, code: 'bad_input', message: `Bad ref: ${ref}` });
+  }
+
+  const session = await loadSession(request, env);
+  if (!session) {
+    const limit = rateLimitPerMinute(env);
+    const check = await checkRateLimit(env.LOC_KV, clientIp(request), limit);
+    if (!check.allowed) {
+      return jsonError({
+        status: 429,
+        code: 'rate_limited',
+        message: `Too many requests from this address (${limit}/min).`,
+        hint: `Try again in ${check.resetSeconds}s.`,
+      });
+    }
+  }
+
+  const client = new GitHubClient(session?.token ?? env.GITHUB_TOKEN);
+  const resolved = await resolveTarget(client, owner, repo, ref, new ResultCache(env.LOC_KV));
+  return jsonResponse(
+    {
+      owner: resolved.repoInfo.owner,
+      repo: resolved.repoInfo.repo,
+      full_name: resolved.repoInfo.full_name,
+      sha: resolved.sha,
+      ref: resolved.ref,
+      default_branch: resolved.repoInfo.default_branch,
+      repo_meta: {
+        stars: resolved.repoInfo.stars,
+        size_kb: resolved.repoInfo.size_kb,
+        private: resolved.repoInfo.private,
+        archived: resolved.repoInfo.archived,
+        fork: resolved.repoInfo.fork,
+        description: resolved.repoInfo.description,
+        html_url: resolved.repoInfo.html_url,
+      },
+      counter_version: COUNTER_VERSION,
+    },
+    200,
+    { 'cache-control': 'public, max-age=60' },
+  );
+}
+
+/**
+ * Passthrough of the repository tarball at a pinned sha.
+ *
+ * The response body is the upstream body, unread: no decompression, no
+ * parsing, no buffering in the isolate. That is what keeps this within the
+ * free plan's CPU budget no matter how large the repository is.
+ *
+ * The GitHub token never reaches the client — this Worker is what holds it, and
+ * the archive redirect is followed server-side to an allowlisted host.
+ */
+async function streamArchive(request: Request, env: Env, path: string): Promise<Response> {
+  const segments = path.split('/').filter(Boolean); // api, archive, owner, repo, sha
+  const [, , owner, repo, sha] = segments;
+  if (!owner || !repo || !sha || segments.length !== 5) {
+    return jsonError({ status: 400, code: 'bad_input', message: 'Use /api/archive/{owner}/{repo}/{sha}' });
+  }
+  if (!isValidOwner(owner) || !isValidRepo(repo) || !ShaSchema.safeParse(sha).success) {
+    return jsonError({ status: 400, code: 'bad_input', message: 'Bad owner, repository or sha.' });
+  }
+
+  const session = await loadSession(request, env);
+  if (!session) {
+    const limit = rateLimitPerMinute(env);
+    const check = await checkRateLimit(env.LOC_KV, clientIp(request), limit);
+    if (!check.allowed) {
+      return jsonError({
+        status: 429,
+        code: 'rate_limited',
+        message: `Too many requests from this address (${limit}/min).`,
+        hint: `Try again in ${check.resetSeconds}s.`,
+      });
+    }
+  }
+
+  const client = new GitHubClient(session?.token ?? env.GITHUB_TOKEN);
+  const body = await client.openTarball(owner, repo, sha);
+  logEvent({ event: 'archive_stream', repo: `${owner}/${repo}`, sha });
+
+  return new Response(body, {
+    headers: {
+      'content-type': 'application/gzip',
+      // Immutable: the sha pins the content.
+      'cache-control': 'private, max-age=3600',
+      ...SECURITY_HEADERS,
+    },
+  });
+}
 
 function metaResponse(env: Env): Response {
   const limits = limitsFromEnv(env);
