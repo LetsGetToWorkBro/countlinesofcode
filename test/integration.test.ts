@@ -549,6 +549,21 @@ describe('search engine plumbing', () => {
     }
   });
 
+  it('advertises the canonical casing, matching each page\'s canonical tag', async () => {
+    github.restore();
+    github = installFakeGitHub([{ ...SAMPLE_REPO, owner: 'Acme', repo: 'Widget' }]);
+
+    // Request it in lowercase, the way a user might type it.
+    await countJson('/api/count/acme/widget');
+    const xml = await (await call('/sitemap.xml')).text();
+    expect(xml).toContain(`/r/Acme/Widget/${SAMPLE_REPO.sha}`);
+    expect(xml).not.toContain(`/r/acme/widget/${SAMPLE_REPO.sha}`);
+
+    // And the page that URL points at agrees.
+    const html = await (await call(`/r/Acme/Widget/${SAMPLE_REPO.sha}`)).text();
+    expect(html).toContain(`<link rel="canonical" href="https://loc.example/r/Acme/Widget/${SAMPLE_REPO.sha}">`);
+  });
+
   it('does not list option variants twice', async () => {
     await countJson('/api/count/acme/widget');
     await countJson('/api/count/acme/widget?lockfiles=1');

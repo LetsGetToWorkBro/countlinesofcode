@@ -61,9 +61,11 @@ export class ResultCache {
     const key = resultKey(result.owner, result.repo, result.sha, result.options);
     await this.kv.put(key, JSON.stringify(result), {
       expirationTtl: RESULT_TTL_SECONDS,
-      // Kept in metadata so the sitemap can date entries from a single list
-      // call, instead of reading back every cached result.
-      metadata: { counted_at: result.counted_at },
+      // Kept in metadata so the sitemap can be built from a single list call
+      // rather than reading back every cached result. owner/repo are stored
+      // because the key lowercases them, and a sitemap that advertises
+      // different casing from the page's own canonical tag wastes crawl budget.
+      metadata: { counted_at: result.counted_at, owner: result.owner, repo: result.repo },
     });
   }
 
@@ -74,7 +76,7 @@ export class ResultCache {
    */
   async listForSitemap(limit = 1000): Promise<{ owner: string; repo: string; sha: string; lastmod?: string }[]> {
     if (!this.kv) return [];
-    const listed = await this.kv.list<{ counted_at?: string }>({
+    const listed = await this.kv.list<{ counted_at?: string; owner?: string; repo?: string }>({
       prefix: `res:${COUNTER_VERSION}:`,
       limit: Math.min(1000, limit),
     });
@@ -82,7 +84,15 @@ export class ResultCache {
     for (const key of listed.keys) {
       const parsed = parseResultKey(key.name);
       if (!parsed) continue;
-      out.push({ ...parsed, ...(key.metadata?.counted_at ? { lastmod: key.metadata.counted_at } : {}) });
+      // Prefer the stored casing; the key itself is normalised to lowercase.
+      const owner = key.metadata?.owner ?? parsed.owner;
+      const repo = key.metadata?.repo ?? parsed.repo;
+      out.push({
+        owner,
+        repo,
+        sha: parsed.sha,
+        ...(key.metadata?.counted_at ? { lastmod: key.metadata.counted_at } : {}),
+      });
     }
     return out;
   }
