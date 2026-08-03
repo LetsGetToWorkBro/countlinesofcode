@@ -18,6 +18,10 @@ export interface Env {
   GITHUB_TOKEN?: string;
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
+  /** See scopesFor() in auth.ts. Unset = read:user. Empty string = GitHub App. */
+  GITHUB_OAUTH_SCOPES?: string;
+  /** Commit the running build came from, for verifiability. */
+  SOURCE_COMMIT?: string;
 }
 
 function intVar(value: string | undefined, fallback: number): number {

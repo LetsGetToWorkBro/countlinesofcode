@@ -82,6 +82,7 @@ export function siteFooter(): string {
 Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spite for bloat<br>
 <a href="/">count something</a> |
 <a href="/how.html">how we count</a> |
+<a href="/security.html">connecting github</a> |
 <a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
 </p>`;
 }

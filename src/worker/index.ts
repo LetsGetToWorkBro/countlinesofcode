@@ -19,7 +19,7 @@ import { ParseError, parseRepoInput, isValidOwner, isValidRepo, isValidRef } fro
 import { checkRateLimit, clientIp } from '../lib/ratelimit';
 import { CountOptionsSchema, CountRequestSchema, ShaSchema, type CountOptions, type CountResult } from '../lib/schema';
 import { COUNTER_VERSION } from '../lib/version';
-import { handleCallback, handleLogin, handleLogout, handleMe, handleMyRepos, loadSession, oauthConfigured } from './auth';
+import { handleCallback, handleLogin, handleLogout, handleMe, handleMyRepos, loadSession, oauthConfigured, scopesFor } from './auth';
 import { limitsFromEnv, rateLimitPerMinute, type Env } from './env';
 import { errorPage, resultPageHtml } from './html';
 
@@ -528,6 +528,7 @@ async function sitemap(request: Request, env: Env): Promise<Response> {
   const entries: string[] = [
     `<url><loc>${escapeXml(origin)}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/how.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
+    `<url><loc>${escapeXml(origin)}/security.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`,
   ];
 
   const cached = await new ResultCache(env.LOC_KV).listForSitemap(1000);
@@ -604,7 +605,11 @@ function metaResponse(env: Env): Response {
   return jsonResponse(
     {
       counter_version: COUNTER_VERSION,
+      // The commit this build came from, so anyone can check the running code
+      // against the public repository. Set at deploy time; see DEPLOY.md.
+      source_commit: env.SOURCE_COMMIT ?? null,
       oauth_available: oauthConfigured(env),
+      oauth_scopes: scopesFor(env),
       server_token: Boolean(env.GITHUB_TOKEN),
       limits: {
         max_files: limits.maxFiles,

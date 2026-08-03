@@ -218,25 +218,73 @@ GITHUB_TOKEN=ghp_xxx npm run verify:live -- vercel/next.js
 
 ## Optional: "Connect GitHub" sign-in
 
-Only needed to count **private** repositories, or to let visitors spend their own
-GitHub quota instead of yours. The server token above does not cover private
-repos.
+Needed to count **private** repositories, or to let visitors spend their own
+GitHub quota instead of yours. The server token above covers neither.
 
-1. <https://github.com/settings/developers> → **New OAuth App**
-2. **Homepage URL**: `https://loc1999.<your-subdomain>.workers.dev`
-3. **Authorization callback URL**:
-   `https://loc1999.<your-subdomain>.workers.dev/api/auth/callback`
-4. Register, then copy the Client ID and generate a Client Secret.
+**Choose the app type first — it decides how much power you are asking for.**
+
+| | GitHub App *(recommended)* | OAuth App |
+|---|---|---|
+| Private repo permission | `contents: read` | `repo` — read **and write**, all private repos |
+| Which repos | the user picks at install time | all of them, always |
+| `GITHUB_OAUTH_SCOPES` | `""` (empty) | `"read:user repo"` |
+
+A classic OAuth App has no read-only scope for private repositories. `repo` is
+the only option, and it grants write access to every private repository the user
+can reach — for a tool that counts lines. A GitHub App with `contents: read`,
+installed on selected repositories, asks for a fraction of that, and users can
+see exactly which repositories they exposed.
+
+**This is why the default is `read:user`**: public repositories and a higher rate
+limit, no private access at all. Private support is opt-in, never accidental,
+and a test enforces that `repo` is never requested unless configured.
+
+### GitHub App (recommended)
+
+1. <https://github.com/settings/apps> → **New GitHub App**
+2. Homepage URL `https://1999loc.com`, callback URL
+   `https://1999loc.com/api/auth/callback`
+3. Tick **Request user authorization (OAuth) during installation**
+4. Permissions → Repository → **Contents: Read-only**, **Metadata: Read-only**.
+   Nothing else.
+5. Create it, note the Client ID, generate a client secret, then install the app
+   on whichever repositories should be countable.
 
 ```bash
 npx wrangler secret put GITHUB_CLIENT_ID
 npx wrangler secret put GITHUB_CLIENT_SECRET
-npx wrangler deploy
 ```
 
-The "Connect GitHub" section on the homepage switches from "not configured" to a
-working sign-in link. Tokens are stored server-side in KV under an opaque session
-id; the browser only ever holds that id, in an HttpOnly cookie.
+Then set `GITHUB_OAUTH_SCOPES = ""` in `[vars]` and deploy. The empty value tells
+the Worker to send no `scope` parameter, because a GitHub App's permissions come
+from the app itself.
+
+### OAuth App (simpler, far more privilege)
+
+1. <https://github.com/settings/developers> → **New OAuth App**
+2. Homepage `https://1999loc.com`, callback
+   `https://1999loc.com/api/auth/callback`
+3. Set the two secrets as above.
+4. For public repositories only, change nothing — the default `read:user` is
+   already right. For private repositories, set
+   `GITHUB_OAUTH_SCOPES = "read:user repo"` and understand that you are asking
+   every user for write access to all their private code.
+
+### Either way
+
+The front page states the exact scope before anyone clicks, `/api/meta` reports
+it as `oauth_scopes`, and `/security.html` explains what is stored with links to
+the source that implements it. Tokens live in KV under an opaque session id and
+never reach the browser; the cookie holds only that id.
+
+### Making the deployment verifiable
+
+`/api/meta` reports `source_commit`, so anyone can check the running build
+against the public repository. Set it at deploy time — in Workers Builds, use:
+
+```
+npx wrangler deploy --var SOURCE_COMMIT:$WORKERS_CI_COMMIT_SHA
+```
 
 ---
 

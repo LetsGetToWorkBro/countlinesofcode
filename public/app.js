@@ -407,9 +407,13 @@
       return;
     }
     if (me.oauth_available) {
-      authBlock.innerHTML = '<a href="/api/auth/login">Connect GitHub</a> for private repositories, ' +
-        'a much higher rate limit, and a quick-pick list of your repositories. ' +
-        'Your token is stored server-side and never sent to the browser.';
+      var grants = me.scopes === null
+        ? 'this is a GitHub App: you pick which repositories it may read'
+        : 'requests <code>' + esc(me.scopes) + '</code>';
+      authBlock.innerHTML = '<a href="/api/auth/login">Connect GitHub</a> to use your own rate limit' +
+        (me.private_repos ? ' and count private repositories' : '') + '. It ' + grants +
+        '. Your token is kept server-side and never sent to the browser &mdash; ' +
+        '<a href="/security.html">what that means, and how to check it</a>.';
     } else {
       authBlock.textContent = 'GitHub sign-in is not configured on this deployment. ' +
         'Public repositories still work.';

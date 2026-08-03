@@ -43,17 +43,29 @@ enabled = true
 # pattern = "www.1999loc.com"
 # custom_domain = true
 #
-# The bare domain is the canonical address. The Worker 301s www.<canonical host>
-# to it (see redirectFromWww in src/worker/index.ts), so www never dead-ends and
-# there is still exactly one indexed address. That redirect only runs once www
-# actually reaches the Worker, which needs one dashboard step:
+# The bare domain is the canonical address. www.1999loc.com is also a custom
+# domain, and the Worker 301s it to the apex (redirectFromWww in
+# src/worker/index.ts).
 #
-#   Workers & Pages -> loc1999 -> Settings -> Domains & Routes -> Add ->
-#   Custom domain -> www.1999loc.com
+# IMPORTANT, measured on the live site: that redirect only covers paths that
+# reach the Worker. Cloudflare's asset router serves ./public files *before* the
+# Worker runs, so on www:
 #
-# Until then www simply does not resolve, which is harmless. No page rule or
-# redirect rule is needed either way: the redirect lives in code, is covered by
-# tests, and costs nothing when www does not exist.
+#   /, /api/*, /sitemap.xml, /r/*   -> 301 to the apex   (Worker handles these)
+#   /how.html, /style.css, ...      -> served directly    (asset router)
+#
+# The duplicates are harmless — every page carries a canonical tag pointing at
+# the apex — but for a complete hostname redirect use a Cloudflare Redirect Rule,
+# which runs at the edge above both:
+#
+#   Rules -> Redirect Rules -> Create
+#     When: hostname equals www.1999loc.com
+#     Then: dynamic redirect to concat("https://1999loc.com", http.request.uri.path)
+#           status 301, preserve query string
+#
+# The alternative, `run_worker_first = true` in [assets], fixes it in code but
+# turns every static asset request into a Worker invocation. Asset requests are
+# otherwise free and unlimited, so that trade is usually not worth it.
 
 # --- Plan notes -------------------------------------------------------------
 # Counting is CPU-bound. Cloudflare allows 10 ms of CPU per request on the FREE

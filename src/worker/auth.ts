@@ -13,8 +13,32 @@ const SESSION_COOKIE = 'loc_sid';
 const STATE_COOKIE = 'loc_state';
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 const STATE_TTL_SECONDS = 600;
-/** `repo` is required to read private repositories; see README for narrowing. */
-const SCOPES = 'read:user repo';
+
+/**
+ * Least privilege by default.
+ *
+ * A classic OAuth App has no read-only scope for private repositories: the only
+ * option is `repo`, which grants read AND WRITE to every private repository the
+ * user can reach. For a tool that counts lines, that is an absurd amount of
+ * power to hold, so it is never requested unless a deployment opts in.
+ *
+ * The right way to support private repositories is a GitHub App with
+ * `contents: read`, which the user installs on selected repositories. GitHub
+ * Apps carry no scope parameter — permissions live on the app — so setting
+ * GITHUB_OAUTH_SCOPES to an empty string selects that mode.
+ *
+ *   unset            "read:user"    public repositories, higher rate limit
+ *   ""               (none sent)    GitHub App: permissions come from the app
+ *   "read:user repo" as written     OAuth App with full private read/write
+ */
+const DEFAULT_SCOPES = 'read:user';
+
+export function scopesFor(env: Env): string | null {
+  const configured = env.GITHUB_OAUTH_SCOPES;
+  if (configured === undefined) return DEFAULT_SCOPES;
+  const trimmed = configured.trim();
+  return trimmed === '' ? null : trimmed;
+}
 
 export interface Session {
   token: string;
@@ -88,7 +112,8 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
   const authorize = new URL('https://github.com/login/oauth/authorize');
   authorize.searchParams.set('client_id', env.GITHUB_CLIENT_ID!);
   authorize.searchParams.set('redirect_uri', redirectUri);
-  authorize.searchParams.set('scope', SCOPES);
+  const scopes = scopesFor(env);
+  if (scopes !== null) authorize.searchParams.set('scope', scopes);
   authorize.searchParams.set('state', state);
   authorize.searchParams.set('allow_signup', 'false');
 
@@ -173,9 +198,16 @@ export async function handleLogout(request: Request, env: Env): Promise<Response
 
 export async function handleMe(request: Request, env: Env): Promise<Response> {
   const session = await loadSession(request, env);
+  // The scope is reported so the page can state exactly what connecting grants,
+  // before the user clicks anything.
   const body = session
     ? { authenticated: true, login: session.login, avatar_url: session.avatar_url }
-    : { authenticated: false, oauth_available: oauthConfigured(env) };
+    : {
+        authenticated: false,
+        oauth_available: oauthConfigured(env),
+        scopes: scopesFor(env),
+        private_repos: (scopesFor(env) ?? '').split(/\s+/).includes('repo') || scopesFor(env) === null,
+      };
   return new Response(JSON.stringify(body), {
     headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
   });

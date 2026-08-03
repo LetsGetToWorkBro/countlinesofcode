@@ -27,6 +27,8 @@ export interface FakeGitHub {
   requests: string[];
   /** Per-request record of which host saw an Authorization header. */
   authHeaders: { host: string; authorization: string | null }[];
+  /** HTTP method of every outbound request, so "read only" is checkable. */
+  methods: string[];
   /** Force the next matching request to fail with this status. */
   failNext(status: number, body?: string): void;
 }
@@ -50,6 +52,7 @@ export function installFakeGitHub(repos: FakeRepo[]): FakeGitHub {
   const original = globalThis.fetch;
   const requests: string[] = [];
   const authHeaders: { host: string; authorization: string | null }[] = [];
+  const methods: string[] = [];
   let forcedFailure: { status: number; body: string } | null = null;
 
   const byName = new Map(repos.map((r) => [`${r.owner}/${r.repo}`.toLowerCase(), r]));
@@ -61,6 +64,7 @@ export function installFakeGitHub(repos: FakeRepo[]): FakeGitHub {
   const fake: typeof fetch = async (input, init) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
     requests.push(url);
+    methods.push((init?.method ?? 'GET').toUpperCase());
     try {
       authHeaders.push({
         host: new URL(url).hostname,
@@ -189,6 +193,7 @@ export function installFakeGitHub(repos: FakeRepo[]): FakeGitHub {
     },
     requests,
     authHeaders,
+    methods,
     failNext(status: number, body = 'Not Found') {
       forcedFailure = { status, body };
     },

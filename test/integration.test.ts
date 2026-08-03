@@ -620,3 +620,59 @@ describe('www handling', () => {
     expect(response.status).toBe(200);
   });
 });
+
+describe('GitHub connection privileges', () => {
+  it('never requests private-repo access by default', async () => {
+    const configured = makeEnv({ GITHUB_CLIENT_ID: 'cid', GITHUB_CLIENT_SECRET: 'secret' });
+    const response = await call('/api/auth/login', {}, configured);
+    const location = new URL(response.headers.get('location')!);
+    const scope = location.searchParams.get('scope');
+
+    expect(scope).toBe('read:user');
+    // `repo` is read AND write on every private repository. It must never be
+    // requested unless a deployment explicitly opts in.
+    expect(scope).not.toContain('repo');
+  });
+
+  it('omits the scope entirely in GitHub App mode', async () => {
+    const app = makeEnv({ GITHUB_CLIENT_ID: 'cid', GITHUB_CLIENT_SECRET: 'secret', GITHUB_OAUTH_SCOPES: '' });
+    const response = await call('/api/auth/login', {}, app);
+    const location = new URL(response.headers.get('location')!);
+    expect(location.searchParams.has('scope')).toBe(false);
+  });
+
+  it('honours an explicit opt-in to private repositories', async () => {
+    const optedIn = makeEnv({
+      GITHUB_CLIENT_ID: 'cid',
+      GITHUB_CLIENT_SECRET: 'secret',
+      GITHUB_OAUTH_SCOPES: 'read:user repo',
+    });
+    const response = await call('/api/auth/login', {}, optedIn);
+    const location = new URL(response.headers.get('location')!);
+    expect(location.searchParams.get('scope')).toBe('read:user repo');
+  });
+
+  it('tells the page what will be requested, before any click', async () => {
+    const configured = makeEnv({ GITHUB_CLIENT_ID: 'cid', GITHUB_CLIENT_SECRET: 'secret' });
+    const body = (await (await call('/api/auth/me', {}, configured)).json()) as {
+      scopes: string | null;
+      private_repos: boolean;
+    };
+    expect(body.scopes).toBe('read:user');
+    expect(body.private_repos).toBe(false);
+  });
+
+  it('reports the running commit so the deployed build can be checked', async () => {
+    const built = makeEnv({ SOURCE_COMMIT: 'abc1234' });
+    const body = (await (await call('/api/meta', {}, built)).json()) as { source_commit: string | null };
+    expect(body.source_commit).toBe('abc1234');
+  });
+
+  it('only ever issues GET requests to GitHub', async () => {
+    // The security page claims the app never writes. Hold it to that.
+    await countJson('/api/count/acme/widget');
+    const methods = github.methods;
+    expect(methods.length).toBeGreaterThan(0);
+    expect(methods.every((m) => m === 'GET')).toBe(true);
+  });
+});
