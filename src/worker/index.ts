@@ -61,8 +61,8 @@ export default {
       if (path === '/api/stream' && request.method === 'GET') return await streamCount(request, env, ctx);
       if (path === '/api/meta' && request.method === 'GET') return metaResponse(env);
       if (path === '/sitemap.xml' && request.method === 'GET') return await sitemap(request, env);
-      if (path === '/board' && request.method === 'GET') return await standings(request, env);
-      if (path === '/api/board' && request.method === 'GET') return await standingsJson(request, env);
+      if (path === '/board' && request.method === 'GET') return await standings(request, env, ctx);
+      if (path === '/api/board' && request.method === 'GET') return await standingsJson(request, env, ctx);
       if (path === '/api/resolve' && request.method === 'GET') return await resolveOnly(request, env, path);
       if (path.startsWith('/api/resolve/') && request.method === 'GET') return await resolveOnly(request, env, path);
       if (path.startsWith('/api/archive/') && request.method === 'GET') return await streamArchive(request, env, path);
@@ -543,40 +543,49 @@ async function streamArchive(request: Request, env: Env, path: string): Promise<
  * The Standings. One KV list() call feeds every board: the ranking numbers live
  * in each entry's metadata, so this costs no result reads and stays inside the
  * free plan's CPU budget however many repositories are cached.
+ *
+ * That one call still has to be paid for on every request, and the homepage now
+ * asks for these rankings on load — so both routes go through the edge cache.
+ * A minute of staleness is free: KV listings are eventually consistent by about
+ * the same margin, so a shorter TTL would buy nothing but KV operations.
  */
-async function standings(request: Request, env: Env): Promise<Response> {
-  const entries = await new ResultCache(env.LOC_KV).listForBoard();
-  const boards = buildBoards(entries);
-  const recent = recentlyCounted(entries);
-  const origin = canonicalOrigin(env, request);
-  return htmlResponse(boardPageHtml(boards, recent, dedupeByRepo(entries).length, origin), 200, {
-    'cache-control': 'public, max-age=300',
+async function standings(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  return atEdge(request, ctx, async () => {
+    const entries = await new ResultCache(env.LOC_KV).listForBoard();
+    const boards = buildBoards(entries);
+    const recent = recentlyCounted(entries);
+    const origin = canonicalOrigin(env, request);
+    return htmlResponse(boardPageHtml(boards, recent, dedupeByRepo(entries).length, origin), 200, {
+      'cache-control': `public, max-age=${BOARD_TTL_SECONDS}`,
+    });
   });
 }
 
 /** The same rankings as data, for anyone who would rather plot them. */
-async function standingsJson(_request: Request, env: Env): Promise<Response> {
-  const entries = await new ResultCache(env.LOC_KV).listForBoard();
-  return jsonResponse(
-    {
-      counted: dedupeByRepo(entries).length,
-      boards: buildBoards(entries).map((board) => ({
-        id: board.id,
-        title: board.title,
-        unit: board.unit,
-        rows: board.rows.map((row) => ({
-          owner: row.owner,
-          repo: row.repo,
-          sha: row.sha,
-          lines: row.lines,
-          stars: row.stars,
-          value: Number(row.value.toFixed(4)),
+async function standingsJson(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  return atEdge(request, ctx, async () => {
+    const entries = await new ResultCache(env.LOC_KV).listForBoard();
+    return jsonResponse(
+      {
+        counted: dedupeByRepo(entries).length,
+        boards: buildBoards(entries).map((board) => ({
+          id: board.id,
+          title: board.title,
+          unit: board.unit,
+          rows: board.rows.map((row) => ({
+            owner: row.owner,
+            repo: row.repo,
+            sha: row.sha,
+            lines: row.lines,
+            stars: row.stars,
+            value: Number(row.value.toFixed(4)),
+          })),
         })),
-      })),
-    },
-    200,
-    { 'cache-control': 'public, max-age=300' },
-  );
+      },
+      200,
+      { 'cache-control': `public, max-age=${BOARD_TTL_SECONDS}` },
+    );
+  });
 }
 
 /**
@@ -772,6 +781,36 @@ function toApiError(error: unknown): ApiError {
   }
   const message = error instanceof Error ? error.message : 'Unexpected error.';
   return { status: 500, code: 'internal', message };
+}
+
+/** How long a rendered board may be served from the edge without rebuilding. */
+const BOARD_TTL_SECONDS = 60;
+
+/**
+ * Serve a GET response from Cloudflare's edge cache, building it on a miss.
+ *
+ * Worker responses are not cached automatically, so without this every visitor
+ * to the homepage would spend a KV list operation on the leaderboard. With it,
+ * one visitor per minute per colo does, and the rest are served bytes.
+ *
+ * `caches` does not exist outside the Workers runtime (tests, `vite-node`), and
+ * a cache is an optimisation, never a correctness requirement — so an absent or
+ * failing cache degrades to simply building the response.
+ */
+async function atEdge(
+  request: Request,
+  ctx: ExecutionContext,
+  build: () => Promise<Response>,
+): Promise<Response> {
+  const cache = typeof caches !== 'undefined' ? caches.default : undefined;
+  if (!cache) return build();
+
+  const hit = await cache.match(request).catch(() => undefined);
+  if (hit) return hit;
+
+  const fresh = await build();
+  if (fresh.ok) ctx.waitUntil(cache.put(request, fresh.clone()).catch(() => undefined));
+  return fresh;
 }
 
 function jsonResponse(body: unknown, status = 200, extra: Record<string, string> = {}): Response {

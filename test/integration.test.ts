@@ -788,6 +788,15 @@ describe('the standings', () => {
     expect(html).toContain('not publishing it');
   });
 
+  it('lets the edge serve the boards, so a homepage visit is not a KV list', async () => {
+    // The homepage fetches /api/board on load. Without a cacheable response
+    // every visitor would spend a KV list operation on the leaderboard.
+    for (const path of ['/board', '/api/board']) {
+      const response = await call(path);
+      expect(response.headers.get('cache-control')).toBe('public, max-age=60');
+    }
+  });
+
   it('says so once when there is nothing to rank', async () => {
     const html = await (await call('/board')).text();
     expect(html).toContain('Nothing has been counted yet');

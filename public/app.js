@@ -19,6 +19,7 @@
   var resultsEl = document.getElementById('results');
   var authBlock = document.getElementById('auth-block');
   var quickpick = document.getElementById('quickpick');
+  var standingsEl = document.getElementById('standings');
 
   var source = null;
   var browserAbort = null;
@@ -297,8 +298,13 @@
       // Either the stream ended normally (we already closed it) or the
       // connection dropped. Only report the latter.
       if (source) {
-        fail('The connection to the counter dropped. Try again.');
+        // A dropped stream is also what a repository too big for the server's
+        // CPU budget looks like: Cloudflare kills the isolate and no handler
+        // here gets to explain. The browser has no such budget, so offer it
+        // rather than leaving a dead end.
+        fail('The connection to the counter dropped.');
         stopQuietly();
+        offerBrowserCount(input, ref, null, 'The server did not finish this one.');
       }
     };
   }
@@ -366,7 +372,7 @@
     return bigScriptLoading;
   }
 
-  function offerBrowserCount(input, ref, details) {
+  function offerBrowserCount(input, ref, details, lead) {
     if (typeof window.DecompressionStream !== 'function') {
       errorEl.textContent += ' This browser cannot decompress the archive, so counting it here is not possible either.';
       return;
@@ -375,7 +381,7 @@
       ? ' That means downloading roughly ' + Math.round(details.bytes / 1048576) + ' MB to this device'
       : ' That means downloading the repository archive to this device';
     resultsEl.innerHTML =
-      '<p>This repository is bigger than the server will process. ' +
+      '<p>' + (lead || 'This repository is bigger than the server will process.') + ' ' +
       'Your browser has no such limit &mdash; it can do the counting locally, ' +
       'using exactly the same code.' + size + ', so it is your call.</p>' +
       '<p><button type="button" id="big-count">Count it in my browser</button></p>' +
@@ -523,6 +529,58 @@
     .catch(function () {
       authBlock.textContent = 'Could not check sign-in status.';
     });
+
+  // ------------------------------------------------------------- standings
+  // A leaderboard nobody sees is not a leaderboard. The homepage is a static
+  // asset served straight from the edge, so the numbers are fetched after load
+  // rather than rendered into it — /api/board is cached at the edge for a
+  // minute, so this is cheap however many people arrive at once.
+
+  var STANDINGS_ROWS = 5;
+
+  function fmtPerStar(value) {
+    // Same scaling as the server uses: the leaders cluster below 1, where a
+    // single decimal makes the top of the board look like a tie.
+    if (value < 1) return value.toFixed(2);
+    if (value < 10) return value.toFixed(1);
+    return num(Math.round(value));
+  }
+
+  function renderStandings(data) {
+    if (!standingsEl || !data || !data.boards) return;
+    var lean = null;
+    for (var i = 0; i < data.boards.length; i++) {
+      if (data.boards[i].id === 'lean') lean = data.boards[i];
+    }
+    if (!lean || !lean.rows.length) return;
+
+    var rows = '';
+    for (var r = 0; r < lean.rows.length && r < STANDINGS_ROWS; r++) {
+      var row = lean.rows[r];
+      var name = row.owner + '/' + row.repo;
+      rows += '<tr><td class="n">' + (r + 1) + '</td>' +
+        '<td><a href="/r/' + encodeURIComponent(row.owner) + '/' + encodeURIComponent(row.repo) +
+        '/' + esc(row.sha) + '">' + esc(name) + '</a></td>' +
+        '<td class="n">' + num(row.lines) + '</td>' +
+        '<td class="n">' + num(row.stars) + '</td>' +
+        '<td class="n"><strong>' + esc(fmtPerStar(row.value)) + '</strong></td></tr>';
+    }
+
+    standingsEl.innerHTML =
+      '<h2>The Standings</h2>' +
+      '<p class="note">Fewest lines of code per GitHub star, out of ' + num(data.counted) +
+      ' repositories counted here. Count one and it joins.</p>' +
+      '<table><thead><tr><th class="n">#</th><th>Repository</th>' +
+      '<th class="n">Lines</th><th class="n">Stars</th><th class="n">lines / star</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table>' +
+      '<p class="note"><a href="/board">All six boards</a> &mdash; including the ones you would ' +
+      'rather not top.</p><hr>';
+  }
+
+  fetch('/api/board')
+    .then(function (response) { return response.ok ? response.json() : null; })
+    .then(renderStandings)
+    .catch(function () { /* A leaderboard is not worth an error message. */ });
 
   // --------------------------------------------------------------- startup
   var query = new URLSearchParams(window.location.search);

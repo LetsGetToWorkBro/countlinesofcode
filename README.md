@@ -391,11 +391,20 @@ live in each cache entry's *metadata*, which `list()` returns for free. That is
 what keeps the page inside the free plan's 10 ms CPU budget, and a test asserts
 rendering it makes no GitHub requests at all.
 
+The homepage shows the top five, fetched from `/api/board` after load so
+`index.html` stays a static asset served straight from the edge. Both board
+routes go through the Cache API for 60 seconds, so a burst of visitors costs one
+KV list per colo per minute rather than one per visit — Worker responses are not
+edge-cached unless you ask. A minute of staleness is free here anyway, since KV
+listings are eventually consistent by about the same margin.
+
 Ranking rules exist so the boards are not noise: forks are excluded, per-star
 boards need 25 stars, ratio boards need 1,000 lines, and a repository appears
 once at its most recent commit. Repositories too large for the server are
 counted in your browser and are **not** ranked — the server never sees those
-numbers and will not rank what it cannot verify.
+numbers and will not rank what it cannot verify. That is why `MAX_COUNT_BYTES`
+matters beyond convenience: it decides what can be ranked at all, which is what
+the Workers Paid plan buys here (32 MiB of text, ~1M lines, ~4.8 s of CPU).
 
 Private repositories never appear on the boards or in the sitemap. They share
 the cache prefix both enumerate, so the listings fail closed: an entry is
