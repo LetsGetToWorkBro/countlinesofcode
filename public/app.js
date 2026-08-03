@@ -21,6 +21,13 @@
   var quickpick = document.getElementById('quickpick');
 
   var source = null;
+  var browserAbort = null;
+
+  /* Above this much countable text we ask before downloading, instead of just
+   * doing it. Measured: ~12 MB of text takes about 10s in a browser, which is
+   * fine when it is visible and interruptible. Beyond ~25 MB the download and
+   * the wait stop being something to spend on someone's behalf. */
+  var AUTO_BROWSER_MAX_BYTES = 25 * 1024 * 1024;
 
   // ---------------------------------------------------------------- helpers
   function esc(value) {
@@ -205,8 +212,26 @@
       source.close();
       source = null;
     }
+    if (browserAbort) {
+      browserAbort.abort();
+      browserAbort = null;
+    }
     setBusy(false);
     statusEl.textContent = 'Stopped.';
+  }
+
+  /* Whether to switch to browser counting without asking. The numbers are the
+   * same either way; what differs is that this spends the visitor's bandwidth
+   * and CPU, so it is only done when that cost is small and they are not on a
+   * connection that says otherwise. */
+  function shouldAutoCount(details) {
+    if (typeof window.DecompressionStream !== 'function') return false;
+    var conn = navigator.connection || {};
+    if (conn.saveData) return false;
+    if (/2g/.test(conn.effectiveType || '')) return false;
+    var bytes = details && details.bytes;
+    if (typeof bytes !== 'number') return true;
+    return bytes <= AUTO_BROWSER_MAX_BYTES;
   }
 
   function startCount(input, ref) {
@@ -238,9 +263,19 @@
     });
 
     source.addEventListener('failure', function (event) {
-      var payload = JSON.parse(event.data);
-      fail(payload.error.message, payload.error.code === 'too_large' ? '' : payload.error.hint);
-      if (payload.error.code === 'too_large') offerBrowserCount(input, ref);
+      var err = JSON.parse(event.data).error;
+
+      // Too big for the server is not a failure the visitor needs to act on:
+      // the browser can do it. Switch straight over, saying so as it happens,
+      // rather than showing red text and asking them to click again.
+      if (err.code === 'too_large' && shouldAutoCount(err.details)) {
+        stopQuietly();
+        runBrowserCount(input, ref, err.details);
+        return;
+      }
+
+      fail(err.message, err.code === 'too_large' ? '' : err.hint);
+      if (err.code === 'too_large') offerBrowserCount(input, ref, err.details);
       stopQuietly();
     });
 
@@ -317,28 +352,34 @@
     return bigScriptLoading;
   }
 
-  function offerBrowserCount(input, ref) {
+  function offerBrowserCount(input, ref, details) {
     if (typeof window.DecompressionStream !== 'function') {
       errorEl.textContent += ' This browser cannot decompress the archive, so counting it here is not possible either.';
       return;
     }
+    var size = details && typeof details.bytes === 'number'
+      ? ' That means downloading roughly ' + Math.round(details.bytes / 1048576) + ' MB to this device'
+      : ' That means downloading the repository archive to this device';
     resultsEl.innerHTML =
       '<p>This repository is bigger than the server will process. ' +
       'Your browser has no such limit &mdash; it can do the counting locally, ' +
-      'using exactly the same code.</p>' +
+      'using exactly the same code.' + size + ', so it is your call.</p>' +
       '<p><button type="button" id="big-count">Count it in my browser</button></p>' +
-      '<p class="note">Downloads the repository archive (can be large) and counts it on this page. ' +
-      'Nothing is uploaded, and the result is not cached or shareable.</p>';
+      '<p class="note">Nothing is uploaded, and the result is not cached or shareable.</p>';
     document.getElementById('big-count').addEventListener('click', function () {
-      runBrowserCount(input, ref);
+      runBrowserCount(input, ref, details);
     });
   }
 
-  function runBrowserCount(input, ref) {
+  function runBrowserCount(input, ref, details) {
     errorEl.textContent = '';
     resultsEl.innerHTML = '';
-    statusEl.textContent = 'Loading the browser counter…';
+    var approx = details && typeof details.bytes === 'number'
+      ? ' (about ' + Math.round(details.bytes / 1048576) + ' MB)'
+      : '';
+    statusEl.textContent = 'Too big for the server — counting it here instead' + approx + '…';
     setBusy(true);
+    browserAbort = typeof AbortController === 'function' ? new AbortController() : null;
 
     var params = new URLSearchParams();
     params.set('input', input);
@@ -356,24 +397,31 @@
         });
       })
       .then(function (resolved) {
-        statusEl.textContent = 'Downloading archive…';
+        statusEl.textContent = 'Downloading archive' + approx + '… (press Stop to cancel)';
         var url = '/api/archive/' + encodeURIComponent(resolved.owner) + '/' +
           encodeURIComponent(resolved.repo) + '/' + encodeURIComponent(resolved.sha);
         return window.LOC1999_BIG.countArchive(url, resolved, {
           includeLockfiles: optLockfiles.checked,
           includeVendored: optVendored.checked,
+          signal: browserAbort ? browserAbort.signal : undefined,
           onProgress: function (files) {
             statusEl.textContent = 'Counting files ' + files.toLocaleString() + '… (in your browser)';
           }
         });
       })
       .then(function (result) {
+        browserAbort = null;
         statusEl.textContent = 'Counted in ' + (result.duration_ms / 1000).toFixed(2) + 's, in your browser.';
         renderResults(result);
         setBusy(false);
       })
       .catch(function (error) {
+        browserAbort = null;
         setBusy(false);
+        if (error && error.name === 'AbortError') {
+          statusEl.textContent = 'Stopped.';
+          return;
+        }
         fail(error.message || 'Counting in the browser failed.');
       });
   }

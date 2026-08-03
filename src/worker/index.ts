@@ -13,7 +13,7 @@
  */
 
 import { ResultCache } from '../lib/cache';
-import { resolveTarget, runCount, type ProgressEvent } from '../lib/counter';
+import { resolveTarget, runCount, TooLargeError, type ProgressEvent } from '../lib/counter';
 import { GitHubClient, GitHubError } from '../lib/github';
 import { ParseError, parseRepoInput, isValidOwner, isValidRepo, isValidRef } from '../lib/parse-url';
 import { checkRateLimit, clientIp } from '../lib/ratelimit';
@@ -37,6 +37,8 @@ interface ApiError {
   code: string;
   message: string;
   hint?: string;
+  /** Structured detail, so clients can act rather than parse the message. */
+  details?: Record<string, number>;
 }
 
 export default {
@@ -317,7 +319,14 @@ async function streamCount(request: Request, env: Env, ctx: ExecutionContext): P
     } catch (error) {
       const mapped = toApiError(error);
       logEvent({ event: 'stream_error', code: mapped.code, message: mapped.message });
-      await send('failure', { error: { code: mapped.code, message: mapped.message, hint: mapped.hint } }).catch(
+      await send('failure', {
+        error: {
+          code: mapped.code,
+          message: mapped.message,
+          hint: mapped.hint,
+          ...(mapped.details ? { details: mapped.details } : {}),
+        },
+      }).catch(
         () => undefined,
       );
     } finally {
@@ -696,6 +705,9 @@ function toApiError(error: unknown): ApiError {
           status: 413,
           code: 'too_large',
           message: error.message,
+          // The page uses these to decide whether switching to browser counting
+          // is polite (a small download) or should be offered as a choice.
+          details: error instanceof TooLargeError ? { bytes: error.bytes, limit: error.limit } : {},
           hint:
             'Count it from the front page instead: your browser has no such limit, ' +
             'and it will offer to do the counting there.',
@@ -725,7 +737,14 @@ function jsonResponse(body: unknown, status = 200, extra: Record<string, string>
 
 function jsonError(error: ApiError): Response {
   return jsonResponse(
-    { error: { code: error.code, message: error.message, ...(error.hint ? { hint: error.hint } : {}) } },
+    {
+      error: {
+        code: error.code,
+        message: error.message,
+        ...(error.hint ? { hint: error.hint } : {}),
+        ...(error.details ? { details: error.details } : {}),
+      },
+    },
     error.status,
     { 'cache-control': 'no-store' },
   );

@@ -26,6 +26,8 @@ export interface BrowserCountOptions {
   includeVendored?: boolean;
   maxFileBytes?: number;
   onProgress?: (files: number, bytes: number) => void;
+  /** Lets the page's Stop button abort the download and the counting. */
+  signal?: AbortSignal;
 }
 
 export interface ResolvedRepo {
@@ -65,7 +67,7 @@ export async function countArchive(
     other: 0,
   };
 
-  const response = await fetch(archiveUrl);
+  const response = await fetch(archiveUrl, options.signal ? { signal: options.signal } : {});
   if (!response.ok) {
     let message = `Could not download the archive (HTTP ${response.status}).`;
     try {
@@ -98,6 +100,7 @@ export async function countArchive(
   };
 
   for await (const entry of readTar(gunzipStream(response.body), { wanted })) {
+    if (options.signal?.aborted) throw new DOMException('Stopped.', 'AbortError');
     if (!entry.data) continue;
     const path = stripArchiveRoot(entry.path);
     if (path === null) continue;
