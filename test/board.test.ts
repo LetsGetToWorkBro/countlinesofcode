@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MIN_FILES_FOR_AVERAGE,
   MIN_LINES_FOR_RATIO,
-  MIN_STARS,
   buildBoards,
+  commentShare,
   dedupeByRepo,
-  formatPerStar,
-  linesPerStar,
+  linesPerFile,
   recentlyCounted,
-  standingFor,
   type BoardEntry,
 } from '../src/lib/board';
 
@@ -20,7 +19,7 @@ function entry(over: Partial<BoardEntry> & Pick<BoardEntry, 'owner' | 'repo'>): 
     comment: 0,
     blank: 0,
     files: 100,
-    stars: 1_000,
+    stars: 0,
     notYours: 0,
     fork: false,
     countedAt: '2026-01-01T00:00:00.000Z',
@@ -53,59 +52,34 @@ describe('dedupeByRepo', () => {
   });
 });
 
-describe('linesPerStar', () => {
-  it('is lines divided by stars', () => {
-    expect(linesPerStar(entry({ owner: 'a', repo: 'b', lines: 500, stars: 1_000 }))).toBe(0.5);
-  });
-
-  it('is infinite with no stars, which keeps it off every board', () => {
-    expect(linesPerStar(entry({ owner: 'a', repo: 'b', stars: 0 }))).toBe(Infinity);
-  });
-});
-
-describe('formatPerStar', () => {
-  it('keeps the leaders distinguishable instead of a wall of 0.1', () => {
-    expect([0.047, 0.09, 0.114, 0.2].map(formatPerStar)).toEqual(['0.05', '0.09', '0.11', '0.20']);
-  });
-
-  it('drops precision as the numbers grow', () => {
-    expect(formatPerStar(3.14)).toBe('3.1');
-    expect(formatPerStar(12.7)).toBe('13');
-    expect(formatPerStar(9_120.4)).toBe('9,120');
-  });
-});
-
 describe('buildBoards', () => {
-  it('ranks lean ascending and heavy descending on the same measurement', () => {
-    const entries = [
-      entry({ owner: 'a', repo: 'lean', lines: 1_000, stars: 100_000 }),
-      entry({ owner: 'a', repo: 'middle', lines: 50_000, stars: 10_000 }),
-      entry({ owner: 'a', repo: 'heavy', lines: 900_000, stars: 100 }),
-    ];
-    expect(rowsOf(entries, 'lean')[0]).toBe('a/lean');
-    expect(rowsOf(entries, 'heavy')[0]).toBe('a/heavy');
+  it('ranks a repository with no stars at all', () => {
+    // The whole point of dropping the per-star boards: a personal project that
+    // nobody has starred is exactly what gets counted here.
+    const rows = rowsOf([entry({ owner: 'someone', repo: 'weekend-project', stars: 0 })], 'biggest');
+    expect(rows).toEqual(['someone/weekend-project']);
+  });
+
+  it('has no board that depends on GitHub popularity', () => {
+    const ids = buildBoards([entry({ owner: 'a', repo: 'b' })]).map((b) => b.id);
+    expect(ids).not.toContain('lean');
+    expect(ids).not.toContain('heavy');
+    for (const board of buildBoards([entry({ owner: 'a', repo: 'b' })])) {
+      expect(board.unit).not.toMatch(/star/);
+    }
   });
 
   it('excludes forks from every board', () => {
     const entries = [
-      entry({ owner: 'a', repo: 'fork', lines: 1, stars: 100_000, fork: true, notYours: 99 }),
-      entry({ owner: 'a', repo: 'own', lines: 5_000, stars: 100, notYours: 1 }),
+      entry({ owner: 'a', repo: 'fork', lines: 900_000, fork: true, notYours: 99, files: 50 }),
+      entry({ owner: 'a', repo: 'own', lines: 5_000, notYours: 1, files: 50 }),
     ];
     for (const board of buildBoards(entries)) {
       expect(board.rows.map((r) => r.repo)).not.toContain('fork');
     }
   });
 
-  it('keeps repositories below the star floor off per-star boards only', () => {
-    const entries = [
-      entry({ owner: 'a', repo: 'obscure', lines: 10, stars: MIN_STARS - 1 }),
-      entry({ owner: 'a', repo: 'known', lines: 100_000, stars: MIN_STARS }),
-    ];
-    expect(rowsOf(entries, 'lean')).toEqual(['a/known']);
-    expect(rowsOf(entries, 'biggest')).toContain('a/obscure');
-  });
-
-  it('keeps tiny repositories off the comment-ratio boards', () => {
+  it('keeps tiny repositories off the ratio boards', () => {
     const tiny = entry({
       owner: 'a',
       repo: 'tiny',
@@ -115,6 +89,12 @@ describe('buildBoards', () => {
     const real = entry({ owner: 'a', repo: 'real', lines: 10_000, comment: 1_000 });
     expect(rowsOf([tiny, real], 'documented')).toEqual(['a/real']);
     expect(rowsOf([tiny, real], 'silent')).toEqual(['a/real']);
+  });
+
+  it('needs enough files before averaging a file length', () => {
+    const few = entry({ owner: 'a', repo: 'few', lines: 9_000, files: MIN_FILES_FOR_AVERAGE - 1 });
+    const many = entry({ owner: 'a', repo: 'many', lines: 9_000, files: MIN_FILES_FOR_AVERAGE });
+    expect(rowsOf([few, many], 'dense')).toEqual(['a/many']);
   });
 
   it('ranks borrowed code by skipped files, and only when there are any', () => {
@@ -143,6 +123,17 @@ describe('buildBoards', () => {
   });
 });
 
+describe('measurements', () => {
+  it('reports comment share as a percentage of all lines', () => {
+    expect(commentShare(entry({ owner: 'a', repo: 'b', lines: 200, comment: 50 }))).toBe(25);
+  });
+
+  it('averages file length, and survives a repository with no files', () => {
+    expect(linesPerFile(entry({ owner: 'a', repo: 'b', lines: 500, files: 20 }))).toBe(25);
+    expect(linesPerFile(entry({ owner: 'a', repo: 'b', files: 0 }))).toBe(0);
+  });
+});
+
 describe('recentlyCounted', () => {
   it('is newest first and respects the limit', () => {
     const entries = [
@@ -154,29 +145,8 @@ describe('recentlyCounted', () => {
   });
 
   it('includes forks, because it is a log and not a ranking', () => {
-    const entries = [entry({ owner: 'a', repo: 'fork', fork: true })];
-    expect(recentlyCounted(entries).map((e) => e.repo)).toEqual(['fork']);
-  });
-});
-
-describe('standingFor', () => {
-  const entries = [
-    entry({ owner: 'a', repo: 'one', lines: 1_000, stars: 100_000 }),
-    entry({ owner: 'a', repo: 'two', lines: 10_000, stars: 100_000 }),
-    entry({ owner: 'a', repo: 'three', lines: 100_000, stars: 100_000 }),
-  ];
-
-  it('reports rank out of the qualifying field', () => {
-    expect(standingFor(entries, 'a', 'two')).toEqual({ rank: 2, of: 3, value: 0.1 });
-  });
-
-  it('matches the repository case-insensitively', () => {
-    expect(standingFor(entries, 'A', 'ONE')?.rank).toBe(1);
-  });
-
-  it('is null for a repository that does not qualify', () => {
-    const withObscure = [...entries, entry({ owner: 'a', repo: 'obscure', stars: 1 })];
-    expect(standingFor(withObscure, 'a', 'obscure')).toBeNull();
-    expect(standingFor(entries, 'a', 'never-counted')).toBeNull();
+    expect(recentlyCounted([entry({ owner: 'a', repo: 'fork', fork: true })]).map((e) => e.repo)).toEqual(
+      ['fork'],
+    );
   });
 });

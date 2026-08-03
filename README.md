@@ -146,6 +146,7 @@ src/lib/
   tar.ts           streaming tar reader + gunzip helper
   counter.ts       the pipeline (resolve -> tree -> content -> classify)
   board.ts         the standings: ranking rules, purely from cache metadata
+  challenges.ts    code golf: the challenge list and fewest-lines ranking
   cache.ts         KV keys and TTLs
   ratelimit.ts     per-IP fixed window
   schema.ts        zod contracts for every request and response
@@ -155,6 +156,7 @@ src/worker/
   auth.ts          GitHub OAuth + server-side session storage
   html.ts          server-rendered result and error pages
   board-html.ts    the standings page
+  golf-html.ts     the golf course and its per-challenge pages
   env.ts           bindings and tunables
 test/              unit + fixture-driven integration tests (no live network)
 ```
@@ -379,31 +381,67 @@ logs a message string only, and result payloads contain no credentials.
 
 ---
 
+## Code golf
+
+`/golf` is the leaderboard that means something. Ranking whole repositories
+against each other never did, because two repositories are not attempting the
+same thing — these are. Every entry on a challenge board solves the same stated
+problem (a URL shortener, a Markdown parser, a JSON parser, Game of Life,
+unbeatable tic-tac-toe, a static site generator), so the line count is finally
+worth arguing about.
+
+Ranked by **lines of code**, comments and blanks excluded: nobody should have to
+strip their comments to compete, and nobody should gain by it. Bytes break ties,
+which also means putting a whole program on one line wins the line column and
+looks absurd in the byte column beside it. One entry per repository, replaced
+when you submit again — the board shows what a repository is now, not the best
+it ever was.
+
+Nothing verifies that a submission works. The counter counts; the repository is
+linked so anyone can look. That is the whole enforcement mechanism and it is
+stated that way on the page.
+
+Challenges live in `src/lib/challenges.ts`, not in storage. There is no admin
+page and no way for one to appear without a commit — the cheapest possible
+defence against a leaderboard of junk categories.
+
+---
+
 ## The standings
 
-`/board` ranks everything anyone has counted, headlined by **lines of code per
-GitHub star** — low means a lot of attention for very little code, high means
-the opposite, and neither is an achievement. Five other boards cover sheer size,
-skipped vendored/generated files, and comment ratio at both ends.
+`/board` ranks everything counted here on things that should not matter: sheer
+size, average file length, comment ratio at both ends, blank-line share, and how
+many files were skipped as vendored or generated.
 
-It costs one KV `list()` call and zero result reads: the numbers needed to rank
-live in each cache entry's *metadata*, which `list()` returns for free. That is
-what keeps the page inside the free plan's 10 ms CPU budget, and a test asserts
-rendering it makes no GitHub requests at all.
+Nothing here ranks on GitHub stars. It used to, and it was wrong twice over: the
+board only contains repositories somebody actually counted on this site, and most
+of those are personal or obscure, so a per-star board sat empty while excluding
+exactly the repositories it was supposed to celebrate. Every measurement now comes
+from the counter itself, so a twelve-line project with no stars can top a board on
+the day it is written.
 
-The homepage shows the top five, fetched from `/api/board` after load so
+**Only counts driven from the page are eligible.** Calling `/api/count` still
+counts, caches and shares perfectly well; it just does not put anything on a
+board. This is a speed bump rather than authentication — the endpoint the page
+uses can be called by hand — and it exists because the board was once filled by
+a script walking the API, which is exactly what a leaderboard should not be.
+
+Both sections cost one KV `list()` call and zero result reads: the numbers needed
+to rank live in each entry's *metadata*, which `list()` returns for free. The
+homepage shows the challenges, fetched from `/api/golf` after load so
 `index.html` stays a static asset served straight from the edge. Both board
 routes go through the Cache API for 60 seconds, so a burst of visitors costs one
 KV list per colo per minute rather than one per visit — Worker responses are not
-edge-cached unless you ask. A minute of staleness is free here anyway, since KV
-listings are eventually consistent by about the same margin.
+edge-cached unless you ask.
 
-Ranking rules exist so the boards are not noise: forks are excluded, per-star
-boards need 25 stars, ratio boards need 1,000 lines, and a repository appears
-once at its most recent commit. Repositories too large for the server are
-counted in your browser and are **not** ranked — the server never sees those
-numbers and will not rank what it cannot verify. That is why `MAX_COUNT_BYTES`
-matters beyond convenience: it decides what can be ranked at all.
+Ranking rules: forks are excluded, ratio boards need 1,000 lines, per-file
+averages need 10 files, and a repository appears once at its most recent commit.
+Private repositories never appear on any board or in the sitemap; the listings
+fail closed, publishing an entry only if it recorded `private: false`.
+Repositories too large for the server are counted in your browser and are not
+ranked — the server never sees those numbers and will not rank what it cannot
+verify. That is why `MAX_COUNT_BYTES` matters beyond convenience: it decides
+what can be ranked at all.
 
 Raising it was tried and measured. At 32 MiB, repositories above roughly 2 MiB
 of text failed most requests with Cloudflare's `error code: 1102` — the isolate
@@ -412,10 +450,6 @@ CPU this deployment gets is far below the paid plan's 30 s, and `[limits]` is
 rejected at build time, so the cap stays at the measured-safe 2 MiB. The plan
 notes in `wrangler.toml` carry the numbers, and `test/config.test.ts` fails if
 the cap drifts back above them.
-
-Private repositories never appear on the boards or in the sitemap. They share
-the cache prefix both enumerate, so the listings fail closed: an entry is
-published only if it recorded `private: false`, never merely by omitting it.
 
 ---
 
@@ -451,6 +485,8 @@ GET  /api/meta                                  limits + versions
 GET  /r/{owner}/{repo}/{sha}                    shareable HTML result
 GET  /board                                     the standings (HTML)
 GET  /api/board                                 the standings (JSON)
+GET  /golf | /golf/{challenge}                  code golf (HTML)
+GET  /api/golf                                  challenges + standings (JSON)
 
 GET  /api/auth/login | /api/auth/callback | /api/auth/me | /api/auth/repos
 POST /api/auth/logout

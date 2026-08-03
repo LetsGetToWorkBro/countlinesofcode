@@ -35,8 +35,9 @@
     | Code                 |    98,112 |  81.5% |
     ...
     ------------------------------------------------------------
-    The Standings - fewest lines per star
-    | 1 | colinhacks/zod    |  1,911 |  0.04 |
+    Code Golf - one task, fewest lines wins
+    URL shortener        leader: 61 lines   4 entries
+    Markdown to HTML     no entries yet
     ...
     ------------------------------------------------------------
     Hosted on Cloudflare - Not affiliated with GitHub - ...
@@ -64,6 +65,16 @@
     <input type="text" id="ref-input" name="ref"
            autocapitalize="off" autocorrect="off" spellcheck="false"
            placeholder="(default branch)">
+  </p>
+  <p>
+    <label for="challenge-input">Golf challenge:</label>
+    <select id="challenge-input" name="challenge">
+      <option value="">(not entering one)</option>
+    </select>
+  </p>
+  <p id="challenge-help" class="note">
+    Optional. Pick one and this count is submitted to
+    <a href="/golf">that challenge's board</a>, where fewest lines wins.
   </p>
   <p>
     <button type="submit" id="submit-button">Count Lines</button>
@@ -96,9 +107,11 @@
 <hr>
 
 <!--
-  Filled in by app.js from /api/board after load, so this page stays a static
+  Filled in by app.js from /api/golf after load, so this page stays a static
   asset served straight from the edge. Empty and invisible if that fetch fails,
   which is the correct outcome: a leaderboard is not worth an error message.
+  The same fetch fills the challenge dropdown above, so the challenge list
+  lives in exactly one place — the server.
 -->
 <div id="standings"></div>
 
@@ -110,6 +123,7 @@
 
 <p class="footer">
 Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spite for bloat<br>
+<a href="/golf">code golf</a> |
 <a href="/board">the standings</a> |
 <a href="/how.html">how we count</a> |
 <a href="/api/meta">limits (json)</a> |

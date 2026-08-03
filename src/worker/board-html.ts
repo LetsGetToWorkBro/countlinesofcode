@@ -4,12 +4,11 @@
  */
 
 import type { Board, BoardEntry } from '../lib/board';
-import { MIN_STARS, formatPerStar } from '../lib/board';
 import { escapeHtml, num, page, siteFooter } from './html';
 
 function fmtValue(board: Board, value: number): string {
-  if (board.unit === 'lines / star') return formatPerStar(value);
-  if (board.unit === '% comments') return `${value.toFixed(1)}%`;
+  if (board.unit.startsWith('%')) return `${value.toFixed(1)}%`;
+  if (board.unit === 'lines / file') return value.toFixed(1);
   return num(Math.round(value));
 }
 
@@ -30,7 +29,7 @@ function boardTable(board: Board): string {
 <td class="n">${index + 1}</td>
 <td>${repoCell(entry)}</td>
 <td class="n">${num(entry.lines)}</td>
-<td class="n">${num(entry.stars)}</td>
+<td class="n">${num(entry.files)}</td>
 <td class="n"><strong>${escapeHtml(fmtValue(board, entry.value))}</strong></td>
 </tr>`,
     )
@@ -38,7 +37,7 @@ function boardTable(board: Board): string {
   return `<h3 id="${escapeHtml(board.id)}">${escapeHtml(board.title)}</h3>
 <p class="note">${escapeHtml(board.note)}</p>
 <table>
-<thead><tr><th class="n">#</th><th>Repository</th><th class="n">Lines</th><th class="n">Stars</th><th class="n">${escapeHtml(board.unit)}</th></tr></thead>
+<thead><tr><th class="n">#</th><th>Repository</th><th class="n">Lines</th><th class="n">Files</th><th class="n">${escapeHtml(board.unit)}</th></tr></thead>
 <tbody>
 ${rows}
 </tbody>
@@ -51,10 +50,10 @@ export function boardPageHtml(
   counted: number,
   origin: string,
 ): string {
-  const leader = boards.find((b) => b.id === 'lean')?.rows[0];
+  const leader = boards.find((b) => b.id === 'biggest')?.rows[0];
   const shareText = leader
-    ? `${leader.owner}/${leader.repo} is leading the standings at ${formatPerStar(leader.value)} lines of code per star.`
-    : 'Lines of code per GitHub star. The standings are open.';
+    ? `${leader.owner}/${leader.repo} is the biggest thing anyone has counted on LOC.1999: ${leader.lines.toLocaleString('en-US')} lines.`
+    : 'Every repository counted on LOC.1999, ranked by things that should not matter.';
   const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(`${origin}/board`)}`;
 
   // Six identical "nothing here yet" tables read as a broken page. Before
@@ -66,31 +65,37 @@ export function boardPageHtml(
 
   const recentRows = recent
     .map(
-      (entry) => `<tr><td>${repoCell(entry)}</td><td class="n">${num(entry.lines)}</td><td class="n">${num(entry.stars)}</td></tr>`,
+      (entry) => `<tr><td>${repoCell(entry)}</td><td class="n">${num(entry.lines)}</td><td class="n">${num(entry.files)}</td></tr>`,
     )
     .join('\n');
 
   return page(
-    'The Standings — Lines of Code per Star — LOC.1999',
+    'The Standings — repositories counted on LOC.1999',
     `<h1>The Standings</h1>
-<p class="tagline">Every repository anyone has counted, ranked by things that should not matter.</p>
+<p class="tagline">Everything counted here, ranked by things that should not matter.</p>
 <hr>
 
 <p>
-Lines of code per GitHub star. Low means a lot of attention for very little code.
-High means the opposite. Neither is an achievement, which is the point.
+Only repositories somebody actually counted on this site appear below, and every
+number comes from the counter itself &mdash; nothing here depends on how popular
+a repository is. A twelve-line project with no stars can top a board on the day
+it is written.
 </p>
 <p class="note">
-${num(counted)} repositories counted so far. Forks are excluded. Per-star boards need
-${num(MIN_STARS)} stars. Anything counted through this site joins automatically &mdash;
-<a href="/">count one</a> and see where it lands.
+${num(counted)} repositories counted so far. Forks are excluded. Counting one on the
+<a href="/">front page</a> adds it; calling the API does not.
+</p>
+<p>
+For rankings that actually mean something, see <a href="/golf">the golf course</a>
+&mdash; there every entry is solving the same stated problem, so the line count is
+worth arguing about.
 </p>
 
 ${tables}
 
 <h3>Counted recently</h3>
 <table>
-<thead><tr><th>Repository</th><th class="n">Lines</th><th class="n">Stars</th></tr></thead>
+<thead><tr><th>Repository</th><th class="n">Lines</th><th class="n">Files</th></tr></thead>
 <tbody>
 ${recentRows || '<tr><td colspan="3">Nothing yet.</td></tr>'}
 </tbody>
@@ -106,8 +111,8 @@ never sees those numbers, and it will not rank what it cannot verify.
 ${siteFooter()}`,
     {
       description:
-        'Every GitHub repository counted by LOC.1999, ranked by lines of code per star, ' +
-        'sheer size, comment ratio and how much of it nobody actually wrote.',
+        'Every GitHub repository counted on LOC.1999, ranked by sheer size, average ' +
+        'file length, comment ratio and how much of it nobody actually wrote.',
       canonical: `${origin}/board`,
     },
   );

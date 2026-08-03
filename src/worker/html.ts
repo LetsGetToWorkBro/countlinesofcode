@@ -4,7 +4,7 @@
  * exactly like the page the counter produced.
  */
 
-import { MIN_STARS, formatPerStar } from '../lib/board';
+import { findChallenge } from '../lib/challenges';
 import type { CountResult } from '../lib/schema';
 
 export function escapeHtml(value: string): string {
@@ -82,6 +82,7 @@ export function siteFooter(): string {
 <p class="footer">
 Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spite for bloat<br>
 <a href="/">count something</a> |
+<a href="/golf">code golf</a> |
 <a href="/board">the standings</a> |
 <a href="/how.html">how we count</a> |
 <a href="/security.html">connecting github</a> |
@@ -214,42 +215,45 @@ ${biggest}
 }
 
 export interface Standing {
+  challenge: string;
   rank: number;
   of: number;
-  value: number;
+  code: number;
 }
 
 /**
- * Where this repository sits on the boards, or why it is not on them. Telling
- * a private repository to "see the standings" is worse than saying nothing, and
- * so is blaming a missing rank on a star count that is plainly high enough.
+ * Where this repository placed on any golf challenge it was entered in.
+ *
+ * A repository nobody entered gets one line pointing at the challenges, because
+ * that is the only ranking on this site that means anything: every entry on a
+ * challenge board is solving the same stated problem.
  */
-function standingNote(result: CountResult, standing?: Standing | null): string {
-  if (standing) {
-    return `<p class="note">Ranked <strong>#${standing.rank}</strong> of ${num(standing.of)} on
-<a href="/board">the standings</a>, at ${escapeHtml(formatPerStar(standing.value))} lines of code per star.</p>`;
+function standingNote(standings: Standing[]): string {
+  if (standings.length === 0) {
+    return `<p class="note">Not entered in any <a href="/golf">golf challenge</a>. One task,
+fewest lines wins &mdash; that is the only board here where the number is worth arguing about.</p>`;
   }
-  if (result.repo_meta.private) {
-    return `<p class="note">Private, so it stays off <a href="/board">the standings</a>.
-Counting a repository is not publishing it.</p>`;
-  }
-  if (result.repo_meta.fork) {
-    return `<p class="note">A fork, so it is not ranked on <a href="/board">the standings</a> &mdash;
-ranking someone for code they copied is meaningless.</p>`;
-  }
-  if (result.repo_meta.stars < MIN_STARS) {
-    return `<p class="note">Not ranked per star: <a href="/board">the standings</a> need
-${num(MIN_STARS)} stars for that. It still counts toward the size boards.</p>`;
-  }
-  // Qualifies, but the listing has not caught up — KV listings are eventually
-  // consistent, so a first count shows up on the boards a moment later.
-  return `<p class="note">Joining <a href="/board">the standings</a> shortly &mdash; the boards
-catch up within a minute of a count.</p>`;
+  const lines = standings
+    .map((standing) => {
+      const challenge = findChallenge(standing.challenge);
+      const title = challenge ? challenge.title : standing.challenge;
+      return `<li><a href="/golf/${escapeHtml(standing.challenge)}">${escapeHtml(title)}</a>:
+<strong>#${standing.rank}</strong> of ${num(standing.of)}, at ${num(standing.code)} lines of code</li>`;
+    })
+    .join('\n');
+  return `<h3>Golf standings</h3>
+<ul>
+${lines}
+</ul>`;
 }
 
-export function resultPageHtml(result: CountResult, origin?: string, standing?: Standing | null): string {
+export function resultPageHtml(
+  result: CountResult,
+  origin?: string,
+  standings: Standing[] = [],
+): string {
   const t = result.totals;
-  const perStar = standingNote(result, standing);
+  const perStar = standingNote(standings);
   return page(
     `${result.full_name} — ${num(t.lines)} lines of code · LOC.1999`,
     `${siteHeader()}

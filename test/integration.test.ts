@@ -7,7 +7,6 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import worker from '../src/worker/index';
 import type { Env } from '../src/worker/env';
 import { CountResultSchema, type CountResult } from '../src/lib/schema';
-import { resultPageHtml } from '../src/worker/html';
 import {
   SAMPLE_EXPECTED,
   SAMPLE_REPO,
@@ -705,93 +704,54 @@ describe('oversized repositories, from a user\'s point of view', () => {
 });
 
 describe('the standings', () => {
-  it('lists a counted repository once it qualifies', async () => {
-    github.restore();
-    github = installFakeGitHub([{ ...SAMPLE_REPO, stars: 500 }]);
-    await countJson('/api/count/acme/widget');
-
+  it('lists a repository counted through the page', async () => {
+    await callStream('/api/stream?input=acme/widget');
     const html = await (await call('/board')).text();
     expect(html).toContain('The Standings');
     expect(html).toContain('acme/widget');
-    expect(html).toContain('lines / star');
   });
 
-  it('excludes repositories with too few stars from per-star boards', async () => {
-    github.restore();
-    github = installFakeGitHub([{ ...SAMPLE_REPO, stars: 1 }]);
+  it('ignores repositories counted through the API', async () => {
+    // The board is what people looked up here, not what a script walked through.
     await countJson('/api/count/acme/widget');
+    const body = (await (await call('/api/board')).json()) as {
+      counted: number;
+      boards: { rows: unknown[] }[];
+    };
+    expect(body.counted).toBe(0);
+    expect(body.boards.every((b) => b.rows.length === 0)).toBe(true);
+  });
 
+  it('promotes an API-counted repository once somebody visits it', async () => {
+    // The page count is a cache hit, so nothing would be rewritten without help.
+    await countJson('/api/count/acme/widget');
+    await callStream('/api/stream?input=acme/widget');
+    const body = (await (await call('/api/board')).json()) as { counted: number };
+    expect(body.counted).toBe(1);
+  });
+
+  it('ranks on the counter, never on stars', async () => {
+    github.restore();
+    github = installFakeGitHub([{ ...SAMPLE_REPO, stars: 0 }]);
+    await callStream('/api/stream?input=acme/widget');
     const body = (await (await call('/api/board')).json()) as {
       boards: { id: string; rows: { repo: string }[] }[];
     };
-    const lean = body.boards.find((b) => b.id === 'lean')!;
-    expect(lean.rows).toHaveLength(0);
-    // But it still shows on the board that has no star requirement.
+    // A repository with no stars at all still ranks: nothing here uses them.
     const biggest = body.boards.find((b) => b.id === 'biggest')!;
-    expect(biggest.rows.length).toBeGreaterThan(0);
+    expect(biggest.rows.map((r) => r.repo)).toContain('widget');
+    expect(body.boards.some((b) => b.id === 'lean' || b.id === 'heavy')).toBe(false);
   });
 
   it('costs one KV list and no GitHub requests', async () => {
-    await countJson('/api/count/acme/widget');
+    await callStream('/api/stream?input=acme/widget');
     const before = github.requests.length;
     await call('/board');
     expect(github.requests.length).toBe(before);
   });
 
-  it('tells a repository where it ranks, on its own page', async () => {
-    github.restore();
-    github = installFakeGitHub([{ ...SAMPLE_REPO, stars: 500 }]);
-    await countJson('/api/count/acme/widget');
-
-    const html = await (await call(`/r/acme/widget/${SAMPLE_REPO.sha}`)).text();
-    expect(html).toMatch(/Ranked <strong>#1<\/strong> of 1/);
-    expect(html).toContain('lines of code per star');
-  });
-
-  it('is reachable and indexable', async () => {
-    expect((await call('/board')).status).toBe(200);
-    const xml = await (await call('/sitemap.xml')).text();
-    expect(xml).toContain('<loc>https://loc.example/board</loc>');
-  });
-
-  it('tells a repository why it is not ranked, rather than just linking away', async () => {
-    github.restore();
-    github = installFakeGitHub([{ ...SAMPLE_REPO, stars: 1 }]);
-    await countJson('/api/count/acme/widget');
-    const html = await (await call(`/r/acme/widget/${SAMPLE_REPO.sha}`)).text();
-    expect(html).toContain('need');
-    expect(html).toContain('25 stars');
-  });
-
-  it('does not blame a missing rank on stars when the repository has plenty', async () => {
-    // Fresh count, listing not caught up yet: KV list is eventually consistent.
-    github.restore();
-    github = installFakeGitHub([{ ...SAMPLE_REPO, stars: 90_000 }]);
-    const result = await countJson('/api/count/acme/widget');
-    const html = resultPageHtml(result, 'https://loc.example', null);
-    expect(html).not.toContain('25 stars');
-    expect(html).toContain('catch up within a minute');
-  });
-
-  it('says a fork is excluded, and a private repository is not published', async () => {
-    github.restore();
-    github = installFakeGitHub([{ ...SAMPLE_REPO, stars: 500, fork: true }]);
-    const forked = await countJson('/api/count/acme/widget');
-    expect(resultPageHtml(forked, 'https://loc.example', null)).toMatch(/A fork, so it is not ranked/);
-
-    // A different name, or the second count is served the first one from cache.
-    github.restore();
-    github = installFakeGitHub([{ ...SAMPLE_REPO, repo: 'secret', stars: 500, private: true }]);
-    const secret = await countJson('/api/count/acme/secret');
-    const html = resultPageHtml(secret, 'https://loc.example', null);
-    expect(html).toContain('Private');
-    expect(html).toContain('not publishing it');
-  });
-
   it('lets the edge serve the boards, so a homepage visit is not a KV list', async () => {
-    // The homepage fetches /api/board on load. Without a cacheable response
-    // every visitor would spend a KV list operation on the leaderboard.
-    for (const path of ['/board', '/api/board']) {
+    for (const path of ['/board', '/api/board', '/golf', '/api/golf']) {
       const response = await call(path);
       expect(response.headers.get('cache-control')).toBe('public, max-age=60');
     }
@@ -800,31 +760,103 @@ describe('the standings', () => {
   it('says so once when there is nothing to rank', async () => {
     const html = await (await call('/board')).text();
     expect(html).toContain('Nothing has been counted yet');
-    // Not once per board — six empty tables read as a broken page.
     expect([...html.matchAll(/Nothing has been counted yet/g)]).toHaveLength(1);
-    expect(html).not.toContain('<tbody>\n<tr>\n<td class="n">1</td>');
   });
 
   it('never publishes a private repository', async () => {
-    // Private results share the cache prefix the boards and sitemap enumerate.
-    // Counting your own private repository must not announce it exists.
     github.restore();
     github = installFakeGitHub([
       { ...SAMPLE_REPO, owner: 'acme', repo: 'secret', stars: 500, private: true },
     ]);
-    await countJson('/api/count/acme/secret');
+    await callStream('/api/stream?input=acme/secret');
 
     const html = await (await call('/board')).text();
     expect(html).not.toContain('secret');
 
-    const body = (await (await call('/api/board')).json()) as {
-      counted: number;
-      boards: { rows: { repo: string }[] }[];
-    };
+    const body = (await (await call('/api/board')).json()) as { counted: number };
     expect(body.counted).toBe(0);
-    expect(body.boards.every((b) => b.rows.length === 0)).toBe(true);
 
     const xml = await (await call('/sitemap.xml')).text();
     expect(xml).not.toContain('secret');
+  });
+
+  it('is reachable and indexable', async () => {
+    expect((await call('/board')).status).toBe(200);
+    const xml = await (await call('/sitemap.xml')).text();
+    expect(xml).toContain('<loc>https://loc.example/board</loc>');
+  });
+});
+
+describe('code golf', () => {
+  it('lists the challenges', async () => {
+    const html = await (await call('/golf')).text();
+    expect(html).toContain('Code Golf');
+    expect(html).toContain('URL shortener');
+    expect(html).toContain('No entries yet.');
+  });
+
+  it('serves a page per challenge and 404s the rest', async () => {
+    const html = await (await call('/golf/markdown')).text();
+    expect(html).toContain('Markdown to HTML');
+    expect((await call('/golf/not-a-challenge')).status).toBe(404);
+  });
+
+  it('records an entry counted through the page with a challenge selected', async () => {
+    await callStream('/api/stream?input=acme/widget&challenge=markdown');
+    const body = (await (await call('/api/golf')).json()) as {
+      challenges: { id: string; entries: number; rows: { repo: string; code: number }[] }[];
+    };
+    const markdown = body.challenges.find((c) => c.id === 'markdown')!;
+    expect(markdown.entries).toBe(1);
+    expect(markdown.rows[0]!.repo).toBe('widget');
+  });
+
+  it('rejects a challenge that does not exist', async () => {
+    const { response } = await callStream('/api/stream?input=acme/widget&challenge=nope');
+    expect(response.status).toBe(400);
+  });
+
+  it('does not enter a repository nobody submitted', async () => {
+    await callStream('/api/stream?input=acme/widget');
+    const body = (await (await call('/api/golf')).json()) as {
+      challenges: { entries: number }[];
+    };
+    expect(body.challenges.every((c) => c.entries === 0)).toBe(true);
+  });
+
+  it('shows a repository where it placed, on its own page', async () => {
+    await callStream('/api/stream?input=acme/widget&challenge=markdown');
+    const html = await (await call(`/r/acme/widget/${SAMPLE_REPO.sha}`)).text();
+    expect(html).toContain('Golf standings');
+    expect(html).toMatch(/<strong>#1<\/strong> of 1/);
+    expect(html).toContain('Markdown to HTML');
+  });
+
+  it('points an unentered repository at the challenges', async () => {
+    await countJson('/api/count/acme/widget');
+    const html = await (await call(`/r/acme/widget/${SAMPLE_REPO.sha}`)).text();
+    expect(html).toContain('Not entered in any');
+    expect(html).toContain('/golf');
+  });
+
+  it('keeps private repositories and forks off the challenge boards', async () => {
+    github.restore();
+    github = installFakeGitHub([{ ...SAMPLE_REPO, repo: 'hidden', private: true }]);
+    await callStream('/api/stream?input=acme/hidden&challenge=markdown');
+
+    github.restore();
+    github = installFakeGitHub([{ ...SAMPLE_REPO, repo: 'copied', fork: true }]);
+    await callStream('/api/stream?input=acme/copied&challenge=markdown');
+
+    const body = (await (await call('/api/golf')).json()) as {
+      challenges: { id: string; entries: number }[];
+    };
+    expect(body.challenges.find((c) => c.id === 'markdown')!.entries).toBe(0);
+  });
+
+  it('is reachable and indexable', async () => {
+    const xml = await (await call('/sitemap.xml')).text();
+    expect(xml).toContain('<loc>https://loc.example/golf</loc>');
+    expect(xml).toContain('<loc>https://loc.example/golf/markdown</loc>');
   });
 });

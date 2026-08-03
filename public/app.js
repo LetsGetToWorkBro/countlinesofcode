@@ -20,6 +20,7 @@
   var authBlock = document.getElementById('auth-block');
   var quickpick = document.getElementById('quickpick');
   var standingsEl = document.getElementById('standings');
+  var challengeInput = document.getElementById('challenge-input');
 
   var source = null;
   var browserAbort = null;
@@ -79,6 +80,10 @@
   }
 
   // ------------------------------------------------------------- rendering
+  /* The challenge selected when this count started, so the result can say what
+   * it was entered in without asking the server again. */
+  var submittedTo = null;
+
   function renderResults(result) {
     var t = result.totals;
     var shortSha = result.sha.slice(0, 10);
@@ -184,13 +189,19 @@
         '<a href="/api/count/' + esc(result.owner) + '/' + esc(result.repo) + '?ref=' +
         esc(result.sha) + '">JSON</a></p>';
       if (result.repo_meta.private) {
-        html += '<p class="note">Private, so it stays off <a href="/board">the standings</a>. ' +
-          'Counting a repository is not publishing it.</p>';
+        html += '<p class="note">Private, so it stays off <a href="/board">the standings</a> ' +
+          'and out of any challenge. Counting a repository is not publishing it.</p>';
       } else if (result.repo_meta.fork) {
         html += '<p class="note">A fork, so it is listed but not ranked on ' +
-          '<a href="/board">the standings</a>.</p>';
+          '<a href="/board">the standings</a>, and cannot enter a challenge &mdash; ' +
+          'submitting somebody else\'s solution is not entering.</p>';
+      } else if (submittedTo) {
+        html += '<p class="note">Entered in <a href="/golf/' + esc(submittedTo.id) + '">' +
+          esc(submittedTo.title) + '</a> at <strong>' + num(result.totals.code) +
+          '</strong> lines of code. Push a shorter one and count it again to replace it.</p>';
       } else {
-        html += '<p class="note">Now on <a href="/board">the standings</a>.</p>';
+        html += '<p class="note">Now on <a href="/board">the standings</a>. ' +
+          'To enter a <a href="/golf">golf challenge</a>, pick one above and count again.</p>';
       }
     }
 
@@ -219,6 +230,8 @@
     if (optLockfiles.checked) params.set('lockfiles', '1');
     if (optVendored.checked) params.set('vendored', '1');
     if (optFresh.checked) params.set('fresh', '1');
+    var challenge = challengeInput && challengeInput.value;
+    if (challenge) params.set('challenge', challenge);
     return params.toString();
   }
 
@@ -254,6 +267,7 @@
     resultsEl.innerHTML = '';
     statusEl.textContent = 'Starting…';
     setBusy(true);
+    submittedTo = challengeFor(challengeInput && challengeInput.value);
 
     var query = buildQuery(input, ref);
 
@@ -327,7 +341,8 @@
         ref: ref || undefined,
         includeLockfiles: optLockfiles.checked,
         includeVendored: optVendored.checked,
-        fresh: optFresh.checked
+        fresh: optFresh.checked,
+        challenge: (challengeInput && challengeInput.value) || undefined
       })
     })
       .then(function (response) {
@@ -530,56 +545,64 @@
       authBlock.textContent = 'Could not check sign-in status.';
     });
 
-  // ------------------------------------------------------------- standings
-  // A leaderboard nobody sees is not a leaderboard. The homepage is a static
-  // asset served straight from the edge, so the numbers are fetched after load
-  // rather than rendered into it — /api/board is cached at the edge for a
-  // minute, so this is cheap however many people arrive at once.
+  // ------------------------------------------------------------------ golf
+  // The challenge list and its standings come from the server in one request,
+  // which also fills the dropdown above — so the challenges are defined in
+  // exactly one place, and the homepage stays a static asset.
 
-  var STANDINGS_ROWS = 5;
+  var challenges = [];
 
-  function fmtPerStar(value) {
-    // Same scaling as the server uses: the leaders cluster below 1, where a
-    // single decimal makes the top of the board look like a tie.
-    if (value < 1) return value.toFixed(2);
-    if (value < 10) return value.toFixed(1);
-    return num(Math.round(value));
+  function fillChallengePicker() {
+    if (!challengeInput) return;
+    for (var i = 0; i < challenges.length; i++) {
+      var option = document.createElement('option');
+      option.value = challenges[i].id;
+      option.textContent = challenges[i].title;
+      challengeInput.appendChild(option);
+    }
+    // Arriving from a challenge page preselects it, so the link does the work.
+    var wanted = new URLSearchParams(window.location.search).get('challenge');
+    if (wanted) challengeInput.value = wanted;
   }
 
-  function renderStandings(data) {
-    if (!standingsEl || !data || !data.boards) return;
-    var lean = null;
-    for (var i = 0; i < data.boards.length; i++) {
-      if (data.boards[i].id === 'lean') lean = data.boards[i];
+  function challengeFor(id) {
+    if (!id) return null;
+    for (var i = 0; i < challenges.length; i++) {
+      if (challenges[i].id === id) return challenges[i];
     }
-    if (!lean || !lean.rows.length) return;
+    return null;
+  }
 
+  function renderGolf() {
+    if (!standingsEl || !challenges.length) return;
     var rows = '';
-    for (var r = 0; r < lean.rows.length && r < STANDINGS_ROWS; r++) {
-      var row = lean.rows[r];
-      var name = row.owner + '/' + row.repo;
-      rows += '<tr><td class="n">' + (r + 1) + '</td>' +
-        '<td><a href="/r/' + encodeURIComponent(row.owner) + '/' + encodeURIComponent(row.repo) +
-        '/' + esc(row.sha) + '">' + esc(name) + '</a></td>' +
-        '<td class="n">' + num(row.lines) + '</td>' +
-        '<td class="n">' + num(row.stars) + '</td>' +
-        '<td class="n"><strong>' + esc(fmtPerStar(row.value)) + '</strong></td></tr>';
+    for (var i = 0; i < challenges.length; i++) {
+      var c = challenges[i];
+      var leader = c.rows && c.rows[0];
+      rows += '<tr><td><a href="/golf/' + esc(c.id) + '">' + esc(c.title) + '</a><br>' +
+        '<span class="note">' + esc(c.brief) + '</span></td>' +
+        '<td class="n">' + (leader ? '<strong>' + num(leader.code) + '</strong>' : '&mdash;') + '</td>' +
+        '<td class="n">' + num(c.entries) + '</td></tr>';
     }
-
     standingsEl.innerHTML =
-      '<h2>The Standings</h2>' +
-      '<p class="note">Fewest lines of code per GitHub star, out of ' + num(data.counted) +
-      ' repositories counted here. Count one and it joins.</p>' +
-      '<table><thead><tr><th class="n">#</th><th>Repository</th>' +
-      '<th class="n">Lines</th><th class="n">Stars</th><th class="n">lines / star</th></tr></thead>' +
-      '<tbody>' + rows + '</tbody></table>' +
-      '<p class="note"><a href="/board">All six boards</a> &mdash; including the ones you would ' +
-      'rather not top.</p><hr>';
+      '<h2>Code Golf</h2>' +
+      '<p class="note">One task. Fewest lines wins. Pick one above before counting ' +
+      'and your repository joins that board.</p>' +
+      '<table><thead><tr><th>Challenge</th><th class="n">Best</th>' +
+      '<th class="n">Entries</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      '<p class="note"><a href="/golf">The rules</a> &middot; ' +
+      '<a href="/board">the standings</a> rank everything counted here on things ' +
+      'that should not matter.</p><hr>';
   }
 
-  fetch('/api/board')
+  fetch('/api/golf')
     .then(function (response) { return response.ok ? response.json() : null; })
-    .then(renderStandings)
+    .then(function (data) {
+      if (!data || !data.challenges) return;
+      challenges = data.challenges;
+      fillChallengePicker();
+      renderGolf();
+    })
     .catch(function () { /* A leaderboard is not worth an error message. */ });
 
   // --------------------------------------------------------------- startup

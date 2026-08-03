@@ -11,6 +11,7 @@
  */
 
 import type { BoardEntry } from './board';
+import type { GolfEntry } from './challenges';
 import type { CountOptions, CountResult } from './schema';
 import { CountResultSchema } from './schema';
 import { COUNTER_VERSION } from './version';
@@ -51,6 +52,51 @@ interface ResultMetadata {
    * below fail closed rather than assuming public.
    */
   private?: boolean;
+  /**
+   * How the count was asked for. Only `site` — a count driven by somebody
+   * actually using the page — is eligible for the leaderboards. Scripting the
+   * API still counts, caches and shares perfectly well; it just does not fill
+   * the board with repositories nobody visited.
+   *
+   * This is a speed bump, not authentication: the endpoint the page uses can be
+   * called by hand. It exists to stop the board being *accidentally* stuffed,
+   * which is precisely how it got stuffed the first time.
+   */
+  via?: 'site' | 'api';
+}
+
+interface GolfMetadata {
+  owner?: string;
+  repo?: string;
+  sha?: string;
+  code?: number;
+  lines?: number;
+  bytes?: number;
+  files?: number;
+  language?: string;
+  counted_at?: string;
+}
+
+/**
+ * Golf entries are keyed by challenge and repository, not by commit: a new
+ * attempt at the same challenge replaces the old one rather than stacking up,
+ * so nobody climbs a board by submitting the same repository ten times.
+ *
+ * Deliberately not versioned with COUNTER_VERSION. A submission is a record of
+ * someone entering a competition; a counter bump should not wipe the standings.
+ */
+export const GOLF_PREFIX = 'golf:';
+
+export function golfKey(challenge: string, owner: string, repo: string): string {
+  return `${GOLF_PREFIX}${challenge}:${owner.toLowerCase()}/${repo.toLowerCase()}`;
+}
+
+export function parseGolfKey(
+  key: string,
+): { challenge: string; owner: string; repo: string } | null {
+  const match = /^golf:([a-z0-9-]+):([^/]+)\/(.+)$/.exec(key);
+  if (!match) return null;
+  return { challenge: match[1]!, owner: match[2]!, repo: match[3]! };
 }
 
 /** Inverse of `resultKey`, for default-option entries only. */
@@ -78,7 +124,7 @@ export class ResultCache {
     return parsed.data;
   }
 
-  async put(result: CountResult): Promise<void> {
+  async put(result: CountResult, via: 'site' | 'api' = 'api'): Promise<void> {
     if (!this.kv) return;
     const key = resultKey(result.owner, result.repo, result.sha, result.options);
     await this.kv.put(key, JSON.stringify(result), {
@@ -102,8 +148,21 @@ export class ResultCache {
         // Files present but not written here: vendored plus generated.
         not_yours: result.skipped.vendored + result.skipped.generated,
         private: result.repo_meta.private,
+        via,
       },
     });
+  }
+
+  /**
+   * Promote an already-cached result to board-eligible.
+   *
+   * A repository counted through the API first and visited afterwards would
+   * otherwise never qualify: the second count is a cache hit, so `put` never
+   * runs. Rewriting the entry costs one KV write, and only the first time.
+   */
+  async markFromSite(result: CountResult): Promise<void> {
+    if (!this.kv) return;
+    await this.put(result, 'site');
   }
 
   /**
@@ -159,6 +218,9 @@ export class ResultCache {
       const meta = key.metadata;
       if (!parsed || !meta || typeof meta.lines !== 'number') continue;
       if (meta.private !== false) continue;
+      // Boards show what people actually looked up here, not what a script
+      // walked through the API.
+      if (meta.via !== 'site') continue;
       out.push({
         owner: meta.owner ?? parsed.owner,
         repo: meta.repo ?? parsed.repo,
@@ -175,6 +237,58 @@ export class ResultCache {
       });
     }
     return out;
+  }
+
+  /**
+   * Golf submissions, all challenges, from one list() call.
+   *
+   * Same trick as the boards: everything needed to rank lives in metadata, so
+   * the whole golf course costs one KV operation and no reads.
+   */
+  async listGolf(limit = 1000): Promise<GolfEntry[]> {
+    if (!this.kv) return [];
+    const listed = await this.kv.list<GolfMetadata>({
+      prefix: GOLF_PREFIX,
+      limit: Math.min(1000, limit),
+    });
+    const out: GolfEntry[] = [];
+    for (const key of listed.keys) {
+      const meta = key.metadata;
+      if (!meta || typeof meta.code !== 'number') continue;
+      const parsed = parseGolfKey(key.name);
+      if (!parsed) continue;
+      out.push({
+        challenge: parsed.challenge,
+        owner: meta.owner ?? parsed.owner,
+        repo: meta.repo ?? parsed.repo,
+        sha: meta.sha ?? '',
+        code: meta.code,
+        lines: meta.lines ?? meta.code,
+        bytes: meta.bytes ?? 0,
+        files: meta.files ?? 0,
+        language: meta.language ?? '',
+        countedAt: meta.counted_at ?? '',
+      });
+    }
+    return out;
+  }
+
+  /** Record a golf submission. Newest count for a repository wins at rank time. */
+  async putGolf(entry: GolfEntry): Promise<void> {
+    if (!this.kv) return;
+    await this.kv.put(golfKey(entry.challenge, entry.owner, entry.repo), JSON.stringify(entry), {
+      metadata: {
+        owner: entry.owner,
+        repo: entry.repo,
+        sha: entry.sha,
+        code: entry.code,
+        lines: entry.lines,
+        bytes: entry.bytes,
+        files: entry.files,
+        language: entry.language,
+        counted_at: entry.countedAt,
+      },
+    });
   }
 
   async getRefSha(owner: string, repo: string, ref: string): Promise<string | null> {

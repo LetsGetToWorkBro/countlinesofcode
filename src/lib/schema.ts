@@ -28,6 +28,12 @@ export const CountRequestSchema = z
     includeVendored: z.boolean().optional(),
     /** Skip the cache and recount. */
     fresh: z.boolean().optional(),
+    /** Golf challenge to submit this repository to. Validated against the list. */
+    challenge: z
+      .string()
+      .max(64)
+      .regex(/^[a-z0-9-]+$/, 'Bad challenge id.')
+      .optional(),
   })
   .refine((value) => Boolean(value.url) || (Boolean(value.owner) && Boolean(value.repo)), {
     message: 'Provide either url or owner+repo.',

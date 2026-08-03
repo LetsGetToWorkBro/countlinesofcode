@@ -9,11 +9,13 @@
  *   GET  /api/resolve?input= | /:owner/:repo   repo + pinned sha, no counting
  *   GET  /api/archive/:owner/:repo/:sha   tarball passthrough for browser mode
  *   GET  /r/:owner/:repo/:sha             server-rendered 1999 results page
+ *   GET  /golf | /golf/:challenge         code golf: one task, fewest lines wins
  *   *                                     static assets from ./public
  */
 
-import { buildBoards, dedupeByRepo, recentlyCounted, standingFor } from '../lib/board';
+import { buildBoards, dedupeByRepo, recentlyCounted } from '../lib/board';
 import { ResultCache } from '../lib/cache';
+import { buildChallengeBoards, findChallenge, placeOf, rankEntries, CHALLENGES, MIN_CODE_LINES, type GolfEntry } from '../lib/challenges';
 import { resolveTarget, runCount, TooLargeError, type ProgressEvent } from '../lib/counter';
 import { GitHubClient, GitHubError } from '../lib/github';
 import { ParseError, parseRepoInput, isValidOwner, isValidRepo, isValidRef } from '../lib/parse-url';
@@ -23,7 +25,8 @@ import { COUNTER_VERSION } from '../lib/version';
 import { handleCallback, handleLogin, handleLogout, handleMe, handleMyRepos, loadSession, oauthConfigured, scopesFor } from './auth';
 import { limitsFromEnv, rateLimitPerMinute, type Env } from './env';
 import { boardPageHtml } from './board-html';
-import { errorPage, resultPageHtml } from './html';
+import { challengePageHtml, golfIndexHtml } from './golf-html';
+import { errorPage, resultPageHtml, type Standing } from './html';
 
 const SECURITY_HEADERS: Record<string, string> = {
   'x-content-type-options': 'nosniff',
@@ -63,6 +66,9 @@ export default {
       if (path === '/sitemap.xml' && request.method === 'GET') return await sitemap(request, env);
       if (path === '/board' && request.method === 'GET') return await standings(request, env, ctx);
       if (path === '/api/board' && request.method === 'GET') return await standingsJson(request, env, ctx);
+      if (path === '/golf' && request.method === 'GET') return await golfIndex(request, env, ctx);
+      if (path.startsWith('/golf/') && request.method === 'GET') return await golfChallenge(request, env, ctx, path);
+      if (path === '/api/golf' && request.method === 'GET') return await golfJson(request, env, ctx);
       if (path === '/api/resolve' && request.method === 'GET') return await resolveOnly(request, env, path);
       if (path.startsWith('/api/resolve/') && request.method === 'GET') return await resolveOnly(request, env, path);
       if (path.startsWith('/api/archive/') && request.method === 'GET') return await streamArchive(request, env, path);
@@ -99,6 +105,13 @@ interface Target {
   ref?: string;
   options: CountOptions;
   fresh: boolean;
+  /**
+   * Whether a person drove this from the page or something called the API.
+   * Only `site` counts reach the leaderboards — see ResultCache's `via`.
+   */
+  via: 'site' | 'api';
+  /** Golf challenge this count is being submitted to, if any. */
+  challenge?: string;
 }
 
 async function postCount(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -132,6 +145,11 @@ async function postCount(request: Request, env: Env, ctx: ExecutionContext): Pro
         includeVendored: input.includeVendored ?? false,
       }),
       fresh: input.fresh ?? false,
+      // The page posts here when the browser has no EventSource. Anything else
+      // posting here is indistinguishable from that, which is stated plainly in
+      // ResultCache's `via`: this is a speed bump, not authentication.
+      via: 'site',
+      ...(input.challenge ? { challenge: input.challenge } : {}),
     };
   } catch (error) {
     if (error instanceof ParseError) {
@@ -178,7 +196,50 @@ function targetFromQuery(url: URL, owner: string, repo: string): Target | ApiErr
       includeVendored: url.searchParams.get('vendored') === '1',
     }),
     fresh: url.searchParams.get('fresh') === '1',
+    // The shareable, scriptable endpoint. Counting through it is entirely fine;
+    // it just does not put anything on a leaderboard.
+    via: 'api',
   };
+}
+
+/**
+ * A repository counted through the API and then visited on the page would never
+ * qualify for the boards: the second count is a cache hit, so nothing is
+ * rewritten. This promotes the cached entry and records any golf submission.
+ */
+async function afterSiteCount(env: Env, target: Target, hit: CountResult): Promise<void> {
+  const cache = new ResultCache(env.LOC_KV);
+  await cache.markFromSite(hit).catch(() => undefined);
+  if (target.challenge) await submitToChallenge(env, target.challenge, hit);
+}
+
+/**
+ * Record a golf entry, if the result is one a challenge board may show.
+ *
+ * Private repositories are excluded for the same reason they are excluded
+ * everywhere else, and forks because entering someone else's solution is not
+ * entering. Anything under the minimum is an empty repository, not an attempt.
+ */
+async function submitToChallenge(env: Env, challenge: string, result: CountResult): Promise<void> {
+  if (!findChallenge(challenge)) return;
+  if (result.repo_meta.private || result.repo_meta.fork) return;
+  if (result.totals.code < MIN_CODE_LINES) return;
+
+  const top = [...result.by_language].sort((a, b) => b.code - a.code)[0];
+  await new ResultCache(env.LOC_KV)
+    .putGolf({
+      challenge,
+      owner: result.owner,
+      repo: result.repo,
+      sha: result.sha,
+      code: result.totals.code,
+      lines: result.totals.lines,
+      bytes: result.totals.bytes,
+      files: result.totals.files,
+      language: top?.language ?? '',
+      countedAt: result.counted_at,
+    })
+    .catch(() => undefined);
 }
 
 /** Resolve -> cache lookup -> count -> cache store. */
@@ -221,6 +282,7 @@ async function performCount(
     if (hit && !hit.repo_meta.private) {
       logEvent({ event: 'count', cached: true, repo: hit.full_name, sha: hit.sha, ms: Date.now() - started, github_requests: 0 });
       onProgress?.({ phase: 'done', message: 'Served from cache.' });
+      if (target.via === 'site') ctx.waitUntil(afterSiteCount(env, target, hit));
       return { ...hit, cached: true, duration_ms: Date.now() - started };
     }
   }
@@ -240,12 +302,14 @@ async function performCount(
         ms: Date.now() - started,
       });
       onProgress?.({ phase: 'done', message: 'Served from cache.' });
+      if (target.via === 'site') ctx.waitUntil(afterSiteCount(env, target, hit));
       return { ...hit, cached: true, ref: resolved.ref, duration_ms: Date.now() - started };
     }
   }
 
   const result = await runCount(client, resolved, { options: target.options }, limitsFromEnv(env), onProgress);
-  ctx.waitUntil(cache.put(result).catch(() => undefined));
+  ctx.waitUntil(cache.put(result, target.via).catch(() => undefined));
+  if (target.challenge) ctx.waitUntil(submitToChallenge(env, target.challenge, result));
   logEvent({
     event: 'count',
     cached: false,
@@ -288,6 +352,7 @@ async function streamCount(request: Request, env: Env, ctx: ExecutionContext): P
             includeVendored: url.searchParams.get('vendored') === '1',
           }),
           fresh: url.searchParams.get('fresh') === '1',
+          via: 'site',
         };
       }
     } catch (error) {
@@ -304,7 +369,18 @@ async function streamCount(request: Request, env: Env, ctx: ExecutionContext): P
   }
 
   if ('status' in target) return jsonError(target);
-  const resolvedTarget = target;
+
+  // This endpoint is what the page uses, so everything through it is a person
+  // counting something, and eligible for the boards.
+  const challenge = url.searchParams.get('challenge');
+  if (challenge !== null && !findChallenge(challenge)) {
+    return jsonError({ status: 400, code: 'bad_input', message: `No such challenge: ${challenge}` });
+  }
+  const resolvedTarget: Target = {
+    ...target,
+    via: 'site',
+    ...(challenge ? { challenge } : {}),
+  };
 
   const encoder = new TextEncoder();
   const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
@@ -379,13 +455,17 @@ async function resultPage(request: Request, env: Env, ctx: ExecutionContext, pat
       ref: sha,
       options,
       fresh: false,
+      // A shared permalink is not somebody entering a competition.
+      via: 'api',
     });
-    const standing = standingFor(
-      await new ResultCache(env.LOC_KV).listForBoard(),
+    // One KV list, same as before — it just answers a better question now:
+    // which challenges this repository was entered in, and where it placed.
+    const standings = placementsFor(
+      await new ResultCache(env.LOC_KV).listGolf(),
       result.owner,
       result.repo,
     );
-    return htmlResponse(resultPageHtml(result, canonicalOrigin(env, request), standing), 200, {
+    return htmlResponse(resultPageHtml(result, canonicalOrigin(env, request), standings), 200, {
       'cache-control': sha ? 'public, max-age=86400' : 'public, max-age=300',
     });
   } catch (error) {
@@ -561,6 +641,81 @@ async function standings(request: Request, env: Env, ctx: ExecutionContext): Pro
   });
 }
 
+/** Every challenge this repository is entered in, with its place on each. */
+function placementsFor(entries: GolfEntry[], owner: string, repo: string): Standing[] {
+  const out: Standing[] = [];
+  for (const challenge of CHALLENGES) {
+    const place = placeOf(entries, challenge.id, owner, repo);
+    if (place) out.push({ challenge: challenge.id, ...place });
+  }
+  return out;
+}
+
+/**
+ * The golf course. One KV list() feeds every challenge board, and the whole
+ * thing is edge-cached like the standings — a challenge page is the sort of
+ * link that arrives all at once or not at all.
+ */
+async function golfIndex(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  return atEdge(request, ctx, async () => {
+    const entries = await new ResultCache(env.LOC_KV).listGolf();
+    return htmlResponse(golfIndexHtml(buildChallengeBoards(entries), canonicalOrigin(env, request)), 200, {
+      'cache-control': `public, max-age=${BOARD_TTL_SECONDS}`,
+    });
+  });
+}
+
+async function golfChallenge(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  path: string,
+): Promise<Response> {
+  const id = path.slice('/golf/'.length).replace(/\/$/, '');
+  const challenge = findChallenge(id);
+  if (!challenge) {
+    return htmlResponse(
+      errorPage(404, 'not_found', 'No such challenge.', 'See /golf for the ones that exist.'),
+      404,
+    );
+  }
+  return atEdge(request, ctx, async () => {
+    const entries = await new ResultCache(env.LOC_KV).listGolf();
+    const board = { challenge, entries: rankEntries(entries.filter((e) => e.challenge === id)) };
+    return htmlResponse(challengePageHtml(board, canonicalOrigin(env, request)), 200, {
+      'cache-control': `public, max-age=${BOARD_TTL_SECONDS}`,
+    });
+  });
+}
+
+/** Challenges and their standings as data, including for the front page. */
+async function golfJson(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  return atEdge(request, ctx, async () => {
+    const entries = await new ResultCache(env.LOC_KV).listGolf();
+    return jsonResponse(
+      {
+        min_code_lines: MIN_CODE_LINES,
+        challenges: buildChallengeBoards(entries).map(({ challenge, entries: rows }) => ({
+          id: challenge.id,
+          title: challenge.title,
+          brief: challenge.brief,
+          entries: rows.length,
+          rows: rows.slice(0, 10).map((row) => ({
+            owner: row.owner,
+            repo: row.repo,
+            sha: row.sha,
+            code: row.code,
+            bytes: row.bytes,
+            language: row.language,
+          })),
+        })),
+      },
+      200,
+      { 'cache-control': `public, max-age=${BOARD_TTL_SECONDS}` },
+    );
+  });
+}
+
 /** The same rankings as data, for anyone who would rather plot them. */
 async function standingsJson(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   return atEdge(request, ctx, async () => {
@@ -606,6 +761,13 @@ async function sitemap(request: Request, env: Env): Promise<Response> {
     `<url><loc>${escapeXml(origin)}/how.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
     `<url><loc>${escapeXml(origin)}/security.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`,
     `<url><loc>${escapeXml(origin)}/board</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`,
+    `<url><loc>${escapeXml(origin)}/golf</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`,
+    // Each challenge is a page someone might search for by name — "url shortener
+    // in the fewest lines of code" is a real thing people look up.
+    ...CHALLENGES.map(
+      (c) =>
+        `<url><loc>${escapeXml(origin)}/golf/${escapeXml(c.id)}</loc><changefreq>daily</changefreq><priority>0.8</priority></url>`,
+    ),
   ];
 
   const cached = await new ResultCache(env.LOC_KV).listForSitemap(1000);
