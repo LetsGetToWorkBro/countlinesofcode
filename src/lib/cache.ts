@@ -82,10 +82,18 @@ interface GolfMetadata {
  * attempt at the same challenge replaces the old one rather than stacking up,
  * so nobody climbs a board by submitting the same repository ten times.
  *
- * Deliberately not versioned with COUNTER_VERSION. A submission is a record of
- * someone entering a competition; a counter bump should not wipe the standings.
+ * Deliberately not tied to COUNTER_VERSION. A submission is a record of someone
+ * entering a competition; a counter bump should not wipe the standings.
+ *
+ * The generation below is the one way to wipe them, and it exists because there
+ * is otherwise no way to remove a single bad entry — KV has no delete path from
+ * inside the Worker here, and a leaderboard nobody can correct is worse than one
+ * that can be reset. Bumping it abandons *every* entry on *every* board, so it
+ * is for discarding test data and nothing else. Bumped to 2 on 2026-08-03 to
+ * drop an end-to-end test submission that was not a solution to anything.
  */
-export const GOLF_PREFIX = 'golf:';
+export const GOLF_GENERATION = 2;
+export const GOLF_PREFIX = `golf:${GOLF_GENERATION}:`;
 
 export function golfKey(challenge: string, owner: string, repo: string): string {
   return `${GOLF_PREFIX}${challenge}:${owner.toLowerCase()}/${repo.toLowerCase()}`;
@@ -94,7 +102,7 @@ export function golfKey(challenge: string, owner: string, repo: string): string 
 export function parseGolfKey(
   key: string,
 ): { challenge: string; owner: string; repo: string } | null {
-  const match = /^golf:([a-z0-9-]+):([^/]+)\/(.+)$/.exec(key);
+  const match = new RegExp(`^golf:${GOLF_GENERATION}:([a-z0-9-]+):([^/]+)/(.+)$`).exec(key);
   if (!match) return null;
   return { challenge: match[1]!, owner: match[2]!, repo: match[3]! };
 }
