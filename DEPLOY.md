@@ -96,7 +96,7 @@ Cloudflare:
 npm test
 ```
 
-Expect `Tests  192 passed (192)`. These run entirely offline — no GitHub, no
+Expect `Tests  205 passed (205)`. These run entirely offline — no GitHub, no
 Cloudflare, no token needed.
 
 ---
