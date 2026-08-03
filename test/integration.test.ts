@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import worker from '../src/worker/index';
 import type { Env } from '../src/worker/env';
 import { CountResultSchema, type CountResult } from '../src/lib/schema';
+import { resultPageHtml } from '../src/worker/html';
 import {
   SAMPLE_EXPECTED,
   SAMPLE_REPO,
@@ -751,6 +752,40 @@ describe('the standings', () => {
     expect((await call('/board')).status).toBe(200);
     const xml = await (await call('/sitemap.xml')).text();
     expect(xml).toContain('<loc>https://loc.example/board</loc>');
+  });
+
+  it('tells a repository why it is not ranked, rather than just linking away', async () => {
+    github.restore();
+    github = installFakeGitHub([{ ...SAMPLE_REPO, stars: 1 }]);
+    await countJson('/api/count/acme/widget');
+    const html = await (await call(`/r/acme/widget/${SAMPLE_REPO.sha}`)).text();
+    expect(html).toContain('need');
+    expect(html).toContain('25 stars');
+  });
+
+  it('does not blame a missing rank on stars when the repository has plenty', async () => {
+    // Fresh count, listing not caught up yet: KV list is eventually consistent.
+    github.restore();
+    github = installFakeGitHub([{ ...SAMPLE_REPO, stars: 90_000 }]);
+    const result = await countJson('/api/count/acme/widget');
+    const html = resultPageHtml(result, 'https://loc.example', null);
+    expect(html).not.toContain('25 stars');
+    expect(html).toContain('catch up within a minute');
+  });
+
+  it('says a fork is excluded, and a private repository is not published', async () => {
+    github.restore();
+    github = installFakeGitHub([{ ...SAMPLE_REPO, stars: 500, fork: true }]);
+    const forked = await countJson('/api/count/acme/widget');
+    expect(resultPageHtml(forked, 'https://loc.example', null)).toMatch(/A fork, so it is not ranked/);
+
+    // A different name, or the second count is served the first one from cache.
+    github.restore();
+    github = installFakeGitHub([{ ...SAMPLE_REPO, repo: 'secret', stars: 500, private: true }]);
+    const secret = await countJson('/api/count/acme/secret');
+    const html = resultPageHtml(secret, 'https://loc.example', null);
+    expect(html).toContain('Private');
+    expect(html).toContain('not publishing it');
   });
 
   it('says so once when there is nothing to rank', async () => {

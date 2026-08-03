@@ -14,6 +14,7 @@ export interface FakeRepo {
   defaultBranch: string;
   sha: string;
   private?: boolean;
+  fork?: boolean;
   stars?: number;
   sizeKb?: number;
   /** path -> file contents */
@@ -138,7 +139,7 @@ export function installFakeGitHub(repos: FakeRepo[]): FakeGitHub {
         stargazers_count: record.stars ?? 7,
         html_url: `https://github.com/${record.owner}/${record.repo}`,
         archived: false,
-        fork: false,
+        fork: record.fork ?? false,
         description: 'fixture',
       });
     }

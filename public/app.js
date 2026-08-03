@@ -168,15 +168,24 @@
       row2('Other', num(result.skipped.other)) +
       '</tbody></table>';
 
+    // Whether this count reached the leaderboards, said plainly at the moment
+    // it is answerable. Only two things keep a result off them, and the client
+    // knows both without asking the server again.
     if (result.strategy === 'browser') {
       html += '<p class="note">Counted locally, so there is no shareable link for this one: ' +
-        'the server never saw these numbers.</p>';
+        'the server never saw these numbers. That also keeps it off ' +
+        '<a href="/board">the standings</a> &mdash; nothing is ranked that the ' +
+        'server did not count itself.</p>';
     } else {
       var permalink = '/r/' + result.owner + '/' + result.repo + '/' + result.sha;
       html += '<p class="note">Permalink: <a href="' + esc(permalink) + '">' +
         esc('/r/' + result.owner + '/' + result.repo + '/' + shortSha) + '</a> &middot; ' +
         '<a href="/api/count/' + esc(result.owner) + '/' + esc(result.repo) + '?ref=' +
         esc(result.sha) + '">JSON</a></p>';
+      html += result.repo_meta.private
+        ? '<p class="note">Private, so it stays off <a href="/board">the standings</a>. ' +
+          'Counting a repository is not publishing it.</p>'
+        : '<p class="note">Now on <a href="/board">the standings</a>.</p>';
     }
 
     resultsEl.innerHTML = html;
@@ -365,7 +374,8 @@
       'Your browser has no such limit &mdash; it can do the counting locally, ' +
       'using exactly the same code.' + size + ', so it is your call.</p>' +
       '<p><button type="button" id="big-count">Count it in my browser</button></p>' +
-      '<p class="note">Nothing is uploaded, and the result is not cached or shareable.</p>';
+      '<p class="note">Nothing is uploaded. The result is not cached, not shareable, ' +
+      'and not ranked on <a href="/board">the standings</a>.</p>';
     document.getElementById('big-count').addEventListener('click', function () {
       runBrowserCount(input, ref, details);
     });

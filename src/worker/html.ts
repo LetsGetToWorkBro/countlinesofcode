@@ -4,7 +4,7 @@
  * exactly like the page the counter produced.
  */
 
-import { formatPerStar } from '../lib/board';
+import { MIN_STARS, formatPerStar } from '../lib/board';
 import type { CountResult } from '../lib/schema';
 
 export function escapeHtml(value: string): string {
@@ -219,12 +219,37 @@ export interface Standing {
   value: number;
 }
 
+/**
+ * Where this repository sits on the boards, or why it is not on them. Telling
+ * a private repository to "see the standings" is worse than saying nothing, and
+ * so is blaming a missing rank on a star count that is plainly high enough.
+ */
+function standingNote(result: CountResult, standing?: Standing | null): string {
+  if (standing) {
+    return `<p class="note">Ranked <strong>#${standing.rank}</strong> of ${num(standing.of)} on
+<a href="/board">the standings</a>, at ${escapeHtml(formatPerStar(standing.value))} lines of code per star.</p>`;
+  }
+  if (result.repo_meta.private) {
+    return `<p class="note">Private, so it stays off <a href="/board">the standings</a>.
+Counting a repository is not publishing it.</p>`;
+  }
+  if (result.repo_meta.fork) {
+    return `<p class="note">A fork, so it is not ranked on <a href="/board">the standings</a> &mdash;
+ranking someone for code they copied is meaningless.</p>`;
+  }
+  if (result.repo_meta.stars < MIN_STARS) {
+    return `<p class="note">Not ranked per star: <a href="/board">the standings</a> need
+${num(MIN_STARS)} stars for that. It still counts toward the size boards.</p>`;
+  }
+  // Qualifies, but the listing has not caught up — KV listings are eventually
+  // consistent, so a first count shows up on the boards a moment later.
+  return `<p class="note">Joining <a href="/board">the standings</a> shortly &mdash; the boards
+catch up within a minute of a count.</p>`;
+}
+
 export function resultPageHtml(result: CountResult, origin?: string, standing?: Standing | null): string {
   const t = result.totals;
-  const perStar = standing
-    ? `<p class="note">Ranked <strong>#${standing.rank}</strong> of ${num(standing.of)} on
-<a href="/board">the standings</a>, at ${escapeHtml(formatPerStar(standing.value))} lines of code per star.</p>`
-    : `<p class="note">See <a href="/board">the standings</a> for how counted repositories compare.</p>`;
+  const perStar = standingNote(result, standing);
   return page(
     `${result.full_name} — ${num(t.lines)} lines of code · LOC.1999`,
     `${siteHeader()}
