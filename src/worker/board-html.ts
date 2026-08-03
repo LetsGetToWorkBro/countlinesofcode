@@ -57,6 +57,13 @@ export function boardPageHtml(
     : 'Lines of code per GitHub star. The standings are open.';
   const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(`${origin}/board`)}`;
 
+  // Six identical "nothing here yet" tables read as a broken page. Before
+  // anything has been counted, say it once.
+  const tables = boards.some((b) => b.rows.length > 0)
+    ? boards.map(boardTable).join('\n\n')
+    : `<p class="note">Nothing has been counted yet, so there is nothing to rank.
+<a href="/">Count a repository</a> and it will be the whole leaderboard.</p>`;
+
   const recentRows = recent
     .map(
       (entry) => `<tr><td>${repoCell(entry)}</td><td class="n">${num(entry.lines)}</td><td class="n">${num(entry.stars)}</td></tr>`,
@@ -79,7 +86,7 @@ ${num(MIN_STARS)} stars. Anything counted through this site joins automatically 
 <a href="/">count one</a> and see where it lands.
 </p>
 
-${boards.map(boardTable).join('\n\n')}
+${tables}
 
 <h3>Counted recently</h3>
 <table>

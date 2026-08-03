@@ -753,6 +753,14 @@ describe('the standings', () => {
     expect(xml).toContain('<loc>https://loc.example/board</loc>');
   });
 
+  it('says so once when there is nothing to rank', async () => {
+    const html = await (await call('/board')).text();
+    expect(html).toContain('Nothing has been counted yet');
+    // Not once per board — six empty tables read as a broken page.
+    expect([...html.matchAll(/Nothing has been counted yet/g)]).toHaveLength(1);
+    expect(html).not.toContain('<tbody>\n<tr>\n<td class="n">1</td>');
+  });
+
   it('never publishes a private repository', async () => {
     // Private results share the cache prefix the boards and sitemap enumerate.
     // Counting your own private repository must not announce it exists.
