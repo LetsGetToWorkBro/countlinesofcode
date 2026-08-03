@@ -31,6 +31,15 @@ export function refKey(owner: string, repo: string, ref: string): string {
   return `ref:${owner.toLowerCase()}/${repo.toLowerCase()}@${ref}`;
 }
 
+/** Inverse of `resultKey`, for default-option entries only. */
+export function parseResultKey(key: string): { owner: string; repo: string; sha: string } | null {
+  const match = new RegExp(
+    `^res:${COUNTER_VERSION.replace(/\./g, '\\.')}:([^/]+)/([^@]+)@([0-9a-f]{40}):L0V0$`,
+  ).exec(key);
+  if (!match) return null;
+  return { owner: match[1]!, repo: match[2]!, sha: match[3]! };
+}
+
 export class ResultCache {
   constructor(private readonly kv: KVNamespace | undefined) {}
 
@@ -50,7 +59,32 @@ export class ResultCache {
   async put(result: CountResult): Promise<void> {
     if (!this.kv) return;
     const key = resultKey(result.owner, result.repo, result.sha, result.options);
-    await this.kv.put(key, JSON.stringify(result), { expirationTtl: RESULT_TTL_SECONDS });
+    await this.kv.put(key, JSON.stringify(result), {
+      expirationTtl: RESULT_TTL_SECONDS,
+      // Kept in metadata so the sitemap can date entries from a single list
+      // call, instead of reading back every cached result.
+      metadata: { counted_at: result.counted_at },
+    });
+  }
+
+  /**
+   * Cached results, newest-listing-first, for the sitemap. Only entries counted
+   * with the default options are returned: the option variants render the same
+   * page at the same URL, so including them would emit duplicates.
+   */
+  async listForSitemap(limit = 1000): Promise<{ owner: string; repo: string; sha: string; lastmod?: string }[]> {
+    if (!this.kv) return [];
+    const listed = await this.kv.list<{ counted_at?: string }>({
+      prefix: `res:${COUNTER_VERSION}:`,
+      limit: Math.min(1000, limit),
+    });
+    const out: { owner: string; repo: string; sha: string; lastmod?: string }[] = [];
+    for (const key of listed.keys) {
+      const parsed = parseResultKey(key.name);
+      if (!parsed) continue;
+      out.push({ ...parsed, ...(key.metadata?.counted_at ? { lastmod: key.metadata.counted_at } : {}) });
+    }
+    return out;
   }
 
   async getRefSha(owner: string, repo: string, ref: string): Promise<string | null> {

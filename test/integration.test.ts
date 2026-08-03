@@ -25,6 +25,7 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
     APP_BASE_URL: 'https://loc.example',
     MAX_BLOB_FETCHES: '40',
     RATE_LIMIT_PER_MINUTE: '100',
+    CANONICAL_ORIGIN: 'https://loc.example',
     ...overrides,
   };
 }
@@ -507,5 +508,65 @@ describe('renamed repositories', () => {
     const authByHost = github.authHeaders;
     expect(authByHost.some((h) => h.host === 'codeload.github.com' && h.authorization !== null)).toBe(false);
     expect(authByHost.some((h) => h.host === 'api.github.com' && h.authorization !== null)).toBe(true);
+  });
+});
+
+describe('search engine plumbing', () => {
+  it('lists the static pages in the sitemap', async () => {
+    const response = await call('/sitemap.xml');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('xml');
+    const xml = await response.text();
+    expect(xml).toContain('<?xml version="1.0"');
+    expect(xml).toContain('<loc>https://loc.example/</loc>');
+    expect(xml).toContain('<loc>https://loc.example/how.html</loc>');
+  });
+
+  it('adds result pages to the sitemap once they are cached', async () => {
+    const before = await (await call('/sitemap.xml')).text();
+    expect(before).not.toContain('/r/acme/widget/');
+
+    await countJson('/api/count/acme/widget');
+
+    const after = await (await call('/sitemap.xml')).text();
+    expect(after).toContain(`<loc>https://loc.example/r/acme/widget/${SAMPLE_REPO.sha}</loc>`);
+    expect(after).toMatch(/<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/);
+  });
+
+  it('never advertises a URL that is not already cached', async () => {
+    // Every /r/ URL in the sitemap must render from cache, so crawling costs
+    // no GitHub quota.
+    await countJson('/api/count/acme/widget');
+    const xml = await (await call('/sitemap.xml')).text();
+    const locs = [...xml.matchAll(/<loc>([^<]+\/r\/[^<]+)<\/loc>/g)].map((m) => m[1]!);
+    expect(locs.length).toBeGreaterThan(0);
+
+    for (const loc of locs) {
+      const before = github.requests.length;
+      const page = await call(new URL(loc).pathname);
+      expect(page.status).toBe(200);
+      expect(github.requests.length).toBe(before);
+    }
+  });
+
+  it('does not list option variants twice', async () => {
+    await countJson('/api/count/acme/widget');
+    await countJson('/api/count/acme/widget?lockfiles=1');
+    const xml = await (await call('/sitemap.xml')).text();
+    const count = [...xml.matchAll(/\/r\/acme\/widget\//g)].length;
+    expect(count).toBe(1);
+  });
+
+  it('gives result pages a descriptive title and canonical URL', async () => {
+    await countJson('/api/count/acme/widget');
+    const html = await (await call(`/r/acme/widget/${SAMPLE_REPO.sha}`)).text();
+    expect(html).toMatch(/<title>acme\/widget — [\d,]+ lines of code · LOC\.1999<\/title>/);
+    expect(html).toContain(`<link rel="canonical" href="https://loc.example/r/acme/widget/${SAMPLE_REPO.sha}">`);
+    expect(html).toContain('<meta property="og:title"');
+  });
+
+  it('keeps error pages out of the index', async () => {
+    const html = await (await call('/r/acme/widget/not-a-sha')).text();
+    expect(html).toContain('<meta name="robots" content="noindex">');
   });
 });

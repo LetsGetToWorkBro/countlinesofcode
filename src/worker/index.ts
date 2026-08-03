@@ -49,6 +49,7 @@ export default {
       if (path.startsWith('/api/count/') && request.method === 'GET') return await getCount(request, env, ctx, path);
       if (path === '/api/stream' && request.method === 'GET') return await streamCount(request, env, ctx);
       if (path === '/api/meta' && request.method === 'GET') return metaResponse(env);
+      if (path === '/sitemap.xml' && request.method === 'GET') return await sitemap(request, env);
       if (path === '/api/resolve' && request.method === 'GET') return await resolveOnly(request, env, path);
       if (path.startsWith('/api/resolve/') && request.method === 'GET') return await resolveOnly(request, env, path);
       if (path.startsWith('/api/archive/') && request.method === 'GET') return await streamArchive(request, env, path);
@@ -359,7 +360,7 @@ async function resultPage(request: Request, env: Env, ctx: ExecutionContext, pat
       options,
       fresh: false,
     });
-    return htmlResponse(resultPageHtml(result), 200, {
+    return htmlResponse(resultPageHtml(result, canonicalOrigin(env, request)), 200, {
       'cache-control': sha ? 'public, max-age=86400' : 'public, max-age=300',
     });
   } catch (error) {
@@ -502,6 +503,65 @@ async function streamArchive(request: Request, env: Env, path: string): Promise<
       ...SECURITY_HEADERS,
     },
   });
+}
+
+/**
+ * Sitemap of the two static pages plus every cached result page.
+ *
+ * The /r/ pages are the interesting ones: each is server-rendered, needs no
+ * JavaScript, and carries real numbers for a specific commit — exactly the kind
+ * of page someone reaches by searching for a repository's size. They are only
+ * linked from results, so without a sitemap a crawler would never find them.
+ *
+ * Listing cached results also means the sitemap can never advertise a page that
+ * costs a GitHub round trip to render: every URL here is already a cache hit.
+ */
+async function sitemap(request: Request, env: Env): Promise<Response> {
+  const origin = canonicalOrigin(env, request);
+  const entries: string[] = [
+    `<url><loc>${escapeXml(origin)}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
+    `<url><loc>${escapeXml(origin)}/how.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
+  ];
+
+  const cached = await new ResultCache(env.LOC_KV).listForSitemap(1000);
+  for (const entry of cached) {
+    const loc = `${origin}/r/${entry.owner}/${entry.repo}/${entry.sha}`;
+    const lastmod = entry.lastmod ? `<lastmod>${escapeXml(entry.lastmod.slice(0, 10))}</lastmod>` : '';
+    entries.push(`<url><loc>${escapeXml(loc)}</loc>${lastmod}<changefreq>monthly</changefreq><priority>0.6</priority></url>`);
+  }
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${entries.join('\n')}
+</urlset>
+`;
+  return new Response(xml, {
+    headers: {
+      'content-type': 'application/xml; charset=utf-8',
+      'cache-control': 'public, max-age=3600',
+      ...SECURITY_HEADERS,
+    },
+  });
+}
+
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
+ * Origin used in canonical URLs and the sitemap. CANONICAL_ORIGIN pins it to
+ * the primary domain so the *.workers.dev copy does not compete with it; unset,
+ * it falls back to whatever host served the request.
+ */
+function canonicalOrigin(env: Env, request: Request): string {
+  const configured = env.CANONICAL_ORIGIN;
+  if (configured && /^https?:\/\//.test(configured)) return configured.replace(/\/$/, '');
+  return new URL(request.url).origin;
 }
 
 function metaResponse(env: Env): Response {

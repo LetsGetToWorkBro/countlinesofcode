@@ -77,6 +77,9 @@ preview_id = "ee8bb66dee884755b2487fbe011ca055"
 # redirect_uri from the origin of the incoming request, so it is correct on
 # localhost, on *.workers.dev and on a custom domain without any edit. Set it
 # only when a proxy in front rewrites the Host header.
+# Canonical origin for <link rel="canonical"> and the sitemap, so the
+# *.workers.dev copy does not compete with the real domain in search results.
+CANONICAL_ORIGIN = "https://1999loc.com"
 MAX_FILES = "20000"
 MAX_TOTAL_BYTES = "67108864"      # 64 MiB of decoded text
 MAX_FILE_BYTES = "4194304"        # 4 MiB — bigger single files are skipped

@@ -30,14 +30,33 @@ function bytes(value: number): string {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function page(title: string, body: string, options: { description?: string } = {}): string {
+export interface PageOptions {
+  description?: string;
+  /** Absolute URL of this page, for <link rel="canonical"> and og:url. */
+  canonical?: string;
+  /** Keep a page out of search results (error pages). */
+  noindex?: boolean;
+}
+
+export function page(title: string, body: string, options: PageOptions = {}): string {
+  const description = options.description ?? 'Count the lines of code in any GitHub repository.';
+  // Social/link-preview tags only — nothing here renders on the page itself.
+  const social = `<meta property="og:type" content="website">
+<meta property="og:title" content="${escapeHtml(title)}">
+<meta property="og:description" content="${escapeHtml(description)}">
+<meta property="og:site_name" content="LOC.1999">
+${options.canonical ? `<meta property="og:url" content="${escapeHtml(options.canonical)}">` : ''}
+<meta name="twitter:card" content="summary">`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)}</title>
-<meta name="description" content="${escapeHtml(options.description ?? 'Count the lines of code in any GitHub repository.')}">
+<meta name="description" content="${escapeHtml(description)}">
+${options.noindex ? '<meta name="robots" content="noindex">' : ''}
+${options.canonical ? `<link rel="canonical" href="${escapeHtml(options.canonical)}">` : ''}
+${social}
 <link rel="stylesheet" href="/style.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -76,6 +95,7 @@ export function errorPage(status: number, code: string, message: string, hint?: 
 ${hint ? `<p>${escapeHtml(hint)}</p>` : ''}
 <p><a href="/">Back to the form</a></p>
 ${siteFooter()}`,
+    { noindex: true },
   ) + `<!-- http status ${status} -->`;
 }
 
@@ -182,14 +202,19 @@ ${biggest}
 </p>`;
 }
 
-export function resultPageHtml(result: CountResult): string {
+export function resultPageHtml(result: CountResult, origin?: string): string {
+  const t = result.totals;
   return page(
-    `LOC.1999 - ${result.full_name}`,
+    `${result.full_name} — ${num(t.lines)} lines of code · LOC.1999`,
     `${siteHeader()}
 ${resultsHtml(result)}
 ${siteFooter()}`,
     {
-      description: `${result.full_name} at ${result.sha.slice(0, 7)}: ${num(result.totals.code)} lines of code across ${num(result.totals.files)} files.`,
+      description:
+        `${result.full_name} has ${num(t.lines)} lines: ${num(t.code)} code, ` +
+        `${num(t.comment)} comment and ${num(t.blank)} blank, across ${num(t.files)} files. ` +
+        `Counted at commit ${result.sha.slice(0, 7)}.`,
+      ...(origin ? { canonical: `${origin}/r/${result.owner}/${result.repo}/${result.sha}` } : {}),
     },
   );
 }

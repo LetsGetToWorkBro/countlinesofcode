@@ -5,6 +5,7 @@ export interface Env {
   LOC_KV?: KVNamespace;
 
   APP_BASE_URL?: string;
+  CANONICAL_ORIGIN?: string;
   MAX_FILES?: string;
   MAX_TOTAL_BYTES?: string;
   MAX_FILE_BYTES?: string;

@@ -457,6 +457,26 @@ Error responses are `{"error": {"code", "message", "hint?"}}` with codes
 
 ---
 
+## Discoverability
+
+Technical only — there is no marketing copy anywhere in this repository, and the
+pages carry exactly the text they carried before.
+
+* `/sitemap.xml` is generated from the KV cache: the two static pages plus every
+  cached result. Result pages are server-rendered, need no JavaScript, and carry
+  real numbers for a specific commit, which makes them the useful long-tail
+  content — but they are only linked from a completed count, so a crawler would
+  never otherwise find them. Building the list from the cache also guarantees
+  every advertised URL is a cache hit, so crawling costs no GitHub quota. A test
+  enforces that.
+* `/robots.txt` allows the pages, disallows `/api/` (indexing JSON wastes crawl
+  budget), and points at the sitemap.
+* Titles lead with the answer — `expressjs/express — 26,700 lines of code` —
+  rather than the brand, and descriptions carry the real totals.
+* `CANONICAL_ORIGIN` pins canonical URLs to the primary domain so the
+  `*.workers.dev` copy does not compete with it.
+* Error pages are `noindex`.
+
 ## Security
 
 * **SSRF.** User input never becomes a URL. It is decomposed into

@@ -198,6 +198,7 @@ export function installFakeGitHub(repos: FakeRepo[]): FakeGitHub {
 /** Minimal in-memory KVNamespace. */
 export function fakeKv(): KVNamespace & { store: Map<string, string> } {
   const store = new Map<string, string>();
+  const metadataStore = new Map<string, unknown>();
   const kv = {
     store,
     async get(key: string, type?: string) {
@@ -205,14 +206,22 @@ export function fakeKv(): KVNamespace & { store: Map<string, string> } {
       if (value === undefined) return null;
       return type === 'json' ? JSON.parse(value) : value;
     },
-    async put(key: string, value: string) {
+    async put(key: string, value: string, options?: { metadata?: unknown }) {
       store.set(key, value);
+      if (options?.metadata !== undefined) metadataStore.set(key, options.metadata);
     },
     async delete(key: string) {
       store.delete(key);
     },
-    async list() {
-      return { keys: [...store.keys()].map((name) => ({ name })), list_complete: true, cacheStatus: null };
+    async list(options?: { prefix?: string; limit?: number }) {
+      const prefix = options?.prefix ?? '';
+      const names = [...store.keys()].filter((name) => name.startsWith(prefix));
+      const limited = names.slice(0, options?.limit ?? 1000);
+      return {
+        keys: limited.map((name) => ({ name, metadata: metadataStore.get(name) })),
+        list_complete: true,
+        cacheStatus: null,
+      };
     },
     async getWithMetadata() {
       return { value: null, metadata: null, cacheStatus: null };

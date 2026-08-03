@@ -1,0 +1,10 @@
+# LOC.1999 — https://1999loc.com
+#
+# Crawl the pages. The API is machine-readable already and indexing it just
+# wastes crawl budget on JSON, so it is off limits.
+
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://1999loc.com/sitemap.xml
