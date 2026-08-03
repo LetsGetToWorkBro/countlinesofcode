@@ -10,6 +10,7 @@
  * than a wrong hit.
  */
 
+import type { BoardEntry } from './board';
 import type { CountOptions, CountResult } from './schema';
 import { CountResultSchema } from './schema';
 import { COUNTER_VERSION } from './version';
@@ -29,6 +30,20 @@ export function resultKey(owner: string, repo: string, sha: string, options: Cou
 
 export function refKey(owner: string, repo: string, ref: string): string {
   return `ref:${owner.toLowerCase()}/${repo.toLowerCase()}@${ref}`;
+}
+
+interface ResultMetadata {
+  counted_at?: string;
+  owner?: string;
+  repo?: string;
+  lines?: number;
+  code?: number;
+  comment?: number;
+  blank?: number;
+  files?: number;
+  stars?: number;
+  fork?: boolean;
+  not_yours?: number;
 }
 
 /** Inverse of `resultKey`, for default-option entries only. */
@@ -61,11 +76,25 @@ export class ResultCache {
     const key = resultKey(result.owner, result.repo, result.sha, result.options);
     await this.kv.put(key, JSON.stringify(result), {
       expirationTtl: RESULT_TTL_SECONDS,
-      // Kept in metadata so the sitemap can be built from a single list call
-      // rather than reading back every cached result. owner/repo are stored
-      // because the key lowercases them, and a sitemap that advertises
-      // different casing from the page's own canonical tag wastes crawl budget.
-      metadata: { counted_at: result.counted_at, owner: result.owner, repo: result.repo },
+      // Everything the sitemap and the leaderboards need, kept in metadata so
+      // both can be built from a single list() call rather than reading back
+      // every cached result. owner/repo are stored because the key lowercases
+      // them, and a sitemap advertising different casing from a page's own
+      // canonical tag wastes crawl budget.
+      metadata: {
+        counted_at: result.counted_at,
+        owner: result.owner,
+        repo: result.repo,
+        lines: result.totals.lines,
+        code: result.totals.code,
+        comment: result.totals.comment,
+        blank: result.totals.blank,
+        files: result.totals.files,
+        stars: result.repo_meta.stars,
+        fork: result.repo_meta.fork,
+        // Files present but not written here: vendored plus generated.
+        not_yours: result.skipped.vendored + result.skipped.generated,
+      },
     });
   }
 
@@ -76,7 +105,7 @@ export class ResultCache {
    */
   async listForSitemap(limit = 1000): Promise<{ owner: string; repo: string; sha: string; lastmod?: string }[]> {
     if (!this.kv) return [];
-    const listed = await this.kv.list<{ counted_at?: string; owner?: string; repo?: string }>({
+    const listed = await this.kv.list<ResultMetadata>({
       prefix: `res:${COUNTER_VERSION}:`,
       limit: Math.min(1000, limit),
     });
@@ -92,6 +121,39 @@ export class ResultCache {
         repo,
         sha: parsed.sha,
         ...(key.metadata?.counted_at ? { lastmod: key.metadata.counted_at } : {}),
+      });
+    }
+    return out;
+  }
+
+  /**
+   * Every cached result, as leaderboard rows, from one list() call. Entries
+   * written before the metadata existed are skipped rather than guessed at.
+   */
+  async listForBoard(limit = 1000): Promise<BoardEntry[]> {
+    if (!this.kv) return [];
+    const listed = await this.kv.list<ResultMetadata>({
+      prefix: `res:${COUNTER_VERSION}:`,
+      limit: Math.min(1000, limit),
+    });
+    const out: BoardEntry[] = [];
+    for (const key of listed.keys) {
+      const parsed = parseResultKey(key.name);
+      const meta = key.metadata;
+      if (!parsed || !meta || typeof meta.lines !== 'number') continue;
+      out.push({
+        owner: meta.owner ?? parsed.owner,
+        repo: meta.repo ?? parsed.repo,
+        sha: parsed.sha,
+        lines: meta.lines,
+        code: meta.code ?? 0,
+        comment: meta.comment ?? 0,
+        blank: meta.blank ?? 0,
+        files: meta.files ?? 0,
+        stars: meta.stars ?? 0,
+        notYours: meta.not_yours ?? 0,
+        fork: meta.fork === true,
+        countedAt: meta.counted_at ?? '',
       });
     }
     return out;

@@ -702,3 +702,54 @@ describe('oversized repositories, from a user\'s point of view', () => {
     expect(html).toMatch(/s of CPU/);
   });
 });
+
+describe('the standings', () => {
+  it('lists a counted repository once it qualifies', async () => {
+    github.restore();
+    github = installFakeGitHub([{ ...SAMPLE_REPO, stars: 500 }]);
+    await countJson('/api/count/acme/widget');
+
+    const html = await (await call('/board')).text();
+    expect(html).toContain('The Standings');
+    expect(html).toContain('acme/widget');
+    expect(html).toContain('lines / star');
+  });
+
+  it('excludes repositories with too few stars from per-star boards', async () => {
+    github.restore();
+    github = installFakeGitHub([{ ...SAMPLE_REPO, stars: 1 }]);
+    await countJson('/api/count/acme/widget');
+
+    const body = (await (await call('/api/board')).json()) as {
+      boards: { id: string; rows: { repo: string }[] }[];
+    };
+    const lean = body.boards.find((b) => b.id === 'lean')!;
+    expect(lean.rows).toHaveLength(0);
+    // But it still shows on the board that has no star requirement.
+    const biggest = body.boards.find((b) => b.id === 'biggest')!;
+    expect(biggest.rows.length).toBeGreaterThan(0);
+  });
+
+  it('costs one KV list and no GitHub requests', async () => {
+    await countJson('/api/count/acme/widget');
+    const before = github.requests.length;
+    await call('/board');
+    expect(github.requests.length).toBe(before);
+  });
+
+  it('tells a repository where it ranks, on its own page', async () => {
+    github.restore();
+    github = installFakeGitHub([{ ...SAMPLE_REPO, stars: 500 }]);
+    await countJson('/api/count/acme/widget');
+
+    const html = await (await call(`/r/acme/widget/${SAMPLE_REPO.sha}`)).text();
+    expect(html).toMatch(/Ranked <strong>#1<\/strong> of 1/);
+    expect(html).toContain('lines of code per star');
+  });
+
+  it('is reachable and indexable', async () => {
+    expect((await call('/board')).status).toBe(200);
+    const xml = await (await call('/sitemap.xml')).text();
+    expect(xml).toContain('<loc>https://loc.example/board</loc>');
+  });
+});

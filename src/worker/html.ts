@@ -4,6 +4,7 @@
  * exactly like the page the counter produced.
  */
 
+import { formatPerStar } from '../lib/board';
 import type { CountResult } from '../lib/schema';
 
 export function escapeHtml(value: string): string {
@@ -81,6 +82,7 @@ export function siteFooter(): string {
 <p class="footer">
 Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spite for bloat<br>
 <a href="/">count something</a> |
+<a href="/board">the standings</a> |
 <a href="/how.html">how we count</a> |
 <a href="/security.html">connecting github</a> |
 <a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
@@ -211,12 +213,23 @@ ${biggest}
 </p>`;
 }
 
-export function resultPageHtml(result: CountResult, origin?: string): string {
+export interface Standing {
+  rank: number;
+  of: number;
+  value: number;
+}
+
+export function resultPageHtml(result: CountResult, origin?: string, standing?: Standing | null): string {
   const t = result.totals;
+  const perStar = standing
+    ? `<p class="note">Ranked <strong>#${standing.rank}</strong> of ${num(standing.of)} on
+<a href="/board">the standings</a>, at ${escapeHtml(formatPerStar(standing.value))} lines of code per star.</p>`
+    : `<p class="note">See <a href="/board">the standings</a> for how counted repositories compare.</p>`;
   return page(
     `${result.full_name} — ${num(t.lines)} lines of code · LOC.1999`,
     `${siteHeader()}
 ${resultsHtml(result)}
+${perStar}
 ${siteFooter()}`,
     {
       description:

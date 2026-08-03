@@ -145,6 +145,7 @@ src/lib/
   github.ts        REST client: retries, backoff, rate-limit capture, archives
   tar.ts           streaming tar reader + gunzip helper
   counter.ts       the pipeline (resolve -> tree -> content -> classify)
+  board.ts         the standings: ranking rules, purely from cache metadata
   cache.ts         KV keys and TTLs
   ratelimit.ts     per-IP fixed window
   schema.ts        zod contracts for every request and response
@@ -153,6 +154,7 @@ src/worker/
   index.ts         router, error mapping, SSE, security headers
   auth.ts          GitHub OAuth + server-side session storage
   html.ts          server-rendered result and error pages
+  board-html.ts    the standings page
   env.ts           bindings and tunables
 test/              unit + fixture-driven integration tests (no live network)
 ```
@@ -377,6 +379,26 @@ logs a message string only, and result payloads contain no credentials.
 
 ---
 
+## The standings
+
+`/board` ranks everything anyone has counted, headlined by **lines of code per
+GitHub star** — low means a lot of attention for very little code, high means
+the opposite, and neither is an achievement. Five other boards cover sheer size,
+skipped vendored/generated files, and comment ratio at both ends.
+
+It costs one KV `list()` call and zero result reads: the numbers needed to rank
+live in each cache entry's *metadata*, which `list()` returns for free. That is
+what keeps the page inside the free plan's 10 ms CPU budget, and a test asserts
+rendering it makes no GitHub requests at all.
+
+Ranking rules exist so the boards are not noise: forks are excluded, per-star
+boards need 25 stars, ratio boards need 1,000 lines, and a repository appears
+once at its most recent commit. Repositories too large for the server are
+counted in your browser and are **not** ranked — the server never sees those
+numbers and will not rank what it cannot verify.
+
+---
+
 ## Why not Supabase
 
 The brief allowed Supabase for auth and history and asked for it to be skipped
@@ -407,6 +429,8 @@ GET  /api/count/{owner}/{repo}?ref=&lockfiles=1&vendored=1&fresh=1
 GET  /api/stream?input=owner/repo&ref=main      text/event-stream
 GET  /api/meta                                  limits + versions
 GET  /r/{owner}/{repo}/{sha}                    shareable HTML result
+GET  /board                                     the standings (HTML)
+GET  /api/board                                 the standings (JSON)
 
 GET  /api/auth/login | /api/auth/callback | /api/auth/me | /api/auth/repos
 POST /api/auth/logout

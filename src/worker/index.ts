@@ -12,6 +12,7 @@
  *   *                                     static assets from ./public
  */
 
+import { buildBoards, dedupeByRepo, recentlyCounted, standingFor } from '../lib/board';
 import { ResultCache } from '../lib/cache';
 import { resolveTarget, runCount, TooLargeError, type ProgressEvent } from '../lib/counter';
 import { GitHubClient, GitHubError } from '../lib/github';
@@ -21,6 +22,7 @@ import { CountOptionsSchema, CountRequestSchema, ShaSchema, type CountOptions, t
 import { COUNTER_VERSION } from '../lib/version';
 import { handleCallback, handleLogin, handleLogout, handleMe, handleMyRepos, loadSession, oauthConfigured, scopesFor } from './auth';
 import { limitsFromEnv, rateLimitPerMinute, type Env } from './env';
+import { boardPageHtml } from './board-html';
 import { errorPage, resultPageHtml } from './html';
 
 const SECURITY_HEADERS: Record<string, string> = {
@@ -59,6 +61,8 @@ export default {
       if (path === '/api/stream' && request.method === 'GET') return await streamCount(request, env, ctx);
       if (path === '/api/meta' && request.method === 'GET') return metaResponse(env);
       if (path === '/sitemap.xml' && request.method === 'GET') return await sitemap(request, env);
+      if (path === '/board' && request.method === 'GET') return await standings(request, env);
+      if (path === '/api/board' && request.method === 'GET') return await standingsJson(request, env);
       if (path === '/api/resolve' && request.method === 'GET') return await resolveOnly(request, env, path);
       if (path.startsWith('/api/resolve/') && request.method === 'GET') return await resolveOnly(request, env, path);
       if (path.startsWith('/api/archive/') && request.method === 'GET') return await streamArchive(request, env, path);
@@ -376,7 +380,12 @@ async function resultPage(request: Request, env: Env, ctx: ExecutionContext, pat
       options,
       fresh: false,
     });
-    return htmlResponse(resultPageHtml(result, canonicalOrigin(env, request)), 200, {
+    const standing = standingFor(
+      await new ResultCache(env.LOC_KV).listForBoard(),
+      result.owner,
+      result.repo,
+    );
+    return htmlResponse(resultPageHtml(result, canonicalOrigin(env, request), standing), 200, {
       'cache-control': sha ? 'public, max-age=86400' : 'public, max-age=300',
     });
   } catch (error) {
@@ -531,6 +540,46 @@ async function streamArchive(request: Request, env: Env, path: string): Promise<
 }
 
 /**
+ * The Standings. One KV list() call feeds every board: the ranking numbers live
+ * in each entry's metadata, so this costs no result reads and stays inside the
+ * free plan's CPU budget however many repositories are cached.
+ */
+async function standings(request: Request, env: Env): Promise<Response> {
+  const entries = await new ResultCache(env.LOC_KV).listForBoard();
+  const boards = buildBoards(entries);
+  const recent = recentlyCounted(entries);
+  const origin = canonicalOrigin(env, request);
+  return htmlResponse(boardPageHtml(boards, recent, dedupeByRepo(entries).length, origin), 200, {
+    'cache-control': 'public, max-age=300',
+  });
+}
+
+/** The same rankings as data, for anyone who would rather plot them. */
+async function standingsJson(_request: Request, env: Env): Promise<Response> {
+  const entries = await new ResultCache(env.LOC_KV).listForBoard();
+  return jsonResponse(
+    {
+      counted: dedupeByRepo(entries).length,
+      boards: buildBoards(entries).map((board) => ({
+        id: board.id,
+        title: board.title,
+        unit: board.unit,
+        rows: board.rows.map((row) => ({
+          owner: row.owner,
+          repo: row.repo,
+          sha: row.sha,
+          lines: row.lines,
+          stars: row.stars,
+          value: Number(row.value.toFixed(4)),
+        })),
+      })),
+    },
+    200,
+    { 'cache-control': 'public, max-age=300' },
+  );
+}
+
+/**
  * Sitemap of the two static pages plus every cached result page.
  *
  * The /r/ pages are the interesting ones: each is server-rendered, needs no
@@ -547,6 +596,7 @@ async function sitemap(request: Request, env: Env): Promise<Response> {
     `<url><loc>${escapeXml(origin)}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/how.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
     `<url><loc>${escapeXml(origin)}/security.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`,
+    `<url><loc>${escapeXml(origin)}/board</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`,
   ];
 
   const cached = await new ResultCache(env.LOC_KV).listForSitemap(1000);
