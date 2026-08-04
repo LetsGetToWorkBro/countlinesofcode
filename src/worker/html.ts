@@ -84,6 +84,7 @@ Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spit
 <a href="/">count something</a> |
 <a href="/golf">code golf</a> |
 <a href="/board">the standings</a> |
+<a href="https://delete.1999loc.com/">delete your posts</a> |
 <a href="/how.html">how we count</a> |
 <a href="/security.html">connecting github</a> |
 <a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
