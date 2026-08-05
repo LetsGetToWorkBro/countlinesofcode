@@ -16,6 +16,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MIN_REDACTION_POINTS,
   applyEdits,
+  buildPdfFromPages,
   canvasRectToPdf,
   canvasToPdf,
   imageFormat,
@@ -438,5 +439,74 @@ describe('AcroForm fields', () => {
     // looking the same but no longer fillable. Better that than dead widgets.
     const out = await applyEdits(await formDoc(), [], [], [], []);
     expect(readFormFields(await loadForEditing(out))).toEqual([]);
+  });
+});
+
+/**
+ * Rebuilding a PDF from rendered pages (the unlock/shrink engine).
+ *
+ * The output must be a fresh, unencrypted document, and the optional invisible
+ * word layer must actually be there — that is what keeps a rebuilt page
+ * selectable rather than a flat picture.
+ */
+describe('buildPdfFromPages', () => {
+  const PNG_2X2 = Uint8Array.from(
+    atob(
+      'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFUlEQVR4nGP8z8DAwMDAwMDEAAWEG' +
+        'ABBJgHl7fWlwQAAAABJRU5ErkJggg==',
+    ),
+    (c) => c.charCodeAt(0),
+  );
+
+  async function visibleText(bytes: Uint8Array, page: number): Promise<string> {
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const doc = await pdfjs.getDocument({
+      data: bytes.slice(),
+      standardFontDataUrl: 'node_modules/pdfjs-dist/standard_fonts/',
+    }).promise;
+    const content = await (await doc.getPage(page + 1)).getTextContent();
+    return content.items.map((i) => ('str' in i ? i.str : '')).join(' ');
+  }
+
+  it('makes a document with one page per input, at the given sizes', async () => {
+    const out = await buildPdfFromPages([
+      { width: 200, height: 300, png: PNG_2X2 },
+      { width: 400, height: 100, png: PNG_2X2 },
+    ]);
+    const doc = await loadForEditing(out);
+    expect(doc.getPageCount()).toBe(2);
+    expect(doc.getPage(0).getSize()).toMatchObject({ width: 200, height: 300 });
+    expect(doc.getPage(1).getSize()).toMatchObject({ width: 400, height: 100 });
+  });
+
+  it('is not encrypted, whatever the source was', async () => {
+    // The whole point of unlock: a document built from scratch has no security
+    // handler, so it opens with no password and no restrictions.
+    const out = await buildPdfFromPages([{ width: 200, height: 200, png: PNG_2X2 }]);
+    await expect(loadForEditing(out)).resolves.toBeDefined();
+    expect(new TextDecoder('latin1').decode(out)).not.toContain('/Encrypt');
+  });
+
+  it('lays the words back as selectable text', async () => {
+    const out = await buildPdfFromPages([
+      {
+        width: 300,
+        height: 300,
+        png: PNG_2X2,
+        words: [
+          { str: 'Selectable', x: 20, y: 250, size: 12 },
+          { str: 'again', x: 20, y: 230, size: 12 },
+        ],
+      },
+    ]);
+    expect(await visibleText(out, 0)).toContain('Selectable');
+  });
+
+  it('skips a word a standard font cannot encode without dropping the page', async () => {
+    const out = await buildPdfFromPages([
+      { width: 300, height: 300, png: PNG_2X2, words: [{ str: '中文', x: 10, y: 10, size: 12 }] },
+    ]);
+    // The page still builds; the un-encodable word is simply absent.
+    expect((await loadForEditing(out)).getPageCount()).toBe(1);
   });
 });

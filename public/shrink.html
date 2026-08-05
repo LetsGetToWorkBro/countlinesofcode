@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shrink a PDF in Your Browser — LOC.1999</title>
+<meta name="description" content="Make a heavy PDF smaller by re-rendering its pages, best for scanned documents. Runs entirely in your browser — the file is never uploaded. Shows the before and after and lets you keep whichever is smaller.">
+<link rel="canonical" href="https://1999loc.com/shrink.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Shrink a PDF in Your Browser — LOC.1999">
+<meta property="og:description" content="Make a heavy scanned PDF smaller, in your browser. Nothing is uploaded, and it shows you the before and after before you keep it.">
+<meta property="og:url" content="https://1999loc.com/shrink.html">
+<meta property="og:site_name" content="LOC.1999">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<!--
+  EXPECTED LAYOUT (single column, ~680px, left aligned):
+
+    LOC.1999
+    Small tools. No accounts. Nothing leaves your browser.
+    ------------------------------------------------------------
+    count code | golf | pdf | images | delete posts
+    ------------------------------------------------------------
+    SHRINK A PDF
+    [ Open a PDF... ]
+    How hard: ( ) Light ( ) Medium ( ) Strong  [x] keep text selectable
+    [ Shrink ]
+    was 8.4 MB -> now 1.2 MB (86% smaller)   [ download ]
+    ------------------------------------------------------------
+-->
+<div id="page">
+
+<h1><a href="/">LOC.1999</a></h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<a href="/code.html">count code</a>
+|
+<a href="/golf">golf</a>
+|
+<a href="/sign.html">pdf</a>
+|
+<a href="/image.html">images</a>
+|
+<a href="https://delete.1999loc.com/">delete posts</a>
+</p>
+<hr>
+
+<h2>Shrink a PDF</h2>
+<p class="tagline">Make a heavy PDF small enough to email. Your file never leaves this tab.</p>
+
+<div class="notice-box">
+<p><strong>This works by re-rendering the pages, so know what it is good at.</strong></p>
+<p class="note">
+The usual reason a PDF is enormous is that it is a scan &mdash; big photographs
+of pages at a far higher resolution than anyone needs. This re-renders each page
+at a sensible size and re-compresses it, which on a scan can cut the file by ten
+times. The text is laid back over each page invisibly, so you can still select
+and search it.
+</p>
+<p class="note">
+On a PDF that is <em>already</em> mostly crisp vector text, this will help little
+or may even make it larger &mdash; there is nothing oversized to shrink. So it
+shows you the before and after and lets you keep the original if it won. It never
+overwrites anything; you download a new file.
+</p>
+</div>
+
+<hr>
+
+<h3>1. Open a PDF</h3>
+
+<div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open a PDF">
+  <strong>Drop a PDF here, or click to choose</strong>
+  <span>Nothing is uploaded &mdash; it is opened inside this tab</span>
+  <input type="file" id="file-input" accept="application/pdf" hidden>
+</div>
+
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<p id="error" class="error" role="alert"></p>
+
+<div id="controls" class="hidden">
+  <hr>
+  <h3>2. How hard to squeeze</h3>
+  <p id="strengths">
+    <label class="wide"><input type="radio" name="strength" value="light"> Light &mdash; barely visible, modest saving</label>
+    <label class="wide"><input type="radio" name="strength" value="medium" checked> Medium &mdash; a good default for scans</label>
+    <label class="wide"><input type="radio" name="strength" value="strong"> Strong &mdash; smallest, softer pages</label>
+  </p>
+  <p class="note">
+    <label class="inline"><input type="checkbox" id="keep-text" checked> Keep the text selectable</label>
+    &mdash; leave this on unless the PDF is a pure scan with no real text anyway.
+  </p>
+  <p>
+    <button type="button" id="shrink">Shrink</button>
+  </p>
+  <p id="result" class="note"></p>
+  <div id="output"></div>
+</div>
+
+<hr>
+
+<h3>The honest notes</h3>
+<ul class="plain">
+  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The PDF is rendered and rewritten in your browser.</li>
+  <li><strong>It re-renders; it does not optimise in place.</strong> Every page becomes a re-compressed image with an invisible text layer over it. That is what shrinks a scan dramatically &mdash; and what makes it the wrong tool for a document that was already efficient vector text, where it will show no gain and you keep the original.</li>
+  <li><strong>Nothing is thrown away silently.</strong> It reports the before and after size, and if the result is not smaller it says so. You choose which to download.</li>
+  <li><strong>Fonts and vector art become pixels.</strong> A shrunk page is an image, so zooming in far enough shows softness a vector PDF would not. At Light strength on a normal document that is hard to notice; at Strong on a dense page it is visible.</li>
+  <li><strong>Big documents use memory and time.</strong> Each page is rendered at full size before being compressed, so a 300-page scan is real work for a phone. It runs a page at a time so the tab does not freeze.</li>
+</ul>
+
+<hr>
+
+<p class="footer">
+Hosted on Cloudflare &middot; Made with spite for bloat<br>
+<a href="/sign.html">edit a pdf</a> |
+<a href="/unlock.html">unlock a pdf</a> |
+<a href="/image.html">image tools</a> |
+<a href="/code.html">count code</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+</div>
+<script src="/pdfrender.js"></script>
+<script src="/shrink.js"></script>
+</body>
+</html>

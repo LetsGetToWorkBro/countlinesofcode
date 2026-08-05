@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remove PDF Restrictions in Your Browser — LOC.1999</title>
+<meta name="description" content="Remove the no-printing, no-copying restrictions from a PDF that opens without a password. Runs entirely in your browser — the file is never uploaded. Not a password cracker: a file that needs a password to open still needs it.">
+<link rel="canonical" href="https://1999loc.com/unlock.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Remove PDF Restrictions in Your Browser — LOC.1999">
+<meta property="og:description" content="Strip the printing and copying restrictions off a PDF, in your browser. A file that needs a password to open still needs it — this is not a cracker.">
+<meta property="og:url" content="https://1999loc.com/unlock.html">
+<meta property="og:site_name" content="LOC.1999">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<!--
+  EXPECTED LAYOUT (single column, ~680px, left aligned):
+
+    LOC.1999
+    Small tools. No accounts. Nothing leaves your browser.
+    ------------------------------------------------------------
+    count code | golf | pdf | images | delete posts
+    ------------------------------------------------------------
+    UNLOCK A PDF
+    [ Open a PDF... ]
+    working: page 3 of 12...
+    result: unlocked, 12 pages, 1.8 MB   [ download ]
+    ------------------------------------------------------------
+-->
+<div id="page">
+
+<h1><a href="/">LOC.1999</a></h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<a href="/code.html">count code</a>
+|
+<a href="/golf">golf</a>
+|
+<a href="/sign.html">pdf</a>
+|
+<a href="/image.html">images</a>
+|
+<a href="https://delete.1999loc.com/">delete posts</a>
+</p>
+<hr>
+
+<h2>Unlock a PDF</h2>
+<p class="tagline">Remove the &ldquo;you may not print or copy this&rdquo; lock. Your file never leaves this tab.</p>
+
+<div class="notice-box">
+<p><strong>Read this first, because the word &ldquo;unlock&rdquo; is used for two different things.</strong></p>
+<p class="note">
+Some PDFs open fine but refuse to let you print, copy the text, or edit them.
+That is an <em>owner</em> password, and it is a request the reader is trusting you
+to honour, not real protection. This removes it: the file opens the same, minus
+the restriction.
+</p>
+<p class="note">
+Some PDFs will not open at all without a password. That is a <em>user</em>
+password, and the file is genuinely encrypted. This is <strong>not a
+cracker</strong> &mdash; it cannot guess a password you do not have. If your file
+needs one to open, you will be asked for it, and you must know it.
+</p>
+</div>
+
+<hr>
+
+<h3>1. Open a PDF</h3>
+
+<div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open a PDF">
+  <strong>Drop a PDF here, or click to choose</strong>
+  <span>Nothing is uploaded &mdash; it is opened inside this tab</span>
+  <input type="file" id="file-input" accept="application/pdf" hidden>
+</div>
+
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<p id="error" class="error" role="alert"></p>
+
+<div id="result-box">
+  <p id="result" class="note"></p>
+  <div id="output"></div>
+</div>
+
+<hr>
+
+<h3>The honest notes</h3>
+<ul class="plain">
+  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The PDF is opened, decoded and rebuilt in your browser.</li>
+  <li><strong>How it works &mdash; and the cost.</strong> The reader here can open a restricted file, so it rebuilds it as a fresh PDF with no restrictions. Each page is rendered to an image, and the text is laid back over it invisibly, so you can still select and search it &mdash; but the pages are now pictures with a text layer, not the original vector text. The file usually gets larger, and very fine text is a touch softer. That is the trade for removing the lock without a server.</li>
+  <li><strong>It is not a password cracker.</strong> A file that needs a password to <em>open</em> is properly encrypted; you will be asked for that password and it is never sent anywhere. Removing an <em>owner</em> restriction from a file that already opens is a different thing, and the one this does.</li>
+  <li><strong>Use it on your own documents.</strong> Owner restrictions are usually there for a reason even when they are trivial to remove. This exists for the everyday case &mdash; a statement you cannot print, a form you cannot fill &mdash; not for getting around someone else's wishes.</li>
+  <li><strong>It downloads about 700&nbsp;KB</strong> the first time, to render pages (<a href="https://mozilla.github.io/pdf.js/">pdf.js</a>) and write the new file (<a href="https://github.com/Hopding/pdf-lib">pdf-lib</a>), served from this domain because the security policy forbids third-party scripts.</li>
+</ul>
+
+<hr>
+
+<p class="footer">
+Hosted on Cloudflare &middot; Made with spite for bloat<br>
+<a href="/sign.html">edit a pdf</a> |
+<a href="/shrink.html">shrink a pdf</a> |
+<a href="/image.html">image tools</a> |
+<a href="/code.html">count code</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+</div>
+<script src="/pdfrender.js"></script>
+<script src="/unlock.js"></script>
+</body>
+</html>

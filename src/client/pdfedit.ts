@@ -552,6 +552,78 @@ export async function applyEdits(
   return out.save({ useObjectStreams: true });
 }
 
+// ---------------------------------------------------------------------------
+// Rebuilding a PDF from rendered pages
+//
+// Two tools rest on this: unlock (a restricted PDF is opened by pdf.js, which
+// decrypts it to render, and rebuilt here with no encryption) and shrink (each
+// page is re-rendered smaller). Both hand over a picture of each page; this
+// assembles them into a fresh document.
+//
+// A picture of a page is not selectable text, which for a document is a real
+// loss. So each page may also carry the words pdf.js found on it, with where
+// they sit, and those are drawn back on top at zero opacity: invisible, but
+// selectable and searchable, sitting exactly over the picture of themselves.
+// It is the same trick a scanner's "searchable PDF" uses.
+// ---------------------------------------------------------------------------
+
+export interface InvisibleWord {
+  str: string;
+  /** Baseline position in PDF user space. */
+  x: number;
+  y: number;
+  size: number;
+}
+
+export interface RenderedPage {
+  width: number;
+  height: number;
+  /** The page as an image. JPEG for photos and scans, PNG when lossless. */
+  jpeg?: Uint8Array;
+  png?: Uint8Array;
+  /** The text on the page, to lay back over the image invisibly. Optional. */
+  words?: InvisibleWord[];
+}
+
+/**
+ * Assemble rendered pages into one fresh, unencrypted PDF.
+ *
+ * The document is built from scratch, so nothing of the original's encryption,
+ * restrictions or structure carries over — that is exactly the point for the
+ * unlock tool. Words that a font cannot encode are skipped rather than aborting
+ * the page; they are only an invisible convenience layer, and the image still
+ * shows them.
+ */
+export async function buildPdfFromPages(pages: RenderedPage[]): Promise<Uint8Array> {
+  const out = await PDFDocument.create();
+  const font = await out.embedFont(StandardFonts.Helvetica);
+
+  for (const page of pages) {
+    const sheet = out.addPage([page.width, page.height]);
+    const image = page.jpeg ? await out.embedJpg(page.jpeg) : page.png ? await out.embedPng(page.png) : null;
+    if (image) sheet.drawImage(image, { x: 0, y: 0, width: page.width, height: page.height });
+
+    for (const word of page.words ?? []) {
+      const text = word.str.replace(/\s+/g, ' ');
+      if (!text.trim()) continue;
+      try {
+        sheet.drawText(text, {
+          x: word.x,
+          y: word.y,
+          size: word.size > 0 ? word.size : 1,
+          font,
+          opacity: 0, // present in the file, invisible on the page
+        });
+      } catch {
+        // A glyph Helvetica cannot encode (CJK, emoji): skip this word. The
+        // picture still shows it; only the invisible copy is missing.
+      }
+    }
+  }
+
+  return out.save({ useObjectStreams: true });
+}
+
 // Published on the global object rather than as a module export, matching the
 // other bundles: loaded with a plain <script> tag, no module plumbing on the
 // page. Assigned through globalThis so the pure helpers unit test under Node.
@@ -564,6 +636,7 @@ const globalScope = globalThis as unknown as {
     matchOpsToItems: typeof matchOpsToItems;
     imageFormat: typeof imageFormat;
     readFormFields: typeof readFormFields;
+    buildPdfFromPages: typeof buildPdfFromPages;
     canvasToPdf: typeof canvasToPdf;
     canvasRectToPdf: typeof canvasRectToPdf;
     pagesNeedingRaster: typeof pagesNeedingRaster;
@@ -579,6 +652,7 @@ globalScope.LOC1999_SIGN = {
   matchOpsToItems,
   imageFormat,
   readFormFields,
+  buildPdfFromPages,
   canvasToPdf,
   canvasRectToPdf,
   pagesNeedingRaster,
