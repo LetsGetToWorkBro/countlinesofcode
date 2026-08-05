@@ -146,7 +146,7 @@ export function buildBoards(raw: BoardEntry[]): Board[] {
       'borrowed',
       'Least of it written here',
       'files skipped',
-      'Vendored and generated files skipped — code that shipped but nobody typed.',
+      'Vendored and generated files skipped: code that shipped but nobody typed.',
       entries,
       (e) => e.notYours > 0,
       (e) => e.notYours,
