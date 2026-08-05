@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Convert PDF to Word and Word to PDF in Your Browser — LOC.1999</title>
+<meta name="description" content="Convert a PDF to an editable Word document, or a Word document to PDF. Runs entirely in your browser — the file is never uploaded. Tells you how good the conversion will be before you commit.">
+<link rel="canonical" href="https://1999loc.com/convert.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Convert PDF to Word and Word to PDF in Your Browser — LOC.1999">
+<meta property="og:description" content="PDF ↔ Word without uploading the file, and the only converter that tells you how well it will go before you commit.">
+<meta property="og:url" content="https://1999loc.com/convert.html">
+<meta property="og:site_name" content="LOC.1999">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<!--
+  EXPECTED LAYOUT (single column, ~680px, left aligned):
+
+    LOC.1999
+    Small tools. No accounts. Nothing leaves your browser.
+    ------------------------------------------------------------
+    count code | golf | pdf | convert | images | delete posts
+    ------------------------------------------------------------
+    PDF <-> WORD
+    [ Open a PDF or a .docx... ]
+    +--------------------------------------------------+
+    | HOW WELL THIS WILL GO: very well                 |
+    |  + this PDF is tagged...                         |
+    |  - exact page layout is not reproduced           |
+    +--------------------------------------------------+
+    [ Convert to Word ]
+    result: 14 headings, 92 paragraphs, 3 tables  [ download ]
+    Headings wrong?  [ fewer ]  [ more ]
+    ------------------------------------------------------------
+-->
+<div id="page">
+
+<h1><a href="/">LOC.1999</a></h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<a href="/code.html">count code</a>
+|
+<a href="/golf">golf</a>
+|
+<a href="/sign.html">pdf</a>
+|
+<strong>convert</strong>
+|
+<a href="/image.html">images</a>
+|
+<a href="https://delete.1999loc.com/">delete posts</a>
+</p>
+<hr>
+
+<h2>PDF &harr; Word</h2>
+<p class="tagline">Both directions, in this tab. Your file never leaves it.</p>
+
+<p class="note">
+Every PDF-to-Word site on the internet wants your document on their server.
+People put contracts, medical letters and payslips through them without
+thinking about where the file went. This one has no endpoint to send anything
+to &mdash; turn off your wifi after the page loads and it still works.
+</p>
+
+<div class="notice-box">
+<p><strong>It tells you how well it will go, before you commit.</strong></p>
+<p class="note">
+PDF was designed to look the same everywhere, not to be edited. Some PDFs
+carry a hidden description of their own structure &mdash; which text is a
+heading, what belongs in which table cell, what order it reads in. Anything
+saved out of Word, Google Docs or LibreOffice usually does. For those, this is a
+translation, and it is very good.
+</p>
+<p class="note">
+The rest &mdash; scans, LaTeX papers, output from older tools &mdash; are just
+positioned letters on a page. Nothing in the file says where a paragraph starts,
+so the structure has to be worked out from the layout. That is a reconstruction,
+and no converter on earth does it perfectly. The difference here is that you are
+told which of the two you have <em>before</em> you convert, and what to check
+afterwards.
+</p>
+</div>
+
+<hr>
+
+<h3>1. Open a file</h3>
+
+<div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open a PDF or Word document">
+  <strong>Drop a PDF or a .docx here, or click to choose</strong>
+  <span>Nothing is uploaded &mdash; it is opened inside this tab</span>
+  <input type="file" id="file-input" accept="application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+</div>
+
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<p id="error" class="error" role="alert"></p>
+
+<div id="report" class="hidden">
+  <hr>
+  <h3>2. How well this will go</h3>
+  <div id="verdict"></div>
+  <p id="counts" class="note"></p>
+  <p>
+    <button type="button" id="convert">Convert</button>
+    <span id="target" class="note"></span>
+  </p>
+  <p id="result" class="note"></p>
+  <div id="output"></div>
+
+  <div id="tune" class="hidden">
+    <p class="note">
+      <strong>Headings not right?</strong> Nudge it, and this browser will
+      remember for the next document from the same source.
+      <button type="button" id="fewer">Fewer headings</button>
+      <button type="button" id="more">More headings</button>
+      <span id="learned"></span>
+    </p>
+  </div>
+
+  <div id="preview-box">
+    <h3>Preview</h3>
+    <p class="note">The first part of what came out, so you can see the structure before you open it.</p>
+    <div id="preview" class="doc-preview"></div>
+  </div>
+</div>
+
+<hr>
+
+<h3>The honest notes</h3>
+<ul class="plain">
+  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. Both directions run in your browser.</li>
+  <li><strong>PDF&nbsp;&rarr;&nbsp;Word is a conversion, not a photocopy.</strong> It recovers the <em>content and structure</em> &mdash; text, headings, lists, tables, reading order &mdash; and lays it out cleanly in Word. It does not reproduce the original page design pixel for pixel, because a Word document re-flows and a PDF does not. Anyone promising both is promising something the two formats cannot both be.</li>
+  <li><strong>Tagged PDFs convert far better, and it says which yours is.</strong> The verdict above is read out of your actual file, not guessed from its size.</li>
+  <li><strong>Scans need OCR, which this does not do.</strong> If a PDF is a photograph of a page there is no text in it to recover, and the page says so rather than handing you an empty document.</li>
+  <li><strong>Word&nbsp;&rarr;&nbsp;PDF re-typesets the document.</strong> Real, selectable, searchable vector text &mdash; not a picture &mdash; but the lines break where <em>this</em> typesetter breaks them, not exactly where Word would. Matching Word's pagination needs Word's own fonts, which are not free to redistribute.</li>
+  <li><strong>What it does not carry across:</strong> headers and footers, footnotes, comments, tracked changes, embedded images, columns, and text boxes. Those are dropped rather than mangled.</li>
+  <li><strong>It learns locally, and only locally.</strong> Correcting the heading detection stores a number in <em>this browser</em>, against the software that produced the PDF. Nothing is collected, because nothing is sent anywhere &mdash; which is also why it cannot learn from anyone else's documents.</li>
+  <li><strong>It downloads about 700&nbsp;KB</strong> the first time, to read PDFs (<a href="https://mozilla.github.io/pdf.js/">pdf.js</a>) and write them (<a href="https://github.com/Hopding/pdf-lib">pdf-lib</a>). The Word half needs nothing extra: a .docx is a ZIP of XML, and the browser already has a ZIP engine.</li>
+</ul>
+
+<hr>
+
+<p class="footer">
+Hosted on Cloudflare &middot; Made with spite for bloat<br>
+<a href="/sign.html">edit a pdf</a> |
+<a href="/unlock.html">unlock a pdf</a> |
+<a href="/shrink.html">shrink a pdf</a> |
+<a href="/image.html">image tools</a> |
+<a href="/code.html">count code</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+</div>
+<script src="/convert-page.js"></script>
+</body>
+</html>

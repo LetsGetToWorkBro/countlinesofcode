@@ -37,6 +37,11 @@ export const BUNDLES = [
     banner: '/* LOC.1999 big-repo counter. Built from src/client/bigcount.ts — do not edit. */',
   },
   {
+    entry: 'src/client/convert.ts',
+    outfile: 'public/convert.js',
+    banner: '/* LOC.1999 PDF/Word converter. Built from src/client/convert.ts — do not edit. Bundles pdf-lib (MIT). */',
+  },
+  {
     entry: 'src/client/pdfedit.ts',
     outfile: 'public/pdfsign.js',
     banner: '/* LOC.1999 PDF editor engine. Built from src/client/pdfedit.ts — do not edit. Bundles pdf-lib (MIT). */',

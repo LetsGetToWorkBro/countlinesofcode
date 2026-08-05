@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LOC.1999 — Small Tools That Do One Thing</title>
-<meta name="description" content="Free tools with no accounts and no uploads: count lines of code in a GitHub repo, fill and sign a PDF, resize and convert images, unlock and shrink PDFs, bulk-delete your old posts. Most of them run entirely in your browser.">
+<meta name="description" content="Free tools with no accounts and no uploads: count lines of code in a GitHub repo, convert PDF to Word, fill and sign a PDF, resize and convert images, unlock and shrink PDFs, bulk-delete your old posts. Most of them run entirely in your browser.">
 <link rel="canonical" href="https://1999loc.com/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="LOC.1999 — Small Tools That Do One Thing">
@@ -23,7 +23,7 @@
     LOC.1999
     Small tools. No accounts. Nothing leaves your browser.
     ------------------------------------------------------------
-    count code | golf | pdf | images | delete posts
+    count code | golf | pdf | convert | images | delete posts
     ------------------------------------------------------------
     The tools
     +----------------+--------------------------+-------------+
@@ -51,6 +51,8 @@
 <a href="/golf">golf</a>
 |
 <a href="/sign.html">pdf</a>
+|
+<a href="/convert.html">convert</a>
 |
 <a href="/image.html">images</a>
 |
@@ -98,6 +100,15 @@ in the tab you already have open.
     drop in a picture, and delete or replace text <em>properly</em> &mdash; click
     a word and it leaves the file, no black box over the top and the rest of the
     page still selectable. Everything you add can be dragged and resized.
+  </td>
+  <td>Your browser</td>
+</tr>
+<tr>
+  <th scope="row"><a href="/convert.html">PDF &harr; Word</a></th>
+  <td>
+    Convert a PDF into an editable Word document, or a Word document into a PDF.
+    The only converter that tells you <em>how well it will go</em> before you
+    commit &mdash; and the only one that never sees your file.
   </td>
   <td>Your browser</td>
 </tr>
@@ -168,7 +179,7 @@ version:
 </p>
 
 <ul class="plain">
-  <li><strong>No half-working features.</strong> PDF&nbsp;&rarr;&nbsp;Word is not offered, and each tool explains exactly why rather than shipping something that looks right and is not.</li>
+  <li><strong>No half-working features.</strong> PDF&nbsp;&rarr;&nbsp;Word is offered, but it grades your document first and tells you plainly what will not survive, rather than shipping something that looks right and is not.</li>
   <li><strong>No numbers we cannot show our working for.</strong> The counter is <a href="/how.html">documented rule by rule</a>, pinned to a commit, and the same for everyone.</li>
   <li><strong>No accounts, so no data to lose.</strong> Connecting GitHub is optional and only exists for private repositories.</li>
   <li><strong>No ads and no tracking.</strong> There is no analytics script on any page here.</li>
@@ -188,6 +199,7 @@ Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spit
 <a href="/golf">code golf</a> |
 <a href="/board">the standings</a> |
 <a href="/sign.html">edit a pdf</a> |
+<a href="/convert.html">pdf to word</a> |
 <a href="/image.html">image tools</a> |
 <a href="/unlock.html">unlock a pdf</a> |
 <a href="/shrink.html">shrink a pdf</a> |

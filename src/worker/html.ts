@@ -87,6 +87,7 @@ export const SITE_TOOLS: { href: string; label: string; id: string }[] = [
   // /pdf.html redirects here. The URL stays /sign.html for the links already
   // out in the world.
   { href: '/sign.html', label: 'pdf', id: 'pdf' },
+  { href: '/convert.html', label: 'convert', id: 'convert' },
   { href: '/image.html', label: 'images', id: 'images' },
   { href: 'https://delete.1999loc.com/', label: 'delete posts', id: 'delete' },
 ];

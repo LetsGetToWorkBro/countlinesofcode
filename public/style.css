@@ -398,3 +398,53 @@ button.remove {
   background-size: 16px 16px;
   background-position: 0 0, 8px 8px;
 }
+
+/* The converter's verdict box. Colour-coded, but the words carry the meaning:
+   this has to read the same to someone who cannot see the tint. */
+.verdict {
+  border: 1px solid #808080;
+  padding: 6px 9px;
+  margin: 10px 0;
+}
+
+.verdict-high { border-color: #227722; background: #f2fbf2; }
+.verdict-medium { border-color: #aa5500; background: #fff8e0; }
+.verdict-low { border-color: #cc0000; background: #fdf3f3; }
+
+.verdict-head { margin: 2px 0; }
+
+.verdict-list {
+  margin: 6px 0 2px 0;
+  font-size: 14px;
+}
+
+.verdict-list li { margin: 2px 0; }
+.verdict-list .good { color: #145214; }
+.verdict-list .caveat { color: #8a3b00; }
+.verdict-low .verdict-list .caveat { color: #8a0000; }
+
+/* A plain rendering of the converted document, to show structure not styling. */
+.doc-preview {
+  border: 1px solid #c0c0c0;
+  background: #ffffff;
+  padding: 8px 10px;
+  max-height: 460px;
+  overflow: auto;
+}
+
+.doc-preview .pv-h { font-weight: bold; margin: 8px 0 2px 0; }
+.doc-preview .pv-h1 { font-size: 19px; }
+.doc-preview .pv-h2 { font-size: 16px; }
+.doc-preview .pv-h3 { font-size: 15px; }
+.doc-preview .pv-h4, .doc-preview .pv-h5, .doc-preview .pv-h6 { font-size: 14px; }
+.doc-preview .pv-p { margin: 4px 0; }
+.doc-preview .pv-li { margin: 2px 0; }
+.doc-preview .pv-break { border: 0; border-top: 1px dashed #808080; margin: 10px 0; }
+.doc-preview .pv-table { width: auto; font-size: 14px; margin: 6px 0; }
+.doc-preview .pv-table td { border: 1px solid #808080; padding: 2px 5px; }
+.doc-preview .pv-i1 { margin-left: 14px; }
+.doc-preview .pv-i2 { margin-left: 28px; }
+.doc-preview .pv-i3 { margin-left: 42px; }
+.doc-preview .pv-i4 { margin-left: 56px; }
+.doc-preview .pv-i5 { margin-left: 70px; }
+.doc-preview .pv-i6 { margin-left: 84px; }
