@@ -41,6 +41,11 @@ export const BUNDLES = [
     outfile: 'public/pdfkit.js',
     banner: '/* LOC.1999 PDF engine. Built from src/client/pdfkit.ts — do not edit. Bundles pdf-lib (MIT). */',
   },
+  {
+    entry: 'src/client/pdfedit.ts',
+    outfile: 'public/pdfsign.js',
+    banner: '/* LOC.1999 sign/redact engine. Built from src/client/pdfedit.ts — do not edit. Bundles pdf-lib (MIT). */',
+  },
 ];
 
 /** Kept for callers that only care about the counter bundle's options. */

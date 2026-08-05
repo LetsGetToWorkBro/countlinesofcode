@@ -293,3 +293,48 @@ button.remove {
   font-size: 13px;
   padding: 0 6px;
 }
+
+/* ------------------------------------------------- the sign / redact tool */
+
+/* The page and the things placed on it are two stacked canvases: the render
+   underneath, the edits on top. Keeping them separate means re-drawing an
+   overlay never costs a re-render of the page. */
+#stage {
+  position: relative;
+  display: inline-block;
+  border: 1px solid #808080;
+  max-width: 100%;
+}
+
+#stage canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#stage #overlay {
+  position: absolute;
+  inset: 0;
+  cursor: crosshair;
+}
+
+#sig-pad {
+  border: 1px solid #000000;
+  background: #ffffff;
+  max-width: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+/* The redaction explanation earns a box: it is the one thing on the page a
+   visitor may already believe the opposite of. */
+.notice-box {
+  border: 1px solid #aa5500;
+  background: #fff8e0;
+  padding: 6px 9px;
+  margin: 10px 0;
+}
+
+.notice-box p {
+  margin: 4px 0;
+}

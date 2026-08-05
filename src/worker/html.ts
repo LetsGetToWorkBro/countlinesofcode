@@ -84,6 +84,7 @@ export const SITE_TOOLS: { href: string; label: string; id: string }[] = [
   { href: '/', label: 'count code', id: 'count' },
   { href: '/golf', label: 'golf', id: 'golf' },
   { href: '/pdf.html', label: 'pdf', id: 'pdf' },
+  { href: '/sign.html', label: 'sign', id: 'sign' },
   { href: 'https://delete.1999loc.com/', label: 'delete posts', id: 'delete' },
 ];
 
