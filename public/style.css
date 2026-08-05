@@ -20,6 +20,16 @@ h1 {
   letter-spacing: 1px;
 }
 
+/* A link that does not announce itself. Used on the "1999" in the wordmark,
+   which goes somewhere, but should not look like it is asking you to. */
+.quiet {
+  color: inherit;
+  text-decoration: none;
+}
+.quiet:hover, .quiet:focus {
+  text-decoration: underline;
+}
+
 h2 {
   font-size: 20px;
   margin: 18px 0 6px 0;

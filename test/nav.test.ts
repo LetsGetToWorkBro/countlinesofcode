@@ -88,7 +88,11 @@ describe('the toolkit bar', () => {
     for (const path of STATIC_PAGES) {
       const html = readFileSync(path, 'utf8');
       if (path.endsWith('index.html')) {
-        expect(html, 'the landing page should not link its own wordmark').toContain('<h1>1999.LOC</h1>');
+        // The landing page must not link its wordmark back to itself. The
+        // "1999" in it does go somewhere — to the page that is exactly 1999
+        // bytes — which is the point of the link and not a way home.
+        expect(html, 'the landing page links its wordmark to itself').not.toContain('<h1><a href="/">');
+        expect(html, 'the landing page lost its wordmark').toMatch(/<h1>.*1999.*\.LOC<\/h1>/);
       } else {
         expect(html, `${path} has no way back to the landing page`).toContain('<h1><a href="/">1999.LOC</a></h1>');
       }

@@ -5,6 +5,7 @@ import {
   buildBoards,
   commentShare,
   dedupeByRepo,
+  distanceFrom1999,
   linesPerFile,
   recentlyCounted,
   type BoardEntry,
@@ -148,5 +149,42 @@ describe('recentlyCounted', () => {
     expect(recentlyCounted([entry({ owner: 'a', repo: 'fork', fork: true })]).map((e) => e.repo)).toEqual(
       ['fork'],
     );
+  });
+});
+
+describe('the nearest-1999 board', () => {
+  const at = (code: number, repo: string) =>
+    entry({ owner: 'o', repo, lines: code + 10, code, comment: 5, blank: 5, files: 20 });
+
+  it('ranks by distance, closest first', () => {
+    const board = buildBoards([at(5000, 'far'), at(2050, 'near'), at(1999, 'exact')])
+      .find((b) => b.id === 'nineteen-ninety-nine')!;
+    expect(board.rows.map((r) => r.repo)).toEqual(['exact', 'near', 'far']);
+    expect(board.rows[0]!.value).toBe(0);
+    expect(board.rows[1]!.value).toBe(51);
+  });
+
+  it('does not care which side of 1999 you land on', () => {
+    // 1979 and 2019 are both twenty away, and neither is more correct.
+    expect(distanceFrom1999(at(1979, 'under'))).toBe(20);
+    expect(distanceFrom1999(at(2019, 'over'))).toBe(20);
+  });
+
+  it('measures code, not total lines', () => {
+    // Otherwise the way to win is to add blank lines, which is the opposite of
+    // what a site about counting code should reward.
+    const padded = entry({ owner: 'o', repo: 'padded', lines: 1999, code: 900, comment: 99, blank: 1000, files: 20 });
+    expect(distanceFrom1999(padded)).toBe(1099);
+  });
+
+  it('always has a winner, however few repositories there are', () => {
+    const board = buildBoards([at(120000, 'only')]).find((b) => b.id === 'nineteen-ninety-nine')!;
+    expect(board.rows).toHaveLength(1);
+  });
+
+  it('leaves forks out, like every other board', () => {
+    const fork = { ...at(1999, 'forked'), fork: true };
+    const board = buildBoards([fork, at(9999, 'real')]).find((b) => b.id === 'nineteen-ninety-nine')!;
+    expect(board.rows.map((r) => r.repo)).toEqual(['real']);
   });
 });

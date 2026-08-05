@@ -96,6 +96,24 @@ export function linesPerFile(entry: BoardEntry): number {
   return entry.files > 0 ? entry.lines / entry.files : 0;
 }
 
+/**
+ * How far a repository's code total is from 1999.
+ *
+ * The site is named for the year and this is the one board where the number
+ * means something. It is on `code` rather than `lines` because code is the
+ * number this site actually stands behind — comments and blanks would make it
+ * a game of adding whitespace.
+ *
+ * "Nearest" always has a winner, which is what makes it a board rather than a
+ * lottery. An exact hit cannot be beaten, only equalled: two repositories can
+ * both be 1999 lines of code, and the ordering between them is then whatever
+ * the sort happens to do. Worth saying plainly rather than promising a crown
+ * nobody can share.
+ */
+export function distanceFrom1999(entry: BoardEntry): number {
+  return Math.abs(entry.code - 1999);
+}
+
 export function buildBoards(raw: BoardEntry[]): Board[] {
   const entries = dedupeByRepo(raw);
   const sizeable = (e: BoardEntry) => e.lines >= MIN_LINES_FOR_RATIO;
@@ -111,6 +129,16 @@ export function buildBoards(raw: BoardEntry[]): Board[] {
       () => true,
       (e) => e.lines,
       'desc',
+    ),
+    build(
+      'nineteen-ninety-nine',
+      'Nearest 1999',
+      'lines away',
+      'Whose code lands closest to the number in the name. Nobody has hit it exactly. Somebody could.',
+      entries,
+      () => true,
+      distanceFrom1999,
+      'asc',
     ),
     build(
       'dense',

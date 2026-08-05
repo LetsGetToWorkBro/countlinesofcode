@@ -25,6 +25,7 @@ import { COUNTER_VERSION } from '../lib/version';
 import { handleCallback, handleLogin, handleLogout, handleMe, handleMyRepos, loadSession, oauthConfigured, scopesFor } from './auth';
 import { limitsFromEnv, rateLimitPerMinute, type Env } from './env';
 import { boardPageHtml } from './board-html';
+import { EXACTLY_1999 } from './exact1999';
 import { challengePageHtml, golfIndexHtml } from './golf-html';
 import { errorPage, resultPageHtml, type Standing } from './html';
 
@@ -105,6 +106,7 @@ export default {
       if (path === '/api/meta' && request.method === 'GET') return metaResponse(env);
       if (path === '/sitemap.xml' && request.method === 'GET') return await sitemap(request, env);
       if (path === '/board' && request.method === 'GET') return await standings(request, env, ctx);
+      if (path === '/1999' && request.method === 'GET') return exactly1999();
       if (path === '/api/board' && request.method === 'GET') return await standingsJson(request, env, ctx);
       if (path === '/golf' && request.method === 'GET') return await golfIndex(request, env, ctx);
       if (path.startsWith('/golf/') && request.method === 'GET') return await golfChallenge(request, env, ctx, path);
@@ -929,6 +931,27 @@ function canonicalOrigin(env: Env, request: Request): string {
   const configured = env.CANONICAL_ORIGIN;
   if (configured && /^https?:\/\//.test(configured)) return configured.replace(/\/$/, '');
   return new URL(request.url).origin;
+}
+
+/**
+ * The page that is exactly 1999 bytes long.
+ *
+ * Served from a string rather than from public/ so that what a visitor counts
+ * with `curl | wc -c` is this exact constant, with no build step, no editor's
+ * trailing newline and no asset pipeline able to get between the claim and the
+ * thing claimed. Content-Length is set explicitly for the same reason: it is
+ * the number, and it should be checkable from the headers alone.
+ */
+function exactly1999(): Response {
+  const body = new TextEncoder().encode(EXACTLY_1999);
+  return new Response(body, {
+    headers: {
+      ...SECURITY_HEADERS,
+      'content-type': 'text/html; charset=utf-8',
+      'content-length': String(body.length),
+      'cache-control': 'public, max-age=3600',
+    },
+  });
 }
 
 function metaResponse(env: Env): Response {
