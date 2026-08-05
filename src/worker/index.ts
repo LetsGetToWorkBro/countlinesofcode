@@ -35,8 +35,35 @@ import { errorPage, resultPageHtml, type Standing } from './html';
  * sync did not stop them drifting apart. */
 export const SECURITY_HEADERS: Record<string, string> = {
   'x-content-type-options': 'nosniff',
-  'referrer-policy': 'strict-origin-when-cross-origin',
+  /* no-referrer, not strict-origin-when-cross-origin, which is what this was.
+   * The difference only shows on an outbound link, and that is exactly where
+   * it matters: clicking through to getmonero.org or gnupg.org from here used
+   * to tell them which page you left, and "1999loc.com/monero.html" is a
+   * sentence about you. Nothing here needs a referrer to work. */
+  'referrer-policy': 'no-referrer',
   'x-frame-options': 'DENY',
+  /* Two years, and every subdomain. Everything under 1999loc.com is already
+   * HTTPS-only through Cloudflare, so this costs nothing and closes the
+   * first-visit downgrade. Not sent with `preload`: that is a one-way door
+   * requiring a manual submission, and it should be a deliberate decision
+   * rather than a side effect of a commit. */
+  'strict-transport-security': 'max-age=63072000; includeSubDomains',
+  /* Severs this page from anything that opened it and anything it opens, so a
+   * window handle cannot be used to poke at it across origins. */
+  'cross-origin-opener-policy': 'same-origin',
+  /* No other site may load these bytes as a subresource. On a page that
+   * generates keys, "somebody else can embed our script" is not a thing worth
+   * permitting for the sake of nobody who was doing it. */
+  'cross-origin-resource-policy': 'same-origin',
+  /* Everything this site could ask a browser for and never does. A tool that
+   * has no business reading your location or opening your camera should not be
+   * able to start, and this is the difference between not doing it and not
+   * being permitted to. */
+  'permissions-policy':
+    'accelerometer=(), autoplay=(), browsing-topics=(), camera=(), display-capture=(), ' +
+    'encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), ' +
+    'local-fonts=(), magnetometer=(), microphone=(), midi=(), payment=(), publickey-credentials-get=(), ' +
+    'screen-wake-lock=(), serial=(), usb=(), xr-spatial-tracking=()',
   /* font-src is 'self' for the PDF tools: pdf.js loads the standard-14 font
    * data from /vendor/standard_fonts/ as a real font face, and default-src
    * 'none' was refusing it. The refusal was silent — the page still rendered,
