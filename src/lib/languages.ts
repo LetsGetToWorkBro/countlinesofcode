@@ -69,6 +69,21 @@ const JS_BACKTICK: StringSpec = { open: '`', close: '`', escape: true, multiline
 const DQ_RAW: StringSpec = { open: '"', close: '"', escape: false, multiline: false };
 const SQ_RAW: StringSpec = { open: "'", close: "'", escape: false, multiline: false };
 
+// Triple-quoted multiline strings (Kotlin/Scala/Swift/Dart/Groovy raw blocks).
+// Modelling them as strings is what stops a `/*` inside one from being read as
+// the start of a runaway block comment once the newline resets string mode.
+const TRIPLE_DQ: StringSpec = { open: '"""', close: '"""', escape: false, multiline: true };
+const TRIPLE_SQ: StringSpec = { open: "'''", close: "'''", escape: false, multiline: true };
+// C# verbatim string @"...". `""` escapes a quote; modelled as multiline with no
+// backslash escaping, which is right for line counting even if it closes early
+// on the rare embedded "" — still far better than treating it as ordinary code.
+const CS_VERBATIM: StringSpec = { open: '@"', close: '"', escape: false, multiline: true };
+// Rust ordinary strings can span lines, and raw strings r"..." / r#"..."# carry
+// no escaping. Longer opens are tried first (compile sorts by open length).
+const RUST_DQ: StringSpec = { open: '"', close: '"', escape: true, multiline: true };
+const RUST_RAW_HASH: StringSpec = { open: 'r#"', close: '"#', escape: false, multiline: true };
+const RUST_RAW: StringSpec = { open: 'r"', close: '"', escape: false, multiline: true };
+
 const C_LIKE: Syntax = {
   line: ['//'],
   block: [['/*', '*/']],
@@ -131,20 +146,20 @@ export const SYNTAX: Record<string, Syntax> = {
   'C': C_LIKE,
   'C++': C_LIKE,
   'C Header': C_LIKE,
-  'C#': C_LIKE,
+  'C#': { ...C_LIKE, strings: [TRIPLE_DQ, CS_VERBATIM, DQ, SQ] },
   'Objective-C': C_LIKE,
   'Java': C_LIKE,
-  'Kotlin': { ...C_LIKE, nestedBlock: true },
-  'Scala': C_LIKE,
+  'Kotlin': { ...C_LIKE, nestedBlock: true, strings: [TRIPLE_DQ, DQ, SQ] },
+  'Scala': { ...C_LIKE, strings: [TRIPLE_DQ, DQ, SQ] },
   'Go': C_LIKE_TEMPLATE,
-  'Rust': { line: ['//'], block: [['/*', '*/']], nestedBlock: true, strings: [DQ, SQ] },
-  'Swift': { line: ['//'], block: [['/*', '*/']], nestedBlock: true, strings: [DQ] },
+  'Rust': { line: ['//'], block: [['/*', '*/']], nestedBlock: true, strings: [RUST_RAW_HASH, RUST_RAW, RUST_DQ, SQ] },
+  'Swift': { line: ['//'], block: [['/*', '*/']], nestedBlock: true, strings: [TRIPLE_DQ, DQ] },
   'JavaScript': JS_LIKE,
   'JSX': JS_LIKE,
   'TypeScript': JS_LIKE,
   'TSX': JS_LIKE,
   'JSON with Comments': C_LIKE,
-  'Dart': C_LIKE_TEMPLATE,
+  'Dart': { line: ['//'], block: [['/*', '*/']], nestedBlock: true, strings: [TRIPLE_DQ, TRIPLE_SQ, DQ, SQ] },
   'PHP': { line: ['//', '#'], block: [['/*', '*/']], strings: [DQ, SQ] },
   'D': C_LIKE,
   'Zig': { line: ['//'], block: [], strings: [DQ, SQ] },
@@ -152,7 +167,7 @@ export const SYNTAX: Record<string, Syntax> = {
   'Solidity': C_LIKE,
   'GLSL': C_LIKE,
   'HLSL': C_LIKE,
-  'Groovy': C_LIKE_TEMPLATE,
+  'Groovy': { line: ['//'], block: [['/*', '*/']], strings: [TRIPLE_DQ, TRIPLE_SQ, DQ, SQ] },
   'Verilog': C_LIKE,
   'VHDL': { line: ['--'], block: [], strings: [DQ] },
   'Protocol Buffers': C_LIKE,
@@ -221,7 +236,12 @@ export const SYNTAX: Record<string, Syntax> = {
   'PLpgSQL': SQL_SYNTAX,
   'Assembly': { line: [';', '#'], block: [['/*', '*/']], strings: [DQ, SQ] },
   'Fortran': { line: ['!'], block: [], strings: [DQ, SQ] },
-  'MATLAB': { line: ['%'], block: [['%{', '%}']], strings: [DQ, SQ_RAW] },
+  // %{ %} is a block comment only when it stands alone on its own line, like
+  // Ruby's =begin/=end. Declaring it as a general inline block let an inline
+  // `%{` (or a `%{...}` with no later `%}`) open a block comment that ran to the
+  // end of the file; as a line-start block plus the `%` line comment, an inline
+  // %{ is just an ordinary comment to end of line.
+  'MATLAB': { line: ['%'], block: [], lineStartBlock: [['%{', '%}']], strings: [DQ, SQ_RAW] },
   'Tcl': HASH,
   'Vim script': { line: ['"'], block: [], strings: [SQ_RAW] },
   'AWK': HASH,

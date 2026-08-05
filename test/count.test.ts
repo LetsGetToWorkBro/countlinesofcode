@@ -337,3 +337,70 @@ describe('Aggregator', () => {
     expect(biggest[9]!.lines).toBe(10);
   });
 });
+
+describe('countLines - multiline strings do not open runaway comments', () => {
+  it('Rust: a /* inside a multiline string literal is not a comment', () => {
+    // The runaway-comment finding: the string spans a newline, and the /*
+    // inside it must not be read as the start of a block comment.
+    expectCounts('let s = "line1\n/* line2";\nfn f() {}\n', 'Rust',
+      { lines: 3, code: 3, comment: 0, blank: 0 });
+  });
+
+  it('Rust: a raw string r#"..."# is consumed whole', () => {
+    expectCounts('let s = r#"a /* b"#;\nfn f() {}\n', 'Rust',
+      { lines: 2, code: 2, comment: 0, blank: 0 });
+  });
+
+  it('Kotlin: a /* inside a triple-quoted string is not a comment', () => {
+    expectCounts('val q = """\na /* b\nc\n"""\nfun main() {}\n', 'Kotlin',
+      { lines: 5, code: 5, comment: 0, blank: 0 });
+  });
+
+  it('Kotlin: a // inside a triple-quoted string is not a comment', () => {
+    expectCounts('val q = """\n// hello\n"""\n', 'Kotlin',
+      { lines: 3, code: 3, comment: 0, blank: 0 });
+  });
+
+  it('Scala, Swift, Groovy: triple-quoted strings behave the same', () => {
+    for (const lang of ['Scala', 'Swift', 'Groovy']) {
+      expectCounts('val q = """\na /* b\n"""\ncode\n', lang,
+        { lines: 4, code: 4, comment: 0, blank: 0 });
+    }
+  });
+
+  it('Dart: a triple-single-quoted string is consumed whole', () => {
+    expectCounts("var q = '''\na /* b\n''';\nvoid main() {}\n", 'Dart',
+      { lines: 4, code: 4, comment: 0, blank: 0 });
+  });
+
+  it('C#: a verbatim string @"..." spanning lines is not a comment', () => {
+    expectCounts('var s = @"a\n/* b";\nvoid M() {}\n', 'C#',
+      { lines: 3, code: 3, comment: 0, blank: 0 });
+  });
+
+  it('C#: still reads an ordinary // comment', () => {
+    expectCounts('int x = 1; // note\n', 'C#', { lines: 1, code: 1, comment: 0, blank: 0 });
+  });
+});
+
+describe('countLines - MATLAB block comments', () => {
+  it('treats an inline %{ as an ordinary comment to end of line, not a runaway block', () => {
+    expectCounts('a = 5   %{ inline\nb = 6\nc = 7\n', 'MATLAB',
+      { lines: 3, code: 3, comment: 0, blank: 0 });
+  });
+
+  it('does not let %{index} run to the end of the file', () => {
+    expectCounts('x = 5;   %{index}\ny = 6;\nz = 7;\n', 'MATLAB',
+      { lines: 3, code: 3, comment: 0, blank: 0 });
+  });
+
+  it('still honours a real block comment that stands on its own lines', () => {
+    expectCounts('%{\nhidden\n%}\nx = 1\n', 'MATLAB',
+      { lines: 4, code: 1, comment: 3, blank: 0 });
+  });
+
+  it('still reads an ordinary % line comment', () => {
+    expectCounts('% just a comment\nx = 1\n', 'MATLAB',
+      { lines: 2, code: 1, comment: 1, blank: 0 });
+  });
+});

@@ -72,7 +72,12 @@
    */
   function hiddenTextOn(doc, index) {
     return doc.getPage(index + 1).then(function (page) {
-      var viewport = page.getViewport({ scale: RENDER_SCALE });
+      // rotation: 0 so the sampled canvas is in the same unrotated user space as
+      // the text-item transforms getTextContent returns. Without this, a page
+      // with /Rotate 90 renders its pixels rotated while the text coordinates
+      // stay unrotated, so every patch is sampled from the wrong place and a
+      // black box over a name on a rotated scan is missed entirely.
+      var viewport = page.getViewport({ scale: RENDER_SCALE, rotation: 0 });
       var canvas = document.createElement('canvas');
       canvas.width = Math.floor(viewport.width);
       canvas.height = Math.floor(viewport.height);
@@ -136,18 +141,30 @@
       }
 
       return chain
-        .then(function () { return doc.getMetadata().catch(function () { return null; }); })
-        .then(function (meta) {
+        .then(function () {
+          return Promise.all([
+            doc.getMetadata().catch(function () { return null; }),
+            // Read attachments and document JavaScript from pdf.js's parsed
+            // structure, not a raw-byte regex: modern PDFs keep these inside
+            // compressed object streams the byte scan cannot see, and missing
+            // them produced a false "no files attached / no JavaScript" clean.
+            doc.getAttachments().catch(function () { return null; }),
+            doc.getJSActions().catch(function () { return null; }),
+          ]);
+        })
+        .then(function (res) {
+          var meta = res[0];
+          var attachments = res[1];
+          var jsActions = res[2];
           setStatus('');
           var features = engine.pdfFeaturesFromBytes(bytes);
           features.hiddenText = hidden;
           features.annotationAuthors = authors;
           features.pages = doc.numPages;
-          var report = engine.inspectPdf((meta && meta.info) || {}, features);
-          if (doc.numPages > checked) {
-            report.clean.push('Pages checked for hidden text: the first ' + checked + ' of ' + doc.numPages);
-          }
-          return report;
+          features.pagesChecked = checked;
+          if (attachments && Object.keys(attachments).length) features.hasEmbeddedFiles = true;
+          if (jsActions && Object.keys(jsActions).length) features.hasJavaScript = true;
+          return engine.inspectPdf((meta && meta.info) || {}, features);
         });
     });
   }

@@ -29,6 +29,11 @@
   }
 
   function objectUrl(blob) {
+    // The lock and unlock results each replace the previous one, so the prior
+    // download URL is revoked before a new one is minted rather than left to
+    // accumulate for the session.
+    liveUrls.forEach(function (u) { URL.revokeObjectURL(u); });
+    liveUrls = [];
     var url = URL.createObjectURL(blob);
     liveUrls.push(url);
     return url;
@@ -272,6 +277,11 @@
   $('unlock').addEventListener('click', unlock);
   $('unpassword').addEventListener('keydown', function (event) {
     if (event.key === 'Enter') { event.preventDefault(); unlock(); }
+  });
+
+  window.addEventListener('pagehide', function () {
+    liveUrls.forEach(function (u) { URL.revokeObjectURL(u); });
+    liveUrls = [];
   });
 
   updateLockButton();

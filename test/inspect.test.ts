@@ -185,9 +185,21 @@ describe('inspectPdf', () => {
     expect(report.leaks[0]!.detail).toContain('SETTLEMENT');
   });
 
-  it('says so plainly when nothing is hidden', () => {
-    const report = inspectPdf({}, { hiddenText: [] });
-    expect(report.clean.some((c) => /nothing is hiding/i.test(c))).toBe(true);
+  it('says so plainly when nothing is hidden, but does not over-promise', () => {
+    const report = inspectPdf({}, { hiddenText: [], pages: 3, pagesChecked: 3 });
+    const line = report.clean.find((c) => /solid box|white-on-white/i.test(c));
+    expect(line).toBeTruthy();
+    // The all-clear must disclaim the textured-cover blind spot rather than
+    // claiming nothing at all can be hiding.
+    expect(line).toMatch(/photographic|patterned/i);
+  });
+
+  it('does not claim the whole document is clean when only some pages were scanned', () => {
+    const report = inspectPdf({}, { hiddenText: [], pages: 30, pagesChecked: 20 });
+    const line = report.clean.find((c) => /20 pages checked/i.test(c));
+    expect(line).toBeTruthy();
+    // And it does NOT assert an unconditional all-clear.
+    expect(report.clean.some((c) => /nothing is hiding|solid box or in white/i.test(c))).toBe(false);
   });
 
   it('reports the author, and treats it as serious', () => {
@@ -262,6 +274,26 @@ describe('inspectOoxml', () => {
   it('finds hidden text', () => {
     const report = inspectOoxml([part('word/document.xml', '<w:r><w:rPr><w:vanish/></w:rPr><w:t>secret</w:t></w:r>')], 'docx');
     expect(titles(report.leaks)).toMatch(/hidden/i);
+  });
+
+  it('does not flag a run that explicitly un-hides itself', () => {
+    // <w:vanish w:val="false"/> turns hidden OFF (a run overriding a style);
+    // the text displays normally and must not be reported as hidden.
+    const report = inspectOoxml([part('word/document.xml', '<w:r><w:rPr><w:vanish w:val="false"/></w:rPr><w:t>Visible</w:t></w:r>')], 'docx');
+    expect(titles(report.leaks)).not.toMatch(/hidden/i);
+  });
+
+  it('counts moved passages as tracked changes', () => {
+    // Text that was only rearranged (w:moveFrom/w:moveTo) is still a tracked
+    // change; the old count of ins+del alone gave a false "no tracked changes".
+    const report = inspectOoxml(
+      [part('word/document.xml', '<w:p><w:moveFrom w:author="Editor"><w:r><w:t>moved bit</w:t></w:r></w:moveFrom></w:p>')],
+      'docx',
+    );
+    const leak = report.leaks.find((l) => /tracked change/i.test(l.title));
+    expect(leak?.severity).toBe('high');
+    expect(leak?.detail).toMatch(/moved passage/i);
+    expect(report.clean.some((c) => /no tracked changes/i.test(c))).toBe(false);
   });
 
   it('finds a path from the author’s own machine', () => {

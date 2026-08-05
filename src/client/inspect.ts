@@ -101,6 +101,8 @@ export interface PdfFeatures {
   hasLayers?: boolean;
   externalLinks?: string[];
   pages?: number;
+  /** How many pages were actually scanned for hidden text. */
+  pagesChecked?: number;
 }
 
 /** Structural flags read straight from the bytes, without a full parse. */
@@ -134,7 +136,18 @@ export function inspectPdf(info: PdfInfo, features: PdfFeatures): Report {
         'If any of this was meant to be removed, it has not been. Delete it properly, or black it out with a tool that flattens the page.',
     });
   } else {
-    clean.push('No invisible-but-copyable text: nothing is hiding under a box');
+    // Two honesty guards on the all-clear. First, if only some pages were
+    // scanned, do not claim the whole document is clean. Second, the check finds
+    // a flat cover (a solid box, white-on-white) but a photographic or patterned
+    // cover has high pixel variance and reads as "visible", so the claim must
+    // not promise more than the method delivers.
+    const checked = features.pagesChecked;
+    const total = features.pages;
+    if (checked !== undefined && total !== undefined && checked < total) {
+      clean.push(`No hidden-but-copyable text in the ${checked} page${checked === 1 ? '' : 's'} checked (of ${total})`);
+    } else {
+      clean.push('No text hiding under a solid box or in white-on-white. A photographic or patterned cover over text could still hide it, so check those by eye');
+    }
   }
 
   if (info.Author) {
@@ -327,16 +340,27 @@ export function inspectOoxml(parts: ZipEntry[], kind: Report['kind']): Report {
   const document = textOf(parts, 'word/document.xml') ?? '';
   const insertions = (document.match(/<w:ins\b/g) ?? []).length;
   const deletions = (document.match(/<w:del\b/g) ?? []).length;
+  // Moved text is a tracked change too, recorded as w:moveFrom/w:moveTo pairs.
+  // Counting the moveFrom regions (the original location, which still holds the
+  // moved words) catches a "No tracked changes" false clean on a document where
+  // text was only rearranged.
+  const moves = (document.match(/<w:moveFrom\b/g) ?? []).length;
   const authors = [...new Set([...document.matchAll(/w:author="([^"]{1,60})"/g)].map((m) => m[1]!))];
 
-  if (insertions + deletions > 0) {
+  const changes = insertions + deletions + moves;
+  if (changes > 0) {
+    const parts_ = [
+      `${insertions} insertion${insertions === 1 ? '' : 's'}`,
+      `${deletions} deletion${deletions === 1 ? '' : 's'}`,
+    ];
+    if (moves) parts_.push(`${moves} moved passage${moves === 1 ? '' : 's'}`);
     leaks.push({
       severity: 'high',
-      title: `${insertions + deletions} tracked change${insertions + deletions === 1 ? '' : 's'} still in the document`,
+      title: `${changes} tracked change${changes === 1 ? '' : 's'} still in the document`,
       detail:
-        `${insertions} insertion${insertions === 1 ? '' : 's'} and ${deletions} deletion${deletions === 1 ? '' : 's'}` +
+        parts_.join(', ') +
         (authors.length ? `, by ${authors.map((a) => `“${trim(a, 30)}”`).join(', ')}` : '') +
-        '. Deleted text that was never accepted is still in the file, word for word.',
+        '. Deleted or moved text that was never accepted is still in the file, word for word.',
       advice: 'Accept or reject every change before sending this. Turning off "show markup" hides them; it does not remove them.',
     });
   } else if (document) {
@@ -357,7 +381,13 @@ export function inspectOoxml(parts: ZipEntry[], kind: Report['kind']): Report {
     clean.push('No comments attached');
   }
 
-  const hidden = (document.match(/<w:vanish\b/g) ?? []).length;
+  // <w:vanish/> hides a run, but <w:vanish w:val="false"/> explicitly un-hides
+  // one (a run overriding a character style that sets vanish). Counting the
+  // latter as hidden text is a false positive on text that displays normally.
+  const hidden = [...document.matchAll(/<w:vanish\b([^>]*)\/?>/g)].filter((m) => {
+    const val = /w:val="([^"]*)"/.exec(m[1]!)?.[1]?.toLowerCase();
+    return val === undefined || !['false', '0', 'off'].includes(val);
+  }).length;
   if (hidden) {
     leaks.push({
       severity: 'high',

@@ -339,6 +339,22 @@ export function removeTextOps(bytes: Uint8Array, indices: number[]): Uint8Array 
 
   for (const op of ops) {
     if (!wanted.has(op.index)) continue;
+
+    if (op.operator === "'" || op.operator === '"') {
+      // The ' and " operators do an implicit T* (advance to the next line)
+      // before showing text. Blanking the whole operator would delete that line
+      // advance, shifting every following line up. So keep the operator and
+      // replace only its shown string with an empty literal () — a valid operand
+      // that draws nothing while the line advance still happens.
+      if (op.operandEnd - op.operandStart >= 2) {
+        out[op.operandStart] = 0x28; // (
+        out[op.operandStart + 1] = 0x29; // )
+        for (let i = op.operandStart + 2; i < op.operandEnd; i++) out[i] = 0x20;
+      }
+      continue;
+    }
+
+    // Tj / TJ have no line-advance side effect: blank the whole thing.
     for (let i = op.start; i < op.end; i++) out[i] = 0x20;
   }
 

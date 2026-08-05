@@ -984,3 +984,60 @@ describe('OUTPUT_FORMATS', () => {
     }
   });
 });
+
+describe('audio re-encode honesty (finding: MKV H.264+FLAC -> MP4)', () => {
+  const flacInMkv: MediaInfo = {
+    format: 'Matroska',
+    duration: 60,
+    size: 50 * 1024 * 1024,
+    video: { codec: 'avc', width: 1920, height: 1080, frameRate: 30, bitrate: 5e6, decodable: true },
+    audio: { codec: 'flac', channels: 2, sampleRate: 48000, bitrate: 900e3, decodable: true },
+  };
+
+  it('does not claim "no quality is lost" when the FLAC track is re-encoded to AAC', () => {
+    const plan = { formatId: 'mp4' };
+    const fit = fitFor(plan, mp4, full, flacInMkv);
+    const explained = explainPlan(plan, flacInMkv, fit);
+    expect(explained.lossless).toBe(false);
+    expect(explained.headline).not.toMatch(/no quality is lost/i);
+    expect(explained.headline).toMatch(/sound re-encoded/i);
+    expect(explained.notes.join(' ')).toMatch(/sound is re-encoded/i);
+  });
+
+  it('still calls a true copy lossless', () => {
+    const plan = { formatId: 'mkv' };
+    const fit = fitFor(plan, mkv, full, h264);
+    const explained = explainPlan(plan, h264, fit);
+    expect(explained.lossless).toBe(true);
+    expect(explained.headline).toMatch(/no quality is lost/i);
+  });
+});
+
+describe('odd anamorphic dimensions do not defeat the copy path', () => {
+  const anamorphic: MediaInfo = {
+    format: 'MP4',
+    duration: 30,
+    size: 10 * 1024 * 1024,
+    // Display width 873 (odd): NTSC 16:9 anamorphic.
+    video: { codec: 'avc', width: 873, height: 480, frameRate: 30, bitrate: 3e6, decodable: true },
+    audio: { codec: 'aac', channels: 2, sampleRate: 48000, bitrate: 128e3, decodable: true },
+  };
+
+  it('reports no picture change for a plain container move', () => {
+    expect(changesPicture({ formatId: 'mkv' }, anamorphic)).toBe(false);
+  });
+
+  it('reports no picture change for a start trim at original size', () => {
+    expect(changesPicture({ formatId: 'mp4', start: 5, end: 20 }, anamorphic)).toBe(false);
+  });
+
+  it('offers the lossless copy despite the odd width', () => {
+    const plan = { formatId: 'mkv' };
+    const fit = fitFor(plan, mkv, full, anamorphic);
+    expect(willCopyVideo(plan, anamorphic, fit)).toBe(true);
+  });
+
+  it('still re-encodes when an actual downscale is requested', () => {
+    expect(changesPicture({ formatId: 'mp4', maxHeight: 360 }, anamorphic)).toBe(true);
+  });
+});

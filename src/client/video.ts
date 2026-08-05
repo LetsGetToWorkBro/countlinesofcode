@@ -496,8 +496,13 @@ export function changesPicture(plan: Plan, info: MediaInfo): boolean {
   if (plan.targetBytes && !targetAlreadyMet(plan, info)) return true;
   if (plan.exact && trimsTheStart(plan)) return true;
   if (!info.video) return false;
-  const scaled = scaleTo(info.video.width, info.video.height, plan.maxHeight ?? 0);
-  return scaled.width !== info.video.width || scaled.height !== info.video.height;
+  // Only an actual downscale changes the picture. scaleTo rounds to even
+  // dimensions (encoders need them), but that rounding must not count as a
+  // change when no resize was asked for: an anamorphic source with an odd
+  // display width (873) is unchanged, and evening it to 874 used to defeat the
+  // lossless copy path for a plain container change or start-trim.
+  const maxHeight = plan.maxHeight ?? 0;
+  return maxHeight > 0 && info.video.height > maxHeight;
 }
 
 export function changesSound(plan: Plan, info?: MediaInfo): boolean {
@@ -1045,13 +1050,28 @@ export function explainPlan(
         target.advice,
     );
   }
+  // Whether the sound is being re-encoded: there is audio, it is not muted, the
+  // browser can encode it, and it is not being copied. This is the case the old
+  // headline ignored — an MKV of H.264 + FLAC copied to MP4 keeps the picture
+  // bit for bit but re-encodes FLAC to lossy AAC, which is not "no quality lost".
+  const soundReencoded = !plan.mute && Boolean(info.audio) && Boolean(fit.audio) && !copyAudio;
+
   if (plan.mute) notes.push('The sound is dropped.');
   else if (!fit.audio && info.audio) notes.push('This browser cannot encode any audio codec this container holds, so the result is silent.');
   else if (copyAudio) notes.push('The sound is copied across untouched.');
+  else if (soundReencoded) notes.push(`The sound is re-encoded to ${codecName(fit.audio!)}, so a lossless audio track becomes lossy.`);
+
+  const lossless = copyVideo && (copyAudio || !info.audio || Boolean(plan.mute));
 
   return {
-    headline: copyVideo ? 'Copied, not re-encoded: no quality is lost' : 'Re-encoded',
-    lossless: copyVideo && (copyAudio || !info.audio || Boolean(plan.mute)),
+    // The headline may only say "no quality is lost" when both tracks are copied
+    // (or there is no sound). Picture-copied-sound-re-encoded gets its own line.
+    headline: lossless
+      ? 'Copied, not re-encoded: no quality is lost'
+      : copyVideo && soundReencoded
+        ? 'Picture copied; sound re-encoded'
+        : 'Re-encoded',
+    lossless,
     notes,
     offerExact,
   };

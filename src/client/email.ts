@@ -51,9 +51,13 @@ export function parseMessage(raw: string): Message {
   const blank = text.indexOf('\n\n');
   const headerBlock = blank === -1 ? text : text.slice(0, blank);
   const body = blank === -1 ? '' : text.slice(blank + 2);
+  return { headers: parseHeaderBlock(headerBlock), body };
+}
 
+/** Parse one block of headers, unfolding continuation lines. */
+function parseHeaderBlock(block: string): Header[] {
   const headers: Header[] = [];
-  for (const line of headerBlock.split('\n')) {
+  for (const line of block.split('\n')) {
     if (/^[ \t]/.test(line) && headers.length) {
       headers[headers.length - 1]!.value += ' ' + line.trim();
       continue;
@@ -61,7 +65,12 @@ export function parseMessage(raw: string): Message {
     const at = line.indexOf(':');
     if (at > 0) headers.push({ name: line.slice(0, at).trim(), value: line.slice(at + 1).trim() });
   }
-  return { headers, body };
+  return headers;
+}
+
+function headerFrom(headers: Header[], name: string): string | null {
+  const wanted = name.toLowerCase();
+  return headers.find((h) => h.name.toLowerCase() === wanted)?.value ?? null;
 }
 
 /** Every value for a header name, in the order they appear. */
@@ -72,6 +81,109 @@ export function headerValues(message: Message, name: string): string[] {
 
 export function header(message: Message, name: string): string | null {
   return headerValues(message, name)[0] ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Decoding the body
+// ---------------------------------------------------------------------------
+
+/**
+ * Undo quoted-printable: =XX hex escapes and the soft line breaks that wrap it.
+ *
+ * The reason the tracker scan needs this at all: real marketing mail is sent
+ * quoted-printable, where `<img src="...">` appears on the wire as
+ * `<img src=3D"...">`. Scanning the raw bytes finds `src="3D"`, which is not a
+ * URL, so the pixel is missed and the tool reports a false all-clear on exactly
+ * the tracker-laden mail it exists to catch.
+ */
+export function decodeQuotedPrintable(text: string): string {
+  return String(text ?? '')
+    .replace(/=\r?\n/g, '')
+    .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+}
+
+/** Undo base64. Returns '' rather than throwing on malformed input. */
+export function decodeBase64(text: string): string {
+  const clean = String(text ?? '').replace(/[^A-Za-z0-9+/=]/g, '');
+  if (!clean) return '';
+  try {
+    return typeof atob === 'function' ? atob(clean) : '';
+  } catch {
+    return '';
+  }
+}
+
+interface MimePart {
+  headers: Header[];
+  body: string;
+}
+
+const MAX_MIME_DEPTH = 8;
+
+function contentType(headers: Header[]): string {
+  return (headerFrom(headers, 'Content-Type') ?? '').split(';')[0]!.trim().toLowerCase();
+}
+
+function boundaryOf(headers: Header[]): string | null {
+  const match = /boundary\s*=\s*"?([^";]+)"?/i.exec(headerFrom(headers, 'Content-Type') ?? '');
+  return match ? match[1]!.trim() : null;
+}
+
+function decodePart(headers: Header[], body: string): string {
+  const cte = (headerFrom(headers, 'Content-Transfer-Encoding') ?? '').trim().toLowerCase();
+  if (cte === 'quoted-printable') return decodeQuotedPrintable(body);
+  if (cte === 'base64') return decodeBase64(body);
+  return body;
+}
+
+function splitOnBoundary(body: string, boundary: string): string[] {
+  const pieces = body.split('--' + boundary);
+  const parts: string[] = [];
+  // pieces[0] is the preamble; a piece beginning with '--' is the closing
+  // delimiter and ends the multipart.
+  for (let i = 1; i < pieces.length; i++) {
+    const piece = pieces[i]!;
+    if (piece.startsWith('--')) break;
+    parts.push(piece.replace(/^\r?\n/, '').replace(/\r?\n$/, ''));
+  }
+  return parts;
+}
+
+function flattenParts(headers: Header[], body: string, depth: number): MimePart[] {
+  const type = contentType(headers);
+  if (depth <= MAX_MIME_DEPTH && type.startsWith('multipart/')) {
+    const boundary = boundaryOf(headers);
+    if (boundary) {
+      const out: MimePart[] = [];
+      for (const chunk of splitOnBoundary(body, boundary)) {
+        const blank = chunk.indexOf('\n\n');
+        const partHeaders = parseHeaderBlock(blank === -1 ? chunk : chunk.slice(0, blank));
+        const partBody = blank === -1 ? '' : chunk.slice(blank + 2);
+        out.push(...flattenParts(partHeaders, partBody, depth + 1));
+      }
+      return out;
+    }
+  }
+  // A leaf. Binary attachments (images and the like) are not scanned, so there
+  // is no reason to decode a multi-megabyte base64 blob just to throw it away.
+  if (type && !type.startsWith('text/')) return [];
+  return [{ headers, body: decodePart(headers, body) }];
+}
+
+/**
+ * The decoded text the message actually displays.
+ *
+ * Walks the MIME parts, decodes each per its Content-Transfer-Encoding, and
+ * returns the HTML part if there is one (that is where trackers live), falling
+ * back to plain text, then to the raw body for a message that is not MIME at
+ * all. This is what the tracker scan must run on rather than the raw body.
+ */
+export function displayBody(message: Message): string {
+  const parts = flattenParts(message.headers, message.body, 0);
+  const html = parts.find((p) => contentType(p.headers) === 'text/html');
+  const text = parts.find((p) => contentType(p.headers) === 'text/plain');
+  const chosen = html ?? text ?? parts[0];
+  return chosen ? chosen.body : decodePart(message.headers, message.body);
 }
 
 // ---------------------------------------------------------------------------
@@ -118,21 +230,31 @@ const MEANINGS: Record<string, Partial<Record<AuthResult, string>>> = {
  * is the record of what a server that *could* check actually found.
  */
 export function authChecks(message: Message): AuthCheck[] {
-  const lines = [
+  // Split into `;`-separated segments up front rather than searching one giant
+  // string. Authentication-Results already puts each method's result and its
+  // domain qualifier in a single segment, so this both matches the structure
+  // and removes a quadratic-backtracking regex over an attacker-controlled
+  // header: the old domain pattern (`method=[a-z]+[^;]*?\b(keyword)`) froze the
+  // tab for seconds on a header padded with a long run of letters and no `;`.
+  const segments = [
     ...headerValues(message, 'Authentication-Results'),
     ...headerValues(message, 'ARC-Authentication-Results'),
     ...headerValues(message, 'Received-SPF').map((v) => `spf=${v}`),
-  ].join('; ');
+  ]
+    .join('; ')
+    .split(';');
+
+  // Each of these searches is now linear: a fixed keyword followed by a bounded
+  // capture, never an ambiguous quantifier that can overlap what follows it.
+  const DOMAIN = /\b(?:header\.(?:d|from)|smtp\.(?:mailfrom|helo)|domain of)[= ]([^\s;]+)/i;
 
   const found: AuthCheck[] = [];
   for (const method of ['spf', 'dkim', 'dmarc'] as const) {
-    const match = new RegExp(`\\b${method}=([a-z]+)`, 'i').exec(lines);
-    if (!match) continue;
-    const result = match[1]!.toLowerCase() as AuthResult;
-    const domainMatch = new RegExp(
-      `\\b${method}=[a-z]+[^;]*?\\b(?:header\\.(?:d|from)|smtp\\.(?:mailfrom|helo)|domain of)[= ]([^\\s;]+)`,
-      'i',
-    ).exec(lines);
+    const resultPattern = new RegExp(`\\b${method}=([a-z]+)`, 'i');
+    const segment = segments.find((s) => resultPattern.test(s));
+    if (!segment) continue;
+    const result = resultPattern.exec(segment)![1]!.toLowerCase() as AuthResult;
+    const domainMatch = DOMAIN.exec(segment);
     found.push({
       method,
       result,
@@ -335,9 +457,14 @@ export function findTrackers(html: string): Tracker[] {
     }
   }
 
-  for (const match of source.matchAll(/<a\b[^>]*\bhref\s*=\s*["']?([^"'\s>]+)[^>]*>([\s\S]*?)<\/a>/gi)) {
-    const href = match[1]!;
-    if (/^(mailto:|tel:|#)/i.test(href)) continue;
+  // The opening tag is matched up to its first `>` (linear), then href is
+  // pulled from the captured attributes. The old single pattern put two
+  // overlapping `[^>]*` runs around the href and backtracked quadratically on a
+  // body with `<a href=` followed by a long unclosed run — a real ReDoS on the
+  // attacker-authored input this tool exists to consume.
+  for (const match of source.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)) {
+    const href = /\bhref\s*=\s*["']?([^"'\s>]+)/i.exec(match[1]!)?.[1];
+    if (!href || /^(mailto:|tel:|#)/i.test(href)) continue;
     const host = hostOf(href);
     if (!host) continue;
     const label = match[2]!.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
@@ -366,8 +493,11 @@ export function redirectTarget(url: string): string | null {
   try {
     const parsed = new URL(url);
     for (const key of ['url', 'u', 'redirect', 'target', 'dest', 'destination', 'link', 'r', 'q']) {
+      // searchParams.get already returns the decoded value. Decoding it a second
+      // time threw on a destination containing a bare `%` (e.g. `.../100%off`),
+      // dropping exactly the wrapped phishing links this is meant to surface.
       const value = parsed.searchParams.get(key);
-      if (value && /^https?:\/\//i.test(decodeURIComponent(value))) return decodeURIComponent(value);
+      if (value && /^https?:\/\//i.test(value)) return value;
     }
   } catch {
     return null;
@@ -431,6 +561,9 @@ globalScope.LOC1999_EMAIL = {
   parseMessage,
   header,
   headerValues,
+  displayBody,
+  decodeQuotedPrintable,
+  decodeBase64,
   authChecks,
   authVerdict,
   senderCheck,

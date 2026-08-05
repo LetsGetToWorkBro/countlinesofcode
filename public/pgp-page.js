@@ -107,9 +107,13 @@
      one place that decides the MIME type and one place that revokes. */
   function download(text, name) {
     var link = document.createElement('a');
-    link.href = objectUrl(new Blob([text], { type: 'text/plain' }));
+    var url = objectUrl(new Blob([text], { type: 'text/plain' }));
+    link.href = url;
     link.download = name;
     link.click();
+    // The click has been dispatched; give the browser a moment to grab the blob,
+    // then revoke so a stream of saves does not pin one blob each.
+    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
   }
 
   /* The dropdowns: public keys are who you can write to, private keys are who
@@ -723,6 +727,13 @@
   $('decrypt').addEventListener('click', decrypt);
   $('sign').addEventListener('click', sign);
   $('verify').addEventListener('click', verify);
+
+  // Revoke every outstanding object URL when the tab goes away, so the ones
+  // embedded in result areas do not leak for the life of the session.
+  window.addEventListener('pagehide', function () {
+    liveUrls.forEach(function (u) { URL.revokeObjectURL(u); });
+    liveUrls = [];
+  });
 
   ready().then(function () {
     renderKeyring();

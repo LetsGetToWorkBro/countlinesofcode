@@ -95,6 +95,20 @@ export const SECURITY_HEADERS: Record<string, string> = {
     "frame-ancestors 'none'",
 };
 
+/**
+ * The Cache-Control for a repository response.
+ *
+ * A private-repo count carries real line totals, real file paths and the repo
+ * description; served `public`, a shared cache anywhere in the TLS path (a
+ * corporate intercepting proxy, or a later Cloudflare cache rule) could store
+ * it keyed on the URL and hand it to a second user who has no access to that
+ * repository. So a private repo is always `private, no-store`; a public one
+ * keeps its cacheable value.
+ */
+function repoCacheControl(isPrivate: boolean, publicValue: string): string {
+  return isPrivate ? 'private, no-store' : publicValue;
+}
+
 interface ApiError {
   status: number;
   code: string;
@@ -229,7 +243,7 @@ async function postCount(request: Request, env: Env, ctx: ExecutionContext): Pro
 
   const result = await performCount(request, env, ctx, target);
   return jsonResponse(result, 200, {
-    'cache-control': result.cached ? 'public, max-age=300' : 'public, max-age=60',
+    'cache-control': repoCacheControl(result.repo_meta.private, result.cached ? 'public, max-age=300' : 'public, max-age=60'),
   });
 }
 
@@ -245,7 +259,7 @@ async function getCount(request: Request, env: Env, ctx: ExecutionContext, path:
 
   const result = await performCount(request, env, ctx, target);
   return jsonResponse(result, 200, {
-    'cache-control': result.cached ? 'public, max-age=300' : 'public, max-age=60',
+    'cache-control': repoCacheControl(result.repo_meta.private, result.cached ? 'public, max-age=300' : 'public, max-age=60'),
   });
 }
 
@@ -535,7 +549,7 @@ async function resultPage(request: Request, env: Env, ctx: ExecutionContext, pat
       result.repo,
     );
     return htmlResponse(resultPageHtml(result, canonicalOrigin(env, request), standings), 200, {
-      'cache-control': sha ? 'public, max-age=86400' : 'public, max-age=300',
+      'cache-control': repoCacheControl(result.repo_meta.private, sha ? 'public, max-age=86400' : 'public, max-age=300'),
     });
   } catch (error) {
     const mapped = toApiError(error);
@@ -636,7 +650,7 @@ async function resolveOnly(request: Request, env: Env, path: string): Promise<Re
       counter_version: COUNTER_VERSION,
     },
     200,
-    { 'cache-control': 'public, max-age=60' },
+    { 'cache-control': repoCacheControl(resolved.repoInfo.private, 'public, max-age=60') },
   );
 }
 

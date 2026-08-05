@@ -14,6 +14,9 @@ import {
   addressOf,
   authChecks,
   authVerdict,
+  decodeBase64,
+  decodeQuotedPrintable,
+  displayBody,
   domainOf,
   findTrackers,
   header,
@@ -347,5 +350,110 @@ describe('the trick this tool exists for', () => {
 
   it('says the two disagree', () => {
     expect(senderCheck(parseMessage(RAW)).concerns.join(' ')).toMatch(/shows you the first one/i);
+  });
+});
+
+describe('decoding the body it actually displays', () => {
+  it('undoes quoted-printable, so src=3D"..." becomes a real URL', () => {
+    expect(decodeQuotedPrintable('src=3D"https://x.example/o?rid=3Dabc"'))
+      .toBe('src="https://x.example/o?rid=abc"');
+  });
+
+  it('rejoins quoted-printable soft line breaks', () => {
+    expect(decodeQuotedPrintable('a very long=\nline')).toBe('a very longline');
+  });
+
+  it('undoes base64, and never throws on junk', () => {
+    expect(decodeBase64('aGVsbG8=')).toBe('hello');
+    expect(decodeBase64('')).toBe('');
+    // Malformed input (a lone padding run) must degrade to '', not throw.
+    expect(() => decodeBase64('=')).not.toThrow();
+    expect(typeof decodeBase64('%%%%')).toBe('string');
+  });
+
+  it('pulls the HTML part out of a multipart quoted-printable message', () => {
+    const raw = [
+      'Content-Type: multipart/alternative; boundary="B"',
+      '',
+      '--B',
+      'Content-Type: text/plain',
+      '',
+      'plain version',
+      '--B',
+      'Content-Type: text/html',
+      'Content-Transfer-Encoding: quoted-printable',
+      '',
+      '<img src=3D"https://open.mailchimp.com/o?rid=3D8f2b91cc44de" width=3D"1">',
+      '--B--',
+    ].join('\n');
+    const body = displayBody(parseMessage(raw));
+    expect(body).toContain('src="https://open.mailchimp.com/o?rid=8f2b91cc44de"');
+  });
+
+  it('decodes a base64 HTML part', () => {
+    const html = '<img src="https://t.example/p?uid=aaaaaaaa" width="1">';
+    const raw = [
+      'Content-Type: multipart/mixed; boundary="X"',
+      '',
+      '--X',
+      'Content-Type: text/html',
+      'Content-Transfer-Encoding: base64',
+      '',
+      btoa(html),
+      '--X--',
+    ].join('\n');
+    expect(displayBody(parseMessage(raw))).toBe(html);
+  });
+
+  it('leaves a plain non-MIME body untouched', () => {
+    expect(displayBody(parseMessage('From: a@b.c\n\n<p>hi</p>'))).toBe('<p>hi</p>');
+  });
+});
+
+describe('trackers survive real-world encoding', () => {
+  it('finds the tracking pixel that only the raw scan would have missed', () => {
+    // The HIGH finding: a quoted-printable Mailchimp pixel reads on the wire as
+    // src=3D"...". The old scan captured "3D" and reported a false all-clear.
+    const raw = [
+      'Content-Type: text/html',
+      'Content-Transfer-Encoding: quoted-printable',
+      '',
+      '<img src=3D"https://open.mailchimp.com/o?rid=3D8f2b91cc44de" width=3D"1" height=3D"1">',
+    ].join('\n');
+    const trackers = findTrackers(displayBody(parseMessage(raw)));
+    expect(trackers).toHaveLength(1);
+    expect(trackers[0]!.host).toBe('open.mailchimp.com');
+  });
+});
+
+describe('redirectTarget with awkward destinations', () => {
+  it('recovers a destination containing a bare percent sign', () => {
+    // The old double-decode threw on %off and returned null, dropping the link.
+    expect(redirectTarget('https://track.example/c?url=https%3A%2F%2Fevil.example%2F100%25off'))
+      .toBe('https://evil.example/100%off');
+  });
+});
+
+describe('resilience to hostile input', () => {
+  it('reads auth results in linear time on a padded header', () => {
+    // The ReDoS finding: a spf= value padded with a long letter run and no ';'
+    // used to freeze the tab for seconds. It must now finish promptly.
+    const raw = 'Authentication-Results: mx; spf=' + 'a'.repeat(120_000) + '\nFrom: a@b.c\n\nx';
+    const start = performance.now();
+    authChecks(parseMessage(raw));
+    expect(performance.now() - start).toBeLessThan(500);
+  });
+
+  it('scans an unclosed anchor in linear time', () => {
+    const body = '<a href=' + 'a'.repeat(200_000);
+    const start = performance.now();
+    findTrackers(body);
+    expect(performance.now() - start).toBeLessThan(500);
+  });
+
+  it('still reads a normal Authentication-Results header correctly', () => {
+    const checks = authChecks(parseMessage(CLEAN));
+    expect(checks.map((c) => `${c.method}=${c.result}`)).toEqual(['spf=pass', 'dkim=pass', 'dmarc=pass']);
+    expect(checks.find((c) => c.method === 'dmarc')!.domain).toBe('example.com');
   });
 });

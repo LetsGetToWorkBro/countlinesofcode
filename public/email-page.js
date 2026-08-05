@@ -79,7 +79,10 @@
   }
 
   function sectionTrackers(message) {
-    var trackers = mail.findTrackers(message.body || '');
+    // The decoded display body, not the raw one: real marketing mail is MIME
+    // multipart with the HTML part quoted-printable or base64 encoded, and
+    // scanning the raw bytes finds no trackers at all.
+    var trackers = mail.findTrackers(mail.displayBody(message));
     var hosts = mail.trackerHosts(trackers);
 
     var html = '<hr><h3>Who is watching you read it</h3>' +

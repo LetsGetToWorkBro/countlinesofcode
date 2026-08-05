@@ -119,14 +119,27 @@ export function headingLevel(style: string | undefined): number | null {
   return match ? Number(match[1]) : null;
 }
 
+/**
+ * Whether a toggle property like <w:b> is on.
+ *
+ * Present with no w:val, or w:val of true/1/on, means on. The whole point is
+ * the *off* case: <w:b w:val="0"/> turns bold off (a plain run inside a bold
+ * heading), and reading the element's mere presence as "on" rendered it bold.
+ */
+function toggleOn(node: XmlNode | undefined): boolean {
+  if (!node) return false;
+  const val = node.attrs['w:val'];
+  return val === undefined || ['1', 'true', 'on'].includes(val.toLowerCase());
+}
+
 function runsOf(paragraph: XmlNode): Run[] {
   const runs: Run[] = [];
   const walk = (node: XmlNode) => {
     for (const child of node.children) {
       if (child.name === 'w:r') {
         const props = kid(child, 'w:rPr');
-        const bold = props ? Boolean(kid(props, 'w:b')) : false;
-        const italic = props ? Boolean(kid(props, 'w:i')) : false;
+        const bold = props ? toggleOn(kid(props, 'w:b')) : false;
+        const italic = props ? toggleOn(kid(props, 'w:i')) : false;
         // w:sz is in half-points.
         const half = props ? kid(props, 'w:sz')?.attrs['w:val'] : undefined;
         const size = half ? Number(half) / 2 : undefined;
@@ -233,27 +246,34 @@ export async function readDocx(source: Uint8Array): Promise<Doc> {
 
   for (const node of body?.children ?? []) {
     if (node.name === 'w:p') {
-      // A page break is a paragraph whose only content is a page-type break.
-      // Without this it reads as an empty paragraph and is tidied away, so a
-      // document losing its pagination on a round trip.
-      if (hasPageBreak(node)) {
-        blocks.push({ kind: 'pageBreak', runs: [] });
-        continue;
-      }
       const props = kid(node, 'w:pPr');
       const styleId = props ? kid(props, 'w:pStyle')?.attrs['w:val'] : undefined;
       const level = headingLevel(styleId) ?? headingLevel(styleId ? names.get(styleId) : undefined);
       const numbered = props ? kid(props, 'w:numPr') : undefined;
       const runs = runsOf(node);
+      const pageBreak = hasPageBreak(node);
 
-      if (numbered) {
-        const numId = kid(numbered, 'w:numId')?.attrs['w:val'];
-        const depth = Number(kid(numbered, 'w:ilvl')?.attrs['w:val'] ?? '0') + 1;
-        blocks.push({ kind: 'listItem', level: depth, ordered: numId ? ordered.has(numId) : false, runs });
-      } else if (level) {
-        blocks.push({ kind: 'heading', level, runs });
+      const pushContent = () => {
+        if (numbered) {
+          const numId = kid(numbered, 'w:numId')?.attrs['w:val'];
+          const depth = Number(kid(numbered, 'w:ilvl')?.attrs['w:val'] ?? '0') + 1;
+          blocks.push({ kind: 'listItem', level: depth, ordered: numId ? ordered.has(numId) : false, runs });
+        } else if (level) {
+          blocks.push({ kind: 'heading', level, runs });
+        } else {
+          blocks.push({ kind: 'paragraph', runs });
+        }
+      };
+
+      // A paragraph can carry both text and a page break — pressing Ctrl+Enter
+      // after typing "Hello" produces exactly that. Emitting only the break, as
+      // before, silently dropped "Hello". Emit the content (when it has any),
+      // then the break.
+      if (pageBreak) {
+        if (runs.length) pushContent();
+        blocks.push({ kind: 'pageBreak', runs: [] });
       } else {
-        blocks.push({ kind: 'paragraph', runs });
+        pushContent();
       }
     } else if (node.name === 'w:tbl') {
       const rows = kids(node, 'w:tr').map((row) => kids(row, 'w:tc').map(cellOf));

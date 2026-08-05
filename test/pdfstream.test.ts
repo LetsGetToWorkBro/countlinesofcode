@@ -140,6 +140,31 @@ describe('removeTextOps', () => {
   it('ignores an index that is not there rather than throwing', () => {
     expect(text(removeTextOps(bytes(stream), [99]))).toBe(stream);
   });
+
+  it("keeps the line advance of a ' operator, so following lines do not shift up", () => {
+    // The ' operator does an implicit T* before showing text. Deleting the
+    // middle line must not remove that advance, or line C jumps up over B.
+    const quoteStream = 'BT /F1 12 Tf 14 TL 100 700 Td (A) \' (B) \' (C) \' ET';
+    const out = text(removeTextOps(bytes(quoteStream), [1]));
+    // The B text is gone, replaced by an empty literal...
+    expect(out).not.toContain('(B)');
+    expect(out).toContain('()');
+    // ...but its ' operator survives, so C still advances a line as before.
+    const ops = findTextOps(bytes(quoteStream));
+    const after = findTextOps(new TextEncoder().encode(out));
+    const cBefore = ops.find((o) => o.operator === "'" && o.index === 2);
+    const cAfter = after.find((o) => o.operator === "'" && Math.abs(o.y - (cBefore!.y)) < 0.01);
+    expect(cAfter, 'line C moved because a T* was lost').toBeTruthy();
+  });
+
+  it('keeps the line advance of a " operator too', () => {
+    const dquote = 'BT /F1 12 Tf 14 TL 100 700 Td (A) \' 1 2 (B) " (C) \' ET';
+    const out = text(removeTextOps(bytes(dquote), [1]));
+    expect(out).not.toContain('(B)');
+    // The " operator and its spacing operands remain.
+    expect(out).toContain('"');
+    expect(out).toContain('1 2');
+  });
 });
 
 describe('matchOpsToItems', () => {

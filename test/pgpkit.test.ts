@@ -542,3 +542,28 @@ describe('backupName', () => {
     expect(backupName('   ', 'keyring')).toBe('key-keyring.asc');
   });
 });
+
+describe('strength does not overstate a padded passphrase', () => {
+  it('scores a word phrase with a trailing year as a phrase, not raw characters', () => {
+    // The finding: adding "2024" made strength() skip the phrase clamp and
+    // report ~159 bits / "excellent" for four dictionary words.
+    const padded = strength('edge habit cycle dune 2024');
+    expect(padded.bits).toBeLessThan(55);
+    expect(['terrible', 'weak', 'fair']).toContain(padded.verdict);
+  });
+
+  it('is not fooled by digits stuck onto each word', () => {
+    const stuck = strength('edge1-habit2-cycle3-dune4');
+    expect(stuck.bits).toBeLessThan(55);
+  });
+
+  it('still scores a plain word phrase exactly as before', () => {
+    expect(phraseBits('edge-habit-cycle-dune')).toBe(32);
+    expect(phraseBits(makePassphrase(7))).toBe(passphraseBits(7));
+  });
+
+  it('still gives unfamiliar words more credit than list words', () => {
+    expect(strength('rutabaga-clavicle-tympanum-basalt-nocturne').bits)
+      .toBeGreaterThan(strength('edge-habit-cycle-dune-hinge').bits);
+  });
+});

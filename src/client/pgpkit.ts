@@ -463,10 +463,34 @@ export function phraseBits(password: string): number | null {
     .split(/[\s._-]+/)
     .filter(Boolean);
   if (parts.length < 3) return null;
-  if (!parts.every((part) => /^[a-z]+$/.test(part))) return null;
 
+  // Each token's alpha core is what decides if it is a word. Requiring the whole
+  // token to be pure-alpha used to return null the moment any token had a digit
+  // stuck to it (`dune4`, `2024`), so strength() skipped the min() clamp and
+  // reported raw character entropy — rating a padded four-word phrase
+  // 'excellent'. A phrase with a year on the end is still a phrase.
   const list = new Set(WORDS);
-  const bits = parts.reduce((total, part) => total + (list.has(part) ? Math.log2(WORDS.length) : 13), 0);
+  let bits = 0;
+  let extraChars = 0;
+  let wordCount = 0;
+  for (const part of parts) {
+    const core = part.replace(/[^a-z]/g, '');
+    if (core.length < 2) {
+      // A token that is essentially not a word (all digits/symbols).
+      extraChars += part.length;
+      continue;
+    }
+    wordCount++;
+    bits += list.has(core) ? Math.log2(WORDS.length) : 13;
+    extraChars += part.length - core.length;
+  }
+  // Three actual words are what make it a phrase, not three tokens: `abc-123-xyz`
+  // is two words and a number, and reads better as characters.
+  if (wordCount < 3) return null;
+
+  // The digits and symbols add a little, but a bounded amount: appending a year
+  // to four words does not make them strong.
+  bits += Math.min(extraChars * 2, 16);
   return Math.round(bits);
 }
 

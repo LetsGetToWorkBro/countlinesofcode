@@ -23,6 +23,7 @@ import {
   loadForEditing,
   pageTextOps,
   pagesNeedingRaster,
+  placeForRotation,
   readContentStream,
   readFormFields,
   usefulRedactions,
@@ -508,5 +509,46 @@ describe('buildPdfFromPages', () => {
     ]);
     // The page still builds; the un-encodable word is simply absent.
     expect((await loadForEditing(out)).getPageCount()).toBe(1);
+  });
+});
+
+describe('placeForRotation (finding: rotated pages misplace signatures)', () => {
+  // The viewer maps a native point to display space by rotating the page
+  // clockwise by /Rotate. placeForRotation must invert that for the anchor, so
+  // round-tripping through the forward mapping returns the original display
+  // point, for every rotation.
+  const forward = (r: number, nw: number, nh: number, nx: number, ny: number): [number, number] => {
+    switch (((r % 360) + 360) % 360) {
+      case 90: return [ny, nw - nx];
+      case 180: return [nw - nx, nh - ny];
+      case 270: return [nh - ny, nx];
+      default: return [nx, ny];
+    }
+  };
+
+  const NW = 612;
+  const NH = 792;
+  const points: [number, number][] = [[0, 0], [100, 700], [612, 792], [300, 150]];
+
+  for (const rotation of [0, 90, 180, 270]) {
+    it(`inverts the display↔native mapping at /Rotate ${rotation}`, () => {
+      for (const [dx, dy] of points) {
+        const { x, y, angle } = placeForRotation(rotation, NW, NH, dx, dy);
+        const [bx, by] = forward(rotation, NW, NH, x, y);
+        expect(bx).toBeCloseTo(dx, 6);
+        expect(by).toBeCloseTo(dy, 6);
+        // The draw is counter-rotated so it reads upright once the viewer rotates.
+        expect(angle).toBe(((rotation % 360) + 360) % 360);
+      }
+    });
+  }
+
+  it('is the identity on an unrotated page', () => {
+    expect(placeForRotation(0, NW, NH, 100, 700)).toEqual({ x: 100, y: 700, angle: 0 });
+  });
+
+  it('normalises odd rotation values', () => {
+    expect(placeForRotation(-90, NW, NH, 100, 700).angle).toBe(270);
+    expect(placeForRotation(450, NW, NH, 100, 700).angle).toBe(90);
   });
 });

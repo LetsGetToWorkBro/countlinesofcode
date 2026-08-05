@@ -143,8 +143,12 @@
         '<th class="n">Lines</th></tr></thead><tbody>';
       for (var b = 0; b < result.biggest_files.length; b++) {
         var file = result.biggest_files[b];
+        // Encode each path segment: a filename with #, ? or % otherwise breaks
+        // the link (a # becomes a fragment, a ? a query string) and lands on the
+        // wrong page. Slashes between segments stay as separators.
+        var encodedPath = String(file.path).split('/').map(encodeURIComponent).join('/');
         var blobUrl = 'https://github.com/' + encodeURIComponent(result.owner) + '/' +
-          encodeURIComponent(result.repo) + '/blob/' + encodeURIComponent(result.sha) + '/' + file.path;
+          encodeURIComponent(result.repo) + '/blob/' + encodeURIComponent(result.sha) + '/' + encodedPath;
         html += '<tr><td><a href="' + esc(blobUrl) + '">' + esc(file.path) + '</a></td>' +
           '<td>' + esc(file.language) + '</td>' +
           '<td class="n">' + num(file.lines) + '</td></tr>';

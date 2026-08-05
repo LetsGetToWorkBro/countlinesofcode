@@ -33,6 +33,7 @@ import {
   PDFTextField,
   StandardFonts,
   decodePDFRawStream,
+  degrees,
   rgb,
 } from 'pdf-lib';
 import { findTextOps, matchOpsToItems, removeTextOps, type ShowTextOp } from './pdfstream';
@@ -506,20 +507,37 @@ export async function applyEdits(
   for (let index = 0; index < pageCount; index++) {
     const raster = rasterByPage.get(index);
     let page;
+    // How to turn an on-screen (display-space) anchor into where pdf-lib must
+    // actually draw. The edits arrive in the coordinate space the user sees,
+    // which for a page with /Rotate is not the page's native user space.
+    let place: (dx: number, dy: number) => { x: number; y: number; angle: number };
 
     if (raster) {
       // Replace the page rather than draw over it: nothing of the original
-      // content stream survives, which is the entire point.
+      // content stream survives, which is the entire point. The raster from the
+      // renderer is display-oriented (upright), so the new page takes the
+      // DISPLAY dimensions and carries no rotation. Using the native MediaBox
+      // size squashed a landscape raster into a portrait frame on rotated pages.
       const original = src.getPage(index);
-      const { width, height } = original.getSize();
+      const { width: nativeW, height: nativeH } = original.getSize();
+      const swap = Math.abs(original.getRotation().angle) % 180 === 90;
+      const width = swap ? nativeH : nativeW;
+      const height = swap ? nativeW : nativeH;
       page = out.addPage([width, height]);
       const image = await out.embedPng(raster);
       page.drawImage(image, { x: 0, y: 0, width, height });
+      // The new page is upright display space: draw straight through.
+      place = (dx, dy) => ({ x: dx, y: dy, angle: 0 });
     } else {
       const [copied] = await out.copyPages(src, [index]);
       if (!copied) throw new Error(`Could not copy page ${index + 1}.`);
       out.addPage(copied);
       page = copied;
+      // A copied page keeps its /Rotate, so an anchor in the space the user saw
+      // has to be transformed back into native user space.
+      const { width: nativeW, height: nativeH } = copied.getSize();
+      const rotation = copied.getRotation().angle;
+      place = (dx, dy) => placeForRotation(rotation, nativeW, nativeH, dx, dy);
     }
 
     for (const edit of edits) {
@@ -530,30 +548,64 @@ export async function applyEdits(
         // lines are placed one below another at the requested size.
         const lines = edit.value.split('\n');
         lines.forEach((line, offset) => {
+          const spot = place(edit.at.x, edit.at.y - offset * edit.size * 1.2);
           page.drawText(line, {
-            x: edit.at.x,
-            y: edit.at.y - offset * edit.size * 1.2,
+            x: spot.x,
+            y: spot.y,
             size: edit.size,
             font,
             color: rgb(0, 0, 0),
+            rotate: degrees(spot.angle),
           });
         });
       } else if (edit.kind === 'stamp') {
         const image = await embed(edit.bytes);
         const height = (image.height / image.width) * edit.width;
+        // The click marks the top-left of the signature on screen; the image is
+        // placed from its bottom-left, so the display anchor is one height down.
+        const spot = place(edit.at.x, edit.at.y - height);
         page.drawImage(image, {
-          x: edit.at.x,
-          // The click marks the top-left of the signature, which is what it
-          // looks like on screen; PDF places images from the bottom-left.
-          y: edit.at.y - height,
+          x: spot.x,
+          y: spot.y,
           width: edit.width,
           height,
+          rotate: degrees(spot.angle),
         });
       }
     }
   }
 
   return out.save({ useObjectStreams: true });
+}
+
+/**
+ * Turn a display-space anchor into where pdf-lib must draw on a page whose
+ * /Rotate is `rotation` (clockwise, 0/90/180/270), so the mark lands where the
+ * user placed it and reads upright once the viewer applies the rotation.
+ *
+ * The viewer maps a native point to display by rotating the page clockwise by
+ * `rotation`; this inverts that for the anchor, and returns the counter-rotation
+ * to draw the content with so it appears upright. Verified for all four angles
+ * in test/pdfedit.test.ts by round-tripping against the forward mapping.
+ */
+export function placeForRotation(
+  rotation: number,
+  nativeW: number,
+  nativeH: number,
+  dx: number,
+  dy: number,
+): { x: number; y: number; angle: number } {
+  const r = (((Math.round(rotation / 90) * 90) % 360) + 360) % 360;
+  switch (r) {
+    case 90:
+      return { x: nativeW - dy, y: dx, angle: 90 };
+    case 180:
+      return { x: nativeW - dx, y: nativeH - dy, angle: 180 };
+    case 270:
+      return { x: dy, y: nativeH - dx, angle: 270 };
+    default:
+      return { x: dx, y: dy, angle: 0 };
+  }
 }
 
 // ---------------------------------------------------------------------------

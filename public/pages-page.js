@@ -236,6 +236,9 @@
   function saveOne() {
     if (!pages.length) return;
     clearError();
+    // The output area is about to be replaced; revoke the previous build's URLs
+    // first so re-saving while tuning ranges does not pin one PDF blob per save.
+    releaseUrls();
     $('output').innerHTML = '';
     $('progress').textContent = 'Building…';
 
@@ -279,6 +282,7 @@
     if (plan.error) { fail(plan.error); return; }
 
     clearError();
+    releaseUrls();
     $('output').innerHTML = '';
     $('progress').textContent = 'Building…';
 

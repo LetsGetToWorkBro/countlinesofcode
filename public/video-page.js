@@ -835,8 +835,26 @@
       ']</span> ' + Math.round(percent * 100) + '%';
   }
 
+  // Output blob URLs are tracked apart from the loaded-file preview: a new run
+  // must revoke the previous *output* (which can be a large video) without
+  // revoking the source preview the <video> above is still using.
+  var outputUrls = [];
+  function outputUrl(blob) {
+    var url = URL.createObjectURL(blob);
+    outputUrls.push(url);
+    return url;
+  }
+  function clearOutputUrls() {
+    outputUrls.forEach(function (u) { URL.revokeObjectURL(u); });
+    outputUrls = [];
+  }
+
   function finish(blob, format, elapsed, plan, startedAt) {
     progressEl.textContent = '';
+    // Revoke the previous run's output before minting a new one, and use a
+    // single URL for both the download link and the media element.
+    clearOutputUrls();
+    var url = outputUrl(blob);
     var trimmed = !planner.isWholeFile(planner.planTrim(plan, info.duration), info.duration);
     var name = planner.outputName(sourceName, format, trimmed);
     var seconds = Math.max(0.1, elapsed / 1000);
@@ -844,7 +862,7 @@
     var sizeNote = change > 0 ? ', ' + change + '% smaller' : change < 0 ? ', ' + (-change) + '% larger' : '';
 
     outputEl.innerHTML =
-      '<p><a id="download" download="' + esc(name) + '" href="' + objectUrl(blob) + '">Download ' + esc(name) + '</a> ' +
+      '<p><a id="download" download="' + esc(name) + '" href="' + url + '">Download ' + esc(name) + '</a> ' +
       '<span class="note">' + esc(planner.formatBytes(blob.size)) + esc(sizeNote) +
       ', in ' + seconds.toFixed(1) + 's' +
       (typeof startedAt === 'number' && Math.abs(startedAt - (plan.start || 0)) > 0.05
@@ -854,10 +872,10 @@
       // An extraction has nothing to show, and a black rectangle with a play bar
       // in it looks like a video that failed to load.
       (format.kind === 'audio'
-        ? '<p><audio controls src="' + objectUrl(blob) + '"></audio></p>'
+        ? '<p><audio controls src="' + url + '"></audio></p>'
         : format.kind === 'gif'
-          ? '<p><img class="gif-result" alt="the GIF that was just made" src="' + objectUrl(blob) + '"></p>'
-          : '<div class="video-stage"><video controls playsinline src="' + objectUrl(blob) + '"></video></div>');
+          ? '<p><img class="gif-result" alt="the GIF that was just made" src="' + url + '"></p>'
+          : '<div class="video-stage"><video controls playsinline src="' + url + '"></video></div>');
   }
 
   // ---------------------------------------------------------------- wiring

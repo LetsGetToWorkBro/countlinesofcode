@@ -75,7 +75,13 @@
             content.items.forEach(function (item) {
               if (!item.str || !item.str.trim()) return;
               var t = item.transform;
-              words.push({ str: item.str, x: t[4], y: t[5], size: Math.hypot(t[2], t[3]) || item.height || 8 });
+              // Map the word's native user-space position into the display
+              // (post-/Rotate) space the output page uses, so the invisible
+              // selectable layer sits over the visible glyph on a rotated page
+              // rather than off the page entirely. On an unrotated page this is
+              // exactly (t[4], t[5]).
+              var p = base.convertToViewportPoint(t[4], t[5]);
+              words.push({ str: item.str, x: p[0], y: base.height - p[1], size: Math.hypot(t[2], t[3]) || item.height || 8 });
             });
             return words;
           })
@@ -84,14 +90,22 @@
       return page.render({ canvasContext: ctx, viewport: viewport }).promise
         .then(function () { return wordsPromise; })
         .then(function (words) {
-          return new Promise(function (resolve) {
+          return new Promise(function (resolve, reject) {
             canvas.toBlob(function (blob) {
+              // toBlob hands back null when the browser cannot encode the canvas
+              // (out of memory on a huge page, say). Rejecting turns that into a
+              // visible error instead of a promise that never settles and a tool
+              // that hangs forever.
+              if (!blob) {
+                reject(new Error('The browser could not turn this page into an image; it may be too large.'));
+                return;
+              }
               blob.arrayBuffer().then(function (buf) {
                 var img = { width: base.width, height: base.height, words: words };
                 if (options.mime === 'image/png') img.png = new Uint8Array(buf);
                 else img.jpeg = new Uint8Array(buf);
                 resolve(img);
-              });
+              }, reject);
             }, options.mime || 'image/jpeg', options.quality);
           });
         });

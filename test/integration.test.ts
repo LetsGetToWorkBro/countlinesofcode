@@ -181,6 +181,30 @@ describe('caching', () => {
     expect(response.status).toBe(404);
   });
 
+  it('never lets a shared cache store a private-repo response', async () => {
+    // A private count carries real line totals and file paths. Served `public`,
+    // an intercepting proxy could hand it to a second user with no access.
+    github.restore();
+    github = installFakeGitHub([{ ...SAMPLE_REPO, private: true }]);
+
+    const json = await call('/api/count/acme/widget');
+    expect(json.status).toBe(200);
+    expect(json.headers.get('cache-control')).toBe('private, no-store');
+
+    const page = await call(`/r/acme/widget/${SAMPLE_REPO.sha}`);
+    expect(page.status).toBe(200);
+    expect(page.headers.get('cache-control')).toBe('private, no-store');
+
+    const resolve = await call('/api/resolve/acme/widget');
+    expect(resolve.status).toBe(200);
+    expect(resolve.headers.get('cache-control')).toBe('private, no-store');
+  });
+
+  it('keeps a public-repo response cacheable', async () => {
+    const json = await call('/api/count/acme/widget');
+    expect(json.headers.get('cache-control')).toMatch(/public/);
+  });
+
   it('caches under the immutable sha, so a sha request hits the branch entry', async () => {
     const branch = await countJson('/api/count/acme/widget');
     const bySha = await countJson(`/api/count/acme/widget?ref=${branch.sha}`);

@@ -41,6 +41,16 @@
   function releaseUrls() {
     liveUrls.forEach(function (u) { URL.revokeObjectURL(u); });
     liveUrls = [];
+    if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
+  }
+
+  // Previews replace one another, so only the current one is ever needed; the
+  // old ones used to accumulate for the life of the archive.
+  var previewUrl = null;
+  function previewObjectUrl(blob) {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = URL.createObjectURL(blob);
+    return previewUrl;
   }
 
   function loadKit() {
@@ -180,7 +190,16 @@
         // The folder structure is kept, but a path that climbs out of the
         // archive is not: an archive this tool writes must not carry the trick
         // it warns about in one it reads.
-        return kit.zip(collected.map(function (c) { return { name: kit.safePath(c.original), data: c.data }; }))
+        // Two distinct entries can flatten to the same safe path (a:b.txt and
+        // a_b.txt both become a_b.txt), which would put two records of the same
+        // name in the archive and silently lose one on extraction. Dedup the
+        // output names, as the "make an archive" path already does.
+        var reTaken = new Set();
+        return kit.zip(collected.map(function (c) {
+          var p = kit.uniqueName(kit.safePath(c.original), reTaken);
+          reTaken.add(p);
+          return { name: p, data: c.data };
+        }))
           .then(function (bytes) {
             var stem = sourceName.replace(/\.zip$/i, '');
             offer([{ name: stem + '-extracted.zip', blob: new Blob([bytes], { type: 'application/zip' }) }]);
@@ -192,9 +211,16 @@
       });
   }
 
+  var offerUrls = [];
   function offer(files) {
+    // Revoke the previous extract's download URLs before replacing them: a user
+    // extracting several times over would otherwise pin one blob per extract.
+    offerUrls.forEach(function (u) { URL.revokeObjectURL(u); });
+    offerUrls = [];
     $('output').innerHTML = files.map(function (f) {
-      return '<p><a download="' + esc(f.name) + '" href="' + objectUrl(f.blob) + '">Download ' +
+      var url = URL.createObjectURL(f.blob);
+      offerUrls.push(url);
+      return '<p><a download="' + esc(f.name) + '" href="' + url + '">Download ' +
         esc(f.name) + '</a> <span class="note">' + esc(kit.formatBytes(f.blob.size)) + '</span></p>';
     }).join('');
   }
@@ -213,7 +239,7 @@
       if (kind === 'image') {
         // Without a type the blob is octet-stream and the <img> refuses to
         // decode it — the preview came up blank until this was set.
-        var url = objectUrl(new Blob([data], { type: kit.mimeOf(entry.name) }));
+        var url = previewObjectUrl(new Blob([data], { type: kit.mimeOf(entry.name) }));
         $('preview').innerHTML = '<img class="zip-image" alt="' + esc(entry.name) + '" src="' + url + '">';
         return;
       }
@@ -259,6 +285,7 @@
     $('build-note').textContent = '';
   }
 
+  var makeUrl = null;
   function build() {
     if (!basket.length) return;
     $('make-error').textContent = '';
@@ -285,8 +312,10 @@
         var saved = before > 0 ? Math.max(0, Math.round((1 - bytes.length / before) * 100)) : 0;
         $('build-note').textContent = saved > 0 ? saved + '% smaller than the files' : 'no smaller: these files were already compressed';
         var name = kit.archiveName(basket.map(function (f) { return f.name; }));
+        if (makeUrl) URL.revokeObjectURL(makeUrl);
+        makeUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/zip' }));
         $('make-output').innerHTML = '<p><a download="' + esc(name) + '" href="' +
-          objectUrl(new Blob([bytes], { type: 'application/zip' })) + '">Download ' + esc(name) +
+          makeUrl + '">Download ' + esc(name) +
           '</a> <span class="note">' + esc(kit.formatBytes(bytes.length)) + '</span></p>';
       })
       .catch(function (err) {
