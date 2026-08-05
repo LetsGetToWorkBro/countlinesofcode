@@ -4,7 +4,7 @@
 
 import type { Challenge, ChallengeBoard, GolfEntry } from '../lib/challenges';
 import { MIN_CODE_LINES } from '../lib/challenges';
-import { escapeHtml, num, page, siteFooter } from './html';
+import { escapeHtml, num, page, siteFooter, siteNav } from './html';
 
 function entryRows(entries: GolfEntry[], limit: number): string {
   return entries
@@ -75,7 +75,7 @@ ${escapeHtml(`${entries[0]!.owner}/${entries[0]!.repo}`)}, ${num(entries.length)
     'Code Golf — one task, fewest lines wins — LOC.1999',
     `<h1>Code Golf</h1>
 <p class="tagline">One task. Fewest lines wins. Pick a fight.</p>
-<hr>
+${siteNav('golf')}
 
 <p>
 Ranking whole repositories against each other never meant anything, because two
@@ -118,7 +118,7 @@ export function challengePageHtml(board: ChallengeBoard, origin: string): string
     `${challenge.title} in the fewest lines of code — LOC.1999`,
     `<h1>${escapeHtml(challenge.title)}</h1>
 <p class="tagline">${escapeHtml(challenge.brief)}</p>
-<hr>
+${siteNav('golf')}
 
 <h3>What counts as a solution</h3>
 ${rulesList(challenge)}

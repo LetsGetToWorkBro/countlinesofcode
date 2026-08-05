@@ -56,6 +56,13 @@ hr {
   margin: 0 0 6px 0;
 }
 
+/* The toolkit bar. A 1999 nav is links separated by pipes, and the page you
+   are on is bold text rather than a link to itself. */
+.nav {
+  margin: 4px 0;
+  font-size: 15px;
+}
+
 form {
   margin: 8px 0;
 }
@@ -244,4 +251,45 @@ ul.plain {
 
 .hidden {
   display: none;
+}
+
+/* ------------------------------------------------------- the PDF tool bits */
+
+.dropzone {
+  border: 2px dashed #808080;
+  background: #f8f8f8;
+  padding: 12px;
+  margin: 8px 0;
+  cursor: pointer;
+  text-align: center;
+}
+
+.dropzone strong {
+  display: block;
+}
+
+.dropzone span {
+  font-size: 14px;
+  color: #333333;
+}
+
+.dropzone.is-over {
+  border-color: #000000;
+  background: #ffffcc;
+}
+
+/* A checkbox label that runs the width of the line rather than sitting in the
+   130px column the form labels use. */
+label.wide,
+label.inline {
+  min-width: auto;
+}
+
+input.narrow {
+  width: 70px;
+}
+
+button.remove {
+  font-size: 13px;
+  padding: 0 6px;
 }

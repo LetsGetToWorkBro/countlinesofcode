@@ -2,7 +2,7 @@
   "name": "loc1999",
   "version": "1.0.0",
   "private": true,
-  "description": "LOC.1999 \u2014 count the lines of code in any GitHub repository. Ugly on purpose.",
+  "description": "LOC.1999 — count the lines of code in any GitHub repository. Ugly on purpose.",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -25,6 +25,7 @@
     "wrangler": "^4.118.0"
   },
   "dependencies": {
+    "pdf-lib": "^1.17.1",
     "zod": "^3.24.1"
   }
 }

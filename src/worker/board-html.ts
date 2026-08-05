@@ -4,7 +4,7 @@
  */
 
 import type { Board, BoardEntry } from '../lib/board';
-import { escapeHtml, num, page, siteFooter } from './html';
+import { escapeHtml, num, page, siteFooter, siteNav } from './html';
 
 function fmtValue(board: Board, value: number): string {
   if (board.unit.startsWith('%')) return `${value.toFixed(1)}%`;
@@ -73,7 +73,7 @@ export function boardPageHtml(
     'The Standings — repositories counted on LOC.1999',
     `<h1>The Standings</h1>
 <p class="tagline">Everything counted here, ranked by things that should not matter.</p>
-<hr>
+${siteNav('golf')}
 
 <p>
 Only repositories somebody actually counted on this site appear below, and every

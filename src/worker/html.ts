@@ -71,10 +71,40 @@ ${body}
 `;
 }
 
-export function siteHeader(): string {
-  return `<h1>LOC.1999</h1>
-<p class="tagline">Enter a repository. We will count the lines. That is all.</p>
+/**
+ * The toolkit, in one place.
+ *
+ * Every page on this site and on delete.1999loc.com carries the same bar, so a
+ * visitor who arrived for one tool can see the rest. Adding a tool means adding
+ * a line here and the matching line in the static pages' copy of it — there is
+ * no template engine, deliberately, and `test/integration.test.ts` checks the
+ * two stay in step.
+ */
+export const SITE_TOOLS: { href: string; label: string; id: string }[] = [
+  { href: '/', label: 'count code', id: 'count' },
+  { href: '/golf', label: 'golf', id: 'golf' },
+  { href: '/pdf.html', label: 'pdf', id: 'pdf' },
+  { href: 'https://delete.1999loc.com/', label: 'delete posts', id: 'delete' },
+];
+
+/** `current` renders as plain bold text rather than a link to the page you are on. */
+export function siteNav(current?: string): string {
+  const items = SITE_TOOLS.map((tool) =>
+    tool.id === current
+      ? `<strong>${escapeHtml(tool.label)}</strong>`
+      : `<a href="${escapeHtml(tool.href)}">${escapeHtml(tool.label)}</a>`,
+  ).join('\n|\n');
+  return `<hr>
+<p class="nav">
+${items}
+</p>
 <hr>`;
+}
+
+export function siteHeader(current = 'count'): string {
+  return `<h1>LOC.1999</h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+${siteNav(current)}`;
 }
 
 export function siteFooter(): string {

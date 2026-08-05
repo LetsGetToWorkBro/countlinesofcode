@@ -759,6 +759,7 @@ async function sitemap(request: Request, env: Env): Promise<Response> {
   const entries: string[] = [
     `<url><loc>${escapeXml(origin)}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/how.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
+    `<url><loc>${escapeXml(origin)}/pdf.html</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>`,
     `<url><loc>${escapeXml(origin)}/security.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`,
     `<url><loc>${escapeXml(origin)}/board</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`,
     `<url><loc>${escapeXml(origin)}/golf</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`,

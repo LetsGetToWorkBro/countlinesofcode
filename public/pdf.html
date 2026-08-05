@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Merge, Split and Rotate PDFs in Your Browser — LOC.1999</title>
+<meta name="description" content="Merge, split, extract, delete, reorder and rotate PDF pages, and turn images into a PDF. Runs entirely in your browser — the file is never uploaded. No account, no watermark, no page limit.">
+<link rel="canonical" href="https://1999loc.com/pdf.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Merge, Split and Rotate PDFs in Your Browser — LOC.1999">
+<meta property="og:description" content="PDF tools that never upload your file. No account, no watermark, no page limit.">
+<meta property="og:url" content="https://1999loc.com/pdf.html">
+<meta property="og:site_name" content="LOC.1999">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<!--
+  EXPECTED LAYOUT (single column, ~680px, left aligned):
+
+    LOC.1999
+    Small tools. No accounts. Nothing leaves your browser.
+    ------------------------------------------------------------
+    count code | golf | pdf | delete posts
+    ------------------------------------------------------------
+    PDF
+    Your file never leaves this tab.
+    [ Add PDFs... ]
+    +---+------------------+-------+
+    | 1 | contract.pdf p1  | [x]   |
+    ...
+    [ Save PDF ]
+    ------------------------------------------------------------
+    Hosted on Cloudflare - Made with spite for bloat - ...
+-->
+<div id="page">
+
+<h1>LOC.1999</h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<a href="/">count code</a>
+|
+<a href="/golf">golf</a>
+|
+<strong>pdf</strong>
+|
+<a href="https://delete.1999loc.com/">delete posts</a>
+</p>
+<hr>
+
+<h2>PDF</h2>
+<p class="tagline">Merge, split, reorder, rotate. Your file never leaves this tab.</p>
+
+<p class="note">
+Every other site that does this wants you to upload the document first. People
+put contracts, payslips and passports through those. This one does the work in
+your browser: the page is static, the server never receives the file, and you
+can watch the network tab to check. Turn off your wifi after the page loads and
+it still works.
+</p>
+
+<hr>
+
+<h3>1. Add your files</h3>
+
+<div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Add PDFs or images">
+  <strong>Drop PDFs here, or click to choose</strong>
+  <span>Images too (JPG, PNG, HEIC, WebP) &mdash; they become one page each</span>
+  <input type="file" id="file-input" accept="application/pdf,image/*" multiple hidden>
+</div>
+
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<p id="error" class="error" role="alert"></p>
+
+<div id="files"></div>
+
+<div id="workspace" class="hidden">
+
+  <hr>
+  <h3>2. Choose the pages</h3>
+
+  <p>
+    <label for="range">Pages:</label>
+    <input type="text" id="range" placeholder="all pages" autocomplete="off" spellcheck="false"
+           aria-describedby="range-help">
+  </p>
+  <p id="range-help" class="note">
+    Like a print dialog: <code>1-3, 7, 12-</code>. Leave it empty for everything.
+    Order matters, so <code>3,1</code> puts page 3 first, and <code>1,1</code>
+    duplicates it. Page numbers run across all the files you added, in the order
+    they are listed above.
+  </p>
+
+  <p>
+    <label for="rotate">Rotate:</label>
+    <select id="rotate">
+      <option value="0">No rotation</option>
+      <option value="90">90&deg; clockwise</option>
+      <option value="180">180&deg;</option>
+      <option value="270">90&deg; anticlockwise</option>
+    </select>
+  </p>
+
+  <fieldset>
+    <legend>Page numbers</legend>
+    <p>
+      <label class="wide"><input type="checkbox" id="numbers"> Stamp page numbers on the result</label>
+    </p>
+    <p>
+      <label for="num-position">Position:</label>
+      <select id="num-position">
+        <option value="bottom-center">Bottom centre</option>
+        <option value="bottom-right">Bottom right</option>
+        <option value="top-right">Top right</option>
+      </select>
+    </p>
+    <p>
+      <label for="num-start">Start on page:</label>
+      <input type="number" id="num-start" min="1" step="1" value="1" class="narrow">
+      <label for="num-first" class="inline">numbered</label>
+      <input type="number" id="num-first" min="0" step="1" value="1" class="narrow">
+    </p>
+    <p class="note">Pages before the starting page are left unstamped, which is how you skip a cover.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>If you added images</legend>
+    <p>
+      <label for="img-size">Page size:</label>
+      <select id="img-size">
+        <option value="fit">Match the image</option>
+        <option value="a4">A4</option>
+        <option value="letter">Letter</option>
+      </select>
+    </p>
+    <p class="note">Ignored for pages that came from a PDF &mdash; those keep their original size.</p>
+  </fieldset>
+
+  <hr>
+  <h3>3. Save it</h3>
+
+  <p>
+    <button type="button" id="build">Save PDF</button>
+    <button type="button" id="split">Save each page separately</button>
+  </p>
+  <p id="summary" class="note"></p>
+  <div id="output"></div>
+</div>
+
+<hr>
+
+<h3>What this will not do</h3>
+
+<p class="note">
+Other sites list these as features. They are being generous with the word, so
+here is where the line actually is.
+</p>
+
+<table>
+<thead><tr><th>Not offered</th><th>Why</th></tr></thead>
+<tbody>
+<tr>
+  <th scope="row">PDF &rarr; Word</th>
+  <td>
+    A PDF stores where each glyph sits, not paragraphs or tables, so converting
+    means guessing the structure back. The open-source converters produce a page
+    of text boxes that looks right and is miserable to edit. Doing it properly
+    needs a commercial engine. A bad conversion of a document you are about to
+    edit is worse than no conversion.
+  </td>
+</tr>
+<tr>
+  <th scope="row">Scanned text (OCR)</th>
+  <td>
+    This one is genuinely possible in a browser now &mdash; Tesseract compiled to
+    WebAssembly gets 95&ndash;99% on clean printed text. The catch is a ~15&nbsp;MB
+    language model per language, and accuracy that falls off a cliff on
+    handwriting, tables and phone photos of paper. It is on the list, behind its
+    own button, once it can be honest about which of those you have.
+  </td>
+</tr>
+<tr>
+  <th scope="row">Video conversion</th>
+  <td>
+    Browsers can now encode and decode video natively through WebCodecs, so this
+    is no longer impossible either. But containers still need muxing, codec
+    support varies by browser, and the fallback is a 25&nbsp;MB download. Not
+    today, and not quietly.
+  </td>
+</tr>
+<tr>
+  <th scope="row">Unlocking a password-protected PDF</th>
+  <td>
+    Documents that merely restrict printing open fine here. One that needs a
+    password to <em>read</em> stays shut. Removing that is not a feature, it is a
+    lock pick.
+  </td>
+</tr>
+<tr>
+  <th scope="row">Shrinking a PDF</th>
+  <td>
+    Real compression means re-encoding every embedded image, which is a different
+    tool with different trade-offs. Saving here does rebuild the file, so it often
+    comes out a little smaller, but that is a side effect and not a promise.
+  </td>
+</tr>
+</tbody>
+</table>
+
+<h3>The honest notes</h3>
+<ul class="plain">
+  <li><strong>Nothing is uploaded.</strong> The page is a static file and there is no endpoint to send a document to.</li>
+  <li><strong>The engine is 424&nbsp;KB</strong> (<a href="https://github.com/Hopding/pdf-lib">pdf-lib</a>, MIT). It downloads the first time you add a file, not when the page loads, and it is served from this domain because the site's security policy forbids third-party scripts.</li>
+  <li><strong>Big files use memory.</strong> Everything is held in the tab, so a 300&nbsp;MB scan may struggle on a phone. There is no server limit because there is no server.</li>
+  <li><strong>Text stays selectable.</strong> Pages are copied, not re-rendered, so links, text and bookmarks survive.</li>
+  <li><strong>No watermark, no page cap, no account.</strong> There is nothing to upsell.</li>
+</ul>
+
+<hr>
+
+<p class="footer">
+Hosted on Cloudflare &middot; Made with spite for bloat<br>
+<a href="/">count code</a> |
+<a href="/golf">code golf</a> |
+<a href="/board">the standings</a> |
+<a href="https://delete.1999loc.com/">delete your posts</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+</div>
+<script src="/pdf.js"></script>
+</body>
+</html>
