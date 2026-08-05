@@ -261,6 +261,10 @@ already have open; where a tool needs our server, it says so.
   <td>
     Bulk-delete your own history on X, Threads and Facebook Pages through the
     official APIs. Upload your archive, pick exactly what goes, dry run first.
+    It is the one tool that cannot run in your browser &mdash; deleting a post
+    means holding a token for your account and talking to X and Meta &mdash; so
+    it lives on <strong>its own domain</strong>, where those permissions are
+    fenced off and can never apply to anything on this one.
   </td>
   <td>Our server, for you</td>
 </tr>
@@ -330,6 +334,7 @@ version:
   <li><strong>No numbers we cannot show our working for.</strong> The counter is <a href="/how.html">documented rule by rule</a>, pinned to a commit, and the same for everyone.</li>
   <li><strong>No accounts, so no data to lose.</strong> Connecting GitHub is optional and only exists for private repositories.</li>
   <li><strong>No ads and no tracking.</strong> There is no analytics script on any page here.</li>
+  <li><strong>The one exception is kept at arm&rsquo;s length.</strong> <a href="https://delete.1999loc.com/">Deleting your posts</a> genuinely needs a server and needs permission to talk to X and Meta, so it is a separate application on a separate domain. Everything on <code>1999loc.com</code> is served under a policy that forbids it contacting any other site at all &mdash; a rule your browser enforces, not a promise from us &mdash; and that rule stays intact precisely because the tool that would need it loosened is not here. Any tool page will <a href="/inspect.html">show you the policy</a> and let you watch the browser refuse.</li>
 </ul>
 
 <p>

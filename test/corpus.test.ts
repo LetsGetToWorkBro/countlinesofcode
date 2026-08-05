@@ -21,9 +21,19 @@ import { detectLanguage } from '../src/lib/languages';
 const ROOTS = ['src', 'test', 'public', 'scripts'];
 const EXTENSIONS = ['.ts', '.js', '.mjs', '.html', '.css'];
 
+/**
+ * Vendored third-party builds are skipped. They are not this repository's own
+ * files, and they are minified: nearly two megabytes of them, which took this
+ * file most of the way to the default timeout and would have crossed it the
+ * next time a library was added. The counter still meets minified code on real
+ * repositories, and `src/lib/count` has its own tests for that.
+ */
+const SKIP = ['public/vendor'];
+
 function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
+    if (SKIP.some((prefix) => full.startsWith(prefix))) continue;
     if (statSync(full).isDirectory()) walk(full, out);
     else if (EXTENSIONS.some((ext) => full.endsWith(ext))) out.push(full);
   }
