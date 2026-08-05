@@ -15,6 +15,16 @@
 export interface ZipEntry {
   name: string;
   data: Uint8Array;
+  /**
+   * Force this entry to be stored uncompressed.
+   *
+   * EPUB requires it: the `mimetype` entry must be first in the archive and
+   * stored, so a reader can identify the file by reading its first few bytes
+   * without inflating anything. It happens to come out stored anyway — twenty
+   * bytes deflate larger than they started — but relying on that would be
+   * relying on a coincidence, and the spec is not a coincidence.
+   */
+  store?: boolean;
 }
 
 const SIGNATURE = {
@@ -87,9 +97,9 @@ export async function zip(entries: ZipEntry[]): Promise<Uint8Array> {
   for (const entry of entries) {
     const name = encoder.encode(entry.name);
     const crc = crc32(entry.data);
-    const compressed = await deflate(entry.data);
     // A tiny file can deflate *larger* than it started; store those as-is.
-    const deflated = compressed.length < entry.data.length;
+    const compressed = entry.store ? entry.data : await deflate(entry.data);
+    const deflated = !entry.store && compressed.length < entry.data.length;
     const body = deflated ? compressed : entry.data;
     const method = deflated ? 8 : 0;
 

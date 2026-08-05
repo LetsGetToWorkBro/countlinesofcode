@@ -314,8 +314,8 @@
         ? ' <em>Using ' + profile.corrections + ' correction' + (profile.corrections === 1 ? '' : 's') +
           ' you made for documents from this source.</em>'
         : '');
-    $('target').textContent = 'to an editable .docx';
-    $('convert').textContent = 'Convert to Word';
+    $('target-format').className = '';
+    $('convert').textContent = 'Convert';
     $('tune').className = conversion.tier === 'geometry' ? '' : 'hidden';
     var isScan = conversion.survey.pieces === 0;
     $('ocr-box').className = isScan ? '' : 'hidden';
@@ -341,7 +341,8 @@
     countsEl.innerHTML = '<strong>Found:</strong> ' + counts.headings + ' headings, ' + counts.paragraphs +
       ' paragraphs, ' + counts.lists + ' list items, ' + counts.tables + ' tables, ' +
       counts.words.toLocaleString() + ' words.';
-    $('target').textContent = 'to a PDF';
+    // A Word document only converts one way here, so the picker is hidden.
+    $('target-format').className = 'hidden';
     $('convert').textContent = 'Convert to PDF';
     $('tune').className = 'hidden';
     reportEl.className = '';
@@ -440,16 +441,25 @@
     $('convert').disabled = true;
     setStatus('Converting…');
 
-    var work = source.kind === 'pdf'
-      ? engine.writeDocx(source.conversion.doc).then(function (out) {
-          offer(out, baseName(source.name) + '.docx',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-          resultEl.innerHTML = '<strong>Converted to Word.</strong> Open it and check the parts the verdict warned about.';
-        })
-      : engine.writePdf(source.doc).then(function (out) {
-          offer(out, baseName(source.name) + '.pdf', 'application/pdf');
-          resultEl.innerHTML = '<strong>Converted to PDF.</strong> The text is real text — you can select and search it.';
+    var work;
+    if (source.kind !== 'pdf') {
+      work = engine.writePdf(source.doc).then(function (out) {
+        offer(out, baseName(source.name) + '.pdf', 'application/pdf');
+        resultEl.innerHTML = '<strong>Converted to PDF.</strong> The text is real text — you can select and search it.';
+      });
+    } else if ($('target-format').value === 'epub') {
+      work = engine.writeEpub(source.conversion.doc, { title: source.input.title || baseName(source.name) })
+        .then(function (out) {
+          offer(out, baseName(source.name) + '.epub', 'application/epub+zip');
+          resultEl.innerHTML = '<strong>Converted to EPUB.</strong> Send it to a phone or e-reader — the text re-flows to the screen.';
         });
+    } else {
+      work = engine.writeDocx(source.conversion.doc).then(function (out) {
+        offer(out, baseName(source.name) + '.docx',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        resultEl.innerHTML = '<strong>Converted to Word.</strong> Open it and check the parts the verdict warned about.';
+      });
+    }
 
     work.then(function () {
       $('convert').disabled = false;

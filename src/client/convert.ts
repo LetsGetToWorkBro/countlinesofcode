@@ -18,6 +18,7 @@ import { readDocx, writeDocx } from './docx';
 import { inspectOoxml, inspectPdf, looksHidden, patchStats, pdfFeaturesFromBytes, textBox } from './inspect';
 import { unzip } from './zip';
 import { writePdf } from './docpdf';
+import { writeEpub } from './epub';
 import {
   DEFAULT_HEADING_RATIO,
   fromPages,
@@ -205,6 +206,7 @@ globalScope.LOC1999_CONVERT = {
   readDocx,
   writeDocx,
   writePdf,
+  writeEpub,
   describe,
   docText,
   loadProfile,
