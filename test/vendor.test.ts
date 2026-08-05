@@ -6,7 +6,9 @@
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { TESSDATA } from '../scripts/fetch-tessdata.mjs';
 import {
   VENDORED,
   VENDORED_DIRS,
@@ -56,10 +58,23 @@ describe('public/vendor', () => {
     expect(libheifVersion()).toMatch(/^\d+\.\d+/);
   });
 
-  it('matches the installed libheif-js, and ships the self-contained bundle', () => {
-    // The HEIC decoder is committed the same way, and must be the -bundle build
-    // so the wasm rides inside the .js — a separate .wasm fetch is one more
-    // thing to get wrong under the CSP.
+  it('ships the OCR language data, which is not in any package', () => {
+    // tesseract.js fetches this from a CDN by default; connect-src 'self'
+    // forbids that, and telling a third party that somebody is OCR'ing a
+    // payslip is the opposite of the point. So it is committed.
+    const size = statSync(join('.', TESSDATA.to)).size;
+    expect(size, `${TESSDATA.to} is missing — run node scripts/fetch-tessdata.mjs`).toBeGreaterThan(TESSDATA.minBytes);
+  });
+
+  it('pins one OCR core rather than shipping every variant', () => {
+    // Letting tesseract.js auto-select means vendoring all of them, which is
+    // twelve megabytes. SIMD covers every major browser since 2021.
+    const cores = VENDORED_LIBS.filter((l) => l.to.includes('tesseract-core'));
+    expect(cores).toHaveLength(1);
+    expect(cores[0]!.to).toContain('simd');
+  });
+
+  it('matches the installed packages for every vendored library', () => {
     for (const spec of VENDORED_LIBS) {
       const source = readFileSync(libSource(spec));
       const committed = readFileSync(libTarget(spec));
@@ -67,7 +82,13 @@ describe('public/vendor', () => {
         committed.equals(source),
         `${spec.to} is stale — run \`npm run vendor:pdfjs\` and commit the result`,
       ).toBe(true);
-      expect(spec.from).toContain('bundle');
     }
+  });
+
+  it('ships libheif as the self-contained bundle', () => {
+    // The wasm has to ride inside the .js: a separate .wasm fetch is one more
+    // thing to get wrong under the CSP.
+    const heif = VENDORED_LIBS.find((l) => l.pkg === 'libheif-js');
+    expect(heif?.from).toContain('bundle');
   });
 });

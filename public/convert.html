@@ -113,6 +113,17 @@ afterwards.
     <button type="button" id="convert">Convert</button>
     <span id="target" class="note"></span>
   </p>
+  <div id="ocr-box" class="hidden notice-box">
+    <p><strong>There is no text in this PDF to convert.</strong></p>
+    <p class="note">
+    It is a scan &mdash; a photograph of a page. The only way through is to read
+    the letters off the picture, which is what this does. It downloads about
+    8&nbsp;MB the first time, runs in this tab like everything else, and is
+    slower than it looks: a page takes a few seconds. Proofread what comes out.
+    </p>
+    <p><button type="button" id="ocr">Read the text off the pages</button></p>
+  </div>
+
   <p id="result" class="note"></p>
   <div id="output"></div>
 
@@ -140,7 +151,7 @@ afterwards.
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. Both directions run in your browser.</li>
   <li><strong>PDF&nbsp;&rarr;&nbsp;Word is a conversion, not a photocopy.</strong> It recovers the <em>content and structure</em> &mdash; text, headings, lists, tables, reading order &mdash; and lays it out cleanly in Word. It does not reproduce the original page design pixel for pixel, because a Word document re-flows and a PDF does not. Anyone promising both is promising something the two formats cannot both be.</li>
   <li><strong>Tagged PDFs convert far better, and it says which yours is.</strong> The verdict above is read out of your actual file, not guessed from its size.</li>
-  <li><strong>Scans need OCR, which this does not do.</strong> If a PDF is a photograph of a page there is no text in it to recover, and the page says so rather than handing you an empty document.</li>
+  <li><strong>Scans are read with optical recognition.</strong> If a PDF is a photograph of a page there is no text in it, so the letters are read off the picture — in this tab, with a recogniser served from this domain rather than a cloud service. It is good on a clean scan and poor on a crooked phone photo, it recovers words rather than layout, and it needs proofreading. The page tells you when it has taken this route.</li>
   <li><strong>Word&nbsp;&rarr;&nbsp;PDF re-typesets the document.</strong> Real, selectable, searchable vector text &mdash; not a picture &mdash; but the lines break where <em>this</em> typesetter breaks them, not exactly where Word would. Matching Word's pagination needs Word's own fonts, which are not free to redistribute.</li>
   <li><strong>What it does not carry across:</strong> headers and footers, footnotes, comments, tracked changes, embedded images, columns, and text boxes. Those are dropped rather than mangled.</li>
   <li><strong>It learns locally, and only locally.</strong> Correcting the heading detection stores a number in <em>this browser</em>, against the software that produced the PDF. Nothing is collected, because nothing is sent anywhere &mdash; which is also why it cannot learn from anyone else's documents.</li>

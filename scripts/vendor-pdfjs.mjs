@@ -97,6 +97,22 @@ export function pdfjsVersion() {
  */
 export const VENDORED_LIBS = [
   { pkg: 'libheif-js', from: 'libheif-wasm/libheif-bundle.js', to: 'public/vendor/libheif/libheif-bundle.js' },
+  /* Tesseract, for reading scanned pages. Three pieces and one deliberate
+   * choice: the core is *pinned* to the SIMD build rather than letting
+   * tesseract.js pick, because auto-selection asks for whichever variant the
+   * browser supports and vendoring all of them would be twelve megabytes.
+   * SIMD has been in every major browser since 2021.
+   *
+   * The language data is not in the package — tesseract.js fetches it from a
+   * CDN by default, which connect-src 'self' forbids — so it is downloaded
+   * once by scripts/fetch-tessdata.mjs and committed like everything else. */
+  { pkg: 'tesseract.js', from: 'dist/tesseract.min.js', to: 'public/vendor/tesseract/tesseract.min.js' },
+  { pkg: 'tesseract.js', from: 'dist/worker.min.js', to: 'public/vendor/tesseract/worker.min.js' },
+  {
+    pkg: 'tesseract.js-core',
+    from: 'tesseract-core-simd-lstm.wasm.js',
+    to: 'public/vendor/tesseract/tesseract-core-simd-lstm.wasm.js',
+  },
 ];
 
 export function libSource(spec) {

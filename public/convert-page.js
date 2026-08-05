@@ -160,11 +160,125 @@
           source = {
             kind: 'pdf',
             name: name,
+            pdfDoc: doc,
             input: { pages: pages, trees: trees, textById: textById,
               producer: meta && meta.info ? (meta.info.Producer || meta.info.Creator || '') : '',
               title: meta && meta.info ? meta.info.Title || '' : '' },
           };
         });
+    });
+  }
+
+  // --------------------------------------------------------------------- OCR
+  /* A scanned PDF is a photograph of a page: there is no text in it to recover,
+   * so the only way through is to read the letters off the picture. Tesseract
+   * is vendored here rather than fetched from a CDN — telling a third party
+   * that somebody is OCR'ing their payslip is exactly what this site exists not
+   * to do — and it is loaded only when someone actually asks for it, because it
+   * is eight megabytes. */
+  var OCR_MAX_PAGES = 30;
+  var OCR_SCALE = 2.2;
+  var tesseract = null;
+
+  function loadOcr() {
+    if (window.Tesseract) return Promise.resolve(window.Tesseract);
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = '/vendor/tesseract/tesseract.min.js';
+      s.onload = function () { resolve(window.Tesseract); };
+      s.onerror = function () { reject(new Error('Could not load the text reader.')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function ocrWorker() {
+    if (tesseract) return Promise.resolve(tesseract);
+    return loadOcr().then(function (T) {
+      // workerBlobURL:false matters: tesseract builds its worker from a blob:
+      // URL by default, and this site's policy refuses that. Pointing it at the
+      // real file is the fix; widening the policy would not have been.
+      return T.createWorker('eng', 1, {
+        workerPath: '/vendor/tesseract/worker.min.js',
+        corePath: '/vendor/tesseract/tesseract-core-simd-lstm.wasm.js',
+        langPath: '/vendor/tesseract/',
+        gzip: false,
+        workerBlobURL: false,
+      }).then(function (w) { tesseract = w; return w; });
+    });
+  }
+
+  /** Read one page's picture, and turn the lines into paragraphs. */
+  function ocrPage(doc, index, worker) {
+    return doc.getPage(index + 1).then(function (page) {
+      var viewport = page.getViewport({ scale: OCR_SCALE });
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      return page.render({ canvasContext: ctx, viewport: viewport }).promise
+        .then(function () { return worker.recognize(canvas); })
+        .then(function (result) { return result.data.text || ''; });
+    });
+  }
+
+  function runOcr() {
+    if (!source || source.kind !== 'pdf') return;
+    clearError();
+    resetOutput();
+    $('ocr').disabled = true;
+    var doc = source.pdfDoc;
+    var total = Math.min(doc.numPages, OCR_MAX_PAGES);
+    var texts = [];
+
+    setStatus('Loading the text reader (about 8 MB, once)…');
+    ocrWorker().then(function (worker) {
+      var chain = Promise.resolve();
+      for (var i = 0; i < total; i++) {
+        (function (index) {
+          chain = chain.then(function () {
+            setStatus('Reading page ' + (index + 1) + ' of ' + total + '… this is slower than it looks');
+            return ocrPage(doc, index, worker).then(function (text) { texts.push(text); });
+          });
+        })(i);
+      }
+      return chain;
+    }).then(function () {
+      setStatus('');
+      $('ocr').disabled = false;
+      var blocks = [];
+      texts.forEach(function (text, page) {
+        if (page > 0) blocks.push({ kind: 'pageBreak', runs: [] });
+        // A blank line is a paragraph break; single newlines are just where the
+        // scan ran out of room, so they join with a space.
+        text.split(/\n\s*\n/).forEach(function (para) {
+          var value = para.replace(/\s*\n\s*/g, ' ').trim();
+          if (value) blocks.push({ kind: 'paragraph', runs: [{ text: value }] });
+        });
+      });
+      var built = { blocks: blocks, title: source.input.title || '' };
+      source.conversion.doc = built;
+      source.conversion.counts = engine.describe(built);
+      var c = source.conversion.counts;
+      countsEl.innerHTML = '<strong>Read from the picture:</strong> ' + c.paragraphs + ' paragraph' +
+        (c.paragraphs === 1 ? '' : 's') + ', ' + c.words.toLocaleString() + ' words' +
+        (doc.numPages > total ? ' — the first ' + total + ' of ' + doc.numPages + ' pages.' : '.');
+      showVerdict({
+        confidence: 'medium',
+        summary: 'The text was read off the picture. It is usually good on a clean scan and poor on a bad one.',
+        findings: [
+          { label: 'Every word came from optical recognition, so proofread it', good: false },
+          { label: 'Layout, tables and columns are not recovered — you get the words in order', good: false },
+          { label: 'Nothing was uploaded: the reader runs in this tab like everything else', good: true },
+        ],
+      });
+      renderPreview(built);
+      $('convert').disabled = false;
+      $('ocr-box').className = 'hidden';
+    }).catch(function (err) {
+      $('ocr').disabled = false;
+      fail((err && err.message) || 'Could not read that scan.');
     });
   }
 
@@ -203,6 +317,10 @@
     $('target').textContent = 'to an editable .docx';
     $('convert').textContent = 'Convert to Word';
     $('tune').className = conversion.tier === 'geometry' ? '' : 'hidden';
+    var isScan = conversion.survey.pieces === 0;
+    $('ocr-box').className = isScan ? '' : 'hidden';
+    $('convert').disabled = isScan;
+    if (isScan) $('tune').className = 'hidden';
     reportEl.className = '';
     renderPreview(conversion.doc);
   }
@@ -374,6 +492,7 @@
   });
 
   $('convert').addEventListener('click', convert);
+  $('ocr').addEventListener('click', runOcr);
   $('fewer').addEventListener('click', function () { nudge('fewer'); });
   $('more').addEventListener('click', function () { nudge('more'); });
 })();
