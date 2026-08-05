@@ -55,6 +55,16 @@ describe('security headers', () => {
     expect(csp).not.toMatch(/(script|font|connect)-src[^;]*\*/);
   });
 
+  it('lets a tool show the image it just made, without a base64 detour', () => {
+    // A multi-megabyte GIF as a data: URL is a third larger again and has to be
+    // built as a JavaScript string first. blob: names bytes the tab already
+    // holds; no remote scheme is admitted.
+    const csp = SECURITY_HEADERS['content-security-policy'] ?? '';
+    expect(csp).toContain('img-src');
+    expect(csp).toMatch(/img-src[^;]*blob:/);
+    expect(csp).not.toMatch(/img-src[^;]*(\*|https?:)/);
+  });
+
   it('lets the video tool play the file you opened, and nothing else', () => {
     // Without media-src the <video> preview is refused outright, and a trim
     // control you cannot see through is useless. blob: names data this tab

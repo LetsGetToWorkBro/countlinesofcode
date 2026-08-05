@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Trim and Convert Video in Your Browser — LOC.1999</title>
-<meta name="description" content="Trim, convert, shrink and mute video, or pull the audio out of it, without uploading anything. Tells you whether it will copy your video losslessly or re-encode it — before you start.">
+<title>Trim Video, Convert It, or Make a GIF — In Your Browser — LOC.1999</title>
+<meta name="description" content="Trim, convert and shrink video, turn a clip into an animated GIF, or pull the audio out — without uploading anything. Tells you whether it will copy your video losslessly or re-encode it, before you start.">
 <link rel="canonical" href="https://1999loc.com/video.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Trim and Convert Video in Your Browser — LOC.1999">
-<meta property="og:description" content="Video trimming and conversion that never uploads the file, and tells you whether it is copying or re-encoding before you commit.">
+<meta property="og:title" content="Trim Video, Convert It, or Make a GIF — In Your Browser — LOC.1999">
+<meta property="og:description" content="Video trimming, conversion and GIF-making that never uploads the file, and tells you whether it is copying or re-encoding before you commit.">
 <meta property="og:url" content="https://1999loc.com/video.html">
 <meta property="og:site_name" content="LOC.1999">
 <meta name="twitter:card" content="summary">
@@ -33,7 +33,7 @@
     +--------------------------------------------------+
     start [====|--------------] 0:12   [ use current ]
     end   [==========|--------] 1:44   [ use current ]
-    format ( MP4 )  size ( original )  quality ( same )
+    format ( MP4 / GIF )  size ( original )  quality ( same )
     +--------------------------------------------------+
     | COPIED, NOT RE-ENCODED - no quality is lost      |
     |  - keeping 1:32 of 2:31                          |
@@ -68,7 +68,7 @@
 </p>
 <hr>
 
-<h2>Trim and convert video</h2>
+<h2>Trim, convert, and make GIFs</h2>
 <p class="tagline">In this tab. A two gigabyte holiday video never leaves your laptop.</p>
 
 <p class="note">
@@ -168,6 +168,12 @@ which one your settings mean and tells you before you press the button.
       <option value="270">270°</option>
     </select>
   </p>
+  <p id="gif-box" class="hidden">
+    <label for="gif-fps" class="inline">Frames a second</label>
+    <select id="gif-fps"></select>
+    <label class="inline"><input type="checkbox" id="gif-dither" checked> Dither</label>
+    <span class="note">&mdash; trades banding for a fine speckle, which the eye much prefers.</span>
+  </p>
   <p>
     <label for="target" class="inline">Fit under</label>
     <select id="target">
@@ -218,9 +224,13 @@ which one your settings mean and tells you before you press the button.
   <li><strong>Which formats appear depends on your browser, and it is asked rather than assumed.</strong> The codecs come from the browser itself. Chrome, Edge and Safari ship H.264 and AAC, so MP4 works. Some builds of Chromium — and Firefox on some systems — ship only the open codecs, and there MP4 can only be written with AV1 or VP9 inside it. Rather than offer a format and fail three minutes in, the page asks the browser what it can actually encode and offers that.</li>
   <li><strong>&ldquo;Fit under 10 MB&rdquo; is arithmetic, not a slider.</strong> A bitrate <em>is</em> a size divided by a duration, so the target sets it directly rather than being guessed at. The sound is subtracted first, because it is spent whatever happens to the picture &mdash; which is why a short clip at a small target can be impossible, and the page says so instead of producing something broken. Whether the result will look like anything is judged in bits per pixel, which is the only measure that means the same thing at 480p and at 4K.</li>
   <li><strong>A sharp small picture beats a smeared large one.</strong> Squeezing 4K into 10 MB does not give you 4K, it gives you mush at 4K's dimensions. Where dropping the resolution would land the same target in the clear, the page names the height and offers to apply it.</li>
+  <li><strong>The GIF encoder is written out here, because there is nowhere to fetch one from.</strong> No CDN script, no ffmpeg, no WebAssembly &mdash; a colour quantiser, a ditherer and an LZW compressor, in the tab. The palette is chosen with median cut from frames sampled across the whole clip, so the colours do not lurch when the scene changes, and it is picked from the colours your video actually contains rather than a fixed grid, which is why so many GIFs look like 1997.</li>
+  <li><strong>Only what moved is stored.</strong> A GIF frame may cover part of the canvas and let the rest show through, so everything that did not change between one frame and the next is marked transparent and simply is not encoded. On a static shot with something moving in it, later frames come to a few per cent of the picture. It is where nearly all the size saving in a good GIF comes from.</li>
+  <li><strong>Dithering trades banding for speckle.</strong> Snapping each pixel to the nearest of 256 colours turns a smooth sky into stripes. Floyd&ndash;Steinberg pushes each pixel's rounding error into its neighbours instead, which the eye much prefers &mdash; at the cost of a larger file, because the speckle is noise to the compressor. It is on by default and can be turned off.</li>
+  <li><strong>A GIF is roughly twenty times the size of the same clip as video</strong>, has no sound, and cannot hold more than 256 colours at once. It is a 1987 format kept alive by the places that will not accept anything else. If you have a choice, use the video.</li>
   <li><strong>Re-encoding is real work.</strong> It decodes and re-encodes every frame, using the same hardware video engine a video call uses. It is fast for a phone clip and slow for an hour of 4K, and it will make a laptop's fan audible. Trimming without re-encoding does not.</li>
   <li><strong>Large files are held in memory.</strong> The result is assembled in the tab before you download it, so a very large output can run a tab out of memory. Trimming first is the fix.</li>
-  <li><strong>What it does not do:</strong> subtitles, chapters, multiple audio tracks, joining two videos, or anything creative. It cuts, converts, resizes, rotates, mutes and extracts.</li>
+  <li><strong>What it does not do:</strong> subtitles, chapters, multiple audio tracks, joining two videos, or anything creative. It cuts, converts, resizes, rotates, mutes, extracts and animates.</li>
   <li><strong>It downloads about 620&nbsp;KB</strong> the first time, once you open a file: <a href="https://github.com/Vanilagy/mediabunny">mediabunny</a>, which reads and writes the container formats. The codecs themselves are the browser's own <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API">WebCodecs</a> — there is no ffmpeg here and no WebAssembly, which is why it is quick.</li>
 </ul>
 

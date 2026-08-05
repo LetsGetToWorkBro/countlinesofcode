@@ -584,3 +584,10 @@ button.small {
   font-family: "Courier New", Courier, monospace;
   letter-spacing: -1px;
 }
+
+/* A finished GIF, shown at its own size but never wider than the column. */
+img.gif-result {
+  max-width: 100%;
+  border: 1px solid #808080;
+  background: #ffffff;
+}

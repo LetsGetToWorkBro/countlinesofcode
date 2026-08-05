@@ -40,6 +40,7 @@
   var suggestBox = $('suggest-box');
 
   var mb = null;          // the mediabunny module
+  var gif = null;         // window.LOC1999_GIF, the encoder
   var planner = null;     // window.LOC1999_VIDEO
   var sourceFile = null;  // the File itself, re-read for every conversion
   var input = null;       // mediabunny Input, for probing only
@@ -96,7 +97,8 @@
     ]).then(function (results) {
       if (results[1]) mb = results[1];
       planner = window.LOC1999_VIDEO;
-      if (!planner) throw new Error('the planner did not load');
+      gif = window.LOC1999_GIF;
+      if (!planner || !gif) throw new Error('the planner did not load');
       QUALITY = {
         'very-low': mb.QUALITY_VERY_LOW,
         low: mb.QUALITY_LOW,
@@ -293,6 +295,16 @@
       sizes.appendChild(option);
     });
 
+    var rates = $('gif-fps');
+    rates.innerHTML = '';
+    planner.GIF_RATES.forEach(function (rate) {
+      var option = document.createElement('option');
+      option.value = String(rate);
+      option.textContent = rate + ' fps';
+      if (rate === planner.DEFAULT_GIF_FPS) option.selected = true;
+      rates.appendChild(option);
+    });
+
     // Trim range, as thousandths of the duration.
     $('start-range').value = '0';
     $('end-range').value = '1000';
@@ -334,6 +346,8 @@
     if (rotate) plan.rotate = rotate;
     if ($('mute').checked) plan.mute = true;
     if ($('exact').checked) plan.exact = true;
+    plan.gifFps = Number($('gif-fps').value) || planner.DEFAULT_GIF_FPS;
+    plan.gifDither = $('gif-dither').checked;
     var target = targetBytes();
     if (target) plan.targetBytes = target;
     return plan;
@@ -369,11 +383,14 @@
       ? ''
       : 'clip is ' + planner.formatTime(range.duration) + ' of ' + planner.formatTime(info.duration);
 
-    // Only meaningful for a video output.
     var audioOnly = format && format.kind === 'audio';
+    var isGif = format && format.kind === 'gif';
+    $('gif-box').classList.toggle('hidden', !isGif);
+    // A GIF has no sound, no bitrate and no container to rotate metadata into,
+    // so those controls would be lying if they stayed live.
     $('size').disabled = audioOnly;
-    $('rotate').disabled = audioOnly;
-    $('mute').disabled = audioOnly;
+    $('rotate').disabled = audioOnly || isGif;
+    $('mute').disabled = audioOnly || isGif;
 
     var explained = planner.explainPlan(plan, info, fit, keyframe);
     var notes = explained.notes.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('');
@@ -387,11 +404,11 @@
     // A size limit sets the bitrate, so a quality level on top of it means
     // nothing; say so by disabling it rather than quietly ignoring it.
     var hasTarget = Boolean(plan.targetBytes);
-    $('quality').disabled = audioOnly || hasTarget;
+    $('quality').disabled = audioOnly || hasTarget || isGif;
     var custom = $('target').value === 'custom';
     $('target-mb').classList.toggle('hidden', !custom);
     $('target-mb-unit').classList.toggle('hidden', !custom);
-    $('target').disabled = audioOnly;
+    $('target').disabled = audioOnly || isGif;
 
     // "Drop to 480p and it becomes watchable" is only worth saying if the page
     // will also do it for you.
@@ -506,9 +523,11 @@
     copyCancelled = false;
     running = true;
 
-    var work = instructions.mode === 'copy'
-      ? copyCut(instructions, plan, format)
-      : convert(instructions, plan);
+    var work = instructions.mode === 'gif'
+      ? makeGif(plan)
+      : instructions.mode === 'copy'
+        ? copyCut(instructions, plan, format)
+        : convert(instructions, plan);
 
     work
       .then(function (result) {
@@ -655,6 +674,135 @@
     });
   }
 
+  /* Redraw the clip as an animated GIF.
+   *
+   * Nothing about this is a container change: GIF has no codecs, so every frame
+   * is decoded to pixels, scaled, reduced to 256 colours and compressed by our
+   * own LZW. The palette is chosen once, from frames sampled across the whole
+   * clip, so the colours do not lurch when the scene changes — a per-frame
+   * palette looks slightly better and costs 768 bytes a frame, which on a
+   * hundred-frame GIF is most of a saving nobody wants to give up.
+   *
+   * The size win comes from the format's one good idea: a frame may cover part
+   * of the canvas and let the rest show through. Everything that did not move
+   * is marked transparent and simply is not encoded.
+   */
+  function makeGif(plan) {
+    var gifPlan = planner.gifPlanFor(plan, info);
+    if (!gifPlan) return Promise.reject(new Error('there is no picture in this file'));
+    var range = planner.planTrim(plan, info.duration);
+
+    var canvas = new OffscreenCanvas(gifPlan.width, gifPlan.height);
+    var ctx = canvas.getContext('2d', { willReadFrequently: true });
+    var input = openInput();
+    var dither = plan.gifDither !== false;
+
+    return input.getPrimaryVideoTrack().then(function (track) {
+      var sink = new mb.VideoSampleSink(track);
+      // Ask for one frame per output frame rather than decoding everything and
+      // throwing most of it away.
+      var times = [];
+      for (var i = 0; i < gifPlan.frames; i++) times.push(range.start + i / gifPlan.fps);
+
+      var frames = [];
+      var samples = [];
+      var iterator = sink.samplesAtTimestamps(times);
+
+      function collect() {
+        if (copyCancelled) throw new mb.ConversionCanceledError('stopped');
+        return iterator.next().then(function (next) {
+          if (next.done) return undefined;
+          var sample = next.value;
+          if (sample) {
+            // A VideoSample is not itself drawable; its own draw() unwraps the
+            // frame and applies the rotation the container asked for, which
+            // drawImage on the raw frame would ignore.
+            sample.draw(ctx, 0, 0, gifPlan.width, gifPlan.height);
+            sample.close();
+            samples.push(ctx.getImageData(0, 0, gifPlan.width, gifPlan.height).data);
+            // Half the progress bar is decoding, half is encoding.
+            showProgress((samples.length / gifPlan.frames) * 0.5);
+          }
+          return collect();
+        });
+      }
+
+      return collect().then(function () {
+        if (!samples.length) throw new Error('no frames could be read out of that clip');
+
+        // One palette for the whole animation, from frames spread across it.
+        var pool = [];
+        var step = Math.max(1, Math.floor(samples.length / 12));
+        for (var i = 0; i < samples.length; i += step) pool.push(gif.samplePixels(samples[i], 12000));
+        var merged = new Uint8Array(pool.reduce(function (n, p) { return n + p.length; }, 0));
+        var at = 0;
+        pool.forEach(function (p) { merged.set(p, at); at += p.length; });
+
+        // One entry is spent on transparency so unchanged regions can be
+        // dropped; it is worth far more than the colour it costs.
+        var palette = gif.medianCut(merged, 255);
+        var colors = palette.length / 3;
+        var transparentIndex = colors;
+        var withTransparent = new Uint8Array((colors + 1) * 3);
+        withTransparent.set(palette);
+        var matcher = new gif.PaletteMatcher(palette);
+
+        var delay = 1000 / gifPlan.fps;
+        for (var f = 0; f < samples.length; f++) {
+          if (copyCancelled) throw new mb.ConversionCanceledError('stopped');
+          var current = samples[f];
+          if (f === 0) {
+            frames.push({
+              indices: gif.quantise(current, gifPlan.width, gifPlan.height, matcher, { dither: dither }),
+              width: gifPlan.width, height: gifPlan.height, x: 0, y: 0, delayMs: delay,
+            });
+          } else {
+            var rect = gif.changedRect(samples[f - 1], current, gifPlan.width, gifPlan.height);
+            if (!rect) {
+              // Nothing moved: extend the previous frame rather than repeating it.
+              frames[frames.length - 1].delayMs += delay;
+              continue;
+            }
+            frames.push(cropFrame(current, samples[f - 1], rect, gifPlan, matcher, transparentIndex, dither, delay));
+          }
+          showProgress(0.5 + ((f + 1) / samples.length) * 0.5);
+        }
+
+        var bytes = gif.buildGif(frames, withTransparent, gifPlan.width, gifPlan.height);
+        return { buffer: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), mimeType: 'image/gif' };
+      });
+    });
+  }
+
+  /* One frame, cut down to the rectangle that changed, with the pixels inside
+     it that did not change marked transparent. */
+  function cropFrame(current, previous, rect, gifPlan, matcher, transparentIndex, dither, delay) {
+    var sub = new Uint8ClampedArray(rect.width * rect.height * 4);
+    var keep = new Uint8Array(rect.width * rect.height);
+    for (var y = 0; y < rect.height; y++) {
+      for (var x = 0; x < rect.width; x++) {
+        var src = ((y + rect.y) * gifPlan.width + (x + rect.x)) * 4;
+        var dst = (y * rect.width + x) * 4;
+        sub[dst] = current[src];
+        sub[dst + 1] = current[src + 1];
+        sub[dst + 2] = current[src + 2];
+        sub[dst + 3] = 255;
+        if (current[src] === previous[src] && current[src + 1] === previous[src + 1] && current[src + 2] === previous[src + 2]) {
+          keep[y * rect.width + x] = 1;
+        }
+      }
+    }
+    return {
+      indices: gif.quantise(sub, rect.width, rect.height, matcher, { dither: dither, transparentIndex: transparentIndex, keep: keep }),
+      width: rect.width,
+      height: rect.height,
+      x: rect.x,
+      y: rect.y,
+      delayMs: delay,
+      transparentIndex: transparentIndex,
+    };
+  }
+
   /* The planner speaks in plain objects; mediabunny wants its own Quality
      instances. This is the only place the two meet. */
   function toTrackOptions(options) {
@@ -707,7 +855,9 @@
       // in it looks like a video that failed to load.
       (format.kind === 'audio'
         ? '<p><audio controls src="' + objectUrl(blob) + '"></audio></p>'
-        : '<div class="video-stage"><video controls playsinline src="' + objectUrl(blob) + '"></video></div>');
+        : format.kind === 'gif'
+          ? '<p><img class="gif-result" alt="the GIF that was just made" src="' + objectUrl(blob) + '"></p>'
+          : '<div class="video-stage"><video controls playsinline src="' + objectUrl(blob) + '"></video></div>');
   }
 
   // ---------------------------------------------------------------- wiring
@@ -761,7 +911,7 @@
     }
   });
 
-  ['format', 'size', 'quality', 'rotate', 'mute', 'exact', 'target'].forEach(function (id) {
+  ['format', 'size', 'quality', 'rotate', 'mute', 'exact', 'target', 'gif-fps', 'gif-dither'].forEach(function (id) {
     $(id).addEventListener('change', refresh);
   });
   $('target-mb').addEventListener('input', refresh);

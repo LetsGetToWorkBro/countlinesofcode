@@ -49,6 +49,11 @@ export const SECURITY_HEADERS: Record<string, string> = {
    * what lets the image tool decode a HEIC photo with a WASM codec served from
    * this origin. No wasm is loaded until a tool that needs it runs.
    *
+   * img-src carries blob: for the same reason as media-src: the video tool
+   * shows the GIF it just made, and a multi-megabyte animation as a base64
+   * data: URL is a third again as large and has to be built as a string first.
+   * blob: names bytes this tab already holds and reaches no network.
+   *
    * media-src is 'blob:' for the video tool, and blob: only. You cannot trim a
    * video you cannot see, and the preview plays the file the visitor just
    * opened — held in the tab as a blob, never fetched. Without this the
@@ -57,7 +62,7 @@ export const SECURITY_HEADERS: Record<string, string> = {
    * network: it names data this page already holds, so the widening admits
    * nothing that was not already in the tab. */
   'content-security-policy':
-    "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; " +
+    "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: blob:; " +
     "font-src 'self'; connect-src 'self'; media-src blob:; form-action 'self'; base-uri 'none'; " +
     "frame-ancestors 'none'",
 };

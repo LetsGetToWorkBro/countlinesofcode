@@ -30,6 +30,8 @@
  * end of a long conversion.
  */
 
+import { GIF_RATES, planGif, type GifPlan } from './gif';
+
 // ---------------------------------------------------------------------------
 // Time
 // ---------------------------------------------------------------------------
@@ -167,8 +169,14 @@ export interface OutputFormat {
   id: string;
   label: string;
   extension: string;
-  /** Whether this container carries a picture at all. */
-  kind: 'video' | 'audio';
+  /**
+   * What sort of output this is.
+   *
+   * 'gif' is its own thing rather than a video container: it has no codecs, no
+   * sound, and nothing can ever be copied into it — every frame is decoded and
+   * redrawn from scratch.
+   */
+  kind: 'video' | 'audio' | 'gif';
   /**
    * Codecs this container can hold, best first. "Best" means most likely to
    * play on a phone someone hands to their mother, not most efficient.
@@ -215,6 +223,15 @@ export const OUTPUT_FORMATS: OutputFormat[] = [
     video: ['avc', 'hevc', 'av1', 'vp9'],
     audio: ['aac', 'opus', 'pcm-s16'],
     note: 'What Apple software expects.',
+  },
+  {
+    id: 'gif',
+    label: 'Animated GIF',
+    extension: 'gif',
+    kind: 'gif',
+    video: [],
+    audio: [],
+    note: 'Plays anywhere, silently, and is enormous. For a short loop, not a video.',
   },
   {
     id: 'mp3',
@@ -331,6 +348,12 @@ export function fitFormat(format: OutputFormat, encodable: Encodable, options: F
     options.encodingAudio ? null : source?.audio?.codec,
   ) as AudioCodecId | null;
 
+  if (format.kind === 'gif') {
+    // GIF is written by hand here, pixel by pixel — there is no codec to ask
+    // the browser for. What it does need is to be able to *decode* the source,
+    // which is checked where the file is known.
+    return { usable: true, video: null, audio: null };
+  }
   if (format.kind === 'audio') {
     return audio
       ? { usable: true, video: null, audio }
@@ -354,6 +377,8 @@ export function fitFormat(format: OutputFormat, encodable: Encodable, options: F
  */
 export function defaultFormatId(info: MediaInfo, encodable: Encodable): string | null {
   const wantsVideo = Boolean(info.video);
+  // GIF is never a default: nobody opens a video converter meaning to make one
+  // by accident, and it is twenty times the size of the same clip as video.
   const usable = OUTPUT_FORMATS.filter(
     (f) => f.kind === (wantsVideo ? 'video' : 'audio') && fitFormat(f, encodable, { source: info }).usable,
   );
@@ -394,6 +419,10 @@ export interface Plan {
    * there is no other way to make a file smaller.
    */
   targetBytes?: number;
+  /** Frames a second for a GIF. The format cannot express more than 50. */
+  gifFps?: number;
+  /** Spread each pixel's colour error into its neighbours. */
+  gifDither?: boolean;
   /**
    * Cut precisely where asked, at the cost of re-encoding.
    *
@@ -460,6 +489,7 @@ function trimsTheStart(plan: Plan): boolean {
  * can encode. Working that out the other way round is circular.
  */
 export function changesPicture(plan: Plan, info: MediaInfo): boolean {
+  if (findFormat(plan.formatId)?.kind === 'gif') return true;
   if (plan.rotate || plan.frameRate || plan.quality) return true;
   // A size limit is a ceiling, not a goal: a file that already fits is left
   // alone rather than inflated to fill it.
@@ -764,6 +794,7 @@ const QUALITY_BITS: Record<QualityLevel, number> = {
 export function estimateBytes(plan: Plan, info: MediaInfo, fit: FormatFit): number {
   const range = planTrim(plan, info.duration);
   if (range.error) return 0;
+  if (findFormat(plan.formatId)?.kind === 'gif') return gifPlanFor(plan, info)?.bytes ?? 0;
   // A size target is not estimated, it is aimed at — unless the file already
   // fits, in which case nothing changes and the copy is the answer.
   if (plan.targetBytes && !targetAlreadyMet(plan, info) && judgeTarget(plan, info, fit)?.verdict !== 'impossible') {
@@ -834,7 +865,7 @@ export interface Instructions {
    * `convert` hands the job to mediabunny's converter, which decodes and
    * re-encodes whatever has to change.
    */
-  mode: 'copy' | 'convert';
+  mode: 'copy' | 'convert' | 'gif';
   /** Options for the picture, or null when the output has none. */
   video: TrackOptions | null;
   audio: TrackOptions | null;
@@ -858,6 +889,16 @@ export function instructionsFor(plan: Plan, info: MediaInfo, fit: FormatFit): In
 
   const range = planTrim(plan, info.duration);
   if (range.error) return bad(range.error);
+
+  if (format.kind === 'gif') {
+    if (!info.video) return bad('there is no picture in this file to animate');
+    // Every frame has to be decoded and redrawn; without a decoder there is
+    // nothing to draw.
+    if (!info.video.decodable) {
+      return bad(`this browser cannot decode ${codecName(info.video.codec)}, and a GIF has to redraw every frame`);
+    }
+    return { mode: 'gif', video: null, audio: null, ...(isWholeFile(range, info.duration) ? {} : { trim: { start: range.start, end: range.end } }) };
+  }
 
   const audioOnly = format.kind === 'audio';
   if (audioOnly && !info.audio) return bad('there is no sound in this file to extract');
@@ -940,6 +981,18 @@ export function explainPlan(
   const range = planTrim(plan, info.duration);
   if (range.error) return { headline: range.error, lossless: false, notes };
 
+  if (format.kind === 'gif') {
+    const gif = gifPlanFor(plan, info);
+    if (!gif) return { headline: 'there is no picture in this file', lossless: false, notes };
+    if (!isWholeFile(range, info.duration)) notes.push(`Keeping ${formatTime(range.duration)} of ${formatTime(info.duration)}.`);
+    notes.push(
+      `${gif.frames} frames at ${gif.width}×${gif.height}, ${gif.fps} a second. ` +
+        'There is no sound in a GIF, and no copying: every frame is decoded and redrawn into 256 colours.',
+    );
+    if (gif.warning) notes.push(gif.warning);
+    return { headline: 'Redrawn as a GIF', lossless: false, notes };
+  }
+
   if (format.kind === 'audio') {
     const copy = willCopyAudio(plan, info, fit);
     notes.push('The picture is dropped; only the sound is written out.');
@@ -1016,8 +1069,37 @@ export function describeEstimate(plan: Plan, info: MediaInfo, fit: FormatFit): s
   if (plan.targetBytes && !targetAlreadyMet(plan, info)) {
     return `at most ${formatBytes(bytes)}${from} — aimed at, not guessed`;
   }
+  if (findFormat(plan.formatId)?.kind === 'gif') {
+    // Only the part of each frame that moved is encoded, so the figure is a
+    // ceiling that full-frame motion approaches and a static shot falls far
+    // under. Calling it an estimate would be understating how loose it is.
+    return `up to ${formatBytes(bytes)}${from} — a still scene comes in far under`;
+  }
   return `roughly ${formatBytes(bytes)}${from} — an estimate, not a promise`;
 }
+
+/**
+ * What a GIF of this clip would come to.
+ *
+ * Delegated to the encoder's own planner, which knows what the format costs;
+ * this just supplies the clip's length and the requested size.
+ */
+export function gifPlanFor(plan: Plan, info: MediaInfo): GifPlan | null {
+  if (!info.video) return null;
+  const range = planTrim(plan, info.duration);
+  if (range.error) return null;
+  const target = scaleTo(info.video.width, info.video.height, plan.maxHeight ?? 0);
+  return planGif(
+    range.duration,
+    info.video.width,
+    info.video.height,
+    target.width,
+    plan.gifFps ?? DEFAULT_GIF_FPS,
+    plan.gifDither !== false,
+  );
+}
+
+export const DEFAULT_GIF_FPS = 12;
 
 /** The download name: the original, with the new extension. */
 export function outputName(source: string, format: OutputFormat, trimmed: boolean): string {
@@ -1089,4 +1171,7 @@ globalScope.LOC1999_VIDEO = {
   explainPlan,
   outputName,
   sizeChoices,
+  gifPlanFor,
+  GIF_RATES,
+  DEFAULT_GIF_FPS,
 };

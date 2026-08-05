@@ -24,6 +24,7 @@ import {
   formatBytes,
   formatForContainer,
   formatTime,
+  gifPlanFor,
   instructionsFor,
   isWholeFile,
   judgeTarget,
@@ -811,6 +812,11 @@ describe('describeEstimate', () => {
     expect(describeEstimate({ formatId: 'mp4', targetBytes: 8 * 1024 * 1024 }, h264, fit)).toMatch(/^at most/);
   });
 
+  it('calls a GIF figure a ceiling, since differencing only ever subtracts', () => {
+    expect(describeEstimate({ formatId: 'gif', start: 0, end: 2 }, h264, fitFormat(findFormat('gif')!, full)))
+      .toMatch(/^up to/);
+  });
+
   it('calls everything else an estimate', () => {
     expect(describeEstimate({ formatId: 'mp4' }, h264, fit)).toMatch(/^roughly/);
     expect(describeEstimate({ formatId: 'mp4' }, h264, fit)).toMatch(/not a promise/);
@@ -850,6 +856,71 @@ describe('fitting a size, end to end', () => {
     const out = explainPlan({ formatId: 'mp4', targetBytes: 20 * 1024 * 1024 }, phone, fit);
     expect(out.notes.join(' ')).toMatch(/fitting 20\.0 MB/i);
     expect(out.notes.join(' ')).toMatch(/kbps/);
+  });
+});
+
+describe('GIF as an output', () => {
+  const gif = findFormat('gif')!;
+  const fit = fitFormat(gif, full);
+
+  it('needs no encoder, because it has no codecs', () => {
+    // Even a browser that can encode nothing at all can write a GIF.
+    expect(fitFormat(gif, { video: [], audio: [] }).usable).toBe(true);
+  });
+
+  it('always redraws — nothing can ever be copied into a GIF', () => {
+    expect(changesPicture({ formatId: 'gif' }, h264)).toBe(true);
+    expect(willCopyVideo({ formatId: 'gif' }, h264, fit)).toBe(false);
+  });
+
+  it('refuses a source this browser cannot decode, and says why', () => {
+    // Copying needs no decoder; redrawing every frame does.
+    const opaque: MediaInfo = { ...h264, video: { ...h264.video!, decodable: false } };
+    const out = instructionsFor({ formatId: 'gif' }, opaque, fit);
+    expect(out.error).toMatch(/decode/i);
+  });
+
+  it('refuses a file with no picture', () => {
+    expect(instructionsFor({ formatId: 'gif' }, { ...h264, video: null }, fit).error).toBeTruthy();
+  });
+
+  it('routes to the GIF engine, carrying the trim', () => {
+    const out = instructionsFor({ formatId: 'gif', start: 5, end: 8 }, h264, fit);
+    expect(out.mode).toBe('gif');
+    expect(out.trim).toEqual({ start: 5, end: 8 });
+  });
+
+  it('estimates from the frame count and size, not the video bitrate', () => {
+    const short = estimateBytes({ formatId: 'gif', start: 0, end: 2, maxHeight: 240 }, h264, fit);
+    const long = estimateBytes({ formatId: 'gif', start: 0, end: 8, maxHeight: 240 }, h264, fit);
+    const big = estimateBytes({ formatId: 'gif', start: 0, end: 2 }, h264, fit);
+    expect(long).toBeGreaterThan(short);
+    expect(big).toBeGreaterThan(short);
+  });
+
+  it('says there is no sound and no copying', () => {
+    const out = explainPlan({ formatId: 'gif', start: 0, end: 3 }, h264, fit);
+    expect(out.lossless).toBe(false);
+    expect(out.headline).toMatch(/GIF/);
+    expect(out.notes.join(' ')).toMatch(/no sound/i);
+    expect(out.notes.join(' ')).toMatch(/256 colours/i);
+  });
+
+  it('warns before someone waits five minutes for a quarter of a gigabyte', () => {
+    const out = explainPlan({ formatId: 'gif', start: 0, end: 60 }, h264, fit);
+    expect(out.notes.join(' ')).toMatch(/shorten|enormous|big for a gif|extra steps/i);
+  });
+
+  it('plans fewer frames at a lower rate', () => {
+    const slow = gifPlanFor({ formatId: 'gif', start: 0, end: 4, gifFps: 5 }, h264)!;
+    const fast = gifPlanFor({ formatId: 'gif', start: 0, end: 4, gifFps: 20 }, h264)!;
+    expect(slow.frames).toBe(20);
+    expect(fast.frames).toBe(80);
+    expect(fast.bytes).toBeGreaterThan(slow.bytes);
+  });
+
+  it('follows the size control', () => {
+    expect(gifPlanFor({ formatId: 'gif', maxHeight: 240 }, h264)!.height).toBe(240);
   });
 });
 
@@ -897,10 +968,19 @@ describe('OUTPUT_FORMATS', () => {
     }
   });
 
-  it('gives audio-only formats no video codecs, and video formats some', () => {
+  it('lists codecs only for the kinds of output that have them', () => {
     for (const format of OUTPUT_FORMATS) {
       expect(format.video.length > 0, format.id).toBe(format.kind === 'video');
-      expect(format.audio.length, format.id).toBeGreaterThan(0);
+      // GIF has neither: it is drawn pixel by pixel and carries no sound.
+      expect(format.audio.length > 0, format.id).toBe(format.kind !== 'gif');
+    }
+  });
+
+  it('never lands on GIF by default', () => {
+    // Twenty times the size of the same clip as video; nobody means to make one
+    // by accident.
+    for (const encodable of [full, open, { video: [], audio: [] }]) {
+      expect(defaultFormatId(h264, encodable)).not.toBe('gif');
     }
   });
 });
