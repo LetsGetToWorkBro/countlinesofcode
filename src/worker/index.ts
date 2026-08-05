@@ -808,6 +808,8 @@ async function sitemap(request: Request, env: Env): Promise<Response> {
     `<url><loc>${escapeXml(origin)}/image.html</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>`,
     `<url><loc>${escapeXml(origin)}/video.html</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/zip.html</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>`,
+    `<url><loc>${escapeXml(origin)}/lock.html</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>`,
+    `<url><loc>${escapeXml(origin)}/pgp.html</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/unlock.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
     `<url><loc>${escapeXml(origin)}/shrink.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
     `<url><loc>${escapeXml(origin)}/security.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`,

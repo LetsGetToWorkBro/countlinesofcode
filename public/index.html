@@ -69,6 +69,10 @@
 |
 <a href="/zip.html">zip</a>
 |
+<a href="/lock.html">lock</a>
+|
+<a href="/pgp.html">pgp</a>
+|
 <a href="https://delete.1999loc.com/">delete posts</a>
 </p>
 <hr>
@@ -222,6 +226,26 @@ already have open; where a tool needs our server, it says so.
 <tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
 </thead>
 <tbody>
+<tr>
+  <th scope="row"><a href="/lock.html">Lock a file with a password</a></th>
+  <td>
+    Encrypt a file before you send it, and unlock one somebody sent you. Neither
+    the file nor the password leaves the tab. It writes the OpenPGP standard, so
+    the person receiving it can open it with <code>gpg</code> rather than being
+    tied to this page.
+  </td>
+  <td>Your browser</td>
+</tr>
+<tr>
+  <th scope="row"><a href="/pgp.html">PGP keys and messages</a></th>
+  <td>
+    Make a key pair, encrypt a message or file to someone&rsquo;s public key,
+    decrypt what they send back, sign and verify. Real OpenPGP, with no
+    keyserver and no upload &mdash; your private key is generated in the tab and
+    stays there.
+  </td>
+  <td>Your browser</td>
+</tr>
 <tr>
   <th scope="row"><a href="/inspect.html">What&rsquo;s hidden in this file?</a></th>
   <td>

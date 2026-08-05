@@ -705,3 +705,71 @@ img.zip-image { max-width: 100%; display: block; }
 }
 
 .spacer { color: #999999; margin: 0 4px; }
+
+/* ------------------------------------------------- the encryption tools */
+
+/* Strength verdicts. Colour alone would not be enough, and it is not the only
+   signal — the words say what the password actually resists. */
+.pw-terrible { color: #8a0000; }
+.pw-weak { color: #8a3b00; }
+.pw-fair { color: #6a5500; }
+.pw-strong { color: #145214; }
+.pw-excellent { color: #145214; }
+
+.error-inline { color: #8a0000; }
+
+textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+  border: 1px solid #808080;
+  padding: 4px 6px;
+}
+
+/* The keyring. Fingerprints are monospaced because they are compared by eye,
+   which is the entire point of showing them. */
+.key-list { border: 1px solid #808080; }
+
+.key-row {
+  display: grid;
+  grid-template-columns: 60px 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 6px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.key-row:last-child { border-bottom: none; }
+.key-row.is-private { background: #fffbe6; }
+
+.key-kind {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #555555;
+}
+
+.key-row.is-private .key-kind { color: #8a3b00; font-weight: bold; }
+
+.key-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.key-print {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  color: #333333;
+}
+
+.key-acts { white-space: nowrap; }
+
+@media (max-width: 620px) {
+  .key-row { grid-template-columns: 1fr; gap: 2px; }
+}
+
+/* Signature verdicts, which are the one thing on that page nobody should have
+   to squint at. */
+.sig-good { color: #145214; }
+.sig-bad { color: #8a0000; font-weight: bold; }
+.sig-none { color: #8a3b00; }
+
+.offscreen { position: absolute; left: -9999px; }
