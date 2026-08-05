@@ -859,3 +859,30 @@ textarea {
 .proof-failed { color: #145214; }
 .proof-sent { color: #8a0000; font-weight: bold; }
 .proof-unsupported { color: #555555; }
+
+/* The donation footer. The address is 95 characters and must be selectable in
+   one go, so it wraps anywhere rather than pushing the page sideways. */
+.footer.support {
+  margin-top: 18px;
+}
+.xmr {
+  display: inline-block;
+  max-width: 100%;
+  word-break: break-all;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* The seed phrase. Numbered because a word in the wrong place is the failure
+   mode, and laid out in columns so 25 words fit on one printed page. */
+.seed-words {
+  columns: 3 12em;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 14px;
+  margin: 6px 0;
+  padding-left: 28px;
+}
+.seed-words li {
+  margin: 1px 0;
+  break-inside: avoid;
+}

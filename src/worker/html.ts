@@ -114,6 +114,7 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
   { href: '/inspect.html', label: 'inspect', id: 'inspect', group: 'privacy' },
   { href: '/lock.html', label: 'lock', id: 'lock', group: 'privacy' },
   { href: '/pgp.html', label: 'pgp', id: 'pgp', group: 'privacy' },
+  { href: '/monero.html', label: 'monero', id: 'monero', group: 'privacy' },
   { href: 'https://delete.1999loc.com/', label: 'delete posts', id: 'delete', group: 'privacy' },
 
   { href: '/code.html', label: 'count code', id: 'count', group: 'code' },
@@ -157,6 +158,17 @@ export function siteHeader(current = 'count'): string {
 ${siteNav(current)}`;
 }
 
+/**
+ * Where donations go.
+ *
+ * A mainnet Monero subaddress. Held in one place so the footer, the checker
+ * page and the test that verifies its checksum all read the same string: an
+ * address that differs by one character between two pages is an address that
+ * loses somebody's money, and it would look exactly like a working one.
+ */
+export const DONATION_ADDRESS =
+  '83TQcTwusSQ4WKbPQE5osrF3cR4GWe2zmcNWeozK6BSqHSaeLvjUVe476ouVwLKn1uVwEFcbJQvnme7W6dTV5SB93x45DEy';
+
 export function siteFooter(): string {
   return `<hr>
 <p class="footer">
@@ -168,6 +180,14 @@ Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spit
 <a href="/how.html">how we count</a> |
 <a href="/security.html">connecting github</a> |
 <a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+<p class="footer support">
+Nothing here is for sale, nothing is tracked, and there is no account to make.
+If something saved you an hour:<br>
+<code class="xmr">${DONATION_ADDRESS}</code><br>
+Monero, because a donation address should not also be a tracking pixel. You can
+<a href="/monero.html">check that address here</a> before sending anything.
 </p>`;
 }
 

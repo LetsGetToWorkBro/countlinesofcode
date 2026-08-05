@@ -67,6 +67,11 @@ export const BUNDLES = [
     banner: '/* 1999.LOC archive engine. Built from src/client/zipkit.ts. Do not edit. */',
   },
   {
+    entry: 'src/client/monero.ts',
+    outfile: 'public/monero.js',
+    banner: '/* 1999.LOC Monero keys and addresses. Built from src/client/monero.ts. Do not edit. Bundles @noble/hashes and @noble/curves (MIT). */',
+  },
+  {
     // The planner only. mediabunny itself is served from /vendor as a module,
     // because it is 600 KB and the page loads it after a file is opened.
     entry: 'src/client/video.ts',

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monero Paper Wallet and Address Checker | 1999.LOC</title>
+<meta name="description" content="Check a Monero address, or generate a paper wallet offline in your browser. Every step of the derivation is verified against published test vectors in front of you, and the page tells you how to confirm the result against the official wallet before you trust it.">
+<link rel="canonical" href="https://1999loc.com/monero.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Monero Paper Wallet and Address Checker | 1999.LOC">
+<meta property="og:description" content="A paper wallet generator that argues with you, shows its working, and tells you how to check it against the official wallet.">
+<meta property="og:url" content="https://1999loc.com/monero.html">
+<meta property="og:site_name" content="1999.LOC">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<!--
+  EXPECTED LAYOUT (single column, ~680px, left aligned):
+
+    1999.LOC
+    ------------------------------------------------------------
+    ... | lock | pgp | monero | delete posts
+    ------------------------------------------------------------
+    MONERO
+    ( Check an address )  ( Make a wallet )  ( Restore a phrase )
+    +--------------------------------------------------+
+    | Does this page work?  9 of 9 checks passed       |
+    |   Keccak-256 of an empty input      ok           |
+    |   The ed25519 base point            ok           |
+    +--------------------------------------------------+
+    [ paste an address ]  -> mainnet standard, checksum ok
+    ------------------------------------------------------------
+-->
+<div id="page">
+
+<h1><a href="/">1999.LOC</a></h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<span class="nav-group"><span class="nav-label">documents</span>
+<a href="/sign.html">pdf</a>
+&middot;
+<a href="/pages.html">pages</a>
+&middot;
+<a href="/convert.html">convert</a>
+&middot;
+<a href="/sheet.html">sheets</a>
+&middot;
+<a href="/zip.html">zip</a></span>
+<span class="nav-group"><span class="nav-label">media</span>
+<a href="/image.html">images</a>
+&middot;
+<a href="/video.html">video</a></span>
+<span class="nav-group"><span class="nav-label">privacy</span>
+<a href="/inspect.html">inspect</a>
+&middot;
+<a href="/lock.html">lock</a>
+&middot;
+<a href="/pgp.html">pgp</a>
+&middot;
+<strong>monero</strong>
+&middot;
+<a href="https://delete.1999loc.com/">delete posts</a></span>
+<span class="nav-group"><span class="nav-label">code</span>
+<a href="/code.html">count code</a>
+&middot;
+<a href="/golf">golf</a></span>
+</p>
+<hr>
+
+<h2>Monero</h2>
+<p class="tagline">Check an address, or make a paper wallet you can verify.</p>
+
+<div class="notice-box">
+<p><strong>Read this first. A wallet generator on a website is a dangerous thing, and this one is no exception.</strong></p>
+<p class="note">
+Every other tool on this site fails loudly. A broken image converter gives you a
+broken image and you can see it. This one fails <em>silently</em>: a derivation
+that is wrong by a single step produces a perfectly well-formed address that
+looks exactly like a working one, and the only way to find out is to send money
+to it and never see the money again.
+</p>
+<p class="note">
+Web wallet generators have also been a favourite target for supply-chain
+attacks, because one altered script on one day harvests every key made that day.
+That risk does not go away because we are honest. It goes away because you check.
+</p>
+<p class="note">
+<strong>So the recommendation is plainly this: do not use the generator unless
+you are willing to do the two checks below.</strong> If you are not going to do
+them, use the
+<a href="https://www.getmonero.org/downloads/">official Monero wallet</a>
+instead, offline. It is free, it takes ten minutes, and it is what we would tell
+a friend to do. The address checker and the phrase restorer on this page are
+safe to use for anything, because they handle no secrets.
+</p>
+</div>
+
+<p>
+<button type="button" id="tab-check" class="sheet-tab is-active">Check an address</button>
+<button type="button" id="tab-make" class="sheet-tab">Make a wallet</button>
+<button type="button" id="tab-restore" class="sheet-tab">Restore a phrase</button>
+</p>
+
+<p id="error" class="error" role="alert"></p>
+<p id="status" class="status" role="status" aria-live="polite"></p>
+
+<hr>
+
+<!-- ---------------------------------------------------------- proof -->
+<h3>Does this page actually work?</h3>
+<p class="note">
+Run in your browser, on this page load, before anything else is allowed to
+happen. If any of it fails, the generator stays switched off.
+</p>
+<div id="proof-checks"></div>
+
+<hr>
+
+<!-- ---------------------------------------------------------- check -->
+<div id="mode-check">
+  <h3>Check an address</h3>
+  <p class="note">
+    Handles no secrets, so this part is safe whatever you think of the rest.
+  </p>
+  <p><textarea id="check-text" rows="3" spellcheck="false" placeholder="4... or 8..."></textarea></p>
+  <p>
+    <button type="button" id="check">Check it</button>
+    <button type="button" id="check-ours" class="small">Use the donation address</button>
+  </p>
+  <div id="check-result"></div>
+
+  <div class="notice-box">
+  <p><strong>What a valid checksum does and does not tell you.</strong></p>
+  <p class="note">
+    It tells you the address was not corrupted between where it was written and
+    where you pasted it: no dropped character, no transcription slip. It does
+    <em>not</em> tell you it is the address you were meant to send to. Malware
+    that swaps addresses on the clipboard swaps in one that checksums perfectly.
+    The defence against that is comparing the first and last several characters
+    against the source, out loud or on a different device.
+  </p>
+  </div>
+</div>
+
+<!-- ----------------------------------------------------------- make -->
+<div id="mode-make" class="hidden">
+  <h3>Make a paper wallet</h3>
+
+  <div class="notice-box">
+  <p><strong>The two checks. Do both, in this order.</strong></p>
+  <ol class="plain">
+    <li><strong>Generate with the network off.</strong> Save this page to disk
+      (Ctrl-S), disconnect the machine from the internet, open the saved copy,
+      and generate there. Nothing here needs the network after the page loads,
+      which you can watch by disconnecting and seeing it keep working. Best of
+      all is a machine that will be wiped afterwards.</li>
+    <li><strong>Restore it in the official wallet and confirm the address
+      matches, before you send anything to it.</strong> This is the check that
+      actually proves it, because it is a different implementation agreeing.
+      <code>monero-wallet-cli --restore-deterministic-wallet</code>, type the 25
+      words, and compare the address it shows against the one printed here. If
+      they differ by a single character, this page is wrong and you have lost
+      nothing.</li>
+  </ol>
+  <p class="note">
+    And then, always: send a small amount first, and spend it back out again,
+    before the wallet holds anything you would miss.
+  </p>
+  </div>
+
+  <h4>Where the randomness comes from</h4>
+  <p class="note">
+    32 bytes from <code>crypto.getRandomValues</code>, your browser's own
+    cryptographic generator. You can mix in your own on top: roll dice, mash the
+    keyboard, type anything at all. It is hashed together with the browser's
+    bytes, so it can only add and can never subtract, and it means a weak or
+    tampered generator is not enough on its own to predict your key.
+  </p>
+  <p>
+    <label for="extra" class="inline">Your own entropy</label>
+    <input type="text" id="extra" size="32" spellcheck="false" placeholder="optional: dice rolls, anything">
+  </p>
+  <p>
+    <label for="network" class="inline">Network</label>
+    <select id="network">
+      <option value="mainnet">mainnet</option>
+      <option value="stagenet">stagenet</option>
+      <option value="testnet">testnet</option>
+    </select>
+  </p>
+  <p>
+    <button type="button" id="generate" disabled>Make a wallet</button>
+    <span id="generate-note" class="note"></span>
+  </p>
+
+  <div id="wallet" class="hidden">
+    <hr>
+    <h3>Your wallet</h3>
+    <p class="note">
+      Nothing here is stored. This page keeps no record of it, there is nowhere
+      for it to be sent, and closing the tab destroys it. Write it down or print
+      it before you leave.
+    </p>
+    <div id="wallet-out"></div>
+    <p>
+      <button type="button" id="print">Print this</button>
+      <button type="button" id="verify-jump" class="small">Now check it restores</button>
+    </p>
+  </div>
+</div>
+
+<!-- -------------------------------------------------------- restore -->
+<div id="mode-restore" class="hidden">
+  <h3>Restore a phrase</h3>
+  <p class="note">
+    Type 25 words and see which wallet they open. Useful for two things:
+    checking a phrase you wrote down is legible and correct, and confirming the
+    words on your paper really do produce the address printed beside them.
+  </p>
+  <p><textarea id="restore-text" rows="4" spellcheck="false" placeholder="abbey ability able ..."></textarea></p>
+  <p>
+    <label for="restore-network" class="inline">Network</label>
+    <select id="restore-network">
+      <option value="mainnet">mainnet</option>
+      <option value="stagenet">stagenet</option>
+      <option value="testnet">testnet</option>
+    </select>
+    <button type="button" id="restore">Restore</button>
+  </p>
+  <div id="restore-result"></div>
+</div>
+
+<hr>
+
+<h3>Is this actually private?</h3>
+<div id="proof"></div>
+
+<h3>The honest notes</h3>
+<ul class="plain">
+  <li><strong>Nothing is uploaded, and there is nowhere to upload to.</strong> Static page, no endpoint, no account. The security policy served with this page forbids it opening a connection to any other domain at all, which is a rule your browser enforces rather than a promise from us, and the panel above lets you watch it being enforced.</li>
+  <li><strong>We would rather you used the official wallet.</strong> That is not modesty. A browser tab shares a process with everything else you have open, cannot wipe a key out of memory reliably, and is delivered fresh from a server every time you load it. <a href="https://www.getmonero.org/downloads/">The official wallet</a> has none of those problems. This page exists for the case where you want a throwaway receiving address without installing anything, and it should be treated as exactly that.</li>
+  <li><strong>The cryptography is not ours.</strong> Keccak-256 comes from <a href="https://github.com/paulmillr/noble-hashes">@noble/hashes</a> and the ed25519 arithmetic from <a href="https://github.com/paulmillr/noble-curves">@noble/curves</a>, both audited and both served from this domain. What is written here is the Monero-specific part: scalar reduction, the key derivation, base58 and the seed phrase.</li>
+  <li><strong>What the checks above actually prove.</strong> Keccak against published vectors, the ed25519 base point against its one published encoding, and base58 and the checksum against a real address that the official Monero wallet produced rather than this code. The last of those is a genuine cross-check against software that is not ours. The seed-phrase checksum is verified against Monero's own published test vector too, in the test suite.</li>
+  <li><strong>What they cannot prove.</strong> There is no published secret-to-address vector to test the private-to-public step against, and inventing one would prove nothing. That gap is exactly why the instruction to restore in the official wallet before funding is not a formality. It is the only check that closes it.</li>
+  <li><strong>A saved copy of this page is safer than this one.</strong> Not because we would change it, but because a saved copy cannot be changed after you have looked at it. Save it, read it, disconnect, and use the copy. The whole page and everything it loads is in <a href="https://github.com/letsgettoworkbro/countlinesofcode">the repository</a>, and what is served is built from it with nothing added.</li>
+  <li><strong>A paper wallet is a receiving address, not an account.</strong> Spending from it means importing the key into a real wallet, and at that moment it stops being cold. Sweep it in one go rather than repeatedly, and treat the paper as spent once you have.</li>
+  <li><strong>The view key is on the paper too.</strong> It lets someone see what arrives without being able to spend it, which is useful for watching a balance from a machine you trust less. It is still worth keeping private: anyone with it can see everything that address receives.</li>
+</ul>
+
+<hr>
+
+<p class="footer">
+Hosted on Cloudflare &middot; Made with spite for bloat<br>
+<a href="/pgp.html">pgp</a> |
+<a href="/lock.html">lock a file</a> |
+<a href="/inspect.html">inspect a file</a> |
+<a href="https://www.getmonero.org/">getmonero.org</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+<p class="footer support">
+Nothing here is for sale, nothing is tracked, and there is no account to make.
+If something saved you an hour:<br>
+<code class="xmr">83TQcTwusSQ4WKbPQE5osrF3cR4GWe2zmcNWeozK6BSqHSaeLvjUVe476ouVwLKn1uVwEFcbJQvnme7W6dTV5SB93x45DEy</code><br>
+Monero, because a donation address should not also be a tracking pixel. You can
+<a href="/monero.html">check that address here</a> before sending anything.
+</p>
+
+</div>
+<script src="/monero-page.js"></script>
+<script src="/proof-panel.js"></script>
+</body>
+</html>
