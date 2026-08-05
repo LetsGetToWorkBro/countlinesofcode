@@ -338,3 +338,10 @@ button.remove {
 .notice-box p {
   margin: 4px 0;
 }
+
+/* Saved signatures: a thumbnail and two buttons, nothing more. */
+.sig-thumb {
+  max-height: 40px;
+  max-width: 220px;
+  vertical-align: middle;
+}

@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign, Fill and Redact a PDF in Your Browser — LOC.1999</title>
-<meta name="description" content="Add text to a PDF, sign it, and redact it properly. Runs entirely in your browser — the file is never uploaded. Redaction removes the text rather than covering it.">
+<title>Sign, Fill and Edit a PDF in Your Browser — LOC.1999</title>
+<meta name="description" content="Sign a PDF, fill in a form, and delete or replace text in it. Runs entirely in your browser — the file is never uploaded. Deleting removes the text from the file rather than covering it with a box.">
 <link rel="canonical" href="https://1999loc.com/sign.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Sign, Fill and Redact a PDF in Your Browser — LOC.1999">
-<meta property="og:description" content="Sign and fill a PDF without uploading it. Redaction that actually removes the text instead of drawing a black box over it.">
+<meta property="og:title" content="Sign, Fill and Edit a PDF in Your Browser — LOC.1999">
+<meta property="og:description" content="Sign and fill a PDF without uploading it. Delete text and it leaves the file — no black box over the top, no page turned into a picture.">
 <meta property="og:url" content="https://1999loc.com/sign.html">
 <meta property="og:site_name" content="LOC.1999">
 <meta name="twitter:card" content="summary">
@@ -25,9 +25,9 @@
     ------------------------------------------------------------
     count code | golf | pdf | sign | delete posts
     ------------------------------------------------------------
-    SIGN & REDACT
+    SIGN & EDIT
     [ Open a PDF... ]
-    ( ) Type text  ( ) Signature  ( ) Redact
+    ( ) Add text  ( ) Signature  ( ) Delete text  ( ) Black out
     [ < page 1 of 4 > ]
     +--------------------------------+
     |  the page, rendered            |
@@ -54,8 +54,8 @@
 </p>
 <hr>
 
-<h2>Sign &amp; redact</h2>
-<p class="tagline">Fill it in, sign it, black it out. Your file never leaves this tab.</p>
+<h2>Sign &amp; edit</h2>
+<p class="tagline">Fill it in, sign it, delete what should not be there. Your file never leaves this tab.</p>
 
 <p class="note">
 Signing a PDF normally means uploading it to a stranger, or buying software. This
@@ -65,7 +65,7 @@ has loaded and everything below still works.
 </p>
 
 <div class="notice-box">
-<p><strong>About the redaction tool, because this one matters.</strong></p>
+<p><strong>About deleting text, because this one matters.</strong></p>
 <p class="note">
 Drawing a black rectangle over text is not redaction, and it is how governments
 and law firms have leaked documents for twenty years. The text stays in the file
@@ -74,17 +74,21 @@ chatbot and ask what the box is hiding. Free tools that offer &ldquo;black
 out&rdquo; almost always do exactly this.
 </p>
 <p class="note">
-So this one does not draw boxes. Any page you redact is rendered to pixels with
-the boxes painted in, and the original page is thrown away. The characters stop
-existing. The cost is that the page becomes an image: its text is no longer
-selectable and the file gets bigger. That trade is the whole feature, and pages
-you did not redact are left untouched.
+So the delete tool here does not draw anything. Click a word and this finds the
+actual instruction in the file that drew it, and removes that instruction. The
+characters stop existing. Nothing is covered, nothing is flattened, and every
+other word on the page is still real selectable text &mdash; you can delete one
+line out of a contract and the rest of it stays a normal PDF.
 </p>
 <p class="note">
-One thing you still have to get right: <strong>the box is what hides it.</strong>
-Flattening removes the text from the whole page, so nothing can be copied out of
-it &mdash; but anything your box does not cover is still there as pixels, and
-still readable. Check the preview covers every character before you save.
+That only works when a word can be tied to one instruction. Some documents draw
+text in ways that cannot be, and rather than guess and cut the wrong sentence,
+the editor says so and points you at <strong>black out</strong> instead. That is
+the blunt fallback: the whole page is rendered to pixels with your boxes painted
+in and the original page thrown away, so the text really is gone, but the page
+stops being selectable text and the file gets bigger. Only the pages you black
+out are affected. If you black out a page, check the preview covers every
+character &mdash; what your box misses is still readable as pixels.
 </p>
 </div>
 
@@ -107,9 +111,15 @@ still readable. Check the preview covers every character before you save.
   <h3>2. Pick a tool, then click the page</h3>
 
   <p id="tools">
-    <label class="wide"><input type="radio" name="tool" value="text" checked> Type text</label>
-    <label class="wide"><input type="radio" name="tool" value="stamp"> Place my signature</label>
-    <label class="wide"><input type="radio" name="tool" value="redact"> Redact (drag a box)</label>
+    <label class="wide"><input type="radio" name="tool" value="text" checked> Add text &mdash; click where it goes</label>
+    <label class="wide"><input type="radio" name="tool" value="stamp"> Signature &mdash; click to stamp it</label>
+    <label class="wide"><input type="radio" name="tool" value="delete"> Delete text &mdash; click a word (double-click to replace it)</label>
+    <label class="wide"><input type="radio" name="tool" value="blackout"> Black out &mdash; drag a box (last resort, flattens the page)</label>
+  </p>
+  <p class="note">
+    Anything you add can be dragged afterwards, nudged with the arrow keys
+    (hold Shift for ten points at a time), or removed with Delete.
+    <label class="inline"><input type="checkbox" id="snap" checked> Snap to the lines already on the page</label>
   </p>
 
   <fieldset id="text-options">
@@ -120,9 +130,13 @@ still readable. Check the preview covers every character before you save.
     </p>
     <p>
       <label for="text-size">Size:</label>
-      <input type="number" id="text-size" min="4" max="72" step="1" value="12" class="narrow">
+      <input type="number" id="text-size" min="4" max="72" step="0.5" value="12" class="narrow">
       <span class="note">points</span>
     </p>
+    <p>
+      <label class="wide"><input type="checkbox" id="text-auto" checked> Match the size of the text you click next to</label>
+    </p>
+    <p class="note">Filling in a form: tick that, click on the line, and it comes out the same size as the label beside it.</p>
   </fieldset>
 
   <fieldset id="sig-options">
@@ -131,6 +145,7 @@ still readable. Check the preview covers every character before you save.
     <canvas id="sig-pad" width="600" height="160" aria-label="Draw your signature"></canvas>
     <p>
       <button type="button" id="sig-clear">Clear</button>
+      <button type="button" id="sig-save">Save for next time</button>
       <label for="sig-typed" class="inline">or type:</label>
       <input type="text" id="sig-typed" placeholder="Your name" autocomplete="off">
       <select id="sig-font">
@@ -139,6 +154,7 @@ still readable. Check the preview covers every character before you save.
         <option value="monospace">Typewriter</option>
       </select>
     </p>
+    <div id="saved-sigs"></div>
     <p>
       <label for="sig-width">Width on the page:</label>
       <input type="number" id="sig-width" min="40" max="400" step="10" value="160" class="narrow">
@@ -178,8 +194,8 @@ still readable. Check the preview covers every character before you save.
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account.</li>
   <li><strong>This is not a digital signature.</strong> It draws your signature onto the page, exactly like signing a printout and scanning it. It is what almost everyone means by &ldquo;sign this PDF&rdquo;, and it is what most people are asked for &mdash; but it carries no cryptographic proof of who signed. If you need a certifying signature that Acrobat will validate, you need a certificate, and this is not that.</li>
-  <li><strong>Redaction flattens the page.</strong> Only the pages you redact, and only because covering text does not remove it.</li>
-  <li><strong>Editing existing text is not offered.</strong> A PDF stores glyphs at positions, not sentences, so &ldquo;change this word&rdquo; means re-flowing a paragraph that was never stored as one. Tools that claim it either rebuild the layout badly or, more often, cover the old text and print new text on top. You can do that here deliberately: redact the old, type the new.</li>
+  <li><strong>Deleting is surgical; replacing is not re-flowing.</strong> Deleting removes the drawing instruction, so those characters leave the file. Replacing deletes the old and places new text at the same spot and size &mdash; which is what you want on a form or a name or a date. What it does not do is re-flow a paragraph: a PDF stores glyphs at positions, not sentences, so if your replacement is much longer than what it replaced it will run past where the old line ended instead of pushing the rest of the paragraph along. Nothing can honestly do that to an arbitrary PDF, and tools that claim to are usually rebuilding your layout and getting it wrong.</li>
+  <li><strong>Black out flattens the page.</strong> Only the pages you black out, and only when the surgical delete cannot safely be used, because covering text does not remove it.</li>
   <li><strong>It downloads about 700&nbsp;KB</strong> the first time you open a file &mdash; <a href="https://mozilla.github.io/pdf.js/">pdf.js</a> to render pages, <a href="https://github.com/Hopding/pdf-lib">pdf-lib</a> to write them, plus font metrics for whatever your document uses. All served from this domain, because the security policy here forbids third-party scripts and a page handling your contracts is the wrong place to make an exception.</li>
   <li><strong>Large scans use memory.</strong> Everything is in the tab, so a 200-page scan may struggle on a phone.</li>
 </ul>

@@ -6,15 +6,22 @@
  * fine and leaves the secret visible. The redaction rules matter because the
  * whole feature rests on which pages get flattened.
  *
- * applyEdits itself needs a real document, so it is exercised in a browser.
+ * The surgical delete is covered end to end below against a real document,
+ * because it is the one operation here that destroys something on purpose.
+ * Flattening needs a canvas, so that half is exercised in a browser.
  */
 
+import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import {
   MIN_REDACTION_POINTS,
+  applyEdits,
   canvasRectToPdf,
   canvasToPdf,
+  loadForEditing,
+  pageTextOps,
   pagesNeedingRaster,
+  readContentStream,
   usefulRedactions,
   type Edit,
 } from '../src/client/pdfedit';
@@ -118,5 +125,102 @@ describe('pagesNeedingRaster', () => {
     expect(pages.has(5)).toBe(true);
     expect(pages.has(4)).toBe(false);
     expect(pages.size).toBe(1);
+  });
+});
+
+/**
+ * Deleting text, against a real PDF.
+ *
+ * This is the only operation here that removes something irreversibly, and the
+ * failure that matters is not "nothing happened" — it is "the wrong line went",
+ * which looks like success. So each case checks both halves: the target is gone
+ * *and* its neighbours are still there.
+ */
+describe('applyEdits: surgical removal', () => {
+  /** Three lines on page one, one line on page two, at known positions. */
+  async function fixture(): Promise<Uint8Array> {
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const first = doc.addPage([612, 792]);
+    first.drawText('PUBLIC HEADING', { x: 60, y: 760, size: 20, font });
+    first.drawText('SUPERSECRETCODEWORD', { x: 60, y: 700, size: 20, font });
+    first.drawText('KEEP THIS LINE', { x: 60, y: 200, size: 14, font });
+    doc.addPage([612, 792]).drawText('SECOND PAGE', { x: 60, y: 700, size: 14, font });
+    return doc.save();
+  }
+
+  /**
+   * A page's content stream, with hex strings turned back into readable text.
+   *
+   * pdf-lib writes show-text operands as `<50554243…>` rather than `(PUBLIC…)`,
+   * so asserting on the raw stream would silently pass no matter what it says.
+   */
+  async function streamOf(bytes: Uint8Array, page: number): Promise<string> {
+    const doc = await loadForEditing(bytes);
+    const raw = new TextDecoder('latin1').decode(readContentStream(doc, page));
+    return raw.replace(/<([0-9A-Fa-f]+)>/g, (_whole, hex: string) => {
+      let out = '';
+      for (let i = 0; i + 1 < hex.length; i += 2) out += String.fromCharCode(parseInt(hex.slice(i, i + 2), 16));
+      return `(${out})`;
+    });
+  }
+
+  it('finds one operator per line, in the order they were drawn', async () => {
+    const ops = pageTextOps(await loadForEditing(await fixture()), 0);
+    expect(ops).toHaveLength(3);
+    expect(ops.map((o) => [Math.round(o.x), Math.round(o.y), Math.round(o.size)])).toEqual([
+      [60, 760, 20],
+      [60, 700, 20],
+      [60, 200, 14],
+    ]);
+  });
+
+  it('removes the targeted line from the file and leaves the others', async () => {
+    const source = await fixture();
+    const out = await applyEdits(source, [], [], [{ page: 0, opIndices: [1] }]);
+    const page1 = await streamOf(out, 0);
+
+    expect(page1).not.toContain('SUPERSECRETCODEWORD');
+    expect(page1).toContain('PUBLIC HEADING');
+    expect(page1).toContain('KEEP THIS LINE');
+  });
+
+  it('leaves the other pages completely alone', async () => {
+    const out = await applyEdits(await fixture(), [], [], [{ page: 0, opIndices: [1] }]);
+    expect(await streamOf(out, 1)).toContain('SECOND PAGE');
+  });
+
+  it('keeps the survivors as real text, not a picture', async () => {
+    // If this ever starts failing, something has begun rasterising pages that
+    // were only edited — which is exactly what this tool exists not to do.
+    const out = await applyEdits(await fixture(), [], [], [{ page: 0, opIndices: [1] }]);
+    const page1 = await streamOf(out, 0);
+    expect(page1).toContain('Tj');
+    expect(page1).not.toContain('/Image');
+  });
+
+  it('removes several lines at once', async () => {
+    const out = await applyEdits(await fixture(), [], [], [{ page: 0, opIndices: [0, 2] }]);
+    const page1 = await streamOf(out, 0);
+    expect(page1).not.toContain('PUBLIC HEADING');
+    expect(page1).not.toContain('KEEP THIS LINE');
+    expect(page1).toContain('SUPERSECRETCODEWORD');
+  });
+
+  it('changes nothing when the removal list is empty', async () => {
+    const out = await applyEdits(await fixture(), [], [], []);
+    const page1 = await streamOf(out, 0);
+    expect(page1).toContain('SUPERSECRETCODEWORD');
+    expect(page1).toContain('PUBLIC HEADING');
+  });
+
+  it('writes added text onto a page it also cut', async () => {
+    const edits: Edit[] = [
+      { kind: 'text', page: 0, at: { x: 60, y: 700 }, value: 'REDACTED BY REQUEST', size: 20 },
+    ];
+    const out = await applyEdits(await fixture(), edits, [], [{ page: 0, opIndices: [1] }]);
+    const page1 = await streamOf(out, 0);
+    expect(page1).not.toContain('SUPERSECRETCODEWORD');
+    expect(page1).toContain('REDACTED BY REQUEST');
   });
 });

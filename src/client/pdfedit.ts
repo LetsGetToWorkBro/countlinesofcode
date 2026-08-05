@@ -20,7 +20,8 @@
  * hands the pixels over.
  */
 
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFArray, PDFDocument, PDFName, PDFRawStream, StandardFonts, decodePDFRawStream, rgb } from 'pdf-lib';
+import { findTextOps, matchOpsToItems, removeTextOps, type ShowTextOp } from './pdfstream';
 
 /** A point in PDF user space: origin bottom-left, units of 1/72 inch. */
 export interface PdfPoint {
@@ -119,6 +120,63 @@ export function usefulRedactions(edits: Edit[]): RedactEdit[] {
   );
 }
 
+/** Show-text operators to delete from a page, by the index findTextOps gives. */
+export interface Removal {
+  page: number;
+  opIndices: number[];
+}
+
+/**
+ * A page's content stream, decoded and concatenated.
+ *
+ * `/Contents` is allowed to be an array of streams, and a single text operator
+ * may legally be split across the boundary between two of them. Treating them
+ * as one buffer — which is exactly how a renderer treats them — means offsets
+ * are computed against the same bytes that get written back.
+ */
+export function readContentStream(doc: PDFDocument, pageIndex: number): Uint8Array {
+  const contents = doc.getPage(pageIndex).node.Contents();
+  if (!contents) return new Uint8Array(0);
+
+  if (contents instanceof PDFArray) {
+    const parts: Uint8Array[] = [];
+    for (let i = 0; i < contents.size(); i++) {
+      const stream = contents.lookup(i, PDFRawStream);
+      parts.push(decodePDFRawStream(stream).decode());
+      // The spec says streams are joined with whitespace between them; without
+      // it the last operator of one would fuse with the first of the next.
+      parts.push(new Uint8Array([0x0a]));
+    }
+    const total = parts.reduce((n, p) => n + p.length, 0);
+    const out = new Uint8Array(total);
+    let at = 0;
+    for (const part of parts) {
+      out.set(part, at);
+      at += part.length;
+    }
+    return out;
+  }
+
+  return decodePDFRawStream(contents as PDFRawStream).decode();
+}
+
+/**
+ * Open a document for editing and keep it around.
+ *
+ * The page needs the parsed document twice: once to read content streams while
+ * you click about, and again to write at the end. Parsing a large PDF is not
+ * free, so the caller holds this and hands it back rather than re-parsing on
+ * every page turn.
+ */
+export async function loadForEditing(source: Uint8Array): Promise<PDFDocument> {
+  return PDFDocument.load(source, { ignoreEncryption: true });
+}
+
+/** Every show-text operator on a page, with where it draws. */
+export function pageTextOps(doc: PDFDocument, pageIndex: number): ShowTextOp[] {
+  return findTextOps(readContentStream(doc, pageIndex));
+}
+
 export interface RasterPage {
   page: number;
   /** PNG of the whole page, with the redaction boxes already painted in. */
@@ -140,8 +198,25 @@ export async function applyEdits(
   source: Uint8Array,
   edits: Edit[],
   rasters: RasterPage[],
+  removals: Removal[] = [],
 ): Promise<Uint8Array> {
   const src = await PDFDocument.load(source, { ignoreEncryption: true });
+
+  /* Surgery happens on the source, before any page is copied. Deleting a
+   * show-text operator removes those characters from the file outright — no
+   * box drawn over them, no page turned into a picture, and everything else on
+   * the page still selectable text. This is the difference between editing a
+   * PDF and defacing one. */
+  for (const removal of removals) {
+    if (removal.opIndices.length === 0) continue;
+    const stream = readContentStream(src, removal.page);
+    const edited = removeTextOps(stream, removal.opIndices);
+    const replacement = src.context.flateStream(edited);
+    src.getPage(removal.page).node.set(
+      PDFName.of('Contents'),
+      src.context.register(replacement),
+    );
+  }
   const out = await PDFDocument.create();
   const font = await out.embedFont(StandardFonts.Helvetica);
   const rasterByPage = new Map(rasters.map((r) => [r.page, r.png]));
@@ -206,6 +281,10 @@ export async function applyEdits(
 const globalScope = globalThis as unknown as {
   LOC1999_SIGN?: {
     applyEdits: typeof applyEdits;
+    loadForEditing: typeof loadForEditing;
+    readContentStream: typeof readContentStream;
+    pageTextOps: typeof pageTextOps;
+    matchOpsToItems: typeof matchOpsToItems;
     canvasToPdf: typeof canvasToPdf;
     canvasRectToPdf: typeof canvasRectToPdf;
     pagesNeedingRaster: typeof pagesNeedingRaster;
@@ -215,6 +294,10 @@ const globalScope = globalThis as unknown as {
 };
 globalScope.LOC1999_SIGN = {
   applyEdits,
+  loadForEditing,
+  readContentStream,
+  pageTextOps,
+  matchOpsToItems,
   canvasToPdf,
   canvasRectToPdf,
   pagesNeedingRaster,
