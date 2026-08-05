@@ -21,6 +21,12 @@
  * The page is served rather than stored as a file so that what is counted is
  * the response body itself, with no chance of a build step or an editor's
  * trailing newline getting between the claim and the thing claimed.
+ *
+ * A Content-Length header is set alongside it and does not reach the client:
+ * Cloudflare re-encodes the response at the edge and drops it, even when the
+ * request asks for no compression. Measured against the live site, not assumed.
+ * So the page tells people to count the body rather than read a header, which
+ * is the check that actually works, and the more convincing one anyway.
  */
 
 export const EXACTLY_1999 = `<!DOCTYPE html>

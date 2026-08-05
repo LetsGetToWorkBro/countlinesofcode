@@ -939,8 +939,12 @@ function canonicalOrigin(env: Env, request: Request): string {
  * Served from a string rather than from public/ so that what a visitor counts
  * with `curl | wc -c` is this exact constant, with no build step, no editor's
  * trailing newline and no asset pipeline able to get between the claim and the
- * thing claimed. Content-Length is set explicitly for the same reason: it is
- * the number, and it should be checkable from the headers alone.
+ * thing claimed.
+ *
+ * Content-Length is set here for honesty rather than for the visitor: the edge
+ * re-encodes the response and drops it before anyone sees it, which was checked
+ * against the live site rather than assumed. Counting the body is the check
+ * that works, and it is the one the page asks for.
  */
 function exactly1999(): Response {
   const body = new TextEncoder().encode(EXACTLY_1999);
