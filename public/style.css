@@ -640,3 +640,68 @@ img.gif-result {
 }
 
 img.zip-image { max-width: 100%; display: block; }
+
+/* --------------------------------------------------- the page arranger */
+
+/* A grid of page thumbnails, sized so a dozen fit on a laptop screen and
+   four on a phone without any of them becoming unrecognisable. */
+.page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  border: 1px solid #808080;
+  background: #f0f0f0;
+  padding: 8px;
+  max-height: 560px;
+  overflow-y: auto;
+}
+
+.page-card {
+  position: relative;
+  background: #ffffff;
+  border: 2px solid #c0c0c0;
+  padding: 4px;
+  cursor: grab;
+  text-align: center;
+  user-select: none;
+}
+
+.page-card:active { cursor: grabbing; }
+.page-card.is-chosen { border-color: #000080; background: #ffffcc; }
+.page-card.is-target { border-color: #aa5500; border-style: dashed; }
+.page-card:focus-visible { outline: 2px solid #000080; outline-offset: 1px; }
+
+.page-number {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 11px;
+  background: #000080;
+  color: #ffffff;
+  padding: 0 4px;
+  font-family: "Courier New", Courier, monospace;
+}
+
+.page-thumb {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid #d0d0d0;
+  background: #ffffff;
+}
+
+/* The turn is baked into the render rather than applied here: a portrait page
+   rotated by CSS keeps its original box and escapes the card. */
+.page-thumb.is-blank { height: 150px; }
+
+.page-from {
+  display: block;
+  font-size: 11px;
+  color: #555555;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spacer { color: #999999; margin: 0 4px; }

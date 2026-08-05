@@ -36,6 +36,10 @@ import {
   rgb,
 } from 'pdf-lib';
 import { findTextOps, matchOpsToItems, removeTextOps, type ShowTextOp } from './pdfstream';
+/* The page-arranging tool rides in this bundle rather than its own.
+ * pdf-lib is 400 KB and both pages need it; a second bundle would ship it
+ * twice and download it twice for anyone who uses both. */
+import * as pages from './pdfpages';
 
 /** A point in PDF user space: origin bottom-left, units of 1/72 inch. */
 export interface PdfPoint {
@@ -643,6 +647,7 @@ const globalScope = globalThis as unknown as {
     usefulRedactions: typeof usefulRedactions;
     MIN_REDACTION_POINTS: number;
   };
+  LOC1999_PAGES?: typeof pages;
 };
 globalScope.LOC1999_SIGN = {
   applyEdits,
@@ -659,3 +664,4 @@ globalScope.LOC1999_SIGN = {
   usefulRedactions,
   MIN_REDACTION_POINTS,
 };
+globalScope.LOC1999_PAGES = pages;
