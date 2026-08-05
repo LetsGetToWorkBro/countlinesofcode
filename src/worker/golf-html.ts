@@ -85,7 +85,7 @@ arguing about.
 </p>
 <p class="note">
 To enter: build the thing, push it to a public GitHub repository, then count it
-on the <a href="/">front page</a> with that challenge selected. Your line count
+on the <a href="/code.html">counter page</a> with that challenge selected. Your line count
 is whatever this counter says &mdash; same rules for everyone,
 <a href="/how.html">documented</a>.
 </p>
@@ -128,7 +128,7 @@ ${boardTable(entries, 25)}
 
 <p class="note">
 To enter: push it to a public GitHub repository, then count it on the
-<a href="/?challenge=${escapeHtml(challenge.id)}">front page</a> with
+<a href="/code.html?challenge=${escapeHtml(challenge.id)}">counter page</a> with
 &ldquo;${escapeHtml(challenge.title)}&rdquo; selected.
 </p>
 

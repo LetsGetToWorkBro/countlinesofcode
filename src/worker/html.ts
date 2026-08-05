@@ -81,7 +81,7 @@ ${body}
  * two stay in step.
  */
 export const SITE_TOOLS: { href: string; label: string; id: string }[] = [
-  { href: '/', label: 'count code', id: 'count' },
+  { href: '/code.html', label: 'count code', id: 'count' },
   { href: '/golf', label: 'golf', id: 'golf' },
   { href: '/pdf.html', label: 'pdf', id: 'pdf' },
   { href: '/sign.html', label: 'sign', id: 'sign' },
@@ -112,7 +112,7 @@ export function siteFooter(): string {
   return `<hr>
 <p class="footer">
 Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spite for bloat<br>
-<a href="/">count something</a> |
+<a href="/code.html">count something</a> |
 <a href="/golf">code golf</a> |
 <a href="/board">the standings</a> |
 <a href="https://delete.1999loc.com/">delete your posts</a> |
@@ -137,7 +137,7 @@ export function errorPage(
 <p class="error">${escapeHtml(message)}</p>
 ${hint ? `<p>${escapeHtml(hint)}</p>` : ''}
 ${action ? `<p><a href="${escapeHtml(action.href)}">${escapeHtml(action.label)}</a></p>` : ''}
-<p><a href="/">Back to the form</a></p>
+<p><a href="/code.html">Back to the form</a></p>
 ${siteFooter()}`,
     { noindex: true },
   ) + `<!-- http status ${status} -->`;

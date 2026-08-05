@@ -703,6 +703,27 @@ describe('oversized repositories, from a user\'s point of view', () => {
   });
 });
 
+describe('the landing page', () => {
+  it('forwards counter links that still point at "/"', async () => {
+    // Golf pages, screenshots and bookmarks all carry /?challenge= and /?repo=
+    // from when the counter lived at the root. Dropping the query would land
+    // people on a page with no form on it.
+    for (const query of ['?repo=acme/widget', '?challenge=markdown', '?repo=a/b&ref=main']) {
+      const response = await call('/' + query);
+      expect(response.status, query).toBe(302);
+      const to = new URL(response.headers.get('location')!);
+      expect(to.pathname, query).toBe('/code.html');
+      expect(to.search, query).toBe(query);
+    }
+  });
+
+  it('lists both the landing page and the counter in the sitemap', async () => {
+    const xml = await (await call('/sitemap.xml')).text();
+    expect(xml).toContain('<loc>https://loc.example/</loc>');
+    expect(xml).toContain('<loc>https://loc.example/code.html</loc>');
+  });
+});
+
 describe('the standings', () => {
   it('lists a repository counted through the page', async () => {
     await callStream('/api/stream?input=acme/widget');

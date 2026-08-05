@@ -42,15 +42,52 @@ describe('the toolkit bar', () => {
     }
   });
 
-  it('marks exactly one entry as the current page', () => {
+  it('marks at most one entry as the current page', () => {
     for (const path of STATIC_PAGES) {
       const html = readFileSync(path, 'utf8');
       const nav = /<p class="nav">([\s\S]*?)<\/p>/.exec(html)?.[1] ?? '';
       const bold = [...nav.matchAll(/<strong>/g)].length;
-      // how.html and security.html are not tools, so they highlight nothing.
-      const isToolPage = !/how\.html|security\.html/.test(path);
+      // The landing page is not a tool, and neither are how/security, so those
+      // three highlight nothing. Every tool page highlights itself.
+      const isToolPage = !/index\.html|how\.html|security\.html/.test(path);
       expect(bold, `${path} highlights ${bold} entries`).toBe(isToolPage ? 1 : 0);
     }
+  });
+
+  it('leads every page except the landing one back to it', () => {
+    // The wordmark is the way home. Without it the landing page is only
+    // reachable by deleting the path out of the address bar.
+    for (const path of STATIC_PAGES) {
+      const html = readFileSync(path, 'utf8');
+      if (path.endsWith('index.html')) {
+        expect(html, 'the landing page should not link its own wordmark').toContain('<h1>LOC.1999</h1>');
+      } else {
+        expect(html, `${path} has no way back to the landing page`).toContain('<h1><a href="/">LOC.1999</a></h1>');
+      }
+    }
+  });
+
+  it('introduces every tool on the landing page', () => {
+    // The landing page is the only page whose job is to say what else exists,
+    // so a tool missing from it is invisible to anyone arriving cold.
+    const landing = readFileSync('public/index.html', 'utf8');
+    for (const tool of SITE_TOOLS) {
+      expect(landing, `the landing page never links ${tool.label}`).toContain(tool.href);
+    }
+    expect(landing).toContain('The tools');
+  });
+
+  it('needs no JavaScript to list the tools', () => {
+    // A landing page that renders nothing without JS is the thing this site
+    // exists to be the opposite of.
+    expect(readFileSync('public/index.html', 'utf8')).not.toContain('<script');
+  });
+
+  it('sends the counter to its own page, not to the landing page', () => {
+    // "/" stopped being the counter when the landing page took the slot; a
+    // stale link here would put people on a page with no form on it.
+    const counter = SITE_TOOLS.find((t) => t.id === 'count');
+    expect(counter?.href).toBe('/code.html');
   });
 
   it('does not link a page to itself', () => {

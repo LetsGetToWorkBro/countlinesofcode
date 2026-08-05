@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Count Lines of Code in Any GitHub Repository — LOC.1999</title>
+<meta name="description" content="Paste a GitHub repository URL. Get accurate line-of-code totals: code, comments, blank, by language. No accounts, no bloat.">
+<link rel="canonical" href="https://1999loc.com/code.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Count Lines of Code in Any GitHub Repository — LOC.1999">
+<meta property="og:description" content="Paste a GitHub repository URL. Get accurate line-of-code totals: code, comments, blank, by language. No accounts, no bloat.">
+<meta property="og:url" content="https://1999loc.com/code.html">
+<meta property="og:site_name" content="LOC.1999">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<!--
+  EXPECTED LAYOUT (single column, ~680px, left aligned):
+
+    LOC.1999
+    Small tools. No accounts. Nothing leaves your browser.
+    ------------------------------------------------------------
+    count code | golf | pdf | sign | delete posts
+    ------------------------------------------------------------
+    Count lines of code
+    Enter a repository. We will count the lines. That is all.
+    ------------------------------------------------------------
+    Repository: [ https://github.com/owner/repo            ]
+    Branch/tag: [ (default branch)   ]  [ Count Lines ]
+    [ ] count lockfiles   [ ] count vendored dirs
+    ------------------------------------------------------------
+    Listing tree... Counting files 120/400...
+    ------------------------------------------------------------
+    owner/repo  [fresh]
+    +----------------------+-----------+--------+
+    | Total lines          |   120,440 | 100.0% |
+    | Code                 |    98,112 |  81.5% |
+    ...
+    ------------------------------------------------------------
+    Code Golf - one task, fewest lines wins
+    URL shortener        leader: 61 lines   4 entries
+    Markdown to HTML     no entries yet
+    ...
+    ------------------------------------------------------------
+    Hosted on Cloudflare - Not affiliated with GitHub - ...
+-->
+<div id="page">
+
+<h1><a href="/">LOC.1999</a></h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<strong>count code</strong>
+|
+<a href="/golf">golf</a>
+|
+<a href="/pdf.html">pdf</a>
+|
+<a href="/sign.html">sign</a>
+|
+<a href="https://delete.1999loc.com/">delete posts</a>
+</p>
+<hr>
+
+<h2>Count lines of code</h2>
+<p class="tagline">Enter a repository. We will count the lines. That is all.</p>
+
+<form id="count-form">
+  <p>
+    <label for="repo-input">Repository:</label>
+    <input type="text" id="repo-input" name="repo" required
+           autocapitalize="off" autocorrect="off" spellcheck="false"
+           placeholder="https://github.com/owner/repo  or  owner/repo"
+           aria-describedby="repo-help">
+  </p>
+  <p id="repo-help" class="note">
+    Accepts <code>owner/repo</code>, a full URL, a <code>/tree/branch</code> URL, or <code>git@github.com:owner/repo.git</code>.
+  </p>
+  <p>
+    <label for="ref-input">Branch / tag / sha:</label>
+    <input type="text" id="ref-input" name="ref"
+           autocapitalize="off" autocorrect="off" spellcheck="false"
+           placeholder="(default branch)">
+  </p>
+  <p>
+    <label for="challenge-input">Golf challenge:</label>
+    <select id="challenge-input" name="challenge">
+      <option value="">(not entering one)</option>
+    </select>
+  </p>
+  <p id="challenge-help" class="note">
+    Optional. Pick one and this count is submitted to
+    <a href="/golf">that challenge's board</a>, where fewest lines wins.
+  </p>
+  <p>
+    <button type="submit" id="submit-button">Count Lines</button>
+    <span id="cancel-wrap" class="hidden"><button type="button" id="cancel-button">Stop</button></span>
+  </p>
+
+  <fieldset>
+    <legend>Options</legend>
+    <p>
+      <input type="checkbox" id="opt-lockfiles" name="lockfiles">
+      <label for="opt-lockfiles" style="min-width:auto">Count lockfiles (package-lock.json, Cargo.lock, ...)</label>
+    </p>
+    <p>
+      <input type="checkbox" id="opt-vendored" name="vendored">
+      <label for="opt-vendored" style="min-width:auto">Count vendored &amp; build dirs (node_modules, dist, vendor, ...)</label>
+    </p>
+    <p>
+      <input type="checkbox" id="opt-fresh" name="fresh">
+      <label for="opt-fresh" style="min-width:auto">Ignore cache and recount</label>
+    </p>
+    <p class="note">Defaults skip both. See <a href="/how.html">how we count</a>.</p>
+  </fieldset>
+</form>
+
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<p id="error" class="error" role="alert"></p>
+
+<div id="results"></div>
+
+<hr>
+
+<!--
+  Filled in by app.js from /api/golf after load, so this page stays a static
+  asset served straight from the edge. Empty and invisible if that fetch fails,
+  which is the correct outcome: a leaderboard is not worth an error message.
+  The same fetch fills the challenge dropdown above, so the challenge list
+  lives in exactly one place — the server.
+-->
+<div id="standings"></div>
+
+<h2>Connect GitHub <span class="blink" id="auth-flag">SOON</span></h2>
+<p id="auth-block" class="note">Checking sign-in status&hellip;</p>
+<div id="quickpick" class="quickpick"></div>
+
+<hr>
+
+<p class="footer">
+Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spite for bloat<br>
+<a href="/golf">code golf</a> |
+<a href="/board">the standings</a> |
+<a href="https://delete.1999loc.com/">delete your posts</a> |
+<a href="/how.html">how we count</a> |
+<a href="/api/meta">limits (json)</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

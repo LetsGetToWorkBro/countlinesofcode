@@ -61,7 +61,7 @@ export function boardPageHtml(
   const tables = boards.some((b) => b.rows.length > 0)
     ? boards.map(boardTable).join('\n\n')
     : `<p class="note">Nothing has been counted yet, so there is nothing to rank.
-<a href="/">Count a repository</a> and it will be the whole leaderboard.</p>`;
+<a href="/code.html">Count a repository</a> and it will be the whole leaderboard.</p>`;
 
   const recentRows = recent
     .map(
@@ -83,7 +83,7 @@ it is written.
 </p>
 <p class="note">
 ${num(counted)} repositories counted so far. Forks are excluded. Counting one on the
-<a href="/">front page</a> adds it; calling the API does not.
+<a href="/code.html">counter page</a> adds it; calling the API does not.
 </p>
 <p>
 For rankings that actually mean something, see <a href="/golf">the golf course</a>

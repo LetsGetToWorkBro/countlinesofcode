@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Count Lines of Code in Any GitHub Repository — LOC.1999</title>
-<meta name="description" content="Paste a GitHub repository URL. Get accurate line-of-code totals: code, comments, blank, by language. No accounts, no bloat.">
+<title>LOC.1999 — Small Tools That Do One Thing</title>
+<meta name="description" content="Free tools with no accounts and no uploads: count lines of code in a GitHub repo, merge and split PDFs, sign and redact a PDF, bulk-delete your old posts. Most of them run entirely in your browser.">
 <link rel="canonical" href="https://1999loc.com/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Count Lines of Code in Any GitHub Repository — LOC.1999">
-<meta property="og:description" content="Paste a GitHub repository URL. Get accurate line-of-code totals: code, comments, blank, by language. No accounts, no bloat.">
+<meta property="og:title" content="LOC.1999 — Small Tools That Do One Thing">
+<meta property="og:description" content="Free tools with no accounts and no uploads. Most of them never send your file anywhere.">
 <meta property="og:url" content="https://1999loc.com/">
 <meta property="og:site_name" content="LOC.1999">
 <meta name="twitter:card" content="summary">
@@ -25,27 +25,19 @@
     ------------------------------------------------------------
     count code | golf | pdf | sign | delete posts
     ------------------------------------------------------------
-    Count lines of code
-    Enter a repository. We will count the lines. That is all.
-    ------------------------------------------------------------
-    Repository: [ https://github.com/owner/repo            ]
-    Branch/tag: [ (default branch)   ]  [ Count Lines ]
-    [ ] count lockfiles   [ ] count vendored dirs
-    ------------------------------------------------------------
-    Listing tree... Counting files 120/400...
-    ------------------------------------------------------------
-    owner/repo  [fresh]
-    +----------------------+-----------+--------+
-    | Total lines          |   120,440 | 100.0% |
-    | Code                 |    98,112 |  81.5% |
+    The tools
+    +----------------+--------------------------+-------------+
+    | Count code     | lines in a GitHub repo   | server      |
+    | PDF pages      | merge, split, rotate     | your tab    |
     ...
     ------------------------------------------------------------
-    Code Golf - one task, fewest lines wins
-    URL shortener        leader: 61 lines   4 entries
-    Markdown to HTML     no entries yet
-    ...
+    Why it looks like this
+    What it will not do
     ------------------------------------------------------------
-    Hosted on Cloudflare - Not affiliated with GitHub - ...
+    Hosted on Cloudflare - Made with spite for bloat - ...
+
+  This is the landing page. The counter that used to live here is at
+  /code.html. Nothing on this page needs JavaScript, on purpose.
 -->
 <div id="page">
 
@@ -54,7 +46,7 @@
 
 <hr>
 <p class="nav">
-<strong>count code</strong>
+<a href="/code.html">count code</a>
 |
 <a href="/golf">golf</a>
 |
@@ -66,92 +58,123 @@
 </p>
 <hr>
 
-<h2>Count lines of code</h2>
-<p class="tagline">Enter a repository. We will count the lines. That is all.</p>
+<p>
+Every tool here does one job and then gets out of the way. There is nothing to
+sign up for, nothing to install, no free tier that runs out, and no upsell at the
+end. Most of them never send your file anywhere at all &mdash; the work happens
+in the tab you already have open.
+</p>
 
-<form id="count-form">
-  <p>
-    <label for="repo-input">Repository:</label>
-    <input type="text" id="repo-input" name="repo" required
-           autocapitalize="off" autocorrect="off" spellcheck="false"
-           placeholder="https://github.com/owner/repo  or  owner/repo"
-           aria-describedby="repo-help">
-  </p>
-  <p id="repo-help" class="note">
-    Accepts <code>owner/repo</code>, a full URL, a <code>/tree/branch</code> URL, or <code>git@github.com:owner/repo.git</code>.
-  </p>
-  <p>
-    <label for="ref-input">Branch / tag / sha:</label>
-    <input type="text" id="ref-input" name="ref"
-           autocapitalize="off" autocorrect="off" spellcheck="false"
-           placeholder="(default branch)">
-  </p>
-  <p>
-    <label for="challenge-input">Golf challenge:</label>
-    <select id="challenge-input" name="challenge">
-      <option value="">(not entering one)</option>
-    </select>
-  </p>
-  <p id="challenge-help" class="note">
-    Optional. Pick one and this count is submitted to
-    <a href="/golf">that challenge's board</a>, where fewest lines wins.
-  </p>
-  <p>
-    <button type="submit" id="submit-button">Count Lines</button>
-    <span id="cancel-wrap" class="hidden"><button type="button" id="cancel-button">Stop</button></span>
-  </p>
+<h2>The tools</h2>
 
-  <fieldset>
-    <legend>Options</legend>
-    <p>
-      <input type="checkbox" id="opt-lockfiles" name="lockfiles">
-      <label for="opt-lockfiles" style="min-width:auto">Count lockfiles (package-lock.json, Cargo.lock, ...)</label>
-    </p>
-    <p>
-      <input type="checkbox" id="opt-vendored" name="vendored">
-      <label for="opt-vendored" style="min-width:auto">Count vendored &amp; build dirs (node_modules, dist, vendor, ...)</label>
-    </p>
-    <p>
-      <input type="checkbox" id="opt-fresh" name="fresh">
-      <label for="opt-fresh" style="min-width:auto">Ignore cache and recount</label>
-    </p>
-    <p class="note">Defaults skip both. See <a href="/how.html">how we count</a>.</p>
-  </fieldset>
-</form>
+<table>
+<thead>
+<tr><th>Tool</th><th>What it does</th><th>Where the work happens</th></tr>
+</thead>
+<tbody>
+<tr>
+  <th scope="row"><a href="/code.html">Count code</a></th>
+  <td>
+    Lines of code in any public GitHub repository, split into code, comments and
+    blanks, per language. Comment-aware, so it does not just count newlines, and
+    it skips <code>node_modules</code> and lockfiles instead of pretending they
+    are yours.
+  </td>
+  <td>Our server, or your browser for big repositories</td>
+</tr>
+<tr>
+  <th scope="row"><a href="/golf">Code golf</a></th>
+  <td>
+    One stated task, fewest lines wins. Build a URL shortener or a JSON parser,
+    count it here, and it joins that challenge's board. Every entry solves the
+    same problem, which is the only way a line count means anything.
+  </td>
+  <td>Our server</td>
+</tr>
+<tr>
+  <th scope="row"><a href="/pdf.html">PDF pages</a></th>
+  <td>
+    Merge, split, extract, delete, reorder and rotate pages. Turn images into a
+    PDF. Stamp page numbers. No watermark, no page limit.
+  </td>
+  <td>Your browser</td>
+</tr>
+<tr>
+  <th scope="row"><a href="/sign.html">Sign &amp; redact</a></th>
+  <td>
+    Type into a PDF, sign it by hand or by name, and black things out
+    <em>properly</em> &mdash; the text is removed, not covered over.
+  </td>
+  <td>Your browser</td>
+</tr>
+<tr>
+  <th scope="row"><a href="https://delete.1999loc.com/">Delete posts</a></th>
+  <td>
+    Bulk-delete your own history on X, Threads and Facebook Pages through the
+    official APIs. Upload your archive, pick exactly what goes, dry run first.
+  </td>
+  <td>Our server, on your behalf</td>
+</tr>
+</tbody>
+</table>
 
-<p id="status" class="status" role="status" aria-live="polite"></p>
-<p id="error" class="error" role="alert"></p>
+<h2>Why it looks like this</h2>
 
-<div id="results"></div>
+<p>
+Because the alternative is what you get everywhere else. Search for &ldquo;merge
+PDF&rdquo; and every result wants your email, your file on their server, and a
+subscription to get it back without a watermark. The page takes four seconds to
+load and half of it is tracking.
+</p>
 
-<hr>
+<p>
+So: black text on a white background, no fonts to download, no frameworks, no
+cookie banner because there are no cookies to warn you about. The pages are a
+few kilobytes and they load instantly on a bad connection. That is not nostalgia,
+it is just what is left when you take out the parts that were never for you.
+</p>
 
-<!--
-  Filled in by app.js from /api/golf after load, so this page stays a static
-  asset served straight from the edge. Empty and invisible if that fetch fails,
-  which is the correct outcome: a leaderboard is not worth an error message.
-  The same fetch fills the challenge dropdown above, so the challenge list
-  lives in exactly one place — the server.
--->
-<div id="standings"></div>
+<p>
+Where a tool can run in your browser, it does. Not as a feature &mdash; as the
+whole point. People put contracts, payslips and passports through PDF sites
+without thinking about where the file went. Here there is no endpoint to send one
+to: turn off your wifi after the page loads and the PDF tools still work.
+</p>
 
-<h2>Connect GitHub <span class="blink" id="auth-flag">SOON</span></h2>
-<p id="auth-block" class="note">Checking sign-in status&hellip;</p>
-<div id="quickpick" class="quickpick"></div>
+<h2>What it will not do</h2>
+
+<p class="note">
+Each tool says where its own limits are, in detail, on its own page. The short
+version:
+</p>
+
+<ul class="plain">
+  <li><strong>No half-working features.</strong> PDF&nbsp;&rarr;&nbsp;Word and OCR are not offered, and the PDF page explains exactly why rather than shipping something that looks right and is not.</li>
+  <li><strong>No numbers we cannot show our working for.</strong> The counter is <a href="/how.html">documented rule by rule</a>, pinned to a commit, and the same for everyone.</li>
+  <li><strong>No accounts, so no data to lose.</strong> Connecting GitHub is optional and only exists for private repositories.</li>
+  <li><strong>No ads and no tracking.</strong> There is no analytics script on any page here.</li>
+</ul>
+
+<p>
+All of it is open source, including the parts that are inconvenient to admit:
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">the toolkit</a> and
+<a href="https://github.com/letsgettoworkbro/xpostdeleter">the post deleter</a>.
+</p>
 
 <hr>
 
 <p class="footer">
 Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spite for bloat<br>
+<a href="/code.html">count code</a> |
 <a href="/golf">code golf</a> |
 <a href="/board">the standings</a> |
+<a href="/pdf.html">pdf pages</a> |
+<a href="/sign.html">sign &amp; redact</a> |
 <a href="https://delete.1999loc.com/">delete your posts</a> |
 <a href="/how.html">how we count</a> |
-<a href="/api/meta">limits (json)</a> |
 <a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
 </p>
 
 </div>
-<script src="/app.js"></script>
 </body>
 </html>

@@ -59,6 +59,13 @@ export default {
     if (wwwRedirect) return wwwRedirect;
 
     try {
+      // The counter used to live at "/". Links to it are out in the world —
+      // golf pages, shared screenshots, anyone's bookmarks — so a request to the
+      // landing page carrying counter parameters is forwarded rather than
+      // silently ignoring them and showing a page with no form on it.
+      const movedCounter = redirectMovedCounter(url);
+      if (movedCounter) return movedCounter;
+
       if (path === '/api/count' && request.method === 'POST') return await postCount(request, env, ctx);
       if (path.startsWith('/api/count/') && request.method === 'GET') return await getCount(request, env, ctx, path);
       if (path === '/api/stream' && request.method === 'GET') return await streamCount(request, env, ctx);
@@ -758,6 +765,7 @@ async function sitemap(request: Request, env: Env): Promise<Response> {
   const origin = canonicalOrigin(env, request);
   const entries: string[] = [
     `<url><loc>${escapeXml(origin)}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
+    `<url><loc>${escapeXml(origin)}/code.html</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/how.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
     `<url><loc>${escapeXml(origin)}/pdf.html</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>`,
     `<url><loc>${escapeXml(origin)}/sign.html</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>`,
@@ -807,6 +815,19 @@ function escapeXml(value: string): string {
  * Returns null when there is nothing to do — including when CANONICAL_ORIGIN is
  * unset, which is the case for local development.
  */
+/**
+ * `/?repo=x` and `/?challenge=y` used to open the counter with something filled
+ * in. The landing page has no form, so those go to /code.html with the query
+ * intact. A bare "/" is left alone — that is the landing page now.
+ */
+export function redirectMovedCounter(url: URL): Response | null {
+  if (url.pathname !== '/') return null;
+  if (!url.searchParams.has('repo') && !url.searchParams.has('challenge')) return null;
+  const to = new URL(url);
+  to.pathname = '/code.html';
+  return Response.redirect(to.toString(), 302);
+}
+
 function redirectFromWww(url: URL, env: Env): Response | null {
   const configured = env.CANONICAL_ORIGIN;
   if (!configured || !/^https?:\/\//.test(configured)) return null;
