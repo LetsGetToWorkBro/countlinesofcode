@@ -28,7 +28,11 @@ import { boardPageHtml } from './board-html';
 import { challengePageHtml, golfIndexHtml } from './golf-html';
 import { errorPage, resultPageHtml, type Standing } from './html';
 
-const SECURITY_HEADERS: Record<string, string> = {
+/* Exported so a test can hold public/_headers to it. Static assets are served
+ * by the assets binding, which never reaches this file, so the same policy has
+ * to be written twice — and a comment asking the next person to keep them in
+ * sync did not stop them drifting apart. */
+export const SECURITY_HEADERS: Record<string, string> = {
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'strict-origin-when-cross-origin',
   'x-frame-options': 'DENY',
