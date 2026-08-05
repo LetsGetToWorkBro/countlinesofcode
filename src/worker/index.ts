@@ -32,9 +32,15 @@ const SECURITY_HEADERS: Record<string, string> = {
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'strict-origin-when-cross-origin',
   'x-frame-options': 'DENY',
+  /* font-src is 'self' for the PDF tools: pdf.js loads the standard-14 font
+   * data from /vendor/standard_fonts/ as a real font face, and default-src
+   * 'none' was refusing it. The refusal was silent — the page still rendered,
+   * with a substituted system font and the wrong glyph metrics, which then got
+   * baked in permanently on any page flattened for a blackout. Embedded fonts
+   * need nothing here (measured), so 'self' is the whole widening. */
   'content-security-policy':
     "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; " +
-    "connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+    "font-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
 };
 
 interface ApiError {

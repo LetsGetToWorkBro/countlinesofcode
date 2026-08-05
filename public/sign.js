@@ -609,24 +609,27 @@
     return canvas;
   }
 
+  /* Saved signatures are data: URLs, and they are decoded by hand rather than
+   * with fetch(). The content security policy on this site is connect-src
+   * 'self', which blocks fetching a data: URL — and the right response to that
+   * is to not need the network at all, not to widen the policy. */
+  function dataUrlBytes(url) {
+    var binary = atob(url.slice(url.indexOf(',') + 1));
+    var out = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+    return out;
+  }
+
+  /* Always a data: URL, never a blob:. The preview is drawn by assigning this
+   * to an <img>, and img-src on this site is 'self' data: — a blob: URL is
+   * refused, the load event never fires, and the signature silently never
+   * appears. Same URL feeds both the preview and the bytes that get embedded. */
   function signaturePng() {
-    if (chosen) {
-      return fetch(chosen).then(function (r) { return r.blob(); }).then(function (blob) {
-        return blob.arrayBuffer().then(function (buf) {
-          return { bytes: new Uint8Array(buf), url: chosen };
-        });
-      });
-    }
+    if (chosen) return Promise.resolve({ bytes: dataUrlBytes(chosen), url: chosen });
     var canvas = currentCanvas();
     if (!canvas) return Promise.resolve(null);
-    var trimmed = trim(canvas);
-    return new Promise(function (resolve) {
-      trimmed.toBlob(function (blob) {
-        blob.arrayBuffer().then(function (buf) {
-          resolve({ bytes: new Uint8Array(buf), url: URL.createObjectURL(blob) });
-        });
-      }, 'image/png');
-    });
+    var url = trim(canvas).toDataURL('image/png');
+    return Promise.resolve({ bytes: dataUrlBytes(url), url: url });
   }
 
   /** Crop to the ink, so placing a signature does not place a huge empty box. */

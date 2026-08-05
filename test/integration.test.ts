@@ -345,6 +345,15 @@ describe('GET /r/:owner/:repo/:sha', () => {
     expect(response.headers.get('x-content-type-options')).toBe('nosniff');
     expect(response.headers.get('content-security-policy')).toContain("default-src 'none'");
   });
+
+  it('lets the PDF tools load their own font data', async () => {
+    // Without font-src the standard-14 fonts are refused and pdf.js quietly
+    // substitutes a system font — which then gets baked into any flattened
+    // page. It fails silently, so it needs a test rather than an eyeball.
+    const csp = (await call('/')).headers.get('content-security-policy') ?? '';
+    expect(csp).toContain("font-src 'self'");
+    expect(csp).not.toContain('font-src *');
+  });
 });
 
 describe('GET /api/meta', () => {
