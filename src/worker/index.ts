@@ -47,10 +47,19 @@ export const SECURITY_HEADERS: Record<string, string> = {
    * permits compiling and instantiating WebAssembly and nothing else — eval()
    * and new Function() stay blocked, which was measured, not assumed. It is
    * what lets the image tool decode a HEIC photo with a WASM codec served from
-   * this origin. No wasm is loaded until a tool that needs it runs. */
+   * this origin. No wasm is loaded until a tool that needs it runs.
+   *
+   * media-src is 'blob:' for the video tool, and blob: only. You cannot trim a
+   * video you cannot see, and the preview plays the file the visitor just
+   * opened — held in the tab as a blob, never fetched. Without this the
+   * <video> element is refused with "Media load rejected by URL safety check",
+   * which was measured here rather than guessed. blob: cannot reach the
+   * network: it names data this page already holds, so the widening admits
+   * nothing that was not already in the tab. */
   'content-security-policy':
     "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; " +
-    "font-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+    "font-src 'self'; connect-src 'self'; media-src blob:; form-action 'self'; base-uri 'none'; " +
+    "frame-ancestors 'none'",
 };
 
 interface ApiError {
@@ -791,6 +800,7 @@ async function sitemap(request: Request, env: Env): Promise<Response> {
     `<url><loc>${escapeXml(origin)}/inspect.html</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/sheet.html</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/image.html</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>`,
+    `<url><loc>${escapeXml(origin)}/video.html</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/unlock.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
     `<url><loc>${escapeXml(origin)}/shrink.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
     `<url><loc>${escapeXml(origin)}/security.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`,

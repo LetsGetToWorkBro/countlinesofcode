@@ -17,7 +17,7 @@
  * test/vendor.test.ts compares them against node_modules so a stale copy fails
  * the suite rather than shipping quietly.
  */
-import { cpSync, copyFileSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { cpSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createRequire } from 'node:module';
@@ -113,10 +113,41 @@ export const VENDORED_LIBS = [
     from: 'tesseract-core-simd-lstm.wasm.js',
     to: 'public/vendor/tesseract/tesseract-core-simd-lstm.wasm.js',
   },
+  /* mediabunny, for reading and writing video containers.
+   *
+   * WebCodecs gives a browser the codecs — it will decode and encode frames —
+   * but it does not read or write MP4 and WebM files. Everything between the
+   * codec and the file is missing, and that is most of the work. This is the
+   * one library that does both halves, in one file, with no WebAssembly and no
+   * ffmpeg. The pre-bundled ESM build is used rather than the module tree so
+   * there is a single file to serve under script-src 'self'. */
+  { pkg: 'mediabunny', from: 'dist/bundles/mediabunny.min.mjs', to: 'public/vendor/mediabunny/mediabunny.min.mjs' },
 ];
 
+/**
+ * Where a package lives on disk.
+ *
+ * `require.resolve('pkg/package.json')` is the obvious way and works for most
+ * packages, but a package with an `exports` map that does not list
+ * `./package.json` refuses it outright — mediabunny is one. So fall back to
+ * resolving the package's own entry point and walking up to the directory that
+ * holds its manifest.
+ */
+export function packageRoot(pkg) {
+  try {
+    return dirname(require.resolve(`${pkg}/package.json`));
+  } catch {
+    let dir = dirname(require.resolve(pkg));
+    while (dir !== dirname(dir)) {
+      if (existsSync(join(dir, 'package.json'))) return dir;
+      dir = dirname(dir);
+    }
+    throw new Error(`cannot locate ${pkg} on disk`);
+  }
+}
+
 export function libSource(spec) {
-  return join(dirname(require.resolve(`${spec.pkg}/package.json`)), spec.from);
+  return join(packageRoot(spec.pkg), spec.from);
 }
 
 export function libTarget(spec) {
@@ -125,6 +156,10 @@ export function libTarget(spec) {
 
 export function libheifVersion() {
   return require('libheif-js/package.json').version;
+}
+
+export function mediabunnyVersion() {
+  return JSON.parse(readFileSync(join(packageRoot('mediabunny'), 'package.json'), 'utf8')).version;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -146,7 +181,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const kb = statSync(libTarget(spec)).size / 1024;
     console.log(`${spec.to.padEnd(32)} ${kb.toFixed(0)} KB`);
   }
-  console.log(`pdf.js ${pdfjsVersion()} · libheif-js ${libheifVersion()}`);
+  console.log(`pdf.js ${pdfjsVersion()} · libheif-js ${libheifVersion()} · mediabunny ${mediabunnyVersion()}`);
   // Touched only to prove the files are readable after copying.
   readFileSync(vendoredPath(VENDORED[0]), 'utf8');
 }

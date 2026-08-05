@@ -55,6 +55,16 @@ describe('security headers', () => {
     expect(csp).not.toMatch(/(script|font|connect)-src[^;]*\*/);
   });
 
+  it('lets the video tool play the file you opened, and nothing else', () => {
+    // Without media-src the <video> preview is refused outright, and a trim
+    // control you cannot see through is useless. blob: names data this tab
+    // already holds — it reaches no network — so 'self' is deliberately absent
+    // as well: no media is served from this origin.
+    const csp = SECURITY_HEADERS['content-security-policy'] ?? '';
+    expect(csp).toContain('media-src blob:');
+    expect(csp).not.toMatch(/media-src[^;]*(\*|https?:)/);
+  });
+
   it('permits WebAssembly without permitting eval', () => {
     // 'wasm-unsafe-eval' lets a same-origin WASM codec (HEIC decode) compile;
     // 'unsafe-eval' — which would also unlock eval() and new Function() — must

@@ -513,3 +513,74 @@ table.tools th[scope="row"] { width: 23%; }
 table.tools col,
 table.tools td:last-child,
 table.tools th:last-child { width: 21%; }
+
+/* -------------------------------------------------------- the video tool */
+
+/* The preview is the trim control's other half: you cannot cut a video you
+   cannot see. Boxed and size-capped so a 4K file does not push the rest of the
+   page off the screen. */
+.video-stage {
+  background: #000000;
+  border: 1px solid #808080;
+  margin: 8px 0;
+  text-align: center;
+}
+
+.video-stage video {
+  max-width: 100%;
+  max-height: 340px;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Label, slider, timestamp, button — on one line where there is room, wrapping
+   on a phone rather than overflowing. */
+.trim-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 4px 0;
+}
+
+.trim-row label {
+  min-width: 44px;
+}
+
+.trim-row input[type="range"] {
+  flex: 1 1 220px;
+  min-width: 140px;
+}
+
+input.time-field {
+  width: 76px;
+  font-family: "Courier New", Courier, monospace;
+  text-align: right;
+}
+
+input.time-field.is-bad {
+  background: #ffdddd;
+}
+
+button.small {
+  font-size: 13px;
+  padding: 0 6px;
+}
+
+/* The copy-or-re-encode verdict. Green when the video comes out untouched,
+   because that is the outcome worth steering people towards. */
+#plan.is-lossless {
+  border-color: #145214;
+  background: #eaffea;
+}
+
+#plan .headline {
+  font-weight: bold;
+}
+
+/* A text progress bar. No animation, no spinner: the number is the useful
+   part, and this page already means business. */
+.bar {
+  font-family: "Courier New", Courier, monospace;
+  letter-spacing: -1px;
+}

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trim and Convert Video in Your Browser — LOC.1999</title>
+<meta name="description" content="Trim, convert, shrink and mute video, or pull the audio out of it, without uploading anything. Tells you whether it will copy your video losslessly or re-encode it — before you start.">
+<link rel="canonical" href="https://1999loc.com/video.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Trim and Convert Video in Your Browser — LOC.1999">
+<meta property="og:description" content="Video trimming and conversion that never uploads the file, and tells you whether it is copying or re-encoding before you commit.">
+<meta property="og:url" content="https://1999loc.com/video.html">
+<meta property="og:site_name" content="LOC.1999">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<!--
+  EXPECTED LAYOUT (single column, ~680px, left aligned):
+
+    LOC.1999
+    Small tools. No accounts. Nothing leaves your browser.
+    ------------------------------------------------------------
+    count code | golf | pdf | convert | inspect | sheets | images | video | delete posts
+    ------------------------------------------------------------
+    TRIM AND CONVERT VIDEO
+    [ Drop a video here... ]
+    MP4 - 2:31 - 48.2 MB - 1920x1080 H.264 30fps - AAC stereo
+    +--------------------------------------------------+
+    |                  video preview                   |
+    +--------------------------------------------------+
+    start [====|--------------] 0:12   [ use current ]
+    end   [==========|--------] 1:44   [ use current ]
+    format ( MP4 )  size ( original )  quality ( same )
+    +--------------------------------------------------+
+    | COPIED, NOT RE-ENCODED - no quality is lost      |
+    |  - keeping 1:32 of 2:31                          |
+    +--------------------------------------------------+
+    [ Make the file ]   about 29 MB
+    ------------------------------------------------------------
+-->
+<div id="page">
+
+<h1><a href="/">LOC.1999</a></h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<a href="/code.html">count code</a>
+|
+<a href="/golf">golf</a>
+|
+<a href="/sign.html">pdf</a>
+|
+<a href="/convert.html">convert</a>
+|
+<a href="/inspect.html">inspect</a>
+|
+<a href="/sheet.html">sheets</a>
+|
+<a href="/image.html">images</a>
+|
+<strong>video</strong>
+|
+<a href="https://delete.1999loc.com/">delete posts</a>
+</p>
+<hr>
+
+<h2>Trim and convert video</h2>
+<p class="tagline">In this tab. A two gigabyte holiday video never leaves your laptop.</p>
+
+<p class="note">
+Every online video converter uploads your file to somebody's server, transcodes
+it there, and hands you back a link. People put family videos, medical
+recordings and unpublished work through them because there is no obvious
+alternative. This one has no endpoint to upload to &mdash; turn off your wifi
+after the page loads and it still works.
+</p>
+
+<div class="notice-box">
+<p><strong>It tells you whether it is copying or re-encoding.</strong></p>
+<p class="note">
+Cutting a video does not have to re-encode it. If the output can hold the codec
+the file already uses, the compressed video is copied across untouched &mdash;
+the result is <em>bit for bit</em> your original, just shorter, and it takes
+seconds rather than minutes. Change the size, the rotation or the quality and it
+has to be decoded and encoded again, which is slower and costs a generation of
+quality.
+</p>
+<p class="note">
+Every other converter re-encodes everything and says nothing. This one works out
+which one your settings mean and tells you before you press the button.
+</p>
+</div>
+
+<hr>
+
+<h3>1. Open a video</h3>
+
+<div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open a video file">
+  <strong>Drop a video here, or click to choose</strong>
+  <span>Nothing is uploaded &mdash; it is opened inside this tab</span>
+  <input type="file" id="file-input" accept="video/*,audio/*,.mp4,.mov,.webm,.mkv,.m4v,.avi,.ogg" hidden>
+</div>
+
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<p id="error" class="error" role="alert"></p>
+
+<div id="loaded" class="hidden">
+  <p id="media-line" class="note"></p>
+  <div id="decode-warning" class="hidden notice-box">
+    <p><strong>This browser cannot decode this video.</strong></p>
+    <p class="note" id="decode-detail"></p>
+  </div>
+
+  <div class="video-stage">
+    <video id="preview" controls playsinline preload="metadata"></video>
+  </div>
+
+  <hr>
+  <h3>2. Choose the part you want</h3>
+
+  <div class="trim-row">
+    <label for="start-range">Start</label>
+    <input type="range" id="start-range" min="0" max="1000" value="0" step="1">
+    <input type="text" id="start-time" class="time-field" value="0:00" size="8" inputmode="numeric" aria-label="Start time">
+    <button type="button" id="start-here" class="small">use playhead</button>
+  </div>
+  <div class="trim-row">
+    <label for="end-range">End</label>
+    <input type="range" id="end-range" min="0" max="1000" value="1000" step="1">
+    <input type="text" id="end-time" class="time-field" value="0:00" size="8" inputmode="numeric" aria-label="End time">
+    <button type="button" id="end-here" class="small">use playhead</button>
+  </div>
+  <p class="note">
+    <button type="button" id="play-clip" class="small">Play just the clip</button>
+    <button type="button" id="reset-trim" class="small">Whole video</button>
+    <span id="trim-summary"></span>
+  </p>
+
+  <hr>
+  <h3>3. Choose what comes out</h3>
+
+  <p>
+    <label for="format" class="inline">Format</label>
+    <select id="format"></select>
+    <span id="format-note" class="note"></span>
+  </p>
+  <p>
+    <label for="size" class="inline">Size</label>
+    <select id="size"></select>
+    <label for="quality" class="inline">Quality</label>
+    <select id="quality">
+      <option value="">unchanged</option>
+      <option value="very-high">very high</option>
+      <option value="high">high</option>
+      <option value="medium">medium</option>
+      <option value="low">low</option>
+      <option value="very-low">very low</option>
+    </select>
+    <label for="rotate" class="inline">Rotate</label>
+    <select id="rotate">
+      <option value="0">none</option>
+      <option value="90">90°</option>
+      <option value="180">180°</option>
+      <option value="270">270°</option>
+    </select>
+  </p>
+  <p>
+    <label class="inline"><input type="checkbox" id="mute"> Remove the sound</label>
+  </p>
+
+  <div id="plan" class="notice-box"></div>
+
+  <p id="exact-box" class="hidden note">
+    <label class="inline"><input type="checkbox" id="exact"> Cut exactly where I asked instead</label>
+    &mdash; precise to the frame, but the picture has to be re-encoded to get there.
+  </p>
+
+  <p>
+    <button type="button" id="run">Make the file</button>
+    <button type="button" id="cancel" class="hidden">Stop</button>
+    <span id="estimate" class="note"></span>
+  </p>
+  <p id="progress" class="note"></p>
+  <div id="output"></div>
+</div>
+
+<hr>
+
+<h3>The honest notes</h3>
+<ul class="plain">
+  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The file is read from disk into this tab and the result is written back out of it.</li>
+  <li><strong>Copying is not re-encoding, and the difference is the whole point.</strong> When the output container can hold the codec your file already uses and nothing about the picture changes, the compressed video is copied across untouched — identical quality, and roughly ten times faster. The panel above says which of the two your settings mean before you start.</li>
+  <li><strong>Changing container is usually free.</strong> An MP4 can hold VP9 and a Matroska file can hold almost anything, so &ldquo;convert this WebM to MP4&rdquo; is normally a repackage rather than a conversion. The codec your file already uses is preferred over whatever this page would otherwise call best, precisely so that stays true.</li>
+  <li><strong>A copied cut lands on a keyframe.</strong> Every frame in a compressed video is stored as a change from the one before it, back to a keyframe — a frame stored whole. A copy has to begin at one, because there is nothing to describe its first frame against otherwise. The page reads your file to find the last keyframe before your start point and tells you exactly where the cut will land and by how much it moved. If you need the frame you actually pointed at, tick the box and it will re-encode to get there.</li>
+  <li><strong>Copying needs no codec at all.</strong> Repackaging never decodes anything, so a video in a codec this browser cannot play — an old phone's HEVC, say — can still be trimmed and moved into another container here. Only re-encoding needs the codec, and the page says when it does not have it.</li>
+  <li><strong>Which formats appear depends on your browser, and it is asked rather than assumed.</strong> The codecs come from the browser itself. Chrome, Edge and Safari ship H.264 and AAC, so MP4 works. Some builds of Chromium — and Firefox on some systems — ship only the open codecs, and there MP4 can only be written with AV1 or VP9 inside it. Rather than offer a format and fail three minutes in, the page asks the browser what it can actually encode and offers that.</li>
+  <li><strong>Re-encoding is real work.</strong> It decodes and re-encodes every frame, using the same hardware video engine a video call uses. It is fast for a phone clip and slow for an hour of 4K, and it will make a laptop's fan audible. Trimming without re-encoding does not.</li>
+  <li><strong>Large files are held in memory.</strong> The result is assembled in the tab before you download it, so a very large output can run a tab out of memory. Trimming first is the fix.</li>
+  <li><strong>What it does not do:</strong> subtitles, chapters, multiple audio tracks, joining two videos, or anything creative. It cuts, converts, resizes, rotates, mutes and extracts.</li>
+  <li><strong>It downloads about 620&nbsp;KB</strong> the first time, once you open a file: <a href="https://github.com/Vanilagy/mediabunny">mediabunny</a>, which reads and writes the container formats. The codecs themselves are the browser's own <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API">WebCodecs</a> — there is no ffmpeg here and no WebAssembly, which is why it is quick.</li>
+</ul>
+
+<hr>
+
+<p class="footer">
+Hosted on Cloudflare &middot; Made with spite for bloat<br>
+<a href="/image.html">image tools</a> |
+<a href="/convert.html">pdf to word</a> |
+<a href="/sign.html">edit a pdf</a> |
+<a href="/sheet.html">excel to csv</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+</div>
+<script src="/video-page.js"></script>
+</body>
+</html>

@@ -17,6 +17,7 @@ import {
   libSource,
   libTarget,
   libheifVersion,
+  mediabunnyVersion,
   pdfjsVersion,
   sourcePath,
   vendoredPath,
@@ -56,6 +57,7 @@ describe('public/vendor', () => {
   it("records a version, so the honest notes can cite one", () => {
     expect(pdfjsVersion()).toMatch(/^\d+\.\d+/);
     expect(libheifVersion()).toMatch(/^\d+\.\d+/);
+    expect(mediabunnyVersion()).toMatch(/^\d+\.\d+/);
   });
 
   it('ships the OCR language data, which is not in any package', () => {
@@ -83,6 +85,15 @@ describe('public/vendor', () => {
         `${spec.to} is stale — run \`npm run vendor:pdfjs\` and commit the result`,
       ).toBe(true);
     }
+  });
+
+  it('ships mediabunny as one pre-bundled module', () => {
+    // The published module tree is hundreds of files that import each other;
+    // serving those means every one of them is a separate fetch on a page
+    // someone opened to trim a holiday video. The bundle is one file.
+    const video = VENDORED_LIBS.find((l) => l.pkg === 'mediabunny');
+    expect(video?.to).toMatch(/\.mjs$/);
+    expect(statSync(libTarget(video!)).size).toBeLessThan(1024 * 1024);
   });
 
   it('ships libheif as the self-contained bundle', () => {
