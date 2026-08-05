@@ -23,6 +23,7 @@ import {
   pageTextOps,
   pagesNeedingRaster,
   readContentStream,
+  readFormFields,
   usefulRedactions,
   type Edit,
 } from '../src/client/pdfedit';
@@ -332,5 +333,110 @@ describe('applyEdits: pictures', () => {
     const out = await applyEdits(await onePage(), [place(0)], []);
     const doc = await loadForEditing(out);
     expect(new TextDecoder('latin1').decode(readContentStream(doc, 1))).not.toContain('Do');
+  });
+});
+
+/**
+ * Filling a real form.
+ *
+ * The point of this over a floating text box is that the values land exactly
+ * where the form's own fields are, and come out as normal page content that
+ * shows the same in every reader. So the tests read the flattened text back and
+ * check the answers are actually there.
+ */
+describe('AcroForm fields', () => {
+  async function formDoc(): Promise<Uint8Array> {
+    const doc = await PDFDocument.create();
+    const p1 = doc.addPage([612, 792]);
+    const p2 = doc.addPage([612, 792]);
+    const form = doc.getForm();
+
+    const name = form.createTextField('applicant.name');
+    name.addToPage(p1, { x: 140, y: 695, width: 200, height: 18 });
+    const agree = form.createCheckBox('applicant.agree');
+    agree.addToPage(p1, { x: 60, y: 650, width: 14, height: 14 });
+    const colour = form.createRadioGroup('applicant.colour');
+    colour.addOptionToPage('red', p1, { x: 60, y: 610, width: 14, height: 14 });
+    colour.addOptionToPage('blue', p1, { x: 160, y: 610, width: 14, height: 14 });
+    const country = form.createDropdown('applicant.country');
+    country.addOptions(['UK', 'US', 'FR']);
+    country.addToPage(p2, { x: 60, y: 700, width: 120, height: 18 });
+    return doc.save();
+  }
+
+  /**
+   * The visible text of a page, read the way a viewer reads it.
+   *
+   * pdf-lib flattens a field by drawing its appearance as a Form XObject and
+   * referencing it with `Do`, so the value is not inline in the page's own
+   * content stream — scraping the stream finds nothing. pdf.js follows the
+   * XObject, which is the whole point: it sees what a person would see.
+   */
+  async function visibleText(bytes: Uint8Array, page: number): Promise<string> {
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const doc = await pdfjs.getDocument({
+      data: bytes.slice(),
+      standardFontDataUrl: 'node_modules/pdfjs-dist/standard_fonts/',
+    }).promise;
+    const content = await (await doc.getPage(page + 1)).getTextContent();
+    return content.items.map((i) => ('str' in i ? i.str : '')).join(' ');
+  }
+
+  it('reports no fields for an ordinary PDF', async () => {
+    const doc = await PDFDocument.create();
+    doc.addPage([300, 300]);
+    expect(readFormFields(await loadForEditing(await doc.save()))).toEqual([]);
+  });
+
+  it('finds every field, on the right page, with its type', async () => {
+    const fields = readFormFields(await loadForEditing(await formDoc()));
+    const byName = (n: string) => fields.filter((f) => f.name === n);
+
+    expect(byName('applicant.name')[0]).toMatchObject({ kind: 'text', page: 0 });
+    expect(byName('applicant.agree')[0]).toMatchObject({ kind: 'checkbox', page: 0 });
+    expect(byName('applicant.country')[0]).toMatchObject({ kind: 'dropdown', page: 1, options: ['UK', 'US', 'FR'] });
+    // A radio group appears once per option, each carrying its own choice.
+    const radios = byName('applicant.colour');
+    expect(radios).toHaveLength(2);
+    expect(radios.map((r) => r.radioOption)).toEqual(['red', 'blue']);
+  });
+
+  it('places each field where the form drew it', async () => {
+    const name = readFormFields(await loadForEditing(await formDoc())).find((f) => f.name === 'applicant.name')!;
+    // pdf-lib's widget rectangle carries the field border, so the reported
+    // box is about a point larger than the one asked for; near is what matters.
+    expect(Math.abs(name.rect.x - 140)).toBeLessThanOrEqual(1);
+    expect(Math.abs(name.rect.y - 695)).toBeLessThanOrEqual(1);
+    expect(Math.abs(name.rect.width - 200)).toBeLessThanOrEqual(2);
+  });
+
+  it('writes the answers in and flattens them to page content', async () => {
+    const out = await applyEdits(await formDoc(), [], [], [], [
+      { name: 'applicant.name', kind: 'text', value: 'Jane Q. Doe' },
+      { name: 'applicant.agree', kind: 'checkbox', value: 'on' },
+      { name: 'applicant.colour', kind: 'radio', value: 'blue' },
+      { name: 'applicant.country', kind: 'dropdown', value: 'FR' },
+    ]);
+
+    // The interactive form is gone; the answers are baked into the pages.
+    expect(readFormFields(await loadForEditing(out))).toEqual([]);
+    expect(await visibleText(out, 0)).toContain('Jane Q. Doe');
+    expect(await visibleText(out, 1)).toContain('FR');
+  });
+
+  it('ignores a value for a field that is not there rather than throwing', async () => {
+    const out = await applyEdits(await formDoc(), [], [], [], [
+      { name: 'no.such.field', kind: 'text', value: 'x' },
+      { name: 'applicant.name', kind: 'text', value: 'Only Me' },
+    ]);
+    expect(await visibleText(out, 0)).toContain('Only Me');
+  });
+
+  it('flattens the form on save even when no answers were typed', async () => {
+    // The pages are copied into a fresh document, which an interactive AcroForm
+    // does not survive — so saving a form always flattens it, leaving the page
+    // looking the same but no longer fillable. Better that than dead widgets.
+    const out = await applyEdits(await formDoc(), [], [], [], []);
+    expect(readFormFields(await loadForEditing(out))).toEqual([]);
   });
 });

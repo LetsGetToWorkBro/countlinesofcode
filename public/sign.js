@@ -50,6 +50,8 @@
   var selected = null;
   var liveUrls = [];
   var nextId = 1;
+  var formFields = [];         // AcroForm fields read from the document
+  var formValues = {};         // field name -> value the visitor typed/picked
 
   var VIEW_WIDTH = 660;
   var RASTER_SCALE = 2;
@@ -129,7 +131,9 @@
         removals = {};
         flatten = {};
         selected = null;
+        formValues = {};
         pages = new Array(doc.numPages);
+        readForm();
         editor.className = '';
         return renderPage();
       })
@@ -180,7 +184,10 @@
       return page.render({ canvasContext: view.getContext('2d'), viewport: viewport }).promise;
     }).then(function () {
       return analysePage(pageIndex);
-    }).then(draw);
+    }).then(function () {
+      draw();
+      if (tool() === 'form') placeFormInputs();
+    });
   }
 
   // -------------------------------------------------------------- coordinates
@@ -607,6 +614,137 @@
     $('sig-options').className = picked === 'stamp' ? '' : 'hidden';
     $('image-options').className = picked === 'image' ? '' : 'hidden';
     overlay.style.cursor = 'crosshair';
+    // The form inputs sit over the page and would swallow clicks meant for the
+    // other tools, so they are only live in form-fill mode.
+    var filling = picked === 'form';
+    $('form-layer').className = filling ? 'form-layer' : 'form-layer hidden';
+    overlay.style.pointerEvents = filling ? 'none' : 'auto';
+    if (filling) placeFormInputs();
+  }
+
+  // ------------------------------------------------------------------- forms
+  /* Read the fillable fields, if the document has any, and offer the tool.
+   * Most PDFs have none, in which case the form option stays hidden and the
+   * page is exactly as it was. */
+  function readForm() {
+    formFields = [];
+    try {
+      formFields = window.LOC1999_SIGN.readFormFields(libDoc) || [];
+    } catch (e) { formFields = []; }
+
+    var has = formFields.length > 0;
+    $('form-tool-label').className = has ? 'wide' : 'wide hidden';
+    $('form-banner').className = has ? 'notice-box' : 'notice-box hidden';
+    if (has) {
+      var names = {};
+      formFields.forEach(function (f) { names[f.name] = true; });
+      $('form-count').textContent = Object.keys(names).length;
+    }
+  }
+
+  /** The fields drawn on the page currently shown. */
+  function fieldsOnPage() {
+    return formFields.filter(function (f) { return f.page === pageIndex; });
+  }
+
+  /* One HTML input per field, laid directly over where the field sits on the
+   * page. The page is a canvas at a known scale, so a field's PDF rectangle
+   * maps straight onto CSS pixels; everything is recomputed on each render
+   * because turning the page or resizing the window moves them. */
+  function placeFormInputs() {
+    var layer = $('form-layer');
+    layer.innerHTML = '';
+    if (tool() !== 'form' || !viewport) return;
+    var rect = overlay.getBoundingClientRect();
+    var ratio = rect.width / overlay.width; // canvas px -> css px
+
+    // Radio widgets share a name; group them so one choice clears the rest.
+    fieldsOnPage().forEach(function (field) {
+      var box = fieldBox(field, ratio);
+      var el = inputFor(field);
+      if (!el) return;
+      el.style.position = 'absolute';
+      el.style.left = box.x + 'px';
+      el.style.top = box.y + 'px';
+      el.style.width = box.w + 'px';
+      el.style.height = box.h + 'px';
+      if (field.readOnly) { el.disabled = true; el.title = 'This field is locked by the form.'; }
+      layer.appendChild(el);
+    });
+  }
+
+  /** A field's rectangle in CSS pixels over the overlay. */
+  function fieldBox(field, ratio) {
+    var s = viewport.scale;
+    var topPdf = field.rect.y + field.rect.height;
+    return {
+      x: field.rect.x * s * ratio,
+      y: (overlay.height - topPdf * s) * ratio,
+      w: field.rect.width * s * ratio,
+      h: field.rect.height * s * ratio,
+    };
+  }
+
+  function currentValue(field) {
+    return Object.prototype.hasOwnProperty.call(formValues, field.name)
+      ? formValues[field.name]
+      : field.value;
+  }
+
+  function inputFor(field) {
+    if (field.kind === 'text') {
+      var input = document.createElement(field.multiline ? 'textarea' : 'input');
+      if (!field.multiline) input.type = 'text';
+      input.className = 'field-input';
+      input.value = currentValue(field);
+      input.addEventListener('input', function () { formValues[field.name] = input.value; });
+      return input;
+    }
+    if (field.kind === 'checkbox') {
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'field-check';
+      cb.checked = currentValue(field) === 'on';
+      cb.addEventListener('change', function () { formValues[field.name] = cb.checked ? 'on' : 'off'; });
+      return cb;
+    }
+    if (field.kind === 'radio') {
+      var radio = document.createElement('input');
+      radio.type = 'radio';
+      radio.name = 'formradio:' + field.name;
+      radio.className = 'field-check';
+      radio.checked = currentValue(field) === field.radioOption;
+      radio.addEventListener('change', function () {
+        if (radio.checked) formValues[field.name] = field.radioOption;
+      });
+      return radio;
+    }
+    if (field.kind === 'dropdown' || field.kind === 'optionlist') {
+      var select = document.createElement('select');
+      select.className = 'field-input';
+      var blank = document.createElement('option');
+      blank.value = ''; blank.textContent = '—';
+      select.appendChild(blank);
+      (field.options || []).forEach(function (opt) {
+        var o = document.createElement('option');
+        o.value = opt; o.textContent = opt;
+        if (currentValue(field) === opt) o.selected = true;
+        select.appendChild(o);
+      });
+      select.addEventListener('change', function () { formValues[field.name] = select.value; });
+      return select;
+    }
+    return null; // signatures, buttons: nothing to type
+  }
+
+  function collectFormValues() {
+    // One value per field name (radios collapse to their group).
+    var byName = {};
+    formFields.forEach(function (f) { byName[f.name] = f; });
+    return Object.keys(formValues).map(function (name) {
+      var f = byName[name];
+      return { name: name, kind: f ? f.kind : 'text', value: formValues[name] };
+    });
   }
 
   // ------------------------------------------------------------------ pictures
@@ -931,9 +1069,13 @@
     var flatPages = Object.keys(flatten)
       .filter(function (p) { return (flatten[p] || []).length; })
       .map(Number);
+    var formList = collectFormValues();
+    var hasForm = formFields.length > 0;
 
-    if (!objects.length && !removalList.length && !flatPages.length) {
-      return fail('Nothing has been changed yet.');
+    if (!objects.length && !removalList.length && !flatPages.length && !formList.length) {
+      return fail(hasForm
+        ? 'Nothing has been changed yet. Fill in a field, sign it, or add something.'
+        : 'Nothing has been changed yet.');
     }
 
     $('save').disabled = true;
@@ -954,7 +1096,7 @@
                 ? { kind: 'text', page: o.page, at: { x: o.x, y: o.y }, value: o.value, size: o.size }
                 : { kind: 'stamp', page: o.page, at: { x: o.x, y: o.y }, bytes: o.bytes, width: o.width };
             });
-            return window.LOC1999_SIGN.applyEdits(basis.bytes, edits, rasters, basis.removals);
+            return window.LOC1999_SIGN.applyEdits(basis.bytes, edits, rasters, basis.removals, formList);
           });
       })
       .then(function (out) {
@@ -965,7 +1107,9 @@
         liveUrls.push(url);
         var removed = removalList.reduce(function (n, r) { return n + r.opIndices.length; }, 0);
         summaryEl.textContent =
-          [objects.length ? objects.length + ' added' : null,
+          [formList.length ? formList.length + ' field' + (formList.length === 1 ? '' : 's') + ' filled' : null,
+            hasForm ? 'form flattened' : null,
+            objects.length ? objects.length + ' added' : null,
             removed ? removed + ' deleted from the file itself' : null,
             flatPages.length ? flatPages.length + ' page' + (flatPages.length === 1 ? '' : 's') + ' flattened' : null]
             .filter(Boolean).join(', ') + '. ' + bytesLabel(blob.size) + '.';
@@ -1057,6 +1201,12 @@
 
   Array.prototype.forEach.call(document.querySelectorAll('input[name="tool"]'), function (radio) {
     radio.addEventListener('change', syncTool);
+  });
+
+  // The form inputs are positioned in CSS pixels, so a resize moves them off
+  // their fields until they are laid out again.
+  window.addEventListener('resize', function () {
+    if (doc && tool() === 'form') placeFormInputs();
   });
 
   renderSaved();

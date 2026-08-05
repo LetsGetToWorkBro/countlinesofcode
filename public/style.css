@@ -326,6 +326,39 @@ button.remove {
   cursor: crosshair;
 }
 
+/* The form-fill layer sits over the page with one input per field, positioned
+   in JS. Inputs are faintly tinted so you can see which parts of the page are
+   fillable without hiding what is printed underneath. */
+#stage .form-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.form-layer .field-input,
+.form-layer .field-check {
+  position: absolute;
+  margin: 0;
+  box-sizing: border-box;
+  font: inherit;
+}
+
+.form-layer .field-input {
+  border: 1px solid #0000ee;
+  background: rgba(210, 225, 255, 0.35);
+  padding: 0 2px;
+  font-size: 13px;
+  line-height: 1.1;
+}
+
+.form-layer .field-input:focus {
+  outline: 2px solid #0000ee;
+  background: #ffffff;
+}
+
+.form-layer .field-check {
+  accent-color: #0000ee;
+}
+
 /* The redaction explanation earns a box: it is the one thing on the page a
    visitor may already believe the opposite of. */
 .notice-box {

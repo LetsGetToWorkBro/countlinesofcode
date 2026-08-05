@@ -107,10 +107,22 @@ character &mdash; what your box misses is still readable as pixels.
 
 <div id="editor" class="hidden">
 
+  <div id="form-banner" class="notice-box hidden">
+  <p><strong>This PDF is a real form &mdash; <span id="form-count">0</span> fillable fields.</strong></p>
+  <p class="note">
+  Pick <strong>Fill the form</strong> below and type straight into the boxes where
+  they already are, instead of guessing at floating text. When you save, the
+  answers are stamped in and the form is locked &mdash; it shows the same in every
+  reader and cannot be un-filled. If you only want to sign or annotate it, the
+  form is locked in on save either way.
+  </p>
+  </div>
+
   <hr>
   <h3>2. Pick a tool, then click the page</h3>
 
   <p id="tools">
+    <label id="form-tool-label" class="wide hidden"><input type="radio" name="tool" value="form"> Fill the form &mdash; type straight into its fields</label>
     <label class="wide"><input type="radio" name="tool" value="text" checked> Add text &mdash; click where it goes</label>
     <label class="wide"><input type="radio" name="tool" value="stamp"> Signature &mdash; click to stamp it</label>
     <label class="wide"><input type="radio" name="tool" value="image"> Picture &mdash; click to place it</label>
@@ -198,6 +210,7 @@ character &mdash; what your box misses is still readable as pixels.
   <div id="stage">
     <canvas id="view"></canvas>
     <canvas id="overlay"></canvas>
+    <div id="form-layer" class="form-layer hidden"></div>
   </div>
 
   <p id="edits" class="note"></p>

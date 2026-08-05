@@ -20,7 +20,21 @@
  * hands the pixels over.
  */
 
-import { PDFArray, PDFDocument, PDFName, PDFRawStream, StandardFonts, decodePDFRawStream, rgb } from 'pdf-lib';
+import {
+  PDFArray,
+  PDFCheckBox,
+  PDFDict,
+  PDFDocument,
+  PDFDropdown,
+  PDFName,
+  PDFOptionList,
+  PDFRadioGroup,
+  PDFRawStream,
+  PDFTextField,
+  StandardFonts,
+  decodePDFRawStream,
+  rgb,
+} from 'pdf-lib';
 import { findTextOps, matchOpsToItems, removeTextOps, type ShowTextOp } from './pdfstream';
 
 /** A point in PDF user space: origin bottom-left, units of 1/72 inch. */
@@ -196,6 +210,207 @@ export function pageTextOps(doc: PDFDocument, pageIndex: number): ShowTextOp[] {
   return findTextOps(readContentStream(doc, pageIndex));
 }
 
+// ---------------------------------------------------------------------------
+// AcroForm fields
+//
+// A real form PDF is not a picture of a form: it carries actual fields with
+// names and types, and pdf-lib — already in this bundle — reads and fills them.
+// Making someone type a floating text box on top of a field that could just be
+// typed into is the thing this replaces. The hard part is only geometry: the
+// document says what the fields are, and the page needs to know where each one
+// sits so an input can be laid over it.
+// ---------------------------------------------------------------------------
+
+export type FieldKind = 'text' | 'checkbox' | 'radio' | 'dropdown' | 'optionlist' | 'other';
+
+export interface FormField {
+  /** The field's fully-qualified name; the id used when applying a value. */
+  name: string;
+  kind: FieldKind;
+  /** Zero-based page the widget is drawn on. */
+  page: number;
+  /** Where the widget sits, in PDF user space. */
+  rect: PdfRect;
+  /** Current value: the text, the chosen option, or '' */
+  value: string;
+  /** For a checkbox or a single radio widget: is this one ticked now. */
+  checked?: boolean;
+  /** For dropdown, option list and radio: every value that may be chosen. */
+  options?: string[];
+  /**
+   * A radio group draws one widget per option, so it appears once per option
+   * here — each entry sharing the group's `name` but carrying the one option
+   * this particular circle stands for.
+   */
+  radioOption?: string;
+  readOnly: boolean;
+  multiline: boolean;
+}
+
+/** A value to write into a named field before flattening. */
+export interface FormValue {
+  name: string;
+  kind: FieldKind;
+  /** Text for a text field; the chosen option for radio/dropdown/list; 'on'/'off' for a checkbox. */
+  value: string;
+}
+
+/** Maps every widget's dictionary to the page it is drawn on. */
+function widgetPages(doc: PDFDocument): Map<PDFDict, number> {
+  const pages = new Map<PDFDict, number>();
+  for (let i = 0; i < doc.getPageCount(); i++) {
+    const annots = doc.getPage(i).node.Annots();
+    if (!annots) continue;
+    for (let j = 0; j < annots.size(); j++) {
+      const dict = annots.lookupMaybe(j, PDFDict);
+      if (dict) pages.set(dict, i);
+    }
+  }
+  return pages;
+}
+
+/**
+ * Every fillable field in the document, one entry per place it is drawn.
+ *
+ * Returns [] for a PDF with no form — which is most of them — so the caller can
+ * simply check the length. A field whose widget cannot be tied to a page is
+ * skipped rather than guessed at: an input floating on the wrong page is worse
+ * than one that is missing.
+ */
+export function readFormFields(doc: PDFDocument): FormField[] {
+  let form;
+  try {
+    form = doc.getForm();
+  } catch {
+    return []; // a malformed or absent AcroForm is simply "no fields"
+  }
+  const pageOf = widgetPages(doc);
+  const out: FormField[] = [];
+
+  for (const field of form.getFields()) {
+    const name = field.getName();
+    const readOnly = field.isReadOnly();
+    const widgets = field.acroField.getWidgets();
+
+    if (field instanceof PDFRadioGroup) {
+      const options = field.getOptions();
+      const selected = field.getSelected();
+      widgets.forEach((widget, index) => {
+        const page = pageOf.get(widget.dict);
+        if (page === undefined) return;
+        // Widgets are stored in option order, so the nth circle is the nth option.
+        const option = options[index] ?? String(index);
+        out.push({
+          name,
+          kind: 'radio',
+          page,
+          rect: rectOf(widget.getRectangle()),
+          value: selected ?? '',
+          checked: selected === option,
+          options,
+          radioOption: option,
+          readOnly,
+          multiline: false,
+        });
+      });
+      continue;
+    }
+
+    // Everything else draws once (occasionally more, e.g. a field repeated on
+    // every page); each widget gets its own input over its own rectangle.
+    for (const widget of widgets) {
+      const page = pageOf.get(widget.dict);
+      if (page === undefined) continue;
+      const rect = rectOf(widget.getRectangle());
+      if (field instanceof PDFTextField) {
+        out.push({
+          name, kind: 'text', page, rect,
+          value: field.getText() ?? '',
+          readOnly, multiline: field.isMultiline(),
+        });
+      } else if (field instanceof PDFCheckBox) {
+        out.push({
+          name, kind: 'checkbox', page, rect,
+          value: field.isChecked() ? 'on' : 'off',
+          checked: field.isChecked(),
+          readOnly, multiline: false,
+        });
+      } else if (field instanceof PDFDropdown) {
+        out.push({
+          name, kind: 'dropdown', page, rect,
+          value: field.getSelected()[0] ?? '',
+          options: field.getOptions(),
+          readOnly, multiline: false,
+        });
+      } else if (field instanceof PDFOptionList) {
+        out.push({
+          name, kind: 'optionlist', page, rect,
+          value: field.getSelected()[0] ?? '',
+          options: field.getOptions(),
+          readOnly, multiline: false,
+        });
+      } else {
+        out.push({ name, kind: 'other', page, rect, value: '', readOnly, multiline: false });
+      }
+    }
+  }
+  return out;
+}
+
+function rectOf(r: { x: number; y: number; width: number; height: number }): PdfRect {
+  return { x: r.x, y: r.y, width: r.width, height: r.height };
+}
+
+/** Whether the document carries any AcroForm fields at all. */
+export function documentHasFields(doc: PDFDocument): boolean {
+  try {
+    return doc.getForm().getFields().length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Write values into the form's fields.
+ *
+ * Skips read-only fields, unknown names, and anything it cannot set rather than
+ * throwing, so one odd field in a long form does not lose every other answer.
+ * The caller flattens afterwards; this only sets the values.
+ */
+export function applyFormValues(doc: PDFDocument, values: FormValue[]): void {
+  if (values.length === 0) return;
+  const form = doc.getForm();
+  for (const entry of values) {
+    let field;
+    try {
+      field = form.getField(entry.name);
+    } catch {
+      continue;
+    }
+    if (!field || field.isReadOnly()) continue;
+    try {
+      if (field instanceof PDFTextField) {
+        field.setText(entry.value || undefined);
+      } else if (field instanceof PDFCheckBox) {
+        if (entry.value === 'on') field.check();
+        else field.uncheck();
+      } else if (field instanceof PDFRadioGroup) {
+        if (entry.value) field.select(entry.value);
+        else field.clear();
+      } else if (field instanceof PDFDropdown) {
+        if (entry.value) field.select(entry.value);
+        else field.clear();
+      } else if (field instanceof PDFOptionList) {
+        if (entry.value) field.select(entry.value);
+        else field.clear();
+      }
+    } catch {
+      // A value that does not fit its field (an option that is not offered, say)
+      // is dropped rather than aborting the whole save.
+    }
+  }
+}
+
 export interface RasterPage {
   page: number;
   /** PNG of the whole page, with the redaction boxes already painted in. */
@@ -218,6 +433,7 @@ export async function applyEdits(
   edits: Edit[],
   rasters: RasterPage[],
   removals: Removal[] = [],
+  formValues: FormValue[] = [],
 ): Promise<Uint8Array> {
   const src = await PDFDocument.load(source, { ignoreEncryption: true });
 
@@ -225,7 +441,11 @@ export async function applyEdits(
    * show-text operator removes those characters from the file outright — no
    * box drawn over them, no page turned into a picture, and everything else on
    * the page still selectable text. This is the difference between editing a
-   * PDF and defacing one. */
+   * PDF and defacing one.
+   *
+   * Order matters: removal indices were computed on the client from the
+   * original content streams, so this has to run before anything else rewrites
+   * them — flattening a filled form, below, appends to the streams. */
   for (const removal of removals) {
     if (removal.opIndices.length === 0) continue;
     const stream = readContentStream(src, removal.page);
@@ -235,6 +455,27 @@ export async function applyEdits(
       PDFName.of('Contents'),
       src.context.register(replacement),
     );
+  }
+
+  /* If the document is a form, fill in any answers and flatten it.
+   *
+   * Flattening turns each field into ordinary page content — the drawing the
+   * field would have shown — and drops the interactive field. It happens
+   * whenever the source has fields at all, not only when answers were typed,
+   * for a blunt reason: the pages are about to be copied into a fresh document
+   * below, and an AcroForm does not survive that copy. Left interactive, the
+   * fields would come out the far side as dead widgets a reader might not even
+   * draw. Flattened, what is on the page is exactly what was on the screen, in
+   * every reader, and the answers are locked in — which is what "fill this and
+   * send it back" almost always means. */
+  if (documentHasFields(src)) {
+    if (formValues.length > 0) applyFormValues(src, formValues);
+    try {
+      src.getForm().flatten();
+    } catch {
+      // A form that will not flatten (an exotic field, a broken appearance)
+      // keeps whatever values were set; it just stays interactive.
+    }
   }
   const out = await PDFDocument.create();
   const font = await out.embedFont(StandardFonts.Helvetica);
@@ -322,6 +563,7 @@ const globalScope = globalThis as unknown as {
     pageTextOps: typeof pageTextOps;
     matchOpsToItems: typeof matchOpsToItems;
     imageFormat: typeof imageFormat;
+    readFormFields: typeof readFormFields;
     canvasToPdf: typeof canvasToPdf;
     canvasRectToPdf: typeof canvasRectToPdf;
     pagesNeedingRaster: typeof pagesNeedingRaster;
@@ -336,6 +578,7 @@ globalScope.LOC1999_SIGN = {
   pageTextOps,
   matchOpsToItems,
   imageFormat,
+  readFormFields,
   canvasToPdf,
   canvasRectToPdf,
   pagesNeedingRaster,
