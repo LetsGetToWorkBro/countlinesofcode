@@ -54,4 +54,14 @@ describe('security headers', () => {
     expect(csp).toContain("script-src 'self'"); // no CDNs, deliberately
     expect(csp).not.toMatch(/(script|font|connect)-src[^;]*\*/);
   });
+
+  it('permits WebAssembly without permitting eval', () => {
+    // 'wasm-unsafe-eval' lets a same-origin WASM codec (HEIC decode) compile;
+    // 'unsafe-eval' — which would also unlock eval() and new Function() — must
+    // never appear. The narrow token is the whole point.
+    const csp = SECURITY_HEADERS['content-security-policy'] ?? '';
+    expect(csp).toContain("'wasm-unsafe-eval'");
+    expect(csp).not.toContain("'unsafe-eval'");
+    expect(csp).not.toContain("'unsafe-inline'");
+  });
 });

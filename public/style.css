@@ -385,3 +385,16 @@ button.remove {
   border: 1px solid #000000;
   vertical-align: middle;
 }
+
+/* Converted-image preview: bounded so a big photo does not fill the screen,
+   on a checkerboard so transparency is visible rather than white-on-white. */
+.pic-preview {
+  max-width: 100%;
+  max-height: 420px;
+  border: 1px solid #808080;
+  background-image:
+    linear-gradient(45deg, #e0e0e0 25%, transparent 25%, transparent 75%, #e0e0e0 75%),
+    linear-gradient(45deg, #e0e0e0 25%, transparent 25%, transparent 75%, #e0e0e0 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
+}

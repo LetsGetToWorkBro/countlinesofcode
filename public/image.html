@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resize, Convert and Compress an Image in Your Browser — LOC.1999</title>
+<meta name="description" content="Resize, compress and convert an image between PNG, JPEG and WebP, decode iPhone HEIC photos, and strip out the location and camera data. Runs entirely in your browser — the file is never uploaded.">
+<link rel="canonical" href="https://1999loc.com/image.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Resize, Convert and Compress an Image in Your Browser — LOC.1999">
+<meta property="og:description" content="Resize, compress and convert images — including iPhone HEIC — without uploading them. Location and camera data stripped on the way out.">
+<meta property="og:url" content="https://1999loc.com/image.html">
+<meta property="og:site_name" content="LOC.1999">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<!--
+  EXPECTED LAYOUT (single column, ~680px, left aligned):
+
+    LOC.1999
+    Small tools. No accounts. Nothing leaves your browser.
+    ------------------------------------------------------------
+    count code | golf | pdf | images | delete posts
+    ------------------------------------------------------------
+    IMAGE TOOLS
+    [ Open an image... ]
+    original: 4032 x 3024, HEIC, 2.3 MB
+    Longest side [____] px   Format ( JPEG )   Quality [====]
+    [ Convert ]
+    result: 1600 x 1200, JPEG, 240 KB   [ download ]
+    ------------------------------------------------------------
+-->
+<div id="page">
+
+<h1><a href="/">LOC.1999</a></h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<a href="/code.html">count code</a>
+|
+<a href="/golf">golf</a>
+|
+<a href="/sign.html">pdf</a>
+|
+<strong>images</strong>
+|
+<a href="https://delete.1999loc.com/">delete posts</a>
+</p>
+<hr>
+
+<h2>Image tools</h2>
+<p class="tagline">Resize, compress and convert a picture. Your file never leaves this tab.</p>
+
+<p class="note">
+Every &ldquo;resize an image&rdquo; site wants your photo on their server. This
+does it in the tab you already have open: the page is static, there is no
+endpoint to send a picture to, and you can check the network tab. Turn off your
+wifi once the page has loaded and everything below still works.
+</p>
+
+<div class="notice-box">
+<p><strong>Location and camera data are removed.</strong></p>
+<p class="note">
+A photo carries EXIF metadata &mdash; often the GPS coordinates it was taken at,
+the camera, the date and time. Re-encoding the picture here drops all of it, so
+what you download is just the image. That is a side effect of how this works,
+not a setting you can forget to switch on.
+</p>
+</div>
+
+<hr>
+
+<h3>1. Open an image</h3>
+
+<div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open an image">
+  <strong>Drop an image here, or click to choose</strong>
+  <span>PNG, JPEG, WebP, GIF, BMP &mdash; and HEIC from an iPhone</span>
+  <input type="file" id="file-input" accept="image/*,.heic,.heif" hidden>
+</div>
+
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<p id="error" class="error" role="alert"></p>
+
+<div id="tool" class="hidden">
+  <hr>
+  <h3>2. What to do with it</h3>
+
+  <p id="original" class="note"></p>
+
+  <fieldset>
+    <legend>Size</legend>
+    <p>
+      <label for="longest">Longest side:</label>
+      <input type="number" id="longest" min="16" max="20000" step="1" class="narrow">
+      <span class="note">pixels. The other side follows, so it never stretches.</span>
+    </p>
+    <p>
+      <label class="inline"><input type="checkbox" id="keep-size" checked> Keep the original size</label>
+    </p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Format</legend>
+    <p>
+      <label class="wide"><input type="radio" name="fmt" value="image/jpeg" checked> JPEG &mdash; smallest for photos, no transparency</label>
+      <label class="wide"><input type="radio" name="fmt" value="image/png"> PNG &mdash; lossless, keeps transparency, bigger</label>
+      <label class="wide"><input type="radio" name="fmt" value="image/webp"> WebP &mdash; small and keeps transparency, less universal</label>
+    </p>
+    <p id="quality-row">
+      <label for="quality">Quality:</label>
+      <input type="range" id="quality" min="30" max="100" step="1" value="82">
+      <span class="note"><span id="quality-val">82</span> / 100 &mdash; lower is smaller</span>
+    </p>
+  </fieldset>
+
+  <p>
+    <button type="button" id="convert">Convert</button>
+  </p>
+
+  <p id="result" class="note"></p>
+  <div id="output"></div>
+  <div id="preview"></div>
+</div>
+
+<hr>
+
+<h3>The honest notes</h3>
+<ul class="plain">
+  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The picture is decoded, resized and re-encoded in your browser.</li>
+  <li><strong>Metadata is always dropped.</strong> Re-encoding cannot keep EXIF, so the location and camera data go. If you needed to <em>keep</em> it, this is the wrong tool &mdash; but for sharing a photo, losing it is the point.</li>
+  <li><strong>HEIC needs a decoder.</strong> Browsers cannot open Apple's HEIC, so opening one downloads <a href="https://github.com/strukturag/libheif">libheif</a> (about 1.4&nbsp;MB, once) to decode it here. It is served from this domain, like everything else, because the security policy forbids third-party scripts. Other formats need nothing extra.</li>
+  <li><strong>Very large photos use memory.</strong> A 100-megapixel image is held uncompressed while it is worked on, so a phone may struggle where a laptop will not.</li>
+  <li><strong>This does not upscale.</strong> Asking for a longest side larger than the original just re-encodes at the original size; enlarging a picture cannot invent detail that was never there.</li>
+</ul>
+
+<hr>
+
+<p class="footer">
+Hosted on Cloudflare &middot; Made with spite for bloat<br>
+<a href="/sign.html">edit a pdf</a> |
+<a href="/unlock.html">unlock a pdf</a> |
+<a href="/shrink.html">shrink a pdf</a> |
+<a href="/code.html">count code</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+</div>
+<script src="/image.js"></script>
+</body>
+</html>

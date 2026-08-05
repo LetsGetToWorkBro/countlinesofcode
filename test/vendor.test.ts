@@ -7,7 +7,18 @@
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { VENDORED, VENDORED_DIRS, dirTarget, pdfjsVersion, sourcePath, vendoredPath } from '../scripts/vendor-pdfjs.mjs';
+import {
+  VENDORED,
+  VENDORED_DIRS,
+  VENDORED_LIBS,
+  dirTarget,
+  libSource,
+  libTarget,
+  libheifVersion,
+  pdfjsVersion,
+  sourcePath,
+  vendoredPath,
+} from '../scripts/vendor-pdfjs.mjs';
 
 describe('public/vendor', () => {
   it('matches the installed pdfjs-dist', () => {
@@ -42,5 +53,21 @@ describe('public/vendor', () => {
 
   it("records a version, so the honest notes can cite one", () => {
     expect(pdfjsVersion()).toMatch(/^\d+\.\d+/);
+    expect(libheifVersion()).toMatch(/^\d+\.\d+/);
+  });
+
+  it('matches the installed libheif-js, and ships the self-contained bundle', () => {
+    // The HEIC decoder is committed the same way, and must be the -bundle build
+    // so the wasm rides inside the .js — a separate .wasm fetch is one more
+    // thing to get wrong under the CSP.
+    for (const spec of VENDORED_LIBS) {
+      const source = readFileSync(libSource(spec));
+      const committed = readFileSync(libTarget(spec));
+      expect(
+        committed.equals(source),
+        `${spec.to} is stale — run \`npm run vendor:pdfjs\` and commit the result`,
+      ).toBe(true);
+      expect(spec.from).toContain('bundle');
+    }
   });
 });

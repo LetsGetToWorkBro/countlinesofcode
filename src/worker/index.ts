@@ -41,9 +41,15 @@ export const SECURITY_HEADERS: Record<string, string> = {
    * 'none' was refusing it. The refusal was silent — the page still rendered,
    * with a substituted system font and the wrong glyph metrics, which then got
    * baked in permanently on any page flattened for a blackout. Embedded fonts
-   * need nothing here (measured), so 'self' is the whole widening. */
+   * need nothing here (measured), so 'self' is the whole widening.
+   *
+   * script-src carries 'wasm-unsafe-eval'. This is NOT 'unsafe-eval': it
+   * permits compiling and instantiating WebAssembly and nothing else — eval()
+   * and new Function() stay blocked, which was measured, not assumed. It is
+   * what lets the image tool decode a HEIC photo with a WASM codec served from
+   * this origin. No wasm is loaded until a tool that needs it runs. */
   'content-security-policy':
-    "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; " +
+    "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; " +
     "font-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
 };
 

@@ -85,6 +85,32 @@ export function pdfjsVersion() {
   return require('pdfjs-dist/package.json').version;
 }
 
+/**
+ * libheif, the HEIC decoder, as a single self-contained file.
+ *
+ * The `-bundle` build embeds the WebAssembly binary inside the JavaScript as
+ * base64, so there is one file to serve and no second fetch for a .wasm — which
+ * keeps it simple under `connect-src 'self'`. It is loaded with a plain
+ * `<script>` tag, exposing a `libheif` global, and only when someone actually
+ * converts a HEIC photo. Decoding needs `'wasm-unsafe-eval'` in the CSP; see
+ * SECURITY_HEADERS. Committed like the pdf.js copies, for the same reason.
+ */
+export const VENDORED_LIBS = [
+  { pkg: 'libheif-js', from: 'libheif-wasm/libheif-bundle.js', to: 'public/vendor/libheif/libheif-bundle.js' },
+];
+
+export function libSource(spec) {
+  return join(dirname(require.resolve(`${spec.pkg}/package.json`)), spec.from);
+}
+
+export function libTarget(spec) {
+  return join(root, spec.to);
+}
+
+export function libheifVersion() {
+  return require('libheif-js/package.json').version;
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   mkdirSync(join(root, 'public/vendor'), { recursive: true });
   for (const spec of VENDORED) {
@@ -98,7 +124,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const kb = files.reduce((sum, f) => sum + statSync(join(dirTarget(spec), f)).size, 0) / 1024;
     console.log(`${spec.to.padEnd(32)} ${kb.toFixed(0)} KB in ${files.length} files`);
   }
-  console.log(`pdf.js ${pdfjsVersion()}`);
+  for (const spec of VENDORED_LIBS) {
+    mkdirSync(dirname(libTarget(spec)), { recursive: true });
+    copyFileSync(libSource(spec), libTarget(spec));
+    const kb = statSync(libTarget(spec)).size / 1024;
+    console.log(`${spec.to.padEnd(32)} ${kb.toFixed(0)} KB`);
+  }
+  console.log(`pdf.js ${pdfjsVersion()} · libheif-js ${libheifVersion()}`);
   // Touched only to prove the files are readable after copying.
   readFileSync(vendoredPath(VENDORED[0]), 'utf8');
 }
