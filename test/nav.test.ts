@@ -79,6 +79,31 @@ describe('the toolkit bar', () => {
     expect(landing).toContain('The tools');
   });
 
+  it('groups the tools on the landing page under categories', () => {
+    // The toolkit has outgrown one flat list, and it is about to stop being
+    // only about documents. Categories are what keep that legible.
+    const landing = readFileSync('public/index.html', 'utf8');
+    const section = landing.slice(landing.indexOf('<h2>The tools</h2>'), landing.indexOf('<h2>Why it looks like this</h2>'));
+    const categories = [...section.matchAll(/<h3>([^<]+)<\/h3>/g)].map((m) => m[1]!);
+    expect(categories.length, 'the tools are not grouped at all').toBeGreaterThan(3);
+    expect(categories).toContain('PDF');
+  });
+
+  it('leaves no tool sitting outside a category', () => {
+    // A tool added above the first heading would render as an orphan, which is
+    // exactly the drift the grouping exists to prevent.
+    const landing = readFileSync('public/index.html', 'utf8');
+    const section = landing.slice(landing.indexOf('<h2>The tools</h2>'), landing.indexOf('<h2>Why it looks like this</h2>'));
+    const firstCategory = section.indexOf('<h3>');
+    const beforeAnyCategory = section.slice(0, firstCategory);
+    expect(beforeAnyCategory, 'a tool is listed before the first category heading').not.toContain('scope="row"');
+
+    // And every tool in the bar is somewhere in the grouped section.
+    for (const tool of SITE_TOOLS) {
+      expect(section, `${tool.label} is missing from the categorised tools`).toContain(tool.href);
+    }
+  });
+
   it('needs no JavaScript to list the tools', () => {
     // A landing page that renders nothing without JS is the thing this site
     // exists to be the opposite of.

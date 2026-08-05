@@ -25,10 +25,13 @@
     ------------------------------------------------------------
     count code | golf | pdf | convert | inspect | sheets | images
     ------------------------------------------------------------
-    The tools
+    The tools, grouped by category
+    PDF
     +----------------+--------------------------+-------------+
-    | Count code     | lines in a GitHub repo   | server      |
-    | Edit a PDF     | fill, sign, redact       | your tab    |
+    | Edit a PDF     | fill, sign, delete text  | your tab    |
+    | PDF <-> Word   | convert, with a verdict  | your tab    |
+    ...
+    Documents & data / Images / Privacy / Code
     ...
     ------------------------------------------------------------
     Why it looks like this
@@ -73,30 +76,17 @@ in the tab you already have open.
 
 <h2>The tools</h2>
 
-<table>
+<p class="note">
+Grouped by what you are working on. Almost everything runs in the tab you
+already have open; where a tool needs our server, it says so.
+</p>
+
+<h3>PDF</h3>
+<table class="tools">
 <thead>
-<tr><th>Tool</th><th>What it does</th><th>Where the work happens</th></tr>
+<tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
 </thead>
 <tbody>
-<tr>
-  <th scope="row"><a href="/code.html">Count code</a></th>
-  <td>
-    Lines of code in any public GitHub repository, split into code, comments and
-    blanks, per language. Comment-aware, so it does not just count newlines, and
-    it skips <code>node_modules</code> and lockfiles instead of pretending they
-    are yours.
-  </td>
-  <td>Our server, or your browser for big repositories</td>
-</tr>
-<tr>
-  <th scope="row"><a href="/golf">Code golf</a></th>
-  <td>
-    One stated task, fewest lines wins. Build a URL shortener or a JSON parser,
-    count it here, and it joins that challenge's board. Every entry solves the
-    same problem, which is the only way a line count means anything.
-  </td>
-  <td>Our server</td>
-</tr>
 <tr>
   <th scope="row"><a href="/sign.html">Edit a PDF</a></th>
   <td>
@@ -112,32 +102,8 @@ in the tab you already have open.
   <td>
     Convert a PDF into an editable Word document, or a Word document into a PDF.
     The only converter that tells you <em>how well it will go</em> before you
-    commit &mdash; and the only one that never sees your file.
-  </td>
-  <td>Your browser</td>
-</tr>
-<tr>
-  <th scope="row"><a href="/inspect.html">What's hidden in this file?</a></th>
-  <td>
-    Before you send a document, see what it is quietly carrying: text under
-    black boxes that can still be copied, tracked changes, comments, author
-    names, the company, even the timezone it was written in.
-  </td>
-  <td>Your browser</td>
-</tr>
-<tr>
-  <th scope="row"><a href="/sheet.html">Excel &harr; CSV</a></th>
-  <td>
-    Convert a spreadsheet to CSV or a CSV to Excel. Detects semicolons, honours
-    quoted fields, and will not turn <code>007</code> into 7.
-  </td>
-  <td>Your browser</td>
-</tr>
-<tr>
-  <th scope="row"><a href="/image.html">Image tools</a></th>
-  <td>
-    Resize, compress and convert an image between PNG, JPEG and WebP, and strip
-    the location and camera data out of a photo. Nothing is re-uploaded to do it.
+    commit &mdash; and the only one that never sees your file. Scanned pages are
+    read with optical recognition, in the tab.
   </td>
   <td>Your browser</td>
 </tr>
@@ -158,13 +124,94 @@ in the tab you already have open.
   </td>
   <td>Your browser</td>
 </tr>
+</tbody>
+</table>
+
+<h3>Documents &amp; data</h3>
+<table class="tools">
+<thead>
+<tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
+</thead>
+<tbody>
+<tr>
+  <th scope="row"><a href="/sheet.html">Excel &harr; CSV</a></th>
+  <td>
+    Convert a spreadsheet to CSV or a CSV to Excel. Detects semicolons, honours
+    quoted fields, and will not turn <code>007</code> into 7.
+  </td>
+  <td>Your browser</td>
+</tr>
+</tbody>
+</table>
+
+<h3>Images</h3>
+<table class="tools">
+<thead>
+<tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
+</thead>
+<tbody>
+<tr>
+  <th scope="row"><a href="/image.html">Image tools</a></th>
+  <td>
+    Resize, compress and convert an image between PNG, JPEG and WebP &mdash;
+    including HEIC straight off an iPhone. The location and camera data are
+    stripped on the way out.
+  </td>
+  <td>Your browser</td>
+</tr>
+</tbody>
+</table>
+
+<h3>Privacy</h3>
+<table class="tools">
+<thead>
+<tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
+</thead>
+<tbody>
+<tr>
+  <th scope="row"><a href="/inspect.html">What&rsquo;s hidden in this file?</a></th>
+  <td>
+    Before you send a document, see what it is quietly carrying: text under
+    black boxes that can still be copied, tracked changes, comments, author
+    names, the company, even the timezone it was written in.
+  </td>
+  <td>Your browser</td>
+</tr>
 <tr>
   <th scope="row"><a href="https://delete.1999loc.com/">Delete posts</a></th>
   <td>
     Bulk-delete your own history on X, Threads and Facebook Pages through the
     official APIs. Upload your archive, pick exactly what goes, dry run first.
   </td>
-  <td>Our server, on your behalf</td>
+  <td>Our server, for you</td>
+</tr>
+</tbody>
+</table>
+
+<h3>Code</h3>
+<table class="tools">
+<thead>
+<tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
+</thead>
+<tbody>
+<tr>
+  <th scope="row"><a href="/code.html">Count code</a></th>
+  <td>
+    Lines of code in any public GitHub repository, split into code, comments and
+    blanks, per language. Comment-aware, so it does not just count newlines, and
+    it skips <code>node_modules</code> and lockfiles instead of pretending they
+    are yours.
+  </td>
+  <td>Our server, or your browser for big repos</td>
+</tr>
+<tr>
+  <th scope="row"><a href="/golf">Code golf</a></th>
+  <td>
+    One stated task, fewest lines wins. Build a URL shortener or a JSON parser,
+    count it here, and it joins that challenge&rsquo;s board. Every entry solves
+    the same problem, which is the only way a line count means anything.
+  </td>
+  <td>Our server</td>
 </tr>
 </tbody>
 </table>
