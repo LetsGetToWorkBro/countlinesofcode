@@ -140,58 +140,161 @@ export async function zip(entries: ZipEntry[]): Promise<Uint8Array> {
 }
 
 /**
- * Read a ZIP, via its central directory.
+ * One entry as the index describes it, without unpacking anything.
  *
- * The central directory is the authority on what is in the archive — walking
- * local headers instead is how readers get fooled by archives with junk
- * prepended, and it cannot tell a deleted entry from a live one.
+ * Listing and extracting are separate on purpose. A viewer wants to show what
+ * is in a 500 MB archive immediately; inflating every entry to do that would
+ * take the memory of the whole uncompressed contents to answer a question the
+ * index already answers.
  */
-export async function unzip(bytes: Uint8Array): Promise<ZipEntry[]> {
+export interface ZipListing {
+  name: string;
+  /** Bytes it occupies in the archive. */
+  compressedSize: number;
+  /** Bytes it becomes. */
+  size: number;
+  /** 0 stored, 8 deflated. Anything else this cannot read. */
+  method: number;
+  crc: number;
+  /** Directory entries are a name ending in a slash and no content. */
+  directory: boolean;
+  /** Locked with the old ZIP password scheme; the bytes cannot be read. */
+  encrypted: boolean;
+  /** Milliseconds since the epoch, from the DOS timestamp, or null. */
+  modified: number | null;
+  /** Where the entry's own header sits. Needed to extract it later. */
+  offset: number;
+}
+
+/** How much smaller an entry got, as a percentage. */
+export function ratio(entry: Pick<ZipListing, 'size' | 'compressedSize'>): number {
+  if (!entry.size) return 0;
+  return Math.max(0, Math.round((1 - entry.compressedSize / entry.size) * 100));
+}
+
+/**
+ * DOS date and time, which is what ZIP stores.
+ *
+ * Two 16-bit fields with two-second resolution, no timezone at all, and years
+ * counted from 1980. It is the timestamp the archive actually holds, so it is
+ * read as local time — which is what the machine that wrote it meant.
+ */
+function dosTime(date: number, time: number): number | null {
+  if (!date) return null;
+  const year = 1980 + ((date >> 9) & 0x7f);
+  const month = ((date >> 5) & 0x0f) - 1;
+  const day = date & 0x1f;
+  const hours = (time >> 11) & 0x1f;
+  const minutes = (time >> 5) & 0x3f;
+  const seconds = (time & 0x1f) * 2;
+  const stamp = new Date(year, month, day, hours, minutes, seconds).getTime();
+  return Number.isFinite(stamp) ? stamp : null;
+}
+
+/** Where the end-of-central-directory record is, or -1. */
+function findEnd(bytes: Uint8Array, view: DataView): number {
+  // It sits at the tail, after an archive comment of unknown length — so it has
+  // to be searched for backwards rather than read from a fixed offset.
+  for (let i = bytes.length - 22; i >= 0 && i > bytes.length - 22 - 0xffff; i--) {
+    if (view.getUint32(i, true) === SIGNATURE.end) return i;
+  }
+  return -1;
+}
+
+/**
+ * What is in the archive, read from its index alone.
+ *
+ * The central directory is the authority — walking local headers instead is how
+ * readers get fooled by archives with junk prepended, and it cannot tell a
+ * deleted entry from a live one.
+ */
+export function listZip(bytes: Uint8Array): ZipListing[] {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const decoder = new TextDecoder();
 
-  // The end record is at the tail, after a comment of unknown length.
-  let end = -1;
-  for (let i = bytes.length - 22; i >= 0 && i > bytes.length - 22 - 0xffff; i--) {
-    if (view.getUint32(i, true) === SIGNATURE.end) {
-      end = i;
-      break;
-    }
-  }
-  if (end < 0) throw new Error('That file is not a ZIP archive, so it cannot be a Word document.');
+  const end = findEnd(bytes, view);
+  if (end < 0) throw new Error('That file is not a ZIP archive.');
 
   const count = view.getUint16(end + 10, true);
   let at = view.getUint32(end + 16, true);
-  const entries: ZipEntry[] = [];
 
+  // ZIP64 puts 0xffff / 0xffffffff in the 32-bit fields and the real values in
+  // a separate record. Rather than half-read one, say so.
+  if (count === 0xffff || at === 0xffffffff) {
+    throw new Error('That archive is in ZIP64 form, which this cannot read. It holds over four gigabytes or over 65,535 files.');
+  }
+
+  const entries: ZipListing[] = [];
   for (let i = 0; i < count; i++) {
-    if (view.getUint32(at, true) !== SIGNATURE.central) {
-      throw new Error('That Word document is damaged: its index does not match its contents.');
+    if (at + 46 > bytes.length || view.getUint32(at, true) !== SIGNATURE.central) {
+      throw new Error('That archive is damaged: its index does not match its contents.');
     }
     const flags = view.getUint16(at + 8, true);
     const method = view.getUint16(at + 10, true);
+    const time = view.getUint16(at + 12, true);
+    const date = view.getUint16(at + 14, true);
+    const crc = view.getUint32(at + 16, true);
     const compressedSize = view.getUint32(at + 20, true);
+    const size = view.getUint32(at + 24, true);
     const nameLength = view.getUint16(at + 28, true);
     const extraLength = view.getUint16(at + 30, true);
     const commentLength = view.getUint16(at + 32, true);
-    const localOffset = view.getUint32(at + 42, true);
-    const name = decoder.decode(bytes.subarray(at + 46, at + 46 + nameLength));
+    const offset = view.getUint32(at + 42, true);
+    const raw = bytes.subarray(at + 46, at + 46 + nameLength);
+    // Bit 11 promises the name is UTF-8. Without it the name is officially
+    // CP437, but every modern tool writes UTF-8 anyway, so decoding as UTF-8
+    // and tolerating the odd wrong accent beats mangling every non-ASCII name.
+    const name = decoder.decode(raw);
 
-    if (flags & 0x1) throw new Error('That Word document is password-protected, so it cannot be opened here.');
-    if (method !== 0 && method !== 8) {
-      throw new Error(`That Word document uses a compression this tool does not support (method ${method}).`);
-    }
-
-    // The local header repeats the name and extra field, at its own lengths.
-    const localName = view.getUint16(localOffset + 26, true);
-    const localExtra = view.getUint16(localOffset + 28, true);
-    const start = localOffset + 30 + localName + localExtra;
-    const raw = bytes.subarray(start, start + compressedSize);
-    entries.push({ name, data: method === 8 ? await inflate(raw) : new Uint8Array(raw) });
-
+    entries.push({
+      name,
+      compressedSize,
+      size,
+      method,
+      crc,
+      directory: name.endsWith('/') || (size === 0 && compressedSize === 0 && name.endsWith('\\')),
+      encrypted: Boolean(flags & 0x1),
+      modified: dosTime(date, time),
+      offset,
+    });
     at += 46 + nameLength + extraLength + commentLength;
   }
+  return entries;
+}
 
+/** Pull one entry's bytes out, inflating it if it needs it. */
+export async function extractEntry(bytes: Uint8Array, listing: ZipListing): Promise<Uint8Array> {
+  if (listing.encrypted) {
+    throw new Error(`"${listing.name}" is password-protected. This cannot open encrypted archives.`);
+  }
+  if (listing.method !== 0 && listing.method !== 8) {
+    throw new Error(`"${listing.name}" uses compression method ${listing.method}, which this cannot read. Only stored and deflated entries work.`);
+  }
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (view.getUint32(listing.offset, true) !== SIGNATURE.local) {
+    throw new Error(`"${listing.name}" is not where the archive's index says it is.`);
+  }
+  // The local header repeats the name and extra field, at its own lengths —
+  // which are not always the same as the central directory's.
+  const localName = view.getUint16(listing.offset + 26, true);
+  const localExtra = view.getUint16(listing.offset + 28, true);
+  const start = listing.offset + 30 + localName + localExtra;
+  const raw = bytes.subarray(start, start + listing.compressedSize);
+  return listing.method === 8 ? inflate(raw) : new Uint8Array(raw);
+}
+
+/**
+ * Read a ZIP whole.
+ *
+ * Convenient for the small archives the document tools deal with — a .docx is
+ * a dozen files — and built on the two functions above so there is one parser.
+ */
+export async function unzip(bytes: Uint8Array): Promise<ZipEntry[]> {
+  const entries: ZipEntry[] = [];
+  for (const listing of listZip(bytes)) {
+    if (listing.directory) continue;
+    entries.push({ name: listing.name, data: await extractEntry(bytes, listing) });
+  }
   return entries;
 }
 

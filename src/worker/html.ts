@@ -92,6 +92,7 @@ export const SITE_TOOLS: { href: string; label: string; id: string }[] = [
   { href: '/sheet.html', label: 'sheets', id: 'sheets' },
   { href: '/image.html', label: 'images', id: 'images' },
   { href: '/video.html', label: 'video', id: 'video' },
+  { href: '/zip.html', label: 'zip', id: 'zip' },
   { href: 'https://delete.1999loc.com/', label: 'delete posts', id: 'delete' },
 ];
 

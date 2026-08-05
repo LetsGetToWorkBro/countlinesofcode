@@ -18,6 +18,7 @@ import {
   libTarget,
   libheifVersion,
   mediabunnyVersion,
+  openpgpVersion,
   pdfjsVersion,
   sourcePath,
   vendoredPath,
@@ -58,6 +59,7 @@ describe('public/vendor', () => {
     expect(pdfjsVersion()).toMatch(/^\d+\.\d+/);
     expect(libheifVersion()).toMatch(/^\d+\.\d+/);
     expect(mediabunnyVersion()).toMatch(/^\d+\.\d+/);
+    expect(openpgpVersion()).toMatch(/^\d+\.\d+/);
   });
 
   it('ships the OCR language data, which is not in any package', () => {
@@ -94,6 +96,17 @@ describe('public/vendor', () => {
     const video = VENDORED_LIBS.find((l) => l.pkg === 'mediabunny');
     expect(video?.to).toMatch(/\.mjs$/);
     expect(statSync(libTarget(video!)).size).toBeLessThan(1024 * 1024);
+  });
+
+  it('ships the cryptography rather than writing it out', () => {
+    // The one library here that exists because writing it ourselves would be
+    // irresponsible: a cipher that is subtly wrong looks exactly like one that
+    // is right. Served unmodified as its own file, which is also what LGPL asks.
+    const pgp = VENDORED_LIBS.find((l) => l.pkg === 'openpgp');
+    expect(pgp?.to).toMatch(/\.mjs$/);
+    const source = readFileSync(libTarget(pgp!), 'utf8');
+    expect(source, 'openpgp must not need eval under script-src self').not.toMatch(/[^.\w]eval\(/);
+    expect(source).not.toContain('new Function');
   });
 
   it('ships libheif as the self-contained bundle', () => {

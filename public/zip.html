@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open a ZIP or Make One, in Your Browser — LOC.1999</title>
+<meta name="description" content="See what is inside a ZIP file, pull out just the files you want, or build an archive from your own files. Nothing is uploaded — the archive is opened inside the tab.">
+<link rel="canonical" href="https://1999loc.com/zip.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Open a ZIP or Make One, in Your Browser — LOC.1999">
+<meta property="og:description" content="Look inside a ZIP without uploading it anywhere, extract only what you need, or build one from your own files.">
+<meta property="og:url" content="https://1999loc.com/zip.html">
+<meta property="og:site_name" content="LOC.1999">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<!--
+  EXPECTED LAYOUT (single column, ~680px, left aligned):
+
+    LOC.1999
+    ------------------------------------------------------------
+    count code | golf | pdf | convert | inspect | sheets | images | video | zip | delete posts
+    ------------------------------------------------------------
+    OPEN A ZIP, OR MAKE ONE
+    ( Open one )  ( Make one )
+    [ Drop a .zip here... ]
+    41 files, 2 folders - 8.1 MB packed into 2.2 MB (73% smaller)
+    +-------------------------------------------------+
+    | [x] docs/report.pdf      1.2 MB  pdf   [ view ] |
+    | [x] docs/notes.txt        4 KB   text  [ view ] |
+    +-------------------------------------------------+
+    [ Extract selected ]  [ Extract everything ]
+    ------------------------------------------------------------
+-->
+<div id="page">
+
+<h1><a href="/">LOC.1999</a></h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<a href="/code.html">count code</a>
+|
+<a href="/golf">golf</a>
+|
+<a href="/sign.html">pdf</a>
+|
+<a href="/convert.html">convert</a>
+|
+<a href="/inspect.html">inspect</a>
+|
+<a href="/sheet.html">sheets</a>
+|
+<a href="/image.html">images</a>
+|
+<a href="/video.html">video</a>
+|
+<strong>zip</strong>
+|
+<a href="https://delete.1999loc.com/">delete posts</a>
+</p>
+<hr>
+
+<h2>Open a ZIP, or make one</h2>
+<p class="tagline">In this tab. The archive is never uploaded.</p>
+
+<p class="note">
+Every &ldquo;unzip online&rdquo; site takes your archive, opens it on their
+server and shows you a list. People do this with backups, phone exports and
+whole projects without thinking about what they have just handed over. This one
+reads the archive where it already is &mdash; on your machine.
+</p>
+
+<p>
+<button type="button" id="tab-open" class="sheet-tab is-active">Open an archive</button>
+<button type="button" id="tab-make" class="sheet-tab">Make one</button>
+</p>
+
+<hr>
+
+<div id="mode-open">
+  <h3>1. Open an archive</h3>
+
+  <div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open a ZIP archive">
+    <strong>Drop a .zip here, or click to choose</strong>
+    <span>Nothing is uploaded &mdash; it is read inside this tab</span>
+    <input type="file" id="file-input" accept=".zip,.docx,.xlsx,.pptx,.epub,.jar,.apk,application/zip" hidden>
+  </div>
+
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+  <p id="error" class="error" role="alert"></p>
+
+  <div id="archive" class="hidden">
+    <p id="summary" class="note"></p>
+    <div id="problems"></div>
+
+    <hr>
+    <h3>2. Take what you want</h3>
+    <p class="note">
+      <button type="button" id="select-all" class="small">Select all</button>
+      <button type="button" id="select-none" class="small">Select none</button>
+      <label for="filter" class="inline">Filter</label>
+      <input type="text" id="filter" size="18" placeholder="name or extension">
+      <span id="selection"></span>
+    </p>
+
+    <div id="listing" class="zip-listing"></div>
+
+    <p>
+      <button type="button" id="extract">Extract selected</button>
+      <button type="button" id="extract-all">Extract everything as one ZIP</button>
+    </p>
+    <p id="progress" class="note"></p>
+    <div id="output"></div>
+
+    <div id="preview-box" class="hidden">
+      <hr>
+      <h3>Preview</h3>
+      <p id="preview-name" class="note"></p>
+      <div id="preview" class="zip-preview"></div>
+    </div>
+  </div>
+</div>
+
+<div id="mode-make" class="hidden">
+  <h3>1. Choose the files</h3>
+
+  <div id="make-drop" class="dropzone" tabindex="0" role="button" aria-label="Choose files to put in an archive">
+    <strong>Drop files here, or click to choose</strong>
+    <span>They are packed in this tab &mdash; nothing is uploaded</span>
+    <input type="file" id="make-input" multiple hidden>
+  </div>
+
+  <p id="make-error" class="error" role="alert"></p>
+
+  <div id="basket" class="hidden">
+    <p id="basket-summary" class="note"></p>
+    <div id="basket-list" class="zip-listing"></div>
+    <p>
+      <button type="button" id="build">Make the ZIP</button>
+      <button type="button" id="basket-clear" class="small">Start again</button>
+      <span id="build-note" class="note"></span>
+    </p>
+    <div id="make-output"></div>
+  </div>
+</div>
+
+<hr>
+
+<h3>The honest notes</h3>
+<ul class="plain">
+  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The archive is read from disk into this tab and anything you extract is written back out of it.</li>
+  <li><strong>The list costs nothing.</strong> A ZIP keeps an index of its contents at the end of the file, so what is in a 500&nbsp;MB archive can be shown without unpacking any of it. Only the files you actually ask for are decompressed.</li>
+  <li><strong>A path inside an archive is not to be trusted.</strong> Nothing in the format stops a file being named <code>../../../.ssh/authorized_keys</code>, and extractors that join that to a folder without checking write outside it — an old bug that still catches people. Names are flattened to their last part here, so an entry cannot choose where it lands, and the page says when an archive contains one.</li>
+  <li><strong>It reads ordinary ZIPs and says so when it cannot.</strong> Stored and deflated entries, which is what every normal archive contains. It does <em>not</em> read password-protected entries, ZIP64 archives (over four gigabytes or 65,535 files), or the rarer compressions like bzip2 and LZMA — and it names which of those it hit rather than producing a broken file.</li>
+  <li><strong>RAR and 7z are different formats.</strong> They are not ZIP with a different extension, and nothing here reads them. A <code>.docx</code>, <code>.xlsx</code>, <code>.pptx</code>, <code>.epub</code>, <code>.jar</code> and <code>.apk</code> <em>are</em> ZIPs, and open here fine — which is a good way to see what an Office document is really made of.</li>
+  <li><strong>The compression is the browser's own.</strong> <code>DecompressionStream</code> is built in and is exactly the algorithm ZIP uses, so there is no decompressor here to get wrong and nothing extra to download. The whole tool is under seven kilobytes.</li>
+  <li><strong>It works in memory.</strong> Everything is held in the tab, so a very large archive can run one out of memory. Extracting a few files at a time is the fix.</li>
+</ul>
+
+<hr>
+
+<p class="footer">
+Hosted on Cloudflare &middot; Made with spite for bloat<br>
+<a href="/inspect.html">inspect a file</a> |
+<a href="/convert.html">pdf to word</a> |
+<a href="/sheet.html">excel to csv</a> |
+<a href="/image.html">image tools</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+</div>
+<script src="/zip-page.js"></script>
+</body>
+</html>

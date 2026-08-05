@@ -122,6 +122,18 @@ export const VENDORED_LIBS = [
    * ffmpeg. The pre-bundled ESM build is used rather than the module tree so
    * there is a single file to serve under script-src 'self'. */
   { pkg: 'mediabunny', from: 'dist/bundles/mediabunny.min.mjs', to: 'public/vendor/mediabunny/mediabunny.min.mjs' },
+  /* OpenPGP.js, for the encryption tools.
+   *
+   * The one place on this site where writing it out would be irresponsible
+   * rather than admirable. A GIF encoder that is subtly wrong produces a
+   * visibly broken picture; a cipher that is subtly wrong produces something
+   * that looks encrypted and is not, and the person holding it has no way to
+   * tell. This is the implementation the rest of the world reviews.
+   *
+   * LGPL-3.0, served unmodified as its own file rather than bundled into ours,
+   * which is what that licence asks for. It needs no eval and no worker —
+   * measured against the real policy, not assumed. */
+  { pkg: 'openpgp', from: 'dist/openpgp.min.mjs', to: 'public/vendor/openpgp/openpgp.min.mjs' },
 ];
 
 /**
@@ -158,6 +170,10 @@ export function libheifVersion() {
   return require('libheif-js/package.json').version;
 }
 
+export function openpgpVersion() {
+  return JSON.parse(readFileSync(join(packageRoot('openpgp'), 'package.json'), 'utf8')).version;
+}
+
 export function mediabunnyVersion() {
   return JSON.parse(readFileSync(join(packageRoot('mediabunny'), 'package.json'), 'utf8')).version;
 }
@@ -181,7 +197,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const kb = statSync(libTarget(spec)).size / 1024;
     console.log(`${spec.to.padEnd(32)} ${kb.toFixed(0)} KB`);
   }
-  console.log(`pdf.js ${pdfjsVersion()} · libheif-js ${libheifVersion()} · mediabunny ${mediabunnyVersion()}`);
+  console.log(`pdf.js ${pdfjsVersion()} · libheif-js ${libheifVersion()} · mediabunny ${mediabunnyVersion()} · openpgp ${openpgpVersion()}`);
   // Touched only to prove the files are readable after copying.
   readFileSync(vendoredPath(VENDORED[0]), 'utf8');
 }

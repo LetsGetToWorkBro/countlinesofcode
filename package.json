@@ -23,6 +23,7 @@
     "esbuild": "^0.28.1",
     "libheif-js": "^1.19.8",
     "mediabunny": "^1.52.3",
+    "openpgp": "^6.3.1",
     "tesseract.js": "^7.0.0",
     "tesseract.js-core": "^6.1.2",
     "typescript": "^5.7.3",

@@ -591,3 +591,52 @@ img.gif-result {
   border: 1px solid #808080;
   background: #ffffff;
 }
+
+/* --------------------------------------------------------- the ZIP tool */
+
+/* A file listing, monospaced so sizes line up, and scrollable because an
+   archive can hold thousands of entries. */
+.zip-listing {
+  border: 1px solid #808080;
+  max-height: 460px;
+  overflow: auto;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+}
+
+.zip-row {
+  display: grid;
+  grid-template-columns: auto 1fr 70px 80px 52px;
+  gap: 8px;
+  align-items: center;
+  padding: 2px 6px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.zip-row:nth-child(even) { background: #f6f6f6; }
+.zip-row.is-folder { color: #555555; grid-template-columns: 1fr; font-style: italic; }
+.zip-row.is-locked { color: #8a0000; }
+
+.zip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zip-kind { color: #555555; }
+.zip-size { text-align: right; }
+.zip-view { text-align: right; }
+
+/* The preview pane: text as-is, images fitted. */
+.zip-preview {
+  border: 1px solid #808080;
+  background: #ffffff;
+  max-height: 400px;
+  overflow: auto;
+  padding: 6px 8px;
+}
+
+.zip-preview pre {
+  margin: 0;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+img.zip-image { max-width: 100%; display: block; }

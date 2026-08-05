@@ -24,3 +24,4 @@ export declare function libTarget(spec: LibSpec): string;
 export declare function pdfjsVersion(): string;
 export declare function libheifVersion(): string;
 export declare function mediabunnyVersion(): string;
+export declare function openpgpVersion(): string;

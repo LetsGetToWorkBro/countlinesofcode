@@ -52,6 +52,11 @@ export const BUNDLES = [
     banner: '/* LOC.1999 PDF editor engine. Built from src/client/pdfedit.ts — do not edit. Bundles pdf-lib (MIT). */',
   },
   {
+    entry: 'src/client/zipkit.ts',
+    outfile: 'public/zipkit.js',
+    banner: '/* LOC.1999 archive engine. Built from src/client/zipkit.ts — do not edit. */',
+  },
+  {
     // The planner only. mediabunny itself is served from /vendor as a module,
     // because it is 600 KB and the page loads it after a file is opened.
     entry: 'src/client/video.ts',
