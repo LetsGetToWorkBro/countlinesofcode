@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What Is Hidden In This File? — LOC.1999</title>
+<meta name="description" content="Check what a PDF or Word document is quietly carrying before you send it: hidden text under black boxes, tracked changes, comments, author names, company, timezone. Runs entirely in your browser — the file is never uploaded.">
+<link rel="canonical" href="https://1999loc.com/inspect.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="What Is Hidden In This File? — LOC.1999">
+<meta property="og:description" content="Before you send that file, see what is in it that you did not mean to send — including text under black boxes that can still be copied.">
+<meta property="og:url" content="https://1999loc.com/inspect.html">
+<meta property="og:site_name" content="LOC.1999">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<!--
+  EXPECTED LAYOUT (single column, ~680px, left aligned):
+
+    LOC.1999
+    Small tools. No accounts. Nothing leaves your browser.
+    ------------------------------------------------------------
+    count code | golf | pdf | convert | inspect | images | delete posts
+    ------------------------------------------------------------
+    WHAT IS HIDDEN IN THIS FILE?
+    [ Open a PDF or Office file... ]
+    +--------------------------------------------------+
+    | !! 2 pieces of text you cannot see but can copy  |
+    | !  The author's name is in the file              |
+    | ok No tracked changes left in it                 |
+    +--------------------------------------------------+
+    ------------------------------------------------------------
+-->
+<div id="page">
+
+<h1><a href="/">LOC.1999</a></h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<a href="/code.html">count code</a>
+|
+<a href="/golf">golf</a>
+|
+<a href="/sign.html">pdf</a>
+|
+<a href="/convert.html">convert</a>
+|
+<strong>inspect</strong>
+|
+<a href="/image.html">images</a>
+|
+<a href="https://delete.1999loc.com/">delete posts</a>
+</p>
+<hr>
+
+<h2>What is hidden in this file?</h2>
+<p class="tagline">Check a document before you send it. Your file never leaves this tab.</p>
+
+<p class="note">
+People attach files all day without ever looking inside them. A PDF names the
+software and the operating system that made it, and stamps itself with a
+timezone. A Word document keeps who last saved it, how long it was worked on,
+usually the company name, and &mdash; routinely &mdash; tracked changes and
+comments that were never accepted or deleted, only hidden from view.
+</p>
+
+<div class="notice-box">
+<p><strong>The one that has ended careers: text you cannot see but anyone can copy.</strong></p>
+<p class="note">
+Drawing a black rectangle over a name does not remove it. Setting text to white
+on a white page does not remove it. Putting a picture on top of it does not
+remove it. In all three cases the words are still in the file, and they come
+straight out of a copy-paste. Governments, law firms and newspapers have been
+publishing documents like this for twenty years.
+</p>
+<p class="note">
+So this renders every page and, for each piece of text the file will hand over,
+asks a simple question: <em>can you actually see it?</em> Text that is present
+but invisible is text somebody believed they had removed. That catches all three
+tricks at once, without needing to know which one was used.
+</p>
+</div>
+
+<hr>
+
+<h3>1. Open a file</h3>
+
+<div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open a PDF or Office file">
+  <strong>Drop a PDF, .docx, .xlsx or .pptx here, or click to choose</strong>
+  <span>Nothing is uploaded &mdash; it is opened inside this tab</span>
+  <input type="file" id="file-input" accept="application/pdf,.pdf,.docx,.xlsx,.pptx" hidden>
+</div>
+
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<p id="error" class="error" role="alert"></p>
+
+<div id="report" class="hidden">
+  <hr>
+  <h3>2. What it found</h3>
+  <p id="summary"></p>
+  <div id="leaks"></div>
+  <div id="clean-box">
+    <h3>Checks that came back clean</h3>
+    <ul id="clean" class="plain"></ul>
+  </div>
+</div>
+
+<hr>
+
+<h3>The honest notes</h3>
+<ul class="plain">
+  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. A tool that checks your document for leaks and then uploads your document would be a poor joke.</li>
+  <li><strong>Finding nothing is not a guarantee.</strong> This checks the things that leak in practice, and it lists exactly which checks it ran. It cannot promise a file is safe &mdash; no tool can &mdash; only tell you what it looked for and what it saw.</li>
+  <li><strong>The invisible-text check works from the rendered page.</strong> Every piece of extractable text is compared against the pixels where it should appear. Nearly-flat pixels mean nothing is visible there. That is why it catches black boxes, white-on-white and covered-by-image alike &mdash; but it means a page it cannot render is a page it cannot check.</li>
+  <li><strong>It errs towards silence.</strong> The threshold is set well clear of ordinary text, because a tool that flags every normal document is one you learn to ignore. Very small or very faint text could in principle slip past.</li>
+  <li><strong>Metadata is not always bad.</strong> A creation date on a public report is fine. The point is knowing it is there before you decide.</li>
+  <li><strong>To fix what it finds:</strong> delete text properly with the <a href="/sign.html">PDF editor</a>, which removes the instruction that drew it rather than covering it over. For Office files, accept or reject tracked changes and delete comments in Word before sending.</li>
+</ul>
+
+<hr>
+
+<p class="footer">
+Hosted on Cloudflare &middot; Made with spite for bloat<br>
+<a href="/sign.html">edit a pdf</a> |
+<a href="/convert.html">pdf to word</a> |
+<a href="/unlock.html">unlock a pdf</a> |
+<a href="/image.html">image tools</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+</div>
+<script src="/inspect-page.js"></script>
+</body>
+</html>

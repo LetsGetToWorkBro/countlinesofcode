@@ -448,3 +448,32 @@ button.remove {
 .doc-preview .pv-i4 { margin-left: 56px; }
 .doc-preview .pv-i5 { margin-left: 70px; }
 .doc-preview .pv-i6 { margin-left: 84px; }
+
+/* The leak audit. Severity is carried by the word, not only the colour. */
+.leak {
+  border-left: 4px solid #808080;
+  padding: 4px 0 4px 9px;
+  margin: 10px 0;
+}
+
+.leak-high { border-left-color: #cc0000; }
+.leak-medium { border-left-color: #aa5500; }
+.leak-low { border-left-color: #808080; }
+
+.leak-head { margin: 2px 0; }
+
+.sev {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  border: 1px solid #000000;
+  padding: 0 4px;
+  vertical-align: middle;
+}
+
+.sev-high { background: #ffdddd; color: #8a0000; }
+.sev-medium { background: #fff2d8; color: #8a3b00; }
+.sev-low { background: #eeeeee; color: #333333; }
+
+.leak-advice { color: #000080; }
+
+#clean .good { color: #145214; font-size: 14px; }

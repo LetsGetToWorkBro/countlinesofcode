@@ -15,6 +15,8 @@
 
 import { describe, docText, tidy, type Doc, type Verdict } from './docmodel';
 import { readDocx, writeDocx } from './docx';
+import { inspectOoxml, inspectPdf, looksHidden, patchStats, pdfFeaturesFromBytes, textBox } from './inspect';
+import { unzip } from './zip';
 import { writePdf } from './docpdf';
 import {
   DEFAULT_HEADING_RATIO,
@@ -211,4 +213,13 @@ globalScope.LOC1999_CONVERT = {
   allProfiles,
   profileKey,
   DEFAULT_HEADING_RATIO,
+  // The leak audit shares this bundle: it needs the same ZIP reader and runs on
+  // the same two file types, so a visitor who opens one has the other already.
+  inspectPdf,
+  inspectOoxml,
+  pdfFeaturesFromBytes,
+  patchStats,
+  looksHidden,
+  textBox,
+  unzip,
 };
