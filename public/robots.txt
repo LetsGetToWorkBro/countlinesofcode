@@ -1,4 +1,4 @@
-# LOC.1999 — https://1999loc.com
+# 1999.LOC — https://1999loc.com
 #
 # Crawl the pages. The API is machine-readable already and indexing it just
 # wastes crawl budget on JSON, so it is off limits.

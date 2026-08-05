@@ -1,4 +1,4 @@
-/* LOC.1999 unlock tool. Vanilla JS, no build step.
+/* 1999.LOC unlock tool. Vanilla JS, no build step.
  *
  * Removes an owner restriction (no-print/no-copy) by opening the PDF with
  * pdf.js — which decrypts it to render — and rebuilding it as a fresh, entirely
@@ -54,7 +54,7 @@
               ? 'That password was not right. Try again, or Cancel:'
               : 'This PDF needs a password to open. It stays in your browser:',
           );
-          if (entered === null) throw new Error('Cancelled — this PDF needs its open password.');
+          if (entered === null) throw new Error('Cancelled. This PDF needs its open password.');
           return attempt(entered);
         }
         throw err;

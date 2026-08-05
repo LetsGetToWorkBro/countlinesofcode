@@ -1,5 +1,5 @@
 #
-# LOC.1999 — Cloudflare Worker (API) + static assets (the 1999 UI).
+# 1999.LOC — Cloudflare Worker (API) + static assets (the 1999 UI).
 #
 # The `[assets]` block is Cloudflare's current static-hosting story (it is what
 # Pages became). Static files in ./public are served straight from the edge;

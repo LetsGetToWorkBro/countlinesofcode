@@ -88,9 +88,9 @@ describe('the toolkit bar', () => {
     for (const path of STATIC_PAGES) {
       const html = readFileSync(path, 'utf8');
       if (path.endsWith('index.html')) {
-        expect(html, 'the landing page should not link its own wordmark').toContain('<h1>LOC.1999</h1>');
+        expect(html, 'the landing page should not link its own wordmark').toContain('<h1>1999.LOC</h1>');
       } else {
-        expect(html, `${path} has no way back to the landing page`).toContain('<h1><a href="/">LOC.1999</a></h1>');
+        expect(html, `${path} has no way back to the landing page`).toContain('<h1><a href="/">1999.LOC</a></h1>');
       }
     }
   });

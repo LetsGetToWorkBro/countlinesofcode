@@ -1,4 +1,4 @@
-/* LOC.1999 file inspector. Vanilla JS, no build step.
+/* 1999.LOC file inspector. Vanilla JS, no build step.
  *
  * Loaded on first file open, both from this origin:
  *   /vendor/pdf.min.mjs  — pdf.js, to render pages and list their text

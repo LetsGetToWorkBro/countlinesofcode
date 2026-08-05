@@ -1,4 +1,4 @@
-# Deploying LOC.1999 from scratch
+# Deploying 1999.LOC from scratch
 
 Start-to-finish, assuming nothing is installed and the repository is not on your
 machine. Roughly five minutes, most of it waiting for two browser logins.
@@ -110,7 +110,7 @@ Set a token.
 
 1. Go to <https://github.com/settings/tokens>
 2. **Generate new token** → **Generate new token (classic)**
-3. Note: `LOC.1999`. Expiration: 90 days (or whatever you prefer).
+3. Note: `1999.LOC`. Expiration: 90 days (or whatever you prefer).
 4. **Tick no scopes at all.** For public repositories, being authenticated is the
    entire benefit — scopes would only add risk.
 5. **Generate token**, then copy the `ghp_…` value. GitHub shows it exactly once.

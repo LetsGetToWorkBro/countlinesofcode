@@ -1,5 +1,5 @@
 /**
- * LOC.1999 Worker.
+ * 1999.LOC Worker.
  *
  * Routes:
  *   POST /api/count                       { url | owner+repo, ref?, ... } -> result

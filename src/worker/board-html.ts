@@ -52,8 +52,8 @@ export function boardPageHtml(
 ): string {
   const leader = boards.find((b) => b.id === 'biggest')?.rows[0];
   const shareText = leader
-    ? `${leader.owner}/${leader.repo} is the biggest thing anyone has counted on LOC.1999: ${leader.lines.toLocaleString('en-US')} lines.`
-    : 'Every repository counted on LOC.1999, ranked by things that should not matter.';
+    ? `${leader.owner}/${leader.repo} is the biggest thing anyone has counted on 1999.LOC: ${leader.lines.toLocaleString('en-US')} lines.`
+    : 'Every repository counted on 1999.LOC, ranked by things that should not matter.';
   const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(`${origin}/board`)}`;
 
   // Six identical "nothing here yet" tables read as a broken page. Before
@@ -70,14 +70,14 @@ export function boardPageHtml(
     .join('\n');
 
   return page(
-    'The Standings — repositories counted on LOC.1999',
+    'The Standings: repositories counted on 1999.LOC',
     `<h1>The Standings</h1>
 <p class="tagline">Everything counted here, ranked by things that should not matter.</p>
 ${siteNav('golf')}
 
 <p>
 Only repositories somebody actually counted on this site appear below, and every
-number comes from the counter itself &mdash; nothing here depends on how popular
+number comes from the counter itself, and nothing here depends on how popular
 a repository is. A twelve-line project with no stars can top a board on the day
 it is written.
 </p>
@@ -86,8 +86,8 @@ ${num(counted)} repositories counted so far. Forks are excluded. Counting one on
 <a href="/code.html">counter page</a> adds it; calling the API does not.
 </p>
 <p>
-For rankings that actually mean something, see <a href="/golf">the golf course</a>
-&mdash; there every entry is solving the same stated problem, so the line count is
+For rankings that actually mean something, see <a href="/golf">the golf course</a>,
+where every entry is solving the same stated problem, so the line count is
 worth arguing about.
 </p>
 
@@ -104,14 +104,14 @@ ${recentRows || '<tr><td colspan="3">Nothing yet.</td></tr>'}
 <p class="note">
 Numbers come from the same counter as everything else here: pinned to a commit,
 same rules for everyone, <a href="/how.html">documented</a>. Repositories too large
-for the server are counted in your browser and are not ranked &mdash; the server
+for the server are counted in your browser and are not ranked: the server
 never sees those numbers, and it will not rank what it cannot verify.
 </p>
 <p><a href="${escapeHtml(shareUrl)}">Post the standings</a></p>
 ${siteFooter()}`,
     {
       description:
-        'Every GitHub repository counted on LOC.1999, ranked by sheer size, average ' +
+        'Every GitHub repository counted on 1999.LOC, ranked by sheer size, average ' +
         'file length, comment ratio and how much of it nobody actually wrote.',
       canonical: `${origin}/board`,
     },

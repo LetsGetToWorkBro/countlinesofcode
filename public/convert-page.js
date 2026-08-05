@@ -1,4 +1,4 @@
-/* LOC.1999 PDF <-> Word page. Vanilla JS, no build step.
+/* 1999.LOC PDF <-> Word page. Vanilla JS, no build step.
  *
  * Loaded on first file open, both from this origin:
  *   /vendor/pdf.min.mjs  — pdf.js, to read PDFs and their structure trees
@@ -263,13 +263,13 @@
       var c = source.conversion.counts;
       countsEl.innerHTML = '<strong>Read from the picture:</strong> ' + c.paragraphs + ' paragraph' +
         (c.paragraphs === 1 ? '' : 's') + ', ' + c.words.toLocaleString() + ' words' +
-        (doc.numPages > total ? ' — the first ' + total + ' of ' + doc.numPages + ' pages.' : '.');
+        (doc.numPages > total ? ', from the first ' + total + ' of ' + doc.numPages + ' pages.' : '.');
       showVerdict({
         confidence: 'medium',
         summary: 'The text was read off the picture. It is usually good on a clean scan and poor on a bad one.',
         findings: [
           { label: 'Every word came from optical recognition, so proofread it', good: false },
-          { label: 'Layout, tables and columns are not recovered — you get the words in order', good: false },
+          { label: 'Layout, tables and columns are not recovered: you get the words in order', good: false },
           { label: 'Nothing was uploaded: the reader runs in this tab like everything else', good: true },
         ],
       });
@@ -309,7 +309,7 @@
       ', ' + c.lists + ' list item' + (c.lists === 1 ? '' : 's') +
       ', ' + c.tables + ' table' + (c.tables === 1 ? '' : 's') +
       ', ' + c.words.toLocaleString() + ' words' +
-      (conversion.tier === 'tags' ? ' — read from the file’s own structure.' : ' — worked out from the layout.') +
+      (conversion.tier === 'tags' ? ', read from the file’s own structure.' : ', worked out from the layout.') +
       (profile.corrections
         ? ' <em>Using ' + profile.corrections + ' correction' + (profile.corrections === 1 ? '' : 's') +
           ' you made for documents from this source.</em>'
@@ -445,13 +445,13 @@
     if (source.kind !== 'pdf') {
       work = engine.writePdf(source.doc).then(function (out) {
         offer(out, baseName(source.name) + '.pdf', 'application/pdf');
-        resultEl.innerHTML = '<strong>Converted to PDF.</strong> The text is real text — you can select and search it.';
+        resultEl.innerHTML = '<strong>Converted to PDF.</strong> The text is real text: you can select and search it.';
       });
     } else if ($('target-format').value === 'epub') {
       work = engine.writeEpub(source.conversion.doc, { title: source.input.title || baseName(source.name) })
         .then(function (out) {
           offer(out, baseName(source.name) + '.epub', 'application/epub+zip');
-          resultEl.innerHTML = '<strong>Converted to EPUB.</strong> Send it to a phone or e-reader — the text re-flows to the screen.';
+          resultEl.innerHTML = '<strong>Converted to EPUB.</strong> Send it to a phone or e-reader; the text re-flows to the screen.';
         });
     } else {
       work = engine.writeDocx(source.conversion.doc).then(function (out) {

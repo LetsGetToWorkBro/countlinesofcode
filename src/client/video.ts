@@ -643,7 +643,7 @@ export function judgeTarget(plan: Plan, info: MediaInfo, fit: FormatFit): Target
       verdict: 'already',
       bitrate: info.video.bitrate ?? 0,
       bpp: 0,
-      advice: `It already fits — about ${formatBytes(copySize(plan, info))}. Nothing is re-encoded.`,
+      advice: `It already fits: about ${formatBytes(copySize(plan, info))}. Nothing is re-encoded.`,
     };
   }
 
@@ -694,7 +694,7 @@ export function judgeTarget(plan: Plan, info: MediaInfo, fit: FormatFit): Target
     bitrate,
     bpp,
     advice: better
-      ? `At this size that is far too little to look like anything. Drop to ${better.label} and it becomes watchable — a sharp small picture beats a smeared large one.`
+      ? `At this size that is far too little to look like anything. Drop to ${better.label} and it becomes watchable: a sharp small picture beats a smeared large one.`
       : 'That is far too little for a picture this size. Shorten the clip or accept a blurry result.',
     ...(better ? { suggestHeight: better.height } : {}),
   };
@@ -1018,8 +1018,8 @@ export function explainPlan(
       // The one honest cost of a copied cut, named in seconds rather than left
       // for someone to discover in the output.
       notes.push(
-        `It will start at ${formatTime(cut.at)} rather than ${formatTime(plan.start ?? 0)} — ` +
-          `${cut.drift.toFixed(1)}s earlier — because that is the last keyframe before your start point, ` +
+        `It will start at ${formatTime(cut.at)} rather than ${formatTime(plan.start ?? 0)}, ` +
+          `${cut.drift.toFixed(1)}s earlier, because that is the last keyframe before your start point, ` +
           'and a copy has nothing to describe its first frame against otherwise.',
       );
       offerExact = true;
@@ -1050,7 +1050,7 @@ export function explainPlan(
   else if (copyAudio) notes.push('The sound is copied across untouched.');
 
   return {
-    headline: copyVideo ? 'Copied, not re-encoded — no quality is lost' : 'Re-encoded',
+    headline: copyVideo ? 'Copied, not re-encoded: no quality is lost' : 'Re-encoded',
     lossless: copyVideo && (copyAudio || !info.audio || Boolean(plan.mute)),
     notes,
     offerExact,
@@ -1067,15 +1067,15 @@ export function describeEstimate(plan: Plan, info: MediaInfo, fit: FormatFit): s
   const bytes = estimateBytes(plan, info, fit);
   const from = ` (from ${formatBytes(info.size)})`;
   if (plan.targetBytes && !targetAlreadyMet(plan, info)) {
-    return `at most ${formatBytes(bytes)}${from} — aimed at, not guessed`;
+    return `at most ${formatBytes(bytes)}${from} (aimed at, not guessed)`;
   }
   if (findFormat(plan.formatId)?.kind === 'gif') {
     // Only the part of each frame that moved is encoded, so the figure is a
     // ceiling that full-frame motion approaches and a static shot falls far
     // under. Calling it an estimate would be understating how loose it is.
-    return `up to ${formatBytes(bytes)}${from} — a still scene comes in far under`;
+    return `up to ${formatBytes(bytes)}${from} (a still scene comes in far under)`;
   }
-  return `roughly ${formatBytes(bytes)}${from} — an estimate, not a promise`;
+  return `roughly ${formatBytes(bytes)}${from} (an estimate, not a promise)`;
 }
 
 /**

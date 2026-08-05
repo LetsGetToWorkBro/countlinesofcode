@@ -1,4 +1,4 @@
-/* LOC.1999 PDF page arranger. Vanilla JS, no build step.
+/* 1999.LOC PDF page arranger. Vanilla JS, no build step.
  *
  * Loaded on first file open, both from this origin:
  *   /vendor/pdf.min.mjs — pdf.js, to draw the thumbnails
@@ -130,7 +130,7 @@
     var counts = engine.countByDoc(pages, sources.length);
     $('sources').textContent = sources.map(function (s, i) {
       return s.name + ' (' + counts[i] + (counts[i] === 1 ? ' page' : ' pages') + ')';
-    }).join(' · ') + ' — ' + pages.length + (pages.length === 1 ? ' page in all' : ' pages in all');
+    }).join(' · ') + ', ' + pages.length + (pages.length === 1 ? ' page in all' : ' pages in all');
   }
 
   // ----------------------------------------------------------- thumbnails

@@ -1,4 +1,4 @@
-/* LOC.1999 spreadsheet page. Vanilla JS, no build step.
+/* 1999.LOC spreadsheet page. Vanilla JS, no build step.
  *
  * Loads /sheetkit.js on first file open — an .xlsx is a ZIP of XML and the
  * browser's own deflate does the compression, so there is no engine to fetch

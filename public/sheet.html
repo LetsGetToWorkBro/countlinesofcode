@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Convert Excel to CSV and CSV to Excel in Your Browser — LOC.1999</title>
-<meta name="description" content="Convert an .xlsx spreadsheet to CSV, or a CSV to Excel, without uploading it. Handles semicolons, quoted fields and leading zeros — a postcode stays a postcode.">
+<title>Convert Excel to CSV and CSV to Excel in Your Browser | 1999.LOC</title>
+<meta name="description" content="Convert an .xlsx spreadsheet to CSV, or a CSV to Excel, without uploading it. Handles semicolons, quoted fields and leading zeros, so a postcode stays a postcode.">
 <link rel="canonical" href="https://1999loc.com/sheet.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Convert Excel to CSV and CSV to Excel in Your Browser — LOC.1999">
+<meta property="og:title" content="Convert Excel to CSV and CSV to Excel in Your Browser | 1999.LOC">
 <meta property="og:description" content="Excel ↔ CSV in your browser. Nothing uploaded, and it will not turn your postcodes into numbers.">
 <meta property="og:url" content="https://1999loc.com/sheet.html">
-<meta property="og:site_name" content="LOC.1999">
+<meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -20,7 +20,7 @@
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
-    LOC.1999
+    1999.LOC
     ------------------------------------------------------------
     count code | golf | pdf | convert | inspect | sheets | images | delete posts
     ------------------------------------------------------------
@@ -35,7 +35,7 @@
 -->
 <div id="page">
 
-<h1><a href="/">LOC.1999</a></h1>
+<h1><a href="/">1999.LOC</a></h1>
 <p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
 
 <hr>
@@ -79,7 +79,7 @@ The classic way a spreadsheet tool destroys data is by being clever: it sees
 <code>007</code> and stores 7, sees <code>SW1A 1AA</code> and mangles it, sees a
 date and reformats it to whatever locale it feels like. Anything with a leading
 zero is treated as text here, because a value that starts with a zero is nearly
-always an identifier &mdash; an account, a phone number, a postcode &mdash; and
+always an identifier (an account, a phone number, a postcode) and
 never a quantity.
 </p>
 <p class="note">
@@ -95,7 +95,7 @@ semicolon-separated exports that most of Europe produces work without a setting.
 
 <div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open a spreadsheet or CSV">
   <strong>Drop a .xlsx or .csv here, or click to choose</strong>
-  <span>Nothing is uploaded &mdash; it is opened inside this tab</span>
+  <span>Nothing is uploaded; it is opened inside this tab</span>
   <input type="file" id="file-input" accept=".xlsx,.csv,.tsv,text/csv" hidden>
 </div>
 

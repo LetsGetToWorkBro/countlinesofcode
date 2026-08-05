@@ -597,7 +597,7 @@ export function planGif(
 
   let warning: string | undefined;
   if (bytes > 50 * 1024 * 1024) {
-    warning = 'That is enormous. GIF stores every frame as a separate image, so it cannot compress motion — shorten the clip, drop the width, or use fewer frames a second.';
+    warning = 'That is enormous. GIF stores every frame as a separate image, so it cannot compress motion. Shorten the clip, drop the width, or use fewer frames a second.';
   } else if (bytes > 12 * 1024 * 1024) {
     warning = 'Big for a GIF. Most places that accept GIFs refuse anything over a few megabytes.';
   } else if (clipSeconds > 30) {

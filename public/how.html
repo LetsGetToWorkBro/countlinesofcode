@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>How We Count Lines of Code — LOC.1999</title>
-<meta name="description" content="Methodology: how LOC.1999 counts lines of code, what it skips, and where it is imprecise.">
+<title>How We Count Lines of Code | 1999.LOC</title>
+<meta name="description" content="Methodology: how 1999.LOC counts lines of code, what it skips, and where it is imprecise.">
 <link rel="canonical" href="https://1999loc.com/how.html">
 <meta property="og:type" content="article">
-<meta property="og:title" content="How We Count Lines of Code — LOC.1999">
-<meta property="og:description" content="Methodology: how LOC.1999 counts lines of code, what it skips, and where it is imprecise.">
+<meta property="og:title" content="How We Count Lines of Code | 1999.LOC">
+<meta property="og:description" content="Methodology: how 1999.LOC counts lines of code, what it skips, and where it is imprecise.">
 <meta property="og:url" content="https://1999loc.com/how.html">
-<meta property="og:site_name" content="LOC.1999">
+<meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -19,7 +19,7 @@
 <body>
 <div id="page">
 
-<h1><a href="/">LOC.1999</a></h1>
+<h1><a href="/">1999.LOC</a></h1>
 <p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
 
 <hr>
@@ -66,8 +66,8 @@ count actual lines.
 <p>
 Your input is resolved to a repository, then to a ref (your branch/tag/sha, or the default branch),
 then to a single 40-character commit sha. Everything after that is computed against that sha, and the
-sha is displayed with the result. Two people counting the same sha get the same numbers, forever
-&mdash; that is what the <code>counter_version</code> field is for: it changes when the algorithm
+sha is displayed with the result. Two people counting the same sha get the same numbers, forever.
+That is what the <code>counter_version</code> field is for: it changes when the algorithm
 changes, so cached results can never silently mean something different.
 </p>
 
@@ -77,19 +77,19 @@ We list the repository with the Git Trees API (<code>?recursive=1</code>) and dr
 fetching anything. A file is skipped when it is:
 </p>
 <ul class="plain">
-  <li><strong>vendored / build output</strong> &mdash; any path with a segment such as
+  <li><strong>vendored / build output</strong>: any path with a segment such as
     <code>node_modules</code>, <code>vendor</code>, <code>third_party</code>, <code>dist</code>,
     <code>build</code>, <code>target</code>, <code>.next</code>, <code>venv</code>,
     <code>__pycache__</code>, <code>Pods</code>, <code>coverage</code> and friends;</li>
-  <li><strong>generated</strong> &mdash; minified bundles (<code>*.min.js</code>,
+  <li><strong>generated</strong>: minified bundles (<code>*.min.js</code>,
     <code>*.min.css</code>), source maps, protobuf/codegen output (<code>*.pb.go</code>,
     <code>*_pb2.py</code>, <code>*.g.dart</code>, <code>*_generated.ts</code>&hellip;), snapshot
     files, and <strong>lockfiles</strong>;</li>
-  <li><strong>binary</strong> &mdash; by extension (images, fonts, archives, objects, model weights,
+  <li><strong>binary</strong>: by extension (images, fonts, archives, objects, model weights,
     databases&hellip;) and then again by content: a NUL byte or a high proportion of control bytes in
     the first 8&nbsp;KiB means binary;</li>
-  <li><strong>too large</strong> &mdash; above the per-file cap (4&nbsp;MiB by default);</li>
-  <li><strong>symlinks and submodules</strong> &mdash; they are pointers, not code.</li>
+  <li><strong>too large</strong>: above the per-file cap (4&nbsp;MiB by default);</li>
+  <li><strong>symlinks and submodules</strong>: they are pointers, not code.</li>
 </ul>
 <p class="note">
 Lockfile policy: <strong>lockfiles are skipped by default</strong> and reported under
@@ -104,7 +104,7 @@ counted as data, with every non-blank line as code. The same applies to
 <p>Each line lands in exactly one bucket, so <code>lines = code + comment + blank</code>:</p>
 <table>
 <tbody>
-<tr><th scope="row">blank</th><td>Nothing but whitespace &mdash; including blank lines inside a block comment (this matches <code>cloc</code>).</td></tr>
+<tr><th scope="row">blank</th><td>Nothing but whitespace, including blank lines inside a block comment (this matches <code>cloc</code>).</td></tr>
 <tr><th scope="row">comment</th><td>Non-blank, and every non-whitespace character on it was inside a comment.</td></tr>
 <tr><th scope="row">code</th><td>Anything else. A line with code <em>and</em> a trailing comment counts as code.</td></tr>
 </tbody>
@@ -120,7 +120,7 @@ template-literal <code>${&hellip;}</code> interpolation, including templates nes
 </p>
 <p class="note">
 Checked against <code>cloc</code> over a ~30,000 line corpus: 125 of 127 files matched exactly on
-code/comment/blank, and both disagreements were cases where <code>cloc</code> is wrong &mdash; a
+code/comment/blank, and both disagreements were cases where <code>cloc</code> is wrong: a
 regex literal containing <code>/*</code>, and comment markers inside a string literal.
 </p>
 
@@ -138,7 +138,7 @@ CoffeeScript, Visual Basic, Pascal, Markdown, and more.
 <p class="note">
 JSON, CSV, plain text, <code>.env</code>, ignore files, checksum files, diffs, reStructuredText,
 AsciiDoc, TeX, Jupyter notebooks and unrecognised extensions are counted as <strong>blank vs
-non-blank only</strong> &mdash; every non-blank line is reported as code, comments as zero. Every
+non-blank only</strong>: every non-blank line is reported as code, comments as zero. Every
 result page lists exactly which languages this applied to. We would rather say &ldquo;we did not
 detect comments here&rdquo; than invent a number.
 </p>
@@ -179,8 +179,8 @@ say so in the result and enumerate from the archive instead, so totals stay comp
 <h2>6. Big repositories</h2>
 <p>
 Counting is CPU-bound, and this app runs on Cloudflare Workers, which cap CPU time per request.
-Past a certain size the server refuses up front &mdash; it tells you how much text it found and
-roughly how much CPU that needs &mdash; rather than being cut off mid-count.
+Past a certain size the server refuses up front, telling you how much text it found and
+roughly how much CPU that needs, rather than being cut off mid-count.
 </p>
 <p>
 When that happens the page offers to count it <strong>in your browser</strong> instead. The server
@@ -190,7 +190,7 @@ this server runs. Numbers are identical; there is no second implementation.
 </p>
 <p class="note">
 Trade-offs: the archive downloads to your machine, and the result is not cached or shareable,
-because the server never saw it. We do not accept counts computed elsewhere &mdash; that would let
+because the server never saw it. We do not accept counts computed elsewhere: that would let
 anyone put made-up numbers into the shared cache.
 </p>
 
@@ -207,7 +207,7 @@ re-resolves promptly. Every result is labelled <span class="badge cached">cached
 <p>
 Defaults, visible at <a href="/api/meta">/api/meta</a>: 20,000 files, 64&nbsp;MiB of decoded text,
 4&nbsp;MiB per file, 20 counts per minute per IP for anonymous users. Hitting a cap produces a
-warning on the result &mdash; partial totals are always labelled as partial.
+warning on the result, and partial totals are always labelled as partial.
 </p>
 
 <h2>9. API</h2>

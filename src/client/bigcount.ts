@@ -153,7 +153,7 @@ export async function countArchive(
     languages_without_comment_rules: [...aggregator.languagesWithoutCommentRules].sort(),
     warnings: [
       'Counted in your browser: this repository is larger than the server will process. ' +
-        'Same counting code, same numbers — but the result is not cached or shareable.',
+        'Same counting code, same numbers, but the result is not cached or shareable.',
     ],
     timing: { resolve_ms: 0, tree_ms: 0, fetch_ms: 0, parse_ms: Date.now() - started },
     limits: {

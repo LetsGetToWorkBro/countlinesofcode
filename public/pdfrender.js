@@ -1,4 +1,4 @@
-/* LOC.1999 shared PDF renderer. Vanilla JS, no build step.
+/* 1999.LOC shared PDF renderer. Vanilla JS, no build step.
  *
  * The unlock and shrink tools both do the same core thing: open a PDF with
  * pdf.js (which decrypts a restricted file to render it), turn each page into

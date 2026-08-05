@@ -228,7 +228,7 @@ function parseSheet(xml: string, shared: string[]): Row[] {
 export async function readXlsx(source: Uint8Array): Promise<Workbook> {
   const parts = await unzip(source);
   const workbookXml = entry(parts, 'xl/workbook.xml');
-  if (!workbookXml) throw new Error('That file is a ZIP but not a spreadsheet — it has no xl/workbook.xml.');
+  if (!workbookXml) throw new Error('That file is a ZIP but not a spreadsheet: it has no xl/workbook.xml.');
 
   const decode = (data: Uint8Array | null) => (data ? new TextDecoder().decode(data) : '');
   const shared = parseSharedStrings(decode(entry(parts, 'xl/sharedStrings.xml')));

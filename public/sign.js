@@ -1,4 +1,4 @@
-/* LOC.1999 PDF editor. Vanilla JS, no build step.
+/* 1999.LOC PDF editor. Vanilla JS, no build step.
  *
  * Loaded on first file open, both from this origin:
  *   /vendor/pdf.min.mjs  — pdf.js, to render pages and report where text is
@@ -513,7 +513,7 @@
     var opIndex = info.opOf[index];
     if (opIndex === undefined) {
       fail(
-        'That text cannot be removed cleanly — this document draws it in a way the ' +
+        'That text cannot be removed cleanly: this document draws it in a way the ' +
         'editor cannot tie to a single instruction. Use “black out” for it instead: ' +
         'that flattens the page, but it is certain.',
       );
@@ -723,7 +723,7 @@
       var select = document.createElement('select');
       select.className = 'field-input';
       var blank = document.createElement('option');
-      blank.value = ''; blank.textContent = '—';
+      blank.value = ''; blank.textContent = '-';
       select.appendChild(blank);
       (field.options || []).forEach(function (opt) {
         var o = document.createElement('option');
@@ -976,7 +976,7 @@
         document.querySelector('input[value="stamp"]').checked = true;
         syncTool(); // setting .checked in script does not fire change
         renderSaved();
-        statusEl.textContent = 'Signature ready — click the page to stamp it.';
+        statusEl.textContent = 'Signature ready. Click the page to stamp it.';
       });
     });
     Array.prototype.forEach.call(savedEl.querySelectorAll('[data-drop]'), function (btn) {

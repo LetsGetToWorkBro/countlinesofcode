@@ -1,4 +1,4 @@
-/* LOC.1999 shrink tool. Vanilla JS, no build step.
+/* 1999.LOC shrink tool. Vanilla JS, no build step.
  *
  * Re-renders each page at a chosen resolution and re-compresses it, which is
  * what makes an oversized scan small. The text is laid back over each page
@@ -117,7 +117,7 @@
         ? '<strong>Was ' + bytesLabel(sourceSize) + ' &rarr; now ' + bytesLabel(blob.size) + '</strong> (' +
           pct + '% smaller).'
         : '<strong>No smaller.</strong> Was ' + bytesLabel(sourceSize) + ', this came out ' + bytesLabel(blob.size) +
-          '. This PDF was already efficient &mdash; keep your original.';
+          '. This PDF was already efficient, so keep your original.';
       outputEl.innerHTML = '<ul class="plain"><li><a href="' + url + '" download="' + esc(outName) + '">' +
         esc(outName) + '</a>' + (smaller ? '' : ' <span class="note">(the shrunk version, if you still want it)</span>') +
         '</li></ul>';

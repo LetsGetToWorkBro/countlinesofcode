@@ -34,44 +34,44 @@ export const BUNDLES = [
   {
     entry: 'src/client/bigcount.ts',
     outfile: 'public/bigcount.js',
-    banner: '/* LOC.1999 big-repo counter. Built from src/client/bigcount.ts — do not edit. */',
+    banner: '/* 1999.LOC big-repo counter. Built from src/client/bigcount.ts. Do not edit. */',
   },
   {
     entry: 'src/client/convert.ts',
     outfile: 'public/convert.js',
-    banner: '/* LOC.1999 PDF/Word converter. Built from src/client/convert.ts — do not edit. Bundles pdf-lib (MIT). */',
+    banner: '/* 1999.LOC PDF/Word converter. Built from src/client/convert.ts. Do not edit. Bundles pdf-lib (MIT). */',
   },
   {
     entry: 'src/client/sheetkit.ts',
     outfile: 'public/sheetkit.js',
-    banner: '/* LOC.1999 spreadsheet engine. Built from src/client/sheetkit.ts — do not edit. */',
+    banner: '/* 1999.LOC spreadsheet engine. Built from src/client/sheetkit.ts. Do not edit. */',
   },
   {
     entry: 'src/client/pdfedit.ts',
     outfile: 'public/pdfsign.js',
-    banner: '/* LOC.1999 PDF editor engine. Built from src/client/pdfedit.ts — do not edit. Bundles pdf-lib (MIT). */',
+    banner: '/* 1999.LOC PDF editor engine. Built from src/client/pdfedit.ts. Do not edit. Bundles pdf-lib (MIT). */',
   },
   {
     entry: 'src/client/proof.ts',
     outfile: 'public/proof.js',
-    banner: '/* LOC.1999 proof panel logic. Built from src/client/proof.ts — do not edit. */',
+    banner: '/* 1999.LOC proof panel logic. Built from src/client/proof.ts. Do not edit. */',
   },
   {
     entry: 'src/client/pgpkit.ts',
     outfile: 'public/pgpkit.js',
-    banner: '/* LOC.1999 encryption helpers. Built from src/client/pgpkit.ts — do not edit. The cryptography itself is OpenPGP.js, served from /vendor. */',
+    banner: '/* 1999.LOC encryption helpers. Built from src/client/pgpkit.ts. Do not edit. The cryptography itself is OpenPGP.js, served from /vendor. */',
   },
   {
     entry: 'src/client/zipkit.ts',
     outfile: 'public/zipkit.js',
-    banner: '/* LOC.1999 archive engine. Built from src/client/zipkit.ts — do not edit. */',
+    banner: '/* 1999.LOC archive engine. Built from src/client/zipkit.ts. Do not edit. */',
   },
   {
     // The planner only. mediabunny itself is served from /vendor as a module,
     // because it is 600 KB and the page loads it after a file is opened.
     entry: 'src/client/video.ts',
     outfile: 'public/video.js',
-    banner: '/* LOC.1999 video planner. Built from src/client/video.ts — do not edit. */',
+    banner: '/* 1999.LOC video planner. Built from src/client/video.ts. Do not edit. */',
   },
 ];
 

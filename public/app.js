@@ -1,4 +1,4 @@
-/* LOC.1999 front-end. Vanilla JS, no build step, no dependencies.
+/* 1999.LOC front-end. Vanilla JS, no build step, no dependencies.
  * Progress arrives over Server-Sent Events; if the browser lacks EventSource
  * we fall back to a plain POST and just show a spinner-free "working" line.
  */
@@ -180,7 +180,7 @@
     if (result.strategy === 'browser') {
       html += '<p class="note">Counted locally, so there is no shareable link for this one: ' +
         'the server never saw these numbers. That also keeps it off ' +
-        '<a href="/board">the standings</a> &mdash; nothing is ranked that the ' +
+        '<a href="/board">the standings</a>: nothing is ranked that the ' +
         'server did not count itself.</p>';
     } else {
       var permalink = '/r/' + result.owner + '/' + result.repo + '/' + result.sha;
@@ -193,7 +193,7 @@
           'and out of any challenge. Counting a repository is not publishing it.</p>';
       } else if (result.repo_meta.fork) {
         html += '<p class="note">A fork, so it is listed but not ranked on ' +
-          '<a href="/board">the standings</a>, and cannot enter a challenge &mdash; ' +
+          '<a href="/board">the standings</a>, and cannot enter a challenge, because ' +
           'submitting somebody else\'s solution is not entering.</p>';
       } else if (submittedTo) {
         html += '<p class="note">Entered in <a href="/golf/' + esc(submittedTo.id) + '">' +
@@ -210,7 +210,7 @@
     if (result.strategy !== 'browser' && window.history && window.history.replaceState) {
       window.history.replaceState({}, '', '/r/' + result.owner + '/' + result.repo + '/' + result.sha);
     }
-    document.title = 'LOC.1999 - ' + result.full_name + ' - ' + num(t.code) + ' lines of code';
+    document.title = '1999.LOC - ' + result.full_name + ' - ' + num(t.code) + ' lines of code';
   }
 
   function row(label, value, extra) {
@@ -397,7 +397,7 @@
       : ' That means downloading the repository archive to this device';
     resultsEl.innerHTML =
       '<p>' + (lead || 'This repository is bigger than the server will process.') + ' ' +
-      'Your browser has no such limit &mdash; it can do the counting locally, ' +
+      'Your browser has no such limit: it can do the counting locally, ' +
       'using exactly the same code.' + size + ', so it is your call.</p>' +
       '<p><button type="button" id="big-count">Count it in my browser</button></p>' +
       '<p class="note">Nothing is uploaded. The result is not cached, not shareable, ' +
@@ -413,7 +413,7 @@
     var approx = details && typeof details.bytes === 'number'
       ? ' (about ' + Math.round(details.bytes / 1048576) + ' MB)'
       : '';
-    statusEl.textContent = 'Too big for the server — counting it here instead' + approx + '…';
+    statusEl.textContent = 'Too big for the server, counting it here instead' + approx + '…';
     setBusy(true);
     browserAbort = typeof AbortController === 'function' ? new AbortController() : null;
 
@@ -501,7 +501,7 @@
         : 'requests <code>' + esc(me.scopes) + '</code>';
       authBlock.innerHTML = '<a href="/api/auth/login">Connect GitHub</a> to use your own rate limit' +
         (me.private_repos ? ' and count private repositories' : '') + '. It ' + grants +
-        '. Your token is kept server-side and never sent to the browser &mdash; ' +
+        '. Your token is kept server-side and never sent to the browser: ' +
         '<a href="/security.html">what that means, and how to check it</a>.';
     } else {
       authBlock.innerHTML = 'Coming soon. It will let you count <strong>private</strong> ' +
@@ -581,7 +581,7 @@
       var leader = c.rows && c.rows[0];
       rows += '<tr><td><a href="/golf/' + esc(c.id) + '">' + esc(c.title) + '</a><br>' +
         '<span class="note">' + esc(c.brief) + '</span></td>' +
-        '<td class="n">' + (leader ? '<strong>' + num(leader.code) + '</strong>' : '&mdash;') + '</td>' +
+        '<td class="n">' + (leader ? '<strong>' + num(leader.code) + '</strong>' : '-') + '</td>' +
         '<td class="n">' + num(c.entries) + '</td></tr>';
     }
     standingsEl.innerHTML =

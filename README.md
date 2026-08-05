@@ -1,4 +1,4 @@
-# LOC.1999
+# 1999.LOC
 
 **Live at [1999loc.com](https://1999loc.com)**
 
@@ -9,7 +9,7 @@ The UI looks like it was made in Notepad in 1999. That is deliberate. The
 engineering behind it is not.
 
 ```
-LOC.1999
+1999.LOC
 Enter a repository. We will count the lines. That is all.
 ------------------------------------------------------------
 Repository: [ https://github.com/owner/repo               ]

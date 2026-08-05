@@ -85,7 +85,7 @@ export function classify(entries: RequestRecord[], origin: string): NetworkAudit
 export function describeNetwork(audit: NetworkAudit, host: string): string {
   const n = audit.own.length;
   if (audit.foreign.length) {
-    return `${audit.foreign.length} request${audit.foreign.length === 1 ? '' : 's'} went somewhere other than ${host}. That should never happen — please report it.`;
+    return `${audit.foreign.length} request${audit.foreign.length === 1 ? '' : 's'} went somewhere other than ${host}. That should never happen. Please report it.`;
   }
   return `${n} request${n === 1 ? '' : 's'}, all to ${host}. Nothing has been sent anywhere else.`;
 }
@@ -115,7 +115,7 @@ export const KNOWN_STORAGE: Record<string, string> = {
   'loc1999:signatures':
     'Signatures you chose to save on the PDF editor, as images. Only ones you explicitly saved.',
   'loc1999:pgp-keys':
-    'PGP keys you made or imported. Private keys are here if you made one — protected by their passphrase if you set one.',
+    'PGP keys you made or imported. Private keys are here if you made one, protected by their passphrase if you set one.',
 };
 
 export function describeStorage(entries: { key: string; size: number }[]): StoredThing[] {
@@ -163,7 +163,7 @@ export function leakVerdict(results: LeakResult[]): { ok: boolean; summary: stri
   if (escaped.length) {
     return {
       ok: false,
-      summary: `${escaped.length} of ${results.length} attempts got through. That is a serious bug — please report it.`,
+      summary: `${escaped.length} of ${results.length} attempts got through. That is a serious bug. Please report it.`,
     };
   }
   const blocked = results.filter((r) => r.outcome === 'blocked').length;

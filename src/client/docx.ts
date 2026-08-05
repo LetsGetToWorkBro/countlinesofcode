@@ -219,7 +219,7 @@ function styleNames(root: XmlNode | null): Map<string, string> {
 export async function readDocx(source: Uint8Array): Promise<Doc> {
   const parts = await unzip(source);
   const documentXml = entry(parts, 'word/document.xml');
-  if (!documentXml) throw new Error('That file is a ZIP but not a Word document — it has no word/document.xml.');
+  if (!documentXml) throw new Error('That file is a ZIP but not a Word document: it has no word/document.xml.');
 
   const decoder = new TextDecoder();
   const document = parseXml(decoder.decode(documentXml));

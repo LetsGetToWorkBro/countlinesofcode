@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Convert PDF to Word and Word to PDF in Your Browser — LOC.1999</title>
-<meta name="description" content="Convert a PDF to an editable Word document or an EPUB, or a Word document to PDF. Runs entirely in your browser — the file is never uploaded. Tells you how good the conversion will be before you commit.">
+<title>Convert PDF to Word and Word to PDF in Your Browser | 1999.LOC</title>
+<meta name="description" content="Convert a PDF to an editable Word document or an EPUB, or a Word document to PDF. Runs entirely in your browser. The file is never uploaded. Tells you how good the conversion will be before you commit.">
 <link rel="canonical" href="https://1999loc.com/convert.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Convert PDF to Word and Word to PDF in Your Browser — LOC.1999">
+<meta property="og:title" content="Convert PDF to Word and Word to PDF in Your Browser | 1999.LOC">
 <meta property="og:description" content="PDF ↔ Word without uploading the file, and the only converter that tells you how well it will go before you commit.">
 <meta property="og:url" content="https://1999loc.com/convert.html">
-<meta property="og:site_name" content="LOC.1999">
+<meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -20,7 +20,7 @@
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
-    LOC.1999
+    1999.LOC
     Small tools. No accounts. Nothing leaves your browser.
     ------------------------------------------------------------
     count code | golf | pdf | convert | images | delete posts
@@ -39,7 +39,7 @@
 -->
 <div id="page">
 
-<h1><a href="/">LOC.1999</a></h1>
+<h1><a href="/">1999.LOC</a></h1>
 <p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
 
 <hr>
@@ -80,20 +80,20 @@
 Every PDF-to-Word site on the internet wants your document on their server.
 People put contracts, medical letters and payslips through them without
 thinking about where the file went. This one has no endpoint to send anything
-to &mdash; turn off your wifi after the page loads and it still works.
+to: turn off your wifi after the page loads and it still works.
 </p>
 
 <div class="notice-box">
 <p><strong>It tells you how well it will go, before you commit.</strong></p>
 <p class="note">
 PDF was designed to look the same everywhere, not to be edited. Some PDFs
-carry a hidden description of their own structure &mdash; which text is a
+carry a hidden description of their own structure: which text is a
 heading, what belongs in which table cell, what order it reads in. Anything
 saved out of Word, Google Docs or LibreOffice usually does. For those, this is a
 translation, and it is very good.
 </p>
 <p class="note">
-The rest &mdash; scans, LaTeX papers, output from older tools &mdash; are just
+The rest (scans, LaTeX papers, output from older tools) are just
 positioned letters on a page. Nothing in the file says where a paragraph starts,
 so the structure has to be worked out from the layout. That is a reconstruction,
 and no converter on earth does it perfectly. The difference here is that you are
@@ -108,7 +108,7 @@ afterwards.
 
 <div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open a PDF or Word document">
   <strong>Drop a PDF or a .docx here, or click to choose</strong>
-  <span>Nothing is uploaded &mdash; it is opened inside this tab</span>
+  <span>Nothing is uploaded; it is opened inside this tab</span>
   <input type="file" id="file-input" accept="application/pdf,.pdf,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
 </div>
 
@@ -131,7 +131,7 @@ afterwards.
   <div id="ocr-box" class="hidden notice-box">
     <p><strong>There is no text in this PDF to convert.</strong></p>
     <p class="note">
-    It is a scan &mdash; a photograph of a page. The only way through is to read
+    It is a scan: a photograph of a page. The only way through is to read
     the letters off the picture, which is what this does. It downloads about
     8&nbsp;MB the first time, runs in this tab like everything else, and is
     slower than it looks: a page takes a few seconds. Proofread what comes out.
@@ -169,13 +169,13 @@ afterwards.
 <h3>The honest notes</h3>
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. Both directions run in your browser.</li>
-  <li><strong>EPUB is the better choice for <em>reading</em> a long PDF.</strong> A PDF is a fixed page, so on a phone you pinch and pan across a sheet designed for A4. An EPUB re-flows to whatever screen and text size you like, and chapters are split at the document's own top-level headings. It carries the words, the headings, the lists and the tables &mdash; not the page design, which is the entire point of the format.</li>
-  <li><strong>PDF&nbsp;&rarr;&nbsp;Word is a conversion, not a photocopy.</strong> It recovers the <em>content and structure</em> &mdash; text, headings, lists, tables, reading order &mdash; and lays it out cleanly in Word. It does not reproduce the original page design pixel for pixel, because a Word document re-flows and a PDF does not. Anyone promising both is promising something the two formats cannot both be.</li>
+  <li><strong>EPUB is the better choice for <em>reading</em> a long PDF.</strong> A PDF is a fixed page, so on a phone you pinch and pan across a sheet designed for A4. An EPUB re-flows to whatever screen and text size you like, and chapters are split at the document's own top-level headings. It carries the words, the headings, the lists and the tables, but not the page design, which is the entire point of the format.</li>
+  <li><strong>PDF&nbsp;&rarr;&nbsp;Word is a conversion, not a photocopy.</strong> It recovers the <em>content and structure</em> (text, headings, lists, tables, reading order) and lays it out cleanly in Word. It does not reproduce the original page design pixel for pixel, because a Word document re-flows and a PDF does not. Anyone promising both is promising something the two formats cannot both be.</li>
   <li><strong>Tagged PDFs convert far better, and it says which yours is.</strong> The verdict above is read out of your actual file, not guessed from its size.</li>
-  <li><strong>Scans are read with optical recognition.</strong> If a PDF is a photograph of a page there is no text in it, so the letters are read off the picture — in this tab, with a recogniser served from this domain rather than a cloud service. It is good on a clean scan and poor on a crooked phone photo, it recovers words rather than layout, and it needs proofreading. The page tells you when it has taken this route.</li>
-  <li><strong>Word&nbsp;&rarr;&nbsp;PDF re-typesets the document.</strong> Real, selectable, searchable vector text &mdash; not a picture &mdash; but the lines break where <em>this</em> typesetter breaks them, not exactly where Word would. Matching Word's pagination needs Word's own fonts, which are not free to redistribute.</li>
+  <li><strong>Scans are read with optical recognition.</strong> If a PDF is a photograph of a page there is no text in it, so the letters are read off the picture, in this tab, with a recogniser served from this domain rather than a cloud service. It is good on a clean scan and poor on a crooked phone photo, it recovers words rather than layout, and it needs proofreading. The page tells you when it has taken this route.</li>
+  <li><strong>Word&nbsp;&rarr;&nbsp;PDF re-typesets the document.</strong> Real, selectable, searchable vector text, not a picture, but the lines break where <em>this</em> typesetter breaks them, not exactly where Word would. Matching Word's pagination needs Word's own fonts, which are not free to redistribute.</li>
   <li><strong>What it does not carry across:</strong> headers and footers, footnotes, comments, tracked changes, embedded images, columns, and text boxes. Those are dropped rather than mangled.</li>
-  <li><strong>It learns locally, and only locally.</strong> Correcting the heading detection stores a number in <em>this browser</em>, against the software that produced the PDF. Nothing is collected, because nothing is sent anywhere &mdash; which is also why it cannot learn from anyone else's documents.</li>
+  <li><strong>It learns locally, and only locally.</strong> Correcting the heading detection stores a number in <em>this browser</em>, against the software that produced the PDF. Nothing is collected, because nothing is sent anywhere, which is also why it cannot learn from anyone else's documents.</li>
   <li><strong>It downloads about 700&nbsp;KB</strong> the first time, to read PDFs (<a href="https://mozilla.github.io/pdf.js/">pdf.js</a>) and write them (<a href="https://github.com/Hopding/pdf-lib">pdf-lib</a>). The Word half needs nothing extra: a .docx is a ZIP of XML, and the browser already has a ZIP engine.</li>
 </ul>
 

@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PGP in Your Browser — Make Keys, Encrypt, Sign and Verify — LOC.1999</title>
-<meta name="description" content="Generate a PGP key pair, encrypt a message or a file to someone's public key, decrypt what they send back, and sign or verify. Runs entirely in your browser — no keyserver, no upload, no account.">
+<title>PGP in Your Browser: Make Keys, Encrypt, Sign and Verify | 1999.LOC</title>
+<meta name="description" content="Generate a PGP key pair, encrypt a message or a file to someone's public key, decrypt what they send back, and sign or verify. Runs entirely in your browser, with no keyserver, no upload and no account.">
 <link rel="canonical" href="https://1999loc.com/pgp.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="PGP in Your Browser — Make Keys, Encrypt, Sign and Verify — LOC.1999">
+<meta property="og:title" content="PGP in Your Browser: Make Keys, Encrypt, Sign and Verify | 1999.LOC">
 <meta property="og:description" content="Real OpenPGP, in the tab. Your private key never leaves the browser and is never uploaded anywhere.">
 <meta property="og:url" content="https://1999loc.com/pgp.html">
-<meta property="og:site_name" content="LOC.1999">
+<meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -20,7 +20,7 @@
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
-    LOC.1999
+    1999.LOC
     ------------------------------------------------------------
     ... | zip | lock | pgp | delete posts
     ------------------------------------------------------------
@@ -35,7 +35,7 @@
 -->
 <div id="page">
 
-<h1><a href="/">LOC.1999</a></h1>
+<h1><a href="/">1999.LOC</a></h1>
 <p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
 
 <hr>
@@ -110,7 +110,7 @@ any of it works without handing your key to a stranger.
   <h3>Your keys</h3>
   <p class="note">
     Kept in this browser only, in its local storage. Not synced, not uploaded,
-    and gone if you clear your browsing data &mdash; so export anything you want
+    and gone if you clear your browsing data, so export anything you want
     to keep.
   </p>
   <div id="keyring"></div>
@@ -128,13 +128,13 @@ any of it works without handing your key to a stranger.
   <p>
     <label for="key-pass" class="inline">Passphrase</label>
     <input type="password" id="key-pass" size="24" autocomplete="new-password" spellcheck="false">
-    <span class="note">&mdash; protects the private key on this machine. Optional, but do it.</span>
+    <span class="note">Protects the private key on this machine. Optional, but do it.</span>
   </p>
   <p>
     <label for="key-type" class="inline">Kind</label>
     <select id="key-type">
-      <option value="curve25519">Curve25519 — modern, small, fast</option>
-      <option value="rsa4096">RSA 4096 — older, slower, accepted everywhere</option>
+      <option value="curve25519">Curve25519: modern, small, fast</option>
+      <option value="rsa4096">RSA 4096: older, slower, accepted everywhere</option>
     </select>
     <button type="button" id="generate">Make the key</button>
   </p>
@@ -188,7 +188,7 @@ any of it works without handing your key to a stranger.
   <h3>Sign</h3>
   <p class="note">
     A signature proves the text came from you and has not been altered. It does
-    not hide anything &mdash; the message stays readable.
+    not hide anything: the message stays readable.
   </p>
   <p>
     <label for="sign-key" class="inline">As</label>

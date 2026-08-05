@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Merge, Split, Reorder and Rotate PDF Pages — LOC.1999</title>
-<meta name="description" content="Combine PDFs into one, split a PDF apart, drag pages into a new order, turn sideways scans the right way up, and delete pages you do not want. Nothing is uploaded — it all happens in your browser.">
+<title>Merge, Split, Reorder and Rotate PDF Pages | 1999.LOC</title>
+<meta name="description" content="Combine PDFs into one, split a PDF apart, drag pages into a new order, turn sideways scans the right way up, and delete pages you do not want. Nothing is uploaded; it all happens in your browser.">
 <link rel="canonical" href="https://1999loc.com/pages.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Merge, Split, Reorder and Rotate PDF Pages — LOC.1999">
+<meta property="og:title" content="Merge, Split, Reorder and Rotate PDF Pages | 1999.LOC">
 <meta property="og:description" content="Merge and split PDFs, reorder and rotate pages, without uploading your documents to anyone.">
 <meta property="og:url" content="https://1999loc.com/pages.html">
-<meta property="og:site_name" content="LOC.1999">
+<meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -20,7 +20,7 @@
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
-    LOC.1999
+    1999.LOC
     ------------------------------------------------------------
     count code | golf | pdf | pages | convert | inspect | sheets | images | video | zip | delete posts
     ------------------------------------------------------------
@@ -37,7 +37,7 @@
 -->
 <div id="page">
 
-<h1><a href="/">LOC.1999</a></h1>
+<h1><a href="/">1999.LOC</a></h1>
 <p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
 
 <hr>
@@ -84,7 +84,7 @@ way. There is no endpoint here to send anything to.
 <div class="notice-box">
 <p><strong>It rearranges. It does not re-render.</strong></p>
 <p class="note">
-Pages are copied across whole &mdash; their fonts, their images, their form
+Pages are copied across whole: their fonts, their images, their form
 fields and their annotations come with them. Nothing is rasterised, nothing is
 re-compressed, and text stays selectable and searchable exactly as it was. A
 page that comes out of here is the page that went in, in a different place.
@@ -97,7 +97,7 @@ page that comes out of here is the page that went in, in a different place.
 
 <div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open PDF files">
   <strong>Drop PDFs here, or click to choose</strong>
-  <span>Several at once &mdash; they are combined into one working set</span>
+  <span>Several at once, combined into one working set</span>
   <input type="file" id="file-input" accept="application/pdf,.pdf" multiple hidden>
 </div>
 
@@ -170,11 +170,11 @@ page that comes out of here is the page that went in, in a different place.
 <h3>The honest notes</h3>
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The PDFs are read from disk into this tab and the result is written back out of it.</li>
-  <li><strong>Pages are copied, not redrawn.</strong> Fonts, images, form fields, links and annotations travel with the page. This is the difference between a rearranged document and a photograph of one — the text is still text, still selectable, still searchable, and the file does not balloon.</li>
+  <li><strong>Pages are copied, not redrawn.</strong> Fonts, images, form fields, links and annotations travel with the page. This is the difference between a rearranged document and a photograph of one: the text is still text, still selectable, still searchable, and the file does not balloon.</li>
   <li><strong>Turning a page is metadata, not pixels.</strong> A PDF page carries its own rotation, so a sideways scan is corrected by changing a number rather than by rotating an image. Nothing is re-encoded and nothing is lost. It also means the turn adds to whatever the page already had, which is what you want on a scan that was already sideways.</li>
   <li><strong>Restricted PDFs open fine.</strong> The very common &ldquo;no printing, no copying&rdquo; kind opens without a password and is treated like any other. A PDF that genuinely needs a password to <em>open</em> cannot be read here, and it says so rather than producing an empty document. There is a separate tool for <a href="/unlock.html">removing restrictions</a>.</li>
   <li><strong>What does not come across:</strong> the document's outline, its table of contents, its attachments, and any JavaScript in it. Bookmarks in particular point at pages that have moved, so carrying them over would produce a contents page that lies. They are dropped rather than mangled.</li>
-  <li><strong>Splitting into many files gives you one ZIP.</strong> A browser blocks a burst of downloads, so anything that produces more than one file comes back as an archive — which you can look inside with the <a href="/zip.html">archive tool</a>.</li>
+  <li><strong>Splitting into many files gives you one ZIP.</strong> A browser blocks a burst of downloads, so anything that produces more than one file comes back as an archive, which you can look inside with the <a href="/zip.html">archive tool</a>.</li>
   <li><strong>Everything is in memory.</strong> A few hundred pages is fine; a thousand-page scan on a phone may not be. The thumbnails are rendered at a small size for exactly this reason.</li>
   <li><strong>It downloads about 430&nbsp;KB</strong> the first time: <a href="https://mozilla.github.io/pdf.js/">pdf.js</a> to draw the thumbnails and <a href="https://github.com/Hopding/pdf-lib">pdf-lib</a> to write the file. Shared with the <a href="/sign.html">editor</a>, so if you have used that it is already cached.</li>
 </ul>

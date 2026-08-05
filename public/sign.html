@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign, Fill and Edit a PDF in Your Browser — LOC.1999</title>
-<meta name="description" content="Sign a PDF, fill in a form, and delete or replace text in it. Runs entirely in your browser — the file is never uploaded. Deleting removes the text from the file rather than covering it with a box.">
+<title>Sign, Fill and Edit a PDF in Your Browser | 1999.LOC</title>
+<meta name="description" content="Sign a PDF, fill in a form, and delete or replace text in it. Runs entirely in your browser. The file is never uploaded. Deleting removes the text from the file rather than covering it with a box.">
 <link rel="canonical" href="https://1999loc.com/sign.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Sign, Fill and Edit a PDF in Your Browser — LOC.1999">
-<meta property="og:description" content="Sign and fill a PDF without uploading it. Delete text and it leaves the file — no black box over the top, no page turned into a picture.">
+<meta property="og:title" content="Sign, Fill and Edit a PDF in Your Browser | 1999.LOC">
+<meta property="og:description" content="Sign and fill a PDF without uploading it. Delete text and it leaves the file, with no black box over the top and no page turned into a picture.">
 <meta property="og:url" content="https://1999loc.com/sign.html">
-<meta property="og:site_name" content="LOC.1999">
+<meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -20,7 +20,7 @@
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
-    LOC.1999
+    1999.LOC
     Small tools. No accounts. Nothing leaves your browser.
     ------------------------------------------------------------
     count code | golf | pdf | sign | delete posts
@@ -37,7 +37,7 @@
 -->
 <div id="page">
 
-<h1><a href="/">LOC.1999</a></h1>
+<h1><a href="/">1999.LOC</a></h1>
 <p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
 
 <hr>
@@ -86,7 +86,7 @@ has loaded and everything below still works.
 <p class="note">
 Drawing a black rectangle over text is not redaction, and it is how governments
 and law firms have leaked documents for twenty years. The text stays in the file
-underneath the box &mdash; you can select it, search it, or hand the file to a
+underneath the box: you can select it, search it, or hand the file to a
 chatbot and ask what the box is hiding. Free tools that offer &ldquo;black
 out&rdquo; almost always do exactly this.
 </p>
@@ -94,7 +94,7 @@ out&rdquo; almost always do exactly this.
 So the delete tool here does not draw anything. Click a word and this finds the
 actual instruction in the file that drew it, and removes that instruction. The
 characters stop existing. Nothing is covered, nothing is flattened, and every
-other word on the page is still real selectable text &mdash; you can delete one
+other word on the page is still real selectable text, so you can delete one
 line out of a contract and the rest of it stays a normal PDF.
 </p>
 <p class="note">
@@ -105,7 +105,7 @@ the blunt fallback: the whole page is rendered to pixels with your boxes painted
 in and the original page thrown away, so the text really is gone, but the page
 stops being selectable text and the file gets bigger. Only the pages you black
 out are affected. If you black out a page, check the preview covers every
-character &mdash; what your box misses is still readable as pixels.
+character, because what your box misses is still readable as pixels.
 </p>
 </div>
 
@@ -115,7 +115,7 @@ character &mdash; what your box misses is still readable as pixels.
 
 <div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open a PDF">
   <strong>Drop a PDF here, or click to choose</strong>
-  <span>Nothing is uploaded &mdash; it is opened inside this tab</span>
+  <span>Nothing is uploaded; it is opened inside this tab</span>
   <input type="file" id="file-input" accept="application/pdf" hidden>
 </div>
 
@@ -125,11 +125,11 @@ character &mdash; what your box misses is still readable as pixels.
 <div id="editor" class="hidden">
 
   <div id="form-banner" class="notice-box hidden">
-  <p><strong>This PDF is a real form &mdash; <span id="form-count">0</span> fillable fields.</strong></p>
+  <p><strong>This PDF is a real form: <span id="form-count">0</span> fillable fields.</strong></p>
   <p class="note">
   Pick <strong>Fill the form</strong> below and type straight into the boxes where
   they already are, instead of guessing at floating text. When you save, the
-  answers are stamped in and the form is locked &mdash; it shows the same in every
+  answers are stamped in and the form is locked, so it shows the same in every
   reader and cannot be un-filled. If you only want to sign or annotate it, the
   form is locked in on save either way.
   </p>
@@ -139,12 +139,12 @@ character &mdash; what your box misses is still readable as pixels.
   <h3>2. Pick a tool, then click the page</h3>
 
   <p id="tools">
-    <label id="form-tool-label" class="wide hidden"><input type="radio" name="tool" value="form"> Fill the form &mdash; type straight into its fields</label>
-    <label class="wide"><input type="radio" name="tool" value="text" checked> Add text &mdash; click where it goes</label>
-    <label class="wide"><input type="radio" name="tool" value="stamp"> Signature &mdash; click to stamp it</label>
-    <label class="wide"><input type="radio" name="tool" value="image"> Picture &mdash; click to place it</label>
-    <label class="wide"><input type="radio" name="tool" value="delete"> Delete text &mdash; click a word (double-click to replace it)</label>
-    <label class="wide"><input type="radio" name="tool" value="blackout"> Black out &mdash; drag a box (last resort, flattens the page)</label>
+    <label id="form-tool-label" class="wide hidden"><input type="radio" name="tool" value="form"> Fill the form: type straight into its fields</label>
+    <label class="wide"><input type="radio" name="tool" value="text" checked> Add text: click where it goes</label>
+    <label class="wide"><input type="radio" name="tool" value="stamp"> Signature: click to stamp it</label>
+    <label class="wide"><input type="radio" name="tool" value="image"> Picture: click to place it</label>
+    <label class="wide"><input type="radio" name="tool" value="delete"> Delete text: click a word (double-click to replace it)</label>
+    <label class="wide"><input type="radio" name="tool" value="blackout"> Black out: drag a box (last resort, flattens the page)</label>
   </p>
   <p class="note">
     Anything you add can be dragged afterwards, resized by its corners, nudged
@@ -201,7 +201,7 @@ character &mdash; what your box misses is still readable as pixels.
     </p>
     <p id="image-about" class="note">
       PNG and JPEG go in as they are. Anything else your browser can open
-      &mdash; WebP, GIF, BMP &mdash; is converted to PNG first, which can make
+      (WebP, GIF, BMP) is converted to PNG first, which can make
       it bigger. Photos keep their full resolution, so a phone photo makes a
       phone-photo-sized PDF.
     </p>
@@ -251,11 +251,11 @@ character &mdash; what your box misses is still readable as pixels.
 <h3>The honest notes</h3>
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account.</li>
-  <li><strong>This is not a digital signature.</strong> It draws your signature onto the page, exactly like signing a printout and scanning it. It is what almost everyone means by &ldquo;sign this PDF&rdquo;, and it is what most people are asked for &mdash; but it carries no cryptographic proof of who signed. If you need a certifying signature that Acrobat will validate, you need a certificate, and this is not that.</li>
-  <li><strong>Deleting is surgical; replacing is not re-flowing.</strong> Deleting removes the drawing instruction, so those characters leave the file. Replacing deletes the old and places new text at the same spot and size &mdash; which is what you want on a form or a name or a date. What it does not do is re-flow a paragraph: a PDF stores glyphs at positions, not sentences, so if your replacement is much longer than what it replaced it will run past where the old line ended instead of pushing the rest of the paragraph along. Nothing can honestly do that to an arbitrary PDF, and tools that claim to are usually rebuilding your layout and getting it wrong.</li>
-  <li><strong>Pictures go in at full resolution.</strong> A PNG or a JPEG is embedded exactly as it is &mdash; nothing is re-compressed behind your back, so a photo straight off a phone makes a PDF the size of a photo straight off a phone. Anything else your browser can open (WebP, GIF, BMP) has to be repainted as a PNG first, which is lossless but throws away the original compression and usually makes it larger. The same picture placed twenty times is still stored once. HEIC from an iPhone will not open: browsers cannot decode it, and this page has nothing else to ask.</li>
+  <li><strong>This is not a digital signature.</strong> It draws your signature onto the page, exactly like signing a printout and scanning it. It is what almost everyone means by &ldquo;sign this PDF&rdquo;, and it is what most people are asked for, but it carries no cryptographic proof of who signed. If you need a certifying signature that Acrobat will validate, you need a certificate, and this is not that.</li>
+  <li><strong>Deleting is surgical; replacing is not re-flowing.</strong> Deleting removes the drawing instruction, so those characters leave the file. Replacing deletes the old and places new text at the same spot and size, which is what you want on a form or a name or a date. What it does not do is re-flow a paragraph: a PDF stores glyphs at positions, not sentences, so if your replacement is much longer than what it replaced it will run past where the old line ended instead of pushing the rest of the paragraph along. Nothing can honestly do that to an arbitrary PDF, and tools that claim to are usually rebuilding your layout and getting it wrong.</li>
+  <li><strong>Pictures go in at full resolution.</strong> A PNG or a JPEG is embedded exactly as it is, and nothing is re-compressed behind your back, so a photo straight off a phone makes a PDF the size of a photo straight off a phone. Anything else your browser can open (WebP, GIF, BMP) has to be repainted as a PNG first, which is lossless but throws away the original compression and usually makes it larger. The same picture placed twenty times is still stored once. HEIC from an iPhone will not open: browsers cannot decode it, and this page has nothing else to ask.</li>
   <li><strong>Black out flattens the page.</strong> Only the pages you black out, and only when the surgical delete cannot safely be used, because covering text does not remove it.</li>
-  <li><strong>It downloads about 700&nbsp;KB</strong> the first time you open a file &mdash; <a href="https://mozilla.github.io/pdf.js/">pdf.js</a> to render pages, <a href="https://github.com/Hopding/pdf-lib">pdf-lib</a> to write them, plus font metrics for whatever your document uses. All served from this domain, because the security policy here forbids third-party scripts and a page handling your contracts is the wrong place to make an exception.</li>
+  <li><strong>It downloads about 700&nbsp;KB</strong> the first time you open a file: <a href="https://mozilla.github.io/pdf.js/">pdf.js</a> to render pages, <a href="https://github.com/Hopding/pdf-lib">pdf-lib</a> to write them, plus font metrics for whatever your document uses. All served from this domain, because the security policy here forbids third-party scripts and a page handling your contracts is the wrong place to make an exception.</li>
   <li><strong>Large scans use memory.</strong> Everything is in the tab, so a 200-page scan may struggle on a phone.</li>
 </ul>
 

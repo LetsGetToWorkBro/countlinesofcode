@@ -12,7 +12,7 @@ import { sleep } from './pool';
 
 export const GITHUB_API = 'https://api.github.com';
 const ARCHIVE_HOSTS = new Set(['codeload.github.com', 'objects.githubusercontent.com']);
-const USER_AGENT = 'LOC.1999 (+https://github.com/letsgettoworkbro/countlinesofcode)';
+const USER_AGENT = '1999.LOC (+https://github.com/letsgettoworkbro/countlinesofcode)';
 
 export type GitHubErrorKind =
   | 'not_found'

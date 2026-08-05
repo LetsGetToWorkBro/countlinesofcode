@@ -2,7 +2,7 @@
   "name": "loc1999",
   "version": "1.0.0",
   "private": true,
-  "description": "LOC.1999 — count the lines of code in any GitHub repository. Ugly on purpose.",
+  "description": "1999.LOC — count the lines of code in any GitHub repository. Ugly on purpose.",
   "license": "MIT",
   "type": "module",
   "scripts": {

@@ -1,4 +1,4 @@
-/* LOC.1999 image tools. Vanilla JS, no build step.
+/* 1999.LOC image tools. Vanilla JS, no build step.
  *
  * Resize, compress and convert an image, all in the tab. Nothing is uploaded:
  * there is no fetch() to any endpoint. The one thing loaded on demand is the
@@ -228,7 +228,7 @@
         var delta = blob.size - source.bytes.length;
         var change = delta <= 0
           ? bytesLabel(-delta) + ' smaller'
-          : bytesLabel(delta) + ' larger — the original was already smaller';
+          : bytesLabel(delta) + ' larger, so the original was already smaller';
         resultEl.innerHTML = '<strong>Result:</strong> ' + size.w + ' &times; ' + size.h + ', ' +
           extFor(mime).toUpperCase() + ', ' + bytesLabel(blob.size) + ' (' + change + ').';
         outputEl.innerHTML = '<ul class="plain"><li><a href="' + url + '" download="' + esc(name) + '">' +

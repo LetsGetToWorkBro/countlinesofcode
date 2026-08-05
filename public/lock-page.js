@@ -1,4 +1,4 @@
-/* LOC.1999 password lock. Vanilla JS, no build step.
+/* 1999.LOC password lock. Vanilla JS, no build step.
  *
  * Loaded on first use, both from this origin:
  *   /vendor/openpgp/openpgp.min.mjs — the cryptography
@@ -66,7 +66,7 @@
     var value = $('password').value;
     var result = kit.strength(value);
     $('meter').innerHTML = value
-      ? '<strong class="pw-' + result.verdict + '">' + esc(result.verdict) + '</strong> — about ' +
+      ? '<strong class="pw-' + result.verdict + '">' + esc(result.verdict) + '</strong>, about ' +
         result.bits + ' bits. ' + esc(result.note)
       : '';
 
@@ -84,7 +84,7 @@
   function updateWordsNote() {
     if (!kit) return;
     var words = Number($('words').value);
-    $('words-note').textContent = '— ' + kit.passphraseBits(words) + ' bits of real randomness';
+    $('words-note').textContent = kit.passphraseBits(words) + ' bits of real randomness';
   }
 
   // -------------------------------------------------------------- locking
@@ -171,7 +171,7 @@
   function readableError(err) {
     var message = (err && err.message) || String(err);
     if (/incorrect key|session key decryption failed|passphrase|password/i.test(message)) {
-      return 'That password does not open this file. There is no way to recover it — if it is lost, so is the file.';
+      return 'That password does not open this file. There is no way to recover it: if it is lost, so is the file.';
     }
     if (/misformed|armor|packet|Unknown|Malformed/i.test(message)) {
       return 'That file is not something this can open. It should be a .gpg, .pgp or .asc written by this page or by GPG.';
@@ -202,7 +202,7 @@
   wireDrop($('drop'), $('file-input'), function (file) {
     toLock = file;
     loadEngines().then(function () {
-      $('chosen').textContent = file.name + ' — ' + formatBytes(file.size);
+      $('chosen').textContent = file.name + ', ' + formatBytes(file.size);
       updateMeter();
       updateWordsNote();
     }).catch(function (err) { $('lock-error').textContent = err.message; });
@@ -211,7 +211,7 @@
   wireDrop($('undrop'), $('unfile-input'), function (file) {
     toUnlock = file;
     loadEngines().then(function () {
-      $('unchosen').textContent = file.name + ' — ' + formatBytes(file.size);
+      $('unchosen').textContent = file.name + ', ' + formatBytes(file.size);
       return file.slice(0, 64).arrayBuffer();
     }).then(function (head) {
       if (head && !kit.looksEncrypted(new Uint8Array(head), file.name)) {

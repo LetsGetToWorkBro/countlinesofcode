@@ -584,7 +584,7 @@ describe('search engine plumbing', () => {
   it('gives result pages a descriptive title and canonical URL', async () => {
     await countJson('/api/count/acme/widget');
     const html = await (await call(`/r/acme/widget/${SAMPLE_REPO.sha}`)).text();
-    expect(html).toMatch(/<title>acme\/widget — [\d,]+ lines of code · LOC\.1999<\/title>/);
+    expect(html).toMatch(/<title>acme\/widget: [\d,]+ lines of code · 1999\.LOC<\/title>/);
     expect(html).toContain(`<link rel="canonical" href="https://loc.example/r/acme/widget/${SAMPLE_REPO.sha}">`);
     expect(html).toContain('<meta property="og:title"');
   });

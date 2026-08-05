@@ -1,4 +1,4 @@
-/* LOC.1999 PGP page. Vanilla JS, no build step.
+/* 1999.LOC PGP page. Vanilla JS, no build step.
  *
  * Loaded on first use, both from this origin:
  *   /vendor/openpgp/openpgp.min.mjs — the cryptography
@@ -98,7 +98,7 @@
     // encrypting something to yourself is a normal thing to want.
     var recipients = publics.concat(privates);
 
-    fill($('enc-to'), recipients, 'no keys yet — import one');
+    fill($('enc-to'), recipients, 'no keys yet, import one');
     fill($('enc-as'), privates, 'you have no private key');
     fill($('dec-key'), privates, 'you have no private key');
     fill($('sign-key'), privates, 'you have no private key');
@@ -173,7 +173,7 @@
             armored: result.publicKey, kind: 'public', name: about.name,
             fingerprint: about.fingerprint, added: Date.now(),
           });
-          $('generate-note').innerHTML = 'Made <strong>' + esc(about.name) + '</strong> — ' +
+          $('generate-note').innerHTML = 'Made <strong>' + esc(about.name) + '</strong>, ' +
             esc(kit.formatFingerprint(about.fingerprint)) +
             '. Save the private key somewhere safe; this browser is not a backup.';
           $('key-name').value = '';
@@ -216,7 +216,7 @@
                 fingerprint: about.fingerprint, added: Date.now(),
               });
             }
-            $('import-note').innerHTML = 'Imported <strong>' + esc(about.name) + '</strong> — ' +
+            $('import-note').innerHTML = 'Imported <strong>' + esc(about.name) + '</strong>, ' +
               esc(kit.formatFingerprint(about.fingerprint)) +
               '. Check that fingerprint with them through some other channel before you trust it.';
             $('import-text').value = '';
@@ -354,7 +354,7 @@
       .then(function () {
         var id = signatures[0].keyID.toHex().toUpperCase();
         var who = keys.find(function (k) { return k.fingerprint.toUpperCase().endsWith(id); });
-        return '<p class="note sig-good">Decrypted, and the signature checks out — signed by ' +
+        return '<p class="note sig-good">Decrypted, and the signature checks out. Signed by ' +
           esc(who ? who.name : id) + '.</p>';
       })
       .catch(function () {
@@ -403,7 +403,7 @@
         return Promise.all(keys.filter(function (k) { return k.kind === 'public'; }).map(publicKeyFrom));
       })
       .then(function (verifiers) {
-        if (!verifiers.length) throw new Error('Import the signer\'s public key first — without it there is nothing to check against.');
+        if (!verifiers.length) throw new Error('Import the signer\'s public key first: without it there is nothing to check against.');
         return pgp.readCleartextMessage({ cleartextMessage: text }).then(function (message) {
           return pgp.verify({ message: message, verificationKeys: verifiers });
         });

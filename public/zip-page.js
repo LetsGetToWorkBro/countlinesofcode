@@ -1,4 +1,4 @@
-/* LOC.1999 archive page. Vanilla JS, no build step.
+/* 1999.LOC archive page. Vanilla JS, no build step.
  *
  * Loads /zipkit.js on first use — about seven kilobytes, because the
  * decompression itself is the browser's own DecompressionStream and there is
@@ -89,7 +89,7 @@
     $('summary').textContent =
       s.files + (s.files === 1 ? ' file' : ' files') +
       (s.folders ? ', ' + s.folders + (s.folders === 1 ? ' folder' : ' folders') : '') +
-      ' — ' + kit.formatBytes(s.size) + ' packed into ' + kit.formatBytes(s.compressedSize) +
+      ', ' + kit.formatBytes(s.size) + ' packed into ' + kit.formatBytes(s.compressedSize) +
       (s.size > 0 ? ' (' + s.saved + '% smaller)' : '');
 
     // Anything this cannot open is said here, once, rather than at the moment
@@ -132,7 +132,7 @@
     var picked = listing.filter(function (e) { return chosen.has(e.name); });
     var bytes = picked.reduce(function (n, e) { return n + e.size; }, 0);
     $('selection').textContent = picked.length
-      ? picked.length + ' selected — ' + kit.formatBytes(bytes)
+      ? picked.length + ' selected, ' + kit.formatBytes(bytes)
       : 'nothing selected';
     $('extract').disabled = picked.length === 0;
   }
@@ -205,7 +205,7 @@
     var entry = byName(name);
     if (!entry) return;
     $('preview-box').classList.remove('hidden');
-    $('preview-name').textContent = entry.name + ' — ' + kit.formatBytes(entry.size);
+    $('preview-name').textContent = entry.name + ', ' + kit.formatBytes(entry.size);
     $('preview').textContent = 'Reading…';
 
     kit.extractEntry(raw, entry).then(function (data) {
@@ -219,7 +219,7 @@
       }
       var text = kit.asText(data);
       if (text === null) {
-        $('preview').textContent = 'That is not text — it is binary data, so there is nothing readable to show.';
+        $('preview').textContent = 'That is not text: it is binary data, so there is nothing readable to show.';
         return;
       }
       var truncated = data.length > 200000;
@@ -246,7 +246,7 @@
     $('basket').classList.remove('hidden');
     var total = basket.reduce(function (n, f) { return n + f.size; }, 0);
     $('basket-summary').textContent =
-      basket.length + (basket.length === 1 ? ' file' : ' files') + ' — ' + kit.formatBytes(total);
+      basket.length + (basket.length === 1 ? ' file' : ' files') + ', ' + kit.formatBytes(total);
 
     $('basket-list').innerHTML = basket.map(function (f, i) {
       return '<div class="zip-row">' +
@@ -283,7 +283,7 @@
       .then(function (bytes) {
         var before = basket.reduce(function (n, f) { return n + f.size; }, 0);
         var saved = before > 0 ? Math.max(0, Math.round((1 - bytes.length / before) * 100)) : 0;
-        $('build-note').textContent = saved > 0 ? saved + '% smaller than the files' : 'no smaller — these files were already compressed';
+        $('build-note').textContent = saved > 0 ? saved + '% smaller than the files' : 'no smaller: these files were already compressed';
         var name = kit.archiveName(basket.map(function (f) { return f.name; }));
         $('make-output').innerHTML = '<p><a download="' + esc(name) + '" href="' +
           objectUrl(new Blob([bytes], { type: 'application/zip' })) + '">Download ' + esc(name) +

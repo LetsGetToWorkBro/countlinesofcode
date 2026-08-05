@@ -129,12 +129,12 @@ export function inspectPdf(info: PdfInfo, features: PdfFeatures): Report {
       title: `${hidden.length} piece${hidden.length === 1 ? '' : 's'} of text you cannot see, but anyone can copy`,
       detail:
         `This text is in the file and will come straight out of a copy-paste, yet none of it is visible on the page: ${sample}. ` +
-        'That is what a black box drawn over a name looks like from the inside — and white text on white paper, and text hidden behind an image.',
+        'That is what a black box drawn over a name looks like from the inside, and white text on white paper, and text hidden behind an image.',
       advice:
         'If any of this was meant to be removed, it has not been. Delete it properly, or black it out with a tool that flattens the page.',
     });
   } else {
-    clean.push('No invisible-but-copyable text — nothing is hiding under a box');
+    clean.push('No invisible-but-copyable text: nothing is hiding under a box');
   }
 
   if (info.Author) {
@@ -154,7 +154,7 @@ export function inspectPdf(info: PdfInfo, features: PdfFeatures): Report {
     leaks.push({
       severity: os ? 'medium' : 'low',
       title: os ? `The software and operating system that made it (${os})` : 'The software that made it',
-      detail: software.join(' · ') + (os ? ` — which names ${os} outright.` : ''),
+      detail: software.join(' · ') + (os ? `, which names ${os} outright.` : ''),
       advice: 'Harmless on its own; useful to somebody building a picture of you.',
     });
   }
@@ -301,7 +301,7 @@ export function inspectOoxml(parts: ZipEntry[], kind: Report['kind']): Report {
       severity: 'low',
       title: 'How long it was actually worked on',
       detail: `Total editing time: ${edited}.`,
-      advice: 'Occasionally awkward — it is the difference between "I spent all week on this" and four minutes.',
+      advice: 'Occasionally awkward: it is the difference between "I spent all week on this" and four minutes.',
     });
   }
 
@@ -319,7 +319,7 @@ export function inspectOoxml(parts: ZipEntry[], kind: Report['kind']): Report {
     leaks.push({
       severity: 'low',
       title: 'The template it was built from',
-      detail: `Template: “${trim(template, 60)}” — sometimes a full path on somebody’s machine.`,
+      detail: `Template: “${trim(template, 60)}”, sometimes a full path on somebody’s machine.`,
     });
   }
 
@@ -372,7 +372,7 @@ export function inspectOoxml(parts: ZipEntry[], kind: Report['kind']): Report {
     leaks.push({
       severity: 'medium',
       title: `${embeddings.length} embedded object${embeddings.length === 1 ? '' : 's'} inside it`,
-      detail: 'Whole other files — a spreadsheet inside a document, say — carried along complete, not just the picture you see.',
+      detail: 'Whole other files (a spreadsheet inside a document, say) carried along complete, not just the picture you see.',
       advice: 'An embedded spreadsheet keeps all its rows, including the ones outside the chart you pasted.',
     });
   }

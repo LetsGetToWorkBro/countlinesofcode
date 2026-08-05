@@ -1,4 +1,4 @@
-/* LOC.1999 proof panel. Vanilla JS, no build step.
+/* 1999.LOC proof panel. Vanilla JS, no build step.
  *
  * Loads on every tool page. Adds nothing to the page until the visitor opens
  * it, and makes no network request of its own — the evidence it shows is
@@ -248,7 +248,7 @@
           ? '<p class="note">Your browser reported ' + violations.length +
             ' policy violation' + (violations.length === 1 ? '' : 's') + ' while that ran: ' +
             esc(violations.map(function (v) { return v.directive; }).join(', ')) +
-            '. Those messages come from the browser, not from this page — you can see them in its console too.</p>'
+            '. Those messages come from the browser, not from this page, and you can see them in its console too.</p>'
           : '<p class="note">Your browser did not report a policy violation, which means these were stopped some other way. ' +
             'Check the console for the reason.</p>');
       button.disabled = false;
@@ -282,16 +282,16 @@
       '<p class="note">The policy served with this page, which your browser enforces against it:</p>' +
       '<pre class="proof-csp">' + esc(POLICY) + '</pre>' +
       '<ul class="plain">' +
-        '<li><code>default-src &#39;none&#39;</code> — nothing is permitted unless a line below permits it.</li>' +
-        '<li><code>connect-src &#39;self&#39;</code> — this page cannot open a connection to any other domain. No analytics, no error reporting, no telemetry: not "we chose not to", but "the browser will not let us".</li>' +
-        '<li><code>script-src &#39;self&#39;</code> — no code from anywhere else, ever. No tag managers, no CDN scripts.</li>' +
-        '<li><code>form-action &#39;self&#39;</code> — a form on this page cannot submit anywhere else.</li>' +
+        '<li><code>default-src &#39;none&#39;</code>: nothing is permitted unless a line below permits it.</li>' +
+        '<li><code>connect-src &#39;self&#39;</code>: this page cannot open a connection to any other domain. No analytics, no error reporting, no telemetry: not "we chose not to", but "the browser will not let us".</li>' +
+        '<li><code>script-src &#39;self&#39;</code>: no code from anywhere else, ever. No tag managers, no CDN scripts.</li>' +
+        '<li><code>form-action &#39;self&#39;</code>: a form on this page cannot submit anywhere else.</li>' +
       '</ul>' +
       '<p class="note">You do not have to take this from us: it is in the response headers, visible in your ' +
         'browser\'s network inspector on this very page.</p>' +
 
       '<h3>3. Watch your browser refuse</h3>' +
-      '<p class="note">This will genuinely try to send data to another domain, four different ways — the same four ' +
+      '<p class="note">This will genuinely try to send data to another domain, four different ways, the same four ' +
         'a tracking script would use. Nothing bad happens; the point is to watch every one fail.</p>' +
       '<p><button type="button" id="proof-leak">Try to leak something</button></p>' +
       '<div id="proof-leak-results"></div>' +
@@ -309,7 +309,7 @@
               '<p><button type="button" class="small" id="proof-forget">Delete all of it</button></p>'
             : '')) +
       '<p class="note">Cookies: <code>' + (document.cookie ? esc(document.cookie) : 'none') + '</code>. ' +
-        'This site sets none — there is no session to keep and nobody to identify.</p>' +
+        'This site sets none: there is no session to keep and nobody to identify.</p>' +
 
       '<h3>5. The code that does all this</h3>' +
       '<p class="note">Every line, including this panel. The files behind <em>this</em> tool:</p>' +
@@ -317,7 +317,7 @@
         return '<li><a href="' + esc(proof.sourceLink(file)) + '"><code>' + esc(file) + '</code></a></li>';
       }).join('') + '</ul>' +
       '<p class="note">The whole repository is at <a href="' + esc(proof.REPO) + '">' + esc(proof.REPO) +
-        '</a>. What is served here is built from it with no minifier-injected anything — you can diff the ' +
+        '</a>. What is served here is built from it with no minifier-injected anything, so you can diff the ' +
         'bundle against the source.</p>' +
 
       '<h3>The limit of all this</h3>' +
@@ -372,7 +372,7 @@
   var toggle = document.createElement('p');
   toggle.className = 'proof-toggle';
   toggle.innerHTML = '<button type="button" id="proof-open">Prove it</button> ' +
-    '<span class="note">&mdash; check, rather than believe, that nothing here leaves your browser.</span>';
+    '<span class="note">Check, rather than believe, that nothing here leaves your browser.</span>';
   mount.parentNode.insertBefore(toggle, mount);
 
   document.getElementById('proof-open').addEventListener('click', function () {

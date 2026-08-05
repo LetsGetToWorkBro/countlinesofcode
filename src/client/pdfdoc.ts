@@ -397,7 +397,7 @@ export function grade(survey: Survey): Verdict {
   if (survey.pieces === 0) {
     return {
       confidence: 'low',
-      summary: 'This PDF has no text in it — it is a scan, a photograph of a page.',
+      summary: 'This PDF has no text in it: it is a scan, a photograph of a page.',
       findings: [
         { label: 'No selectable text anywhere in the file', good: false },
         { label: 'Converting needs OCR, which reads the letters off the picture', good: false },
@@ -412,7 +412,7 @@ export function grade(survey: Survey): Verdict {
     const roles = new Set(survey.roles ?? []);
     if (roles.has('Table')) findings.push({ label: 'Tables are marked up in the file, so they convert as tables', good: true });
     if (roles.has('L') || roles.has('LI')) findings.push({ label: 'Lists are marked up, so numbering and bullets survive', good: true });
-    findings.push({ label: 'Exact page layout is not reproduced — Word re-flows the text', good: false });
+    findings.push({ label: 'Exact page layout is not reproduced: Word re-flows the text', good: false });
     return {
       confidence: 'high',
       summary: 'This should convert very well. The PDF carries its own structure, so this is a translation rather than a guess.',
@@ -422,8 +422,8 @@ export function grade(survey: Survey): Verdict {
 
   findings.push({ label: 'This PDF is not tagged, so structure has to be inferred from the layout', good: false });
   findings.push({ label: 'Text, headings, paragraphs and lists are usually recovered well', good: true });
-  if (survey.columns) findings.push({ label: 'More than one column detected — check the reading order', good: false });
-  if (survey.ruledTables) findings.push({ label: 'Ruled tables detected — check every table before you rely on it', good: false });
+  if (survey.columns) findings.push({ label: 'More than one column detected: check the reading order', good: false });
+  if (survey.ruledTables) findings.push({ label: 'Ruled tables detected: check every table before you rely on it', good: false });
   else findings.push({ label: 'Tables without drawn borders may come out as plain paragraphs', good: false });
 
   return {

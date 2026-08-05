@@ -1,4 +1,4 @@
-/* LOC.1999 video page. Vanilla JS, no build step.
+/* 1999.LOC video page. Vanilla JS, no build step.
  *
  * Loaded on first file open, both from this origin:
  *   /vendor/mediabunny/mediabunny.min.mjs — reads and writes MP4, WebM, MKV…
@@ -171,7 +171,7 @@
     var message = (err && err.message) || String(err);
     if (/format|demux|parse|unsupported/i.test(message)) {
       return 'That file could not be read as a video. MP4, MOV, WebM, MKV, Ogg, MP3 and WAV work; ' +
-        'AVI, WMV and FLV do not — they are old container formats with no browser support.';
+        'AVI, WMV and FLV do not: they are old container formats with no browser support.';
     }
     return message;
   }
@@ -252,7 +252,7 @@
       if (info.audio && !info.audio.decodable) which.push('the ' + planner.codecName(info.audio.codec) + ' audio');
       $('decode-detail').textContent =
         'This browser has no decoder for ' + which.join(' or ') + '. Copying it into another container ' +
-        'still works, because that does not require decoding — but resizing, re-encoding and the preview ' +
+        'still works, because that does not require decoding, but resizing, re-encoding and the preview ' +
         'above will not.';
       decodeWarning.classList.remove('hidden');
     } else {
@@ -272,7 +272,7 @@
       option.textContent = format.label;
       if (!fit.usable) {
         option.disabled = true;
-        option.textContent = format.label + ' — not available in this browser';
+        option.textContent = format.label + ' (not available in this browser)';
       } else {
         offered++;
       }
@@ -841,7 +841,7 @@
     var name = planner.outputName(sourceName, format, trimmed);
     var seconds = Math.max(0.1, elapsed / 1000);
     var change = sourceSize ? Math.round((1 - blob.size / sourceSize) * 100) : 0;
-    var sizeNote = change > 0 ? ' — ' + change + '% smaller' : change < 0 ? ' — ' + (-change) + '% larger' : '';
+    var sizeNote = change > 0 ? ', ' + change + '% smaller' : change < 0 ? ', ' + (-change) + '% larger' : '';
 
     outputEl.innerHTML =
       '<p><a id="download" download="' + esc(name) + '" href="' + objectUrl(blob) + '">Download ' + esc(name) + '</a> ' +

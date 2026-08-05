@@ -45,7 +45,7 @@ export function page(title: string, body: string, options: PageOptions = {}): st
   const social = `<meta property="og:type" content="website">
 <meta property="og:title" content="${escapeHtml(title)}">
 <meta property="og:description" content="${escapeHtml(description)}">
-<meta property="og:site_name" content="LOC.1999">
+<meta property="og:site_name" content="1999.LOC">
 ${options.canonical ? `<meta property="og:url" content="${escapeHtml(options.canonical)}">` : ''}
 <meta name="twitter:card" content="summary">`;
   return `<!DOCTYPE html>
@@ -152,7 +152,7 @@ ${groups}
 }
 
 export function siteHeader(current = 'count'): string {
-  return `<h1>LOC.1999</h1>
+  return `<h1>1999.LOC</h1>
 <p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
 ${siteNav(current)}`;
 }
@@ -180,7 +180,7 @@ export function errorPage(
   action?: { href: string; label: string },
 ): string {
   return page(
-    `LOC.1999 - ${escapeHtml(code)}`,
+    `1999.LOC - ${escapeHtml(code)}`,
     `${siteHeader()}
 <h2>Error</h2>
 <p class="error">${escapeHtml(message)}</p>
@@ -312,7 +312,7 @@ export interface Standing {
 function standingNote(standings: Standing[]): string {
   if (standings.length === 0) {
     return `<p class="note">Not entered in any <a href="/golf">golf challenge</a>. One task,
-fewest lines wins &mdash; that is the only board here where the number is worth arguing about.</p>`;
+fewest lines wins, and that is the only board here where the number is worth arguing about.</p>`;
   }
   const lines = standings
     .map((standing) => {
@@ -336,7 +336,7 @@ export function resultPageHtml(
   const t = result.totals;
   const perStar = standingNote(standings);
   return page(
-    `${result.full_name} — ${num(t.lines)} lines of code · LOC.1999`,
+    `${result.full_name}: ${num(t.lines)} lines of code · 1999.LOC`,
     `${siteHeader()}
 ${resultsHtml(result)}
 ${perStar}

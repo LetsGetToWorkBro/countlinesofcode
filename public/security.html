@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>What Connecting GitHub Grants — LOC.1999</title>
-<meta name="description" content="Exactly what LOC.1999 asks GitHub for, what it stores, and how to verify every claim against the source.">
+<title>What Connecting GitHub Grants | 1999.LOC</title>
+<meta name="description" content="Exactly what 1999.LOC asks GitHub for, what it stores, and how to verify every claim against the source.">
 <link rel="canonical" href="https://1999loc.com/security.html">
 <meta property="og:type" content="article">
-<meta property="og:title" content="What Connecting GitHub Grants — LOC.1999">
-<meta property="og:description" content="Exactly what LOC.1999 asks GitHub for, what it stores, and how to verify every claim against the source.">
+<meta property="og:title" content="What Connecting GitHub Grants | 1999.LOC">
+<meta property="og:description" content="Exactly what 1999.LOC asks GitHub for, what it stores, and how to verify every claim against the source.">
 <meta property="og:url" content="https://1999loc.com/security.html">
-<meta property="og:site_name" content="LOC.1999">
+<meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -19,7 +19,7 @@
 <body>
 <div id="page">
 
-<h1><a href="/">LOC.1999</a></h1>
+<h1><a href="/">1999.LOC</a></h1>
 <p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
 
 <hr>
@@ -66,14 +66,14 @@ one.
 <p>
 This deployment asks for exactly what <a href="/api/meta">/api/meta</a> reports under
 <code>oauth_scopes</code>, and the sign-in section on the <a href="/code.html">counter page</a> states it
-before you click. GitHub shows the same list on its own consent screen &mdash; that screen, not
+before you click. GitHub shows the same list on its own consent screen, and that screen, not
 anything written here, is the authority.
 </p>
 <table>
 <tbody>
 <tr><th scope="row"><code>read:user</code></th><td>Your login name and avatar, so the page can say who is connected. Nothing else.</td></tr>
 <tr><th scope="row">no scope</th><td>GitHub App mode. Permissions come from the app (<code>contents: read</code>), and you choose which repositories it may see when you install it.</td></tr>
-<tr><th scope="row"><code>repo</code></th><td>Only if a deployment explicitly opts in. This is GitHub's <em>read and write</em> scope for private repositories &mdash; classic OAuth Apps have no read-only equivalent. If you see this requested, it is worth asking why.</td></tr>
+<tr><th scope="row"><code>repo</code></th><td>Only if a deployment explicitly opts in. This is GitHub's <em>read and write</em> scope for private repositories, and classic OAuth Apps have no read-only equivalent. If you see this requested, it is worth asking why.</td></tr>
 </tbody>
 </table>
 
@@ -81,7 +81,7 @@ anything written here, is the authority.
 <table>
 <tbody>
 <tr><th scope="row">Your access token</th><td>In Cloudflare KV, under a random 256-bit session id. It expires after 7 days. It is never sent to your browser.</td></tr>
-<tr><th scope="row">Your browser</th><td>One cookie holding only that session id &mdash; <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite=Lax</code>. JavaScript on the page cannot read it.</td></tr>
+<tr><th scope="row">Your browser</th><td>One cookie holding only that session id: <code>HttpOnly</code>, <code>Secure</code>, <code>SameSite=Lax</code>. JavaScript on the page cannot read it.</td></tr>
 <tr><th scope="row">Your code</th><td>Never stored. Files are decoded, counted, and discarded as they stream past. Only totals are kept.</td></tr>
 <tr><th scope="row">Private results</th><td>Cached under the commit sha like any other, but a cached private result is never served without re-checking that the caller can still see the repository.</td></tr>
 </tbody>
@@ -105,13 +105,13 @@ The whole thing is open source, so none of the above has to be taken on faith.
 <ul class="plain">
   <li><a href="https://github.com/letsgettoworkbro/countlinesofcode">The source</a>, in full.</li>
   <li><a href="https://github.com/letsgettoworkbro/countlinesofcode/blob/main/src/worker/auth.ts"><code>src/worker/auth.ts</code></a>
-      &mdash; the entire sign-in flow, including what is requested and where the token goes.</li>
+      holds the entire sign-in flow, including what is requested and where the token goes.</li>
   <li><a href="https://github.com/letsgettoworkbro/countlinesofcode/blob/main/src/lib/github.ts"><code>src/lib/github.ts</code></a>
-      &mdash; every GitHub request the app can make. All of them are GETs.</li>
+      lists every GitHub request the app can make. All of them are GETs.</li>
   <li><a href="/api/meta">/api/meta</a> reports <code>source_commit</code>: the commit this running
       build came from. Compare it with the repository to confirm the deployed code is the published
       code.</li>
-  <li>The test suite asserts these properties rather than describing them &mdash; that a cached
+  <li>The test suite asserts these properties rather than describing them: that a cached
       private result is not served to someone who has lost access, and that the token is sent to
       <code>api.github.com</code> and never to the archive host. Both fail if the protection is
       removed.</li>
@@ -120,7 +120,7 @@ The whole thing is open source, so none of the above has to be taken on faith.
 <h2>Revoking</h2>
 <p>
 &ldquo;Disconnect&rdquo; on the front page deletes the stored token immediately. To revoke from
-GitHub's side &mdash; which is the one that does not depend on trusting this site &mdash; use
+GitHub's side, which is the one that does not depend on trusting this site, use
 <a href="https://github.com/settings/applications">GitHub &rarr; Settings &rarr; Applications</a>.
 Doing that is always the stronger move, and it works whether or not anything here is true.
 </p>
