@@ -477,3 +477,31 @@ button.remove {
 .leak-advice { color: #000080; }
 
 #clean .good { color: #145214; font-size: 14px; }
+
+/* Spreadsheet preview: a scrollable grid, monospaced so columns line up. */
+.sheet-preview {
+  border: 1px solid #808080;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.sheet-preview table {
+  border: none;
+  margin: 0;
+  width: auto;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+}
+
+.sheet-preview th,
+.sheet-preview td {
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sheet-preview th { background: #e0e0e0; position: sticky; top: 0; }
+
+button.sheet-tab { font-size: 14px; padding: 1px 8px; }
+button.sheet-tab.is-active { border-style: inset; background: #ffffcc; }
