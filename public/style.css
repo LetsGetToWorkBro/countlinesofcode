@@ -736,6 +736,8 @@ img.zip-image { max-width: 100%; display: block; }
 .pw-fair { color: #6a5500; }
 .pw-strong { color: #145214; }
 .pw-excellent { color: #145214; }
+/* Not a verdict on a passphrase: the state of having chosen not to have one. */
+.pw-warn { color: #8a3b00; }
 
 .error-inline { color: #8a0000; }
 

@@ -21,6 +21,168 @@
  */
 
 // ---------------------------------------------------------------------------
+// Which OpenPGP to write
+// ---------------------------------------------------------------------------
+
+/**
+ * There are two OpenPGPs now, and pretending otherwise would be the same kind
+ * of dishonesty as claiming a file is never uploaded while uploading it.
+ *
+ * RFC 9580 (2024) brought AEAD encryption, native Ed25519/X25519 keys, v6 key
+ * packets and Argon2 for protecting a private key with a passphrase. All four
+ * are better than what came before. Argon2 is the one that matters most here:
+ * it is memory-hard, so a graphics card cannot grind through passphrases the
+ * way it can against the older iterated-SHA-256 stretching, and the private key
+ * this page keeps in your browser is exactly the thing an attacker would grind
+ * against.
+ *
+ * The catch is that a great deal of deployed software cannot read any of it.
+ * Writing only the new format would mean handing someone a file their `gpg`
+ * refuses, which is the failure this whole tool exists to avoid.
+ *
+ * So: both, chosen explicitly, with the cost of each stated on the page. The
+ * numbers below are not aspirations — `test/pgpkit.test.ts` generates real keys
+ * with these options and asserts the algorithms that come out.
+ */
+export type ProfileId = 'compatible' | 'modern';
+
+export interface Profile {
+  id: ProfileId;
+  label: string;
+  /** The signing and encryption algorithms the key itself uses. */
+  algorithms: string;
+  /** What the private key is protected with at rest. */
+  protection: string;
+  /** What a message encrypted *to this key* is protected with. */
+  message: string;
+  /** Who can open what this writes. */
+  opens: string;
+  /** Handed straight to OpenPGP.js as `config`. */
+  config: Record<string, unknown>;
+}
+
+/**
+ * Argon2 is s2k type 4. Named rather than inlined because a bare `4` in a
+ * config object is the sort of thing that gets "tidied" into the wrong value.
+ */
+const S2K_ARGON2 = 4;
+
+export const PROFILES: Record<ProfileId, Profile> = {
+  compatible: {
+    id: 'compatible',
+    label: 'Compatible',
+    algorithms: 'Ed25519 to sign, X25519 to encrypt, in the packet encoding that predates RFC 9580',
+    protection: 'AES-256, unlocked by putting your passphrase through 16,777,216 rounds of SHA-256',
+    message: 'AES-256 with a modification-detection code, so a tampered message fails to open',
+    opens: 'Anything that speaks OpenPGP: GnuPG, Thunderbird, Kleopatra, GPG Suite, and this page.',
+    // Deliberately empty. The defaults are the long-established format, and
+    // pinning today's values here would freeze them into the file.
+    config: {},
+  },
+  modern: {
+    id: 'modern',
+    label: 'Modern',
+    algorithms: 'The same Ed25519 and X25519, in the native RFC 9580 encoding, on a version 6 key',
+    protection: 'AES-256, unlocked by Argon2, which is memory-hard and so far harder to attack with a graphics card',
+    message: 'AES-256 in an authenticated mode (AEAD), which detects tampering as part of decrypting rather than after it',
+    opens: 'Implementations updated for RFC 9580. Older GnuPG will refuse it.',
+    config: { aeadProtect: true, s2kType: S2K_ARGON2, v6Keys: true },
+  },
+};
+
+/**
+ * Which format a message to this recipient will actually get.
+ *
+ * Worth stating plainly on the page, because it is not the setting you chose:
+ * it follows the *recipient's* key. Encrypt to a version 6 key and the message
+ * is AEAD whatever the toggle says; encrypt to an older key and it is the older
+ * format, again whatever the toggle says. OpenPGP.js is right to do this — a
+ * message their software cannot open is not a stronger message — but a page
+ * that advertised AEAD and then quietly wrote a modification-detection code
+ * would be making exactly the sort of promise this site exists not to make.
+ */
+export function messageFormatFor(recipientKeyVersion: number): { aead: boolean; note: string } {
+  const aead = recipientKeyVersion >= 6;
+  return {
+    aead,
+    note: aead
+      ? 'Their key is a version 6 key, so this is written with authenticated encryption.'
+      : 'Their key predates RFC 9580, so this is written in the older format with a modification-detection code. Sending anything else would produce a file they could not open.',
+  };
+}
+
+export function profileFor(id: string): Profile {
+  return PROFILES[id as ProfileId] ?? PROFILES.compatible;
+}
+
+export type KeyKind = 'curve25519' | 'rsa4096';
+
+/**
+ * The two profiles want *different* Curve25519.
+ *
+ * `{ type: 'ecc', curve: 'curve25519' }` is the older encoding: EdDSA-legacy
+ * signing with an ECDH subkey, which is what every deployed implementation
+ * understands. `{ type: 'curve25519' }` is the RFC 9580 native form, Ed25519
+ * and X25519 proper. Same curve, same mathematics, different packets, and only
+ * one of them opens in software from before 2024.
+ */
+export function keyOptions(
+  profile: Profile,
+  fields: { name?: string; email?: string; kind?: KeyKind; passphrase?: string; expiryYears?: number },
+): Record<string, unknown> {
+  const options: Record<string, unknown> = {
+    userIDs: [{ name: fields.name || undefined, email: fields.email || undefined }],
+    format: 'armored',
+  };
+
+  if (fields.kind === 'rsa4096') {
+    options.type = 'rsa';
+    options.rsaBits = 4096;
+  } else if (profile.id === 'modern') {
+    options.type = 'curve25519';
+  } else {
+    options.type = 'ecc';
+    options.curve = 'curve25519';
+  }
+
+  if (fields.passphrase) options.passphrase = fields.passphrase;
+
+  const seconds = expirySeconds(fields.expiryYears);
+  if (seconds) options.keyExpirationTime = seconds;
+
+  if (Object.keys(profile.config).length) options.config = { ...profile.config };
+  return options;
+}
+
+/** Years to seconds, with 0 and nonsense meaning "no expiry". */
+export function expirySeconds(years?: number): number {
+  const n = Number(years);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.round(n * 365.25 * 24 * 60 * 60);
+}
+
+// ---------------------------------------------------------------------------
+// What may be kept in this browser
+// ---------------------------------------------------------------------------
+
+/**
+ * A private key is never stored here without a passphrase.
+ *
+ * With one, what sits in local storage is a block that costs an attacker a real
+ * search to open. Without one it is the key itself, in the clear, readable by
+ * anything that can run a line of script on this origin or by anyone who picks
+ * up the unlocked laptop. The convenience of skipping it is not worth what it
+ * costs, and a tool that offers the unsafe option with a warning beside it is
+ * really just offering the unsafe option.
+ *
+ * A key made without a passphrase is still made, and still downloaded. It is
+ * only not *remembered*.
+ */
+export function mayStorePrivate(passphrase: string): boolean {
+  return String(passphrase ?? '').length > 0;
+}
+
+// ---------------------------------------------------------------------------
 // What a block of text is
 // ---------------------------------------------------------------------------
 
@@ -60,6 +222,54 @@ export function looksEncrypted(bytes: Uint8Array, name = ''): boolean {
   // starts with; 0x85/0x84 are their old-format equivalents.
   const first = bytes[0] ?? 0;
   return [0xc1, 0xc3, 0xc2, 0x84, 0x85, 0x8c, 0xa3].includes(first);
+}
+
+/**
+ * Every armored block in a piece of text, in the order they appear.
+ *
+ * A file someone exports from GnuPG routinely holds several: the public key and
+ * the private key together, or a whole keyring. Reading only the first would
+ * silently drop the rest, and dropping the *private* half of a backup while
+ * reporting success is the worst version of that.
+ *
+ * The END line is matched against the BEGIN line's own label, with one genuine
+ * exception: a clearsigned message opens `BEGIN PGP SIGNED MESSAGE` and never
+ * closes it — the block ends with the END of the signature nested inside it.
+ * Matching labels naively there returns the inner signature and silently drops
+ * the text it was vouching for, which is worse than returning nothing.
+ */
+export function splitArmored(text: string): string[] {
+  const source = String(text ?? '');
+  const blocks: string[] = [];
+  const begin = /-----BEGIN PGP ([A-Z0-9 ,]+)-----/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = begin.exec(source))) {
+    const label = match[1]!;
+    const closing = label === 'SIGNED MESSAGE' ? '-----END PGP SIGNATURE-----' : `-----END PGP ${label}-----`;
+    const end = source.indexOf(closing, match.index);
+    if (end === -1) continue;
+    blocks.push(source.slice(match.index, end + closing.length));
+    begin.lastIndex = end + closing.length;
+  }
+  return blocks;
+}
+
+/**
+ * A key pair as one file: public half first, then private.
+ *
+ * That order is on purpose. Anyone opening the file in a text editor sees the
+ * public block at the top and knows what they are looking at before they have
+ * scrolled into the half that must not be shared.
+ */
+export function keyPairArmor(publicKey: string, privateKey: string): string {
+  return [publicKey.trim(), privateKey.trim()].filter(Boolean).join('\n\n') + '\n';
+}
+
+/** A filename for a saved key, safe on every filesystem. */
+export function backupName(name: string, kind: 'public' | 'private' | 'pair' | 'keyring'): string {
+  const stem = String(name ?? '').replace(/[^\w.-]+/g, '_').replace(/^_+|_+$/g, '') || 'key';
+  return `${stem}-${kind}.asc`;
 }
 
 // ---------------------------------------------------------------------------
@@ -374,6 +584,14 @@ export function shortId(fingerprint: string): string {
 
 const globalScope = globalThis as unknown as { LOC1999_PGP?: Record<string, unknown> };
 globalScope.LOC1999_PGP = {
+  PROFILES,
+  profileFor,
+  keyOptions,
+  expirySeconds,
+  mayStorePrivate,
+  splitArmored,
+  keyPairArmor,
+  backupName,
   armorKind,
   looksEncrypted,
   lockedName,

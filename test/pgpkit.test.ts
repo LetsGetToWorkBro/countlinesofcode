@@ -15,19 +15,27 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  PROFILES,
   WORDS,
   armorKind,
+  backupName,
+  expirySeconds,
   forgetAllKeys,
   forgetKey,
   formatFingerprint,
+  keyOptions,
+  keyPairArmor,
   lockedName,
   looksEncrypted,
   makePassphrase,
+  mayStorePrivate,
   passphraseBits,
   phraseBits,
+  profileFor,
   rememberKey,
   savedKeys,
   shortId,
+  splitArmored,
   strength,
   unlockedName,
   type StoredKey,
@@ -386,5 +394,151 @@ describe('remembering keys', () => {
   it('ignores a store that has been filled with something that is not keys', () => {
     (globalThis as unknown as { localStorage: Storage }).localStorage.setItem('loc1999:pgp-keys', '{"not":"an array"}');
     expect(savedKeys()).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The two OpenPGP profiles
+// ---------------------------------------------------------------------------
+
+describe('profiles', () => {
+  it('falls back to the compatible one rather than breaking on a stale value', () => {
+    // The choice is remembered in the page; a value from an older build must
+    // not leave someone unable to make a key.
+    expect(profileFor('nonsense').id).toBe('compatible');
+    expect(profileFor('').id).toBe('compatible');
+    expect(profileFor('modern').id).toBe('modern');
+  });
+
+  it('leaves the compatible profile on the library defaults', () => {
+    // Pinning today's defaults into a config object would freeze them, so this
+    // profile deliberately says nothing.
+    expect(PROFILES.compatible.config).toEqual({});
+  });
+
+  it('asks for Argon2, AEAD and v6 in the modern one', () => {
+    expect(PROFILES.modern.config).toEqual({ aeadProtect: true, s2kType: 4, v6Keys: true });
+  });
+
+  it('names the two Curve25519 encodings apart, because they are not the same packets', () => {
+    const compatible = keyOptions(PROFILES.compatible, { name: 'A', kind: 'curve25519' });
+    const modern = keyOptions(PROFILES.modern, { name: 'A', kind: 'curve25519' });
+    expect(compatible).toMatchObject({ type: 'ecc', curve: 'curve25519' });
+    expect(modern).toMatchObject({ type: 'curve25519' });
+    expect(modern.curve).toBeUndefined();
+  });
+
+  it('asks for RSA the same way in both, because RSA has only one encoding', () => {
+    for (const profile of [PROFILES.compatible, PROFILES.modern]) {
+      expect(keyOptions(profile, { name: 'A', kind: 'rsa4096' })).toMatchObject({ type: 'rsa', rsaBits: 4096 });
+    }
+  });
+
+  it('leaves the passphrase out entirely when there is not one', () => {
+    // An empty string here would be a passphrase of no characters rather than
+    // no passphrase, and OpenPGP.js treats those differently.
+    expect('passphrase' in keyOptions(PROFILES.compatible, { name: 'A' })).toBe(false);
+    expect(keyOptions(PROFILES.compatible, { name: 'A', passphrase: 'x' }).passphrase).toBe('x');
+  });
+
+  it('copies the config rather than handing out the shared one', () => {
+    const options = keyOptions(PROFILES.modern, { name: 'A' });
+    (options.config as Record<string, unknown>).aeadProtect = false;
+    expect(PROFILES.modern.config.aeadProtect).toBe(true);
+  });
+});
+
+describe('expirySeconds', () => {
+  it('is zero for never, which is the absence of the option', () => {
+    expect(expirySeconds(0)).toBe(0);
+    expect(expirySeconds(undefined)).toBe(0);
+    expect(expirySeconds(-1)).toBe(0);
+    expect(expirySeconds(Number.NaN)).toBe(0);
+  });
+
+  it('counts leap years, so a two-year key does not expire two days early', () => {
+    expect(expirySeconds(2)).toBe(Math.round(2 * 365.25 * 86400));
+    expect(expirySeconds(1)).toBeGreaterThan(365 * 86400);
+  });
+});
+
+describe('mayStorePrivate', () => {
+  it('refuses to keep an unprotected private key', () => {
+    // The whole rule: without a passphrase, what would sit in local storage is
+    // the key itself.
+    expect(mayStorePrivate('')).toBe(false);
+    expect(mayStorePrivate(undefined as unknown as string)).toBe(false);
+    expect(mayStorePrivate('x')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reading a key file
+// ---------------------------------------------------------------------------
+
+const block = (label: string, body = 'AAAA') =>
+  `-----BEGIN PGP ${label}-----\n\n${body}\n-----END PGP ${label}-----`;
+
+describe('splitArmored', () => {
+  it('finds both halves of an exported key pair', () => {
+    const file = `${block('PUBLIC KEY BLOCK')}\n\n${block('PRIVATE KEY BLOCK')}\n`;
+    const blocks = splitArmored(file);
+    expect(blocks).toHaveLength(2);
+    expect(armorKind(blocks[0]!)).toBe('public-key');
+    expect(armorKind(blocks[1]!)).toBe('private-key');
+  });
+
+  it('finds every key in a whole exported keyring', () => {
+    expect(splitArmored([block('PUBLIC KEY BLOCK'), block('PUBLIC KEY BLOCK'), block('PUBLIC KEY BLOCK')].join('\n'))).toHaveLength(3);
+  });
+
+  it('ignores the notes people leave around a pasted key', () => {
+    const file = `Here is my key, thanks!\n\n${block('PUBLIC KEY BLOCK')}\n\nlet me know if it works`;
+    expect(splitArmored(file)).toHaveLength(1);
+  });
+
+  it('keeps a clearsigned message whole instead of tearing out its signature', () => {
+    // A signed message nests a SIGNATURE block inside itself. Matching END
+    // against the opening label is what stops that becoming two fragments.
+    const signed = '-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA256\n\nhello\n' +
+      '-----BEGIN PGP SIGNATURE-----\n\nAAAA\n-----END PGP SIGNATURE-----';
+    const blocks = splitArmored(signed);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]).toContain('hello');
+    expect(blocks[0]).toContain('END PGP SIGNATURE');
+  });
+
+  it('drops a block whose end never came rather than returning half a key', () => {
+    expect(splitArmored('-----BEGIN PGP PRIVATE KEY BLOCK-----\n\nAAAA\n')).toEqual([]);
+  });
+
+  it('has nothing to say about text with no keys in it', () => {
+    expect(splitArmored('just a note')).toEqual([]);
+    expect(splitArmored('')).toEqual([]);
+  });
+});
+
+describe('keyPairArmor', () => {
+  it('puts the public half first, so the file says what it is before it says the secret', () => {
+    const pair = keyPairArmor(block('PUBLIC KEY BLOCK'), block('PRIVATE KEY BLOCK'));
+    expect(pair.indexOf('PUBLIC')).toBeLessThan(pair.indexOf('PRIVATE'));
+    expect(splitArmored(pair)).toHaveLength(2);
+  });
+
+  it('round-trips through the reader', () => {
+    const pair = keyPairArmor(block('PUBLIC KEY BLOCK', 'pub'), block('PRIVATE KEY BLOCK', 'priv'));
+    expect(splitArmored(pair).map(armorKind)).toEqual(['public-key', 'private-key']);
+  });
+});
+
+describe('backupName', () => {
+  it('makes a filename out of a name with anything in it', () => {
+    expect(backupName('Ada Lovelace <ada@example.com>', 'pair')).toBe('Ada_Lovelace_ada_example.com-pair.asc');
+    expect(backupName('../../etc/passwd', 'private')).toBe('.._.._etc_passwd-private.asc');
+  });
+
+  it('still produces a filename when the name is unusable', () => {
+    expect(backupName('', 'public')).toBe('key-public.asc');
+    expect(backupName('   ', 'keyring')).toBe('key-keyring.asc');
   });
 });
