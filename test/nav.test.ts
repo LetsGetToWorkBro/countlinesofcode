@@ -47,9 +47,11 @@ describe('the toolkit bar', () => {
       const html = readFileSync(path, 'utf8');
       const nav = /<p class="nav">([\s\S]*?)<\/p>/.exec(html)?.[1] ?? '';
       const bold = [...nav.matchAll(/<strong>/g)].length;
-      // The landing page is not a tool, and neither are how/security, so those
-      // three highlight nothing. Every tool page highlights itself.
-      const isToolPage = !/index\.html|how\.html|security\.html/.test(path);
+      // The landing page is not a tool, and neither are how/security or the
+      // secondary PDF utilities (unlock/shrink), which carry the bar but are
+      // not in it. Those highlight nothing; every top-nav tool page highlights
+      // itself.
+      const isToolPage = !/index\.html|how\.html|security\.html|unlock\.html|shrink\.html/.test(path);
       expect(bold, `${path} highlights ${bold} entries`).toBe(isToolPage ? 1 : 0);
     }
   });

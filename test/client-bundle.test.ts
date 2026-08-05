@@ -47,30 +47,30 @@ describe('public/bigcount.js', () => {
   });
 });
 
-describe('public/pdfkit.js', () => {
-  it('matches a fresh build of src/client/pdfkit.ts', async () => {
-    const fresh = await freshBuild('public/pdfkit.js');
-    const committed = readFileSync('public/pdfkit.js', 'utf8');
+describe('public/pdfsign.js', () => {
+  it('matches a fresh build of src/client/pdfedit.ts', async () => {
+    const fresh = await freshBuild('public/pdfsign.js');
+    const committed = readFileSync('public/pdfsign.js', 'utf8');
     expect(fresh.length).toBeGreaterThan(1000);
     expect(
       committed,
-      'public/pdfkit.js is stale — run `npm run build:client` and commit the result',
+      'public/pdfsign.js is stale — run `npm run build:client` and commit the result',
     ).toBe(fresh);
   });
 
   it('inlines pdf-lib, because the CSP forbids loading it from a CDN', () => {
-    const committed = readFileSync('public/pdfkit.js', 'utf8');
+    const committed = readFileSync('public/pdfsign.js', 'utf8');
     expect(committed).not.toMatch(/\bfrom\s*["']pdf-lib["']/);
     expect(committed).not.toMatch(/https:\/\/(cdn|unpkg)/);
-    expect(committed).toContain('LOC1999_PDF');
+    expect(committed).toContain('LOC1999_SIGN');
   });
 
   /**
-   * This one is a budget, not a fact. pdf-lib is the single heaviest thing on
-   * the site and the page states its size out loud; if a change doubles it,
-   * that claim needs rewriting and this test is the reminder.
+   * A budget, not a fact. pdf-lib is the single heaviest thing on the site and
+   * the page states its size out loud; if a change doubles it, that claim needs
+   * rewriting and this test is the reminder.
    */
   it('stays inside the size the page promises', () => {
-    expect(readFileSync('public/pdfkit.js').length).toBeLessThan(600 * 1024);
+    expect(readFileSync('public/pdfsign.js').length).toBeLessThan(600 * 1024);
   });
 });

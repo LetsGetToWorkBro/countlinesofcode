@@ -37,14 +37,9 @@ export const BUNDLES = [
     banner: '/* LOC.1999 big-repo counter. Built from src/client/bigcount.ts — do not edit. */',
   },
   {
-    entry: 'src/client/pdfkit.ts',
-    outfile: 'public/pdfkit.js',
-    banner: '/* LOC.1999 PDF engine. Built from src/client/pdfkit.ts — do not edit. Bundles pdf-lib (MIT). */',
-  },
-  {
     entry: 'src/client/pdfedit.ts',
     outfile: 'public/pdfsign.js',
-    banner: '/* LOC.1999 sign/redact engine. Built from src/client/pdfedit.ts — do not edit. Bundles pdf-lib (MIT). */',
+    banner: '/* LOC.1999 PDF editor engine. Built from src/client/pdfedit.ts — do not edit. Bundles pdf-lib (MIT). */',
   },
 ];
 

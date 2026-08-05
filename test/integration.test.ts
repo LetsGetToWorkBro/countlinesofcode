@@ -616,6 +616,13 @@ describe('www handling', () => {
     expect(response.status).toBe(200);
   });
 
+  it('301s the retired /pdf.html to the editor', async () => {
+    // The merge/split page is gone; its links must not 404.
+    const response = await get('https://loc.example/pdf.html');
+    expect(response.status).toBe(301);
+    expect(response.headers.get('location')).toBe('https://loc.example/sign.html');
+  });
+
   it('leaves other hosts alone, so workers.dev and previews keep working', async () => {
     for (const host of ['loc1999.someone.workers.dev', '1a2b3c-loc1999.someone.workers.dev', 'localhost:8787']) {
       const response = await get(`https://${host}/api/meta`);

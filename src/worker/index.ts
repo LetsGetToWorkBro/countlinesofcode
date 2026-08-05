@@ -76,6 +76,9 @@ export default {
       const movedCounter = redirectMovedCounter(url);
       if (movedCounter) return movedCounter;
 
+      const retired = redirectRetiredPage(url);
+      if (retired) return retired;
+
       if (path === '/api/count' && request.method === 'POST') return await postCount(request, env, ctx);
       if (path.startsWith('/api/count/') && request.method === 'GET') return await getCount(request, env, ctx, path);
       if (path === '/api/stream' && request.method === 'GET') return await streamCount(request, env, ctx);
@@ -777,8 +780,10 @@ async function sitemap(request: Request, env: Env): Promise<Response> {
     `<url><loc>${escapeXml(origin)}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/code.html</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/how.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
-    `<url><loc>${escapeXml(origin)}/pdf.html</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>`,
     `<url><loc>${escapeXml(origin)}/sign.html</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>`,
+    `<url><loc>${escapeXml(origin)}/image.html</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>`,
+    `<url><loc>${escapeXml(origin)}/unlock.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
+    `<url><loc>${escapeXml(origin)}/shrink.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
     `<url><loc>${escapeXml(origin)}/security.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`,
     `<url><loc>${escapeXml(origin)}/board</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`,
     `<url><loc>${escapeXml(origin)}/golf</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`,
@@ -836,6 +841,32 @@ export function redirectMovedCounter(url: URL): Response | null {
   const to = new URL(url);
   to.pathname = '/code.html';
   return Response.redirect(to.toString(), 302);
+}
+
+/**
+ * Pages that no longer exist but have links out in the world.
+ *
+ * /pdf.html was merge/split/reorder; it is retired in favour of the editor,
+ * which is now the PDF tool. A permanent redirect keeps old links, shared
+ * screenshots and search results landing somewhere useful instead of on a 404.
+ */
+const RETIRED_PAGES: Record<string, string> = {
+  '/pdf.html': '/sign.html',
+};
+
+export function redirectRetiredPage(url: URL): Response | null {
+  const to = RETIRED_PAGES[url.pathname];
+  if (!to) return null;
+  const target = new URL(url);
+  target.pathname = to;
+  return new Response(null, {
+    status: 301,
+    headers: {
+      location: target.toString(),
+      'cache-control': 'public, max-age=3600',
+      ...SECURITY_HEADERS,
+    },
+  });
 }
 
 function redirectFromWww(url: URL, env: Env): Response | null {

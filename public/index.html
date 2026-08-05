@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LOC.1999 — Small Tools That Do One Thing</title>
-<meta name="description" content="Free tools with no accounts and no uploads: count lines of code in a GitHub repo, merge and split PDFs, sign and edit a PDF, bulk-delete your old posts. Most of them run entirely in your browser.">
+<meta name="description" content="Free tools with no accounts and no uploads: count lines of code in a GitHub repo, fill and sign a PDF, resize and convert images, unlock and shrink PDFs, bulk-delete your old posts. Most of them run entirely in your browser.">
 <link rel="canonical" href="https://1999loc.com/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="LOC.1999 — Small Tools That Do One Thing">
@@ -23,12 +23,12 @@
     LOC.1999
     Small tools. No accounts. Nothing leaves your browser.
     ------------------------------------------------------------
-    count code | golf | pdf | sign | delete posts
+    count code | golf | pdf | images | delete posts
     ------------------------------------------------------------
     The tools
     +----------------+--------------------------+-------------+
     | Count code     | lines in a GitHub repo   | server      |
-    | PDF pages      | merge, split, rotate     | your tab    |
+    | Edit a PDF     | fill, sign, redact       | your tab    |
     ...
     ------------------------------------------------------------
     Why it looks like this
@@ -50,9 +50,9 @@
 |
 <a href="/golf">golf</a>
 |
-<a href="/pdf.html">pdf</a>
+<a href="/sign.html">pdf</a>
 |
-<a href="/sign.html">sign</a>
+<a href="/image.html">images</a>
 |
 <a href="https://delete.1999loc.com/">delete posts</a>
 </p>
@@ -92,20 +92,37 @@ in the tab you already have open.
   <td>Our server</td>
 </tr>
 <tr>
-  <th scope="row"><a href="/pdf.html">PDF pages</a></th>
+  <th scope="row"><a href="/sign.html">Edit a PDF</a></th>
   <td>
-    Merge, split, extract, delete, reorder and rotate pages. Turn images into a
-    PDF. Stamp page numbers. No watermark, no page limit.
+    Fill in a form by typing into its actual fields, sign it by hand or by name,
+    drop in a picture, and delete or replace text <em>properly</em> &mdash; click
+    a word and it leaves the file, no black box over the top and the rest of the
+    page still selectable. Everything you add can be dragged and resized.
   </td>
   <td>Your browser</td>
 </tr>
 <tr>
-  <th scope="row"><a href="/sign.html">Sign &amp; edit</a></th>
+  <th scope="row"><a href="/image.html">Image tools</a></th>
   <td>
-    Fill in a form, sign it by hand or by name, drop in a picture, and delete or
-    replace text <em>properly</em> &mdash; click a word and it leaves the file,
-    no black box over the top and the rest of the page still selectable.
-    Everything you add can be dragged and resized.
+    Resize, compress and convert an image between PNG, JPEG and WebP, and strip
+    the location and camera data out of a photo. Nothing is re-uploaded to do it.
+  </td>
+  <td>Your browser</td>
+</tr>
+<tr>
+  <th scope="row"><a href="/unlock.html">Unlock a PDF</a></th>
+  <td>
+    Remove the &ldquo;no printing, no copying&rdquo; restrictions from a PDF that
+    opens without a password. Not a password cracker &mdash; a file that needs a
+    password to open still needs it.
+  </td>
+  <td>Your browser</td>
+</tr>
+<tr>
+  <th scope="row"><a href="/shrink.html">Shrink a PDF</a></th>
+  <td>
+    Make a heavy PDF smaller, mostly by shrinking oversized scanned pages. Shows
+    you the before and after and lets you keep whichever is smaller.
   </td>
   <td>Your browser</td>
 </tr>
@@ -151,7 +168,7 @@ version:
 </p>
 
 <ul class="plain">
-  <li><strong>No half-working features.</strong> PDF&nbsp;&rarr;&nbsp;Word and OCR are not offered, and the PDF page explains exactly why rather than shipping something that looks right and is not.</li>
+  <li><strong>No half-working features.</strong> PDF&nbsp;&rarr;&nbsp;Word is not offered, and each tool explains exactly why rather than shipping something that looks right and is not.</li>
   <li><strong>No numbers we cannot show our working for.</strong> The counter is <a href="/how.html">documented rule by rule</a>, pinned to a commit, and the same for everyone.</li>
   <li><strong>No accounts, so no data to lose.</strong> Connecting GitHub is optional and only exists for private repositories.</li>
   <li><strong>No ads and no tracking.</strong> There is no analytics script on any page here.</li>
@@ -170,8 +187,10 @@ Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spit
 <a href="/code.html">count code</a> |
 <a href="/golf">code golf</a> |
 <a href="/board">the standings</a> |
-<a href="/pdf.html">pdf pages</a> |
-<a href="/sign.html">sign &amp; edit</a> |
+<a href="/sign.html">edit a pdf</a> |
+<a href="/image.html">image tools</a> |
+<a href="/unlock.html">unlock a pdf</a> |
+<a href="/shrink.html">shrink a pdf</a> |
 <a href="https://delete.1999loc.com/">delete your posts</a> |
 <a href="/how.html">how we count</a> |
 <a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>

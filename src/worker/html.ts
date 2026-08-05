@@ -83,8 +83,11 @@ ${body}
 export const SITE_TOOLS: { href: string; label: string; id: string }[] = [
   { href: '/code.html', label: 'count code', id: 'count' },
   { href: '/golf', label: 'golf', id: 'golf' },
-  { href: '/pdf.html', label: 'pdf', id: 'pdf' },
-  { href: '/sign.html', label: 'sign', id: 'sign' },
+  // The editor is the PDF tool now; the old merge/split page is retired and
+  // /pdf.html redirects here. The URL stays /sign.html for the links already
+  // out in the world.
+  { href: '/sign.html', label: 'pdf', id: 'pdf' },
+  { href: '/image.html', label: 'images', id: 'images' },
   { href: 'https://delete.1999loc.com/', label: 'delete posts', id: 'delete' },
 ];
 
