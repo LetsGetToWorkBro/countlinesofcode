@@ -22,6 +22,8 @@ import { describe, expect, it } from 'vitest';
 import {
   KNOWN_ADDRESS,
   addressFor,
+  approximateHeight,
+  canWatch,
   allChecksPass,
   base58Decode,
   base58Encode,
@@ -36,7 +38,9 @@ import {
   reduceScalar,
   seedFromMnemonic,
   selfTest,
+  restoreHeight,
   toHex,
+  watchOnlyExport,
   walletFromMnemonic,
   walletFromSeed,
 } from '../src/client/monero';
@@ -427,5 +431,110 @@ describe('mixing in your own entropy', () => {
   it('produces a usable wallet', () => {
     const wallet = walletFromSeed(mixEntropy(browser(), new TextEncoder().encode('4 4 6 1')));
     expect(parseAddress(wallet.address).valid).toBe(true);
+  });
+});
+
+describe('the block height estimate', () => {
+  it('puts the v2 fork where it actually happened', () => {
+    // Two block-time eras, not one. A single 120-second model is out by most
+    // of a million blocks, which would send a wallet scanning from years too
+    // late. This landmark is what pins the first era.
+    const forkDate = new Date(Date.UTC(2016, 2, 19));
+    expect(Math.abs(approximateHeight(forkDate) - 1_009_827)).toBeLessThan(2000);
+  });
+
+  it('puts height three million in late 2023', () => {
+    // An independent landmark from the other era.
+    const height = approximateHeight(Date.UTC(2023, 9, 13));
+    expect(Math.abs(height - 3_000_000)).toBeLessThan(5000);
+  });
+
+  it('is zero before Monero existed', () => {
+    expect(approximateHeight(Date.UTC(2010, 0, 1))).toBe(0);
+    expect(approximateHeight(Date.UTC(2014, 3, 18))).toBe(0);
+  });
+
+  it('only ever goes up', () => {
+    let previous = -1;
+    for (const year of [2015, 2017, 2019, 2021, 2023, 2025]) {
+      const height = approximateHeight(Date.UTC(year, 0, 1));
+      expect(height).toBeGreaterThan(previous);
+      previous = height;
+    }
+  });
+});
+
+describe('the restore height', () => {
+  it('errs early, never late', () => {
+    // The direction is the whole point. Too early costs patience; too late
+    // means the wallet silently never sees payments that already arrived and
+    // the balance reads zero with no explanation.
+    const now = Date.UTC(2026, 6, 1);
+    expect(restoreHeight(now)).toBeLessThan(approximateHeight(now));
+  });
+
+  it('backs off by about a week', () => {
+    const now = Date.UTC(2026, 6, 1);
+    const blocksBack = approximateHeight(now) - restoreHeight(now);
+    // A week at two-minute blocks.
+    expect(blocksBack).toBe(7 * 24 * 30);
+  });
+
+  it('never goes below zero', () => {
+    expect(restoreHeight(Date.UTC(2014, 3, 19))).toBe(0);
+  });
+});
+
+describe('the watch-only export', () => {
+  const wallet = () => walletFromSeed(seedFrom('watch me'));
+
+  it('carries the address and the view key, and never the spend key', () => {
+    // The single most important property here. A "watch-only" export that
+    // included the spend key would be a full wallet wearing a safe name.
+    const w = wallet();
+    const exported = watchOnlyExport(w.address, w.viewSecret, Date.UTC(2026, 6, 1));
+    expect(exported.json).toContain(w.viewSecret);
+    expect(exported.json).toContain(w.address);
+    expect(exported.json).not.toContain(w.spendSecret);
+    expect(JSON.stringify(exported)).not.toContain(w.spendSecret);
+  });
+
+  it('produces JSON the restore format expects', () => {
+    const w = wallet();
+    const parsed = JSON.parse(watchOnlyExport(w.address, w.viewSecret, Date.UTC(2026, 6, 1)).json);
+    expect(parsed).toMatchObject({ version: 1, viewkey: w.viewSecret, address: w.address });
+    expect(parsed.scan_from_height).toBeGreaterThan(3_000_000);
+    expect('spendkey' in parsed).toBe(false);
+  });
+
+  it('names the command to run', () => {
+    const w = wallet();
+    const exported = watchOnlyExport(w.address, w.viewSecret);
+    expect(exported.steps[0]).toContain('--generate-from-view-key');
+    expect(exported.steps.join(' ')).toMatch(/view key/i);
+  });
+
+  it('sets a restore height rather than starting from genesis', () => {
+    const exported = watchOnlyExport('4addr', 'viewkey', Date.UTC(2026, 6, 1));
+    expect(exported.height).toBe(restoreHeight(Date.UTC(2026, 6, 1)));
+  });
+});
+
+describe('what can be watched', () => {
+  it('accepts a standard address', () => {
+    expect(canWatch(parseAddress(walletFromSeed(seedFrom('standard')).address)).ok).toBe(true);
+  });
+
+  it('refuses a subaddress, and explains why', () => {
+    // --generate-from-view-key wants the wallet's primary address. Given a
+    // subaddress it builds a wallet that quietly watches the wrong thing,
+    // which is only discovered after a long sync shows nothing.
+    const result = canWatch(parseAddress(KNOWN_ADDRESS));
+    expect(result.ok).toBe(false);
+    expect(result.problem).toMatch(/primary address/i);
+  });
+
+  it('passes on the reason an address was invalid', () => {
+    expect(canWatch(parseAddress('nonsense')).problem).toBeTruthy();
   });
 });

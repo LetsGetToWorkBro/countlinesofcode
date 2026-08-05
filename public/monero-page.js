@@ -140,11 +140,62 @@
       '<p class="note">Restore those 25 words in the official wallet and confirm it shows the same address. ' +
       '<code>monero-wallet-cli --restore-deterministic-wallet</code>. If the address it shows differs, ' +
       'this page is wrong, and finding that out now costs you nothing.</p>' +
-      '</div>';
+      '</div>' +
+      '<hr>' +
+      watchOnlyHtml(wallet.address, wallet.viewSecret,
+        'Watching this wallet later, without exposing it');
 
     $('wallet').classList.remove('hidden');
     $('generate-note').textContent = 'Made. Nothing about it is stored anywhere.';
     $('wallet').scrollIntoView({ block: 'start' });
+  }
+
+
+  // ---------------------------------------------------------- watch only
+
+  /* The instructions for loading an address and its view key into the official
+     wallet. Shared by the Watch tab and the freshly generated wallet, so there
+     is one place that decides what is printed and one place to get it wrong. */
+  function watchOnlyHtml(address, viewSecret, heading) {
+    var exported = xmr.watchOnlyExport(address, viewSecret, Date.now());
+    return '<h4>' + esc(heading) + '</h4>' +
+      '<p class="note">Run this, and answer the two prompts with the values below. ' +
+      'Nothing here contacts the network; the official wallet does that part.</p>' +
+      '<pre>' + esc(exported.steps[0]) + '</pre>' +
+      '<table>' +
+      '<tr><th scope="row">Standard address</th><td><code class="xmr">' + esc(address) + '</code></td></tr>' +
+      '<tr><th scope="row">Private view key</th><td><code class="xmr">' + esc(viewSecret) + '</code></td></tr>' +
+      '<tr><th scope="row">Restore from height</th><td><code>' + exported.height.toLocaleString() + '</code></td></tr>' +
+      '</table>' +
+      '<p class="note">That height is worked out from today\'s date and is deliberately about a week early. ' +
+      'Scanning from too early only costs time; from too late, the wallet never sees payments that already ' +
+      'arrived and shows a balance of zero without saying why. If you know when the wallet was made, use that.</p>' +
+      '<p class="note">In the GUI instead: <em>Restore wallet from keys</em>, paste the address and the view key, ' +
+      'and leave the spend key blank.</p>' +
+      '<p><button type="button" class="small watch-json" data-json="' + esc(exported.json) +
+      '" data-name="' + esc(exported.filename) + '">Save the JSON for --generate-from-json</button></p>' +
+      '<p class="note">The JSON is the scriptable route. It contains the address, the view key and the height, ' +
+      'and no spend key: it cannot move anything.</p>';
+  }
+
+  function watch() {
+    clearError();
+    ready().then(function () {
+      var address = $('watch-address').value.trim();
+      var view = $('watch-view').value.trim().toLowerCase();
+
+      var allowed = xmr.canWatch(xmr.parseAddress(address));
+      if (!allowed.ok) {
+        $('watch-result').innerHTML = '<p class="error">' + esc(allowed.problem) + '</p>';
+        return;
+      }
+      if (!/^[0-9a-f]{64}$/.test(view)) {
+        $('watch-result').innerHTML = '<p class="error">A private view key is 64 hexadecimal characters. ' +
+          'That is ' + view.length + '.</p>';
+        return;
+      }
+      $('watch-result').innerHTML = watchOnlyHtml(address, view, 'Load it as watch-only');
+    }).catch(function (err) { fail(err.message); });
   }
 
   // ------------------------------------------------------------ restoring
@@ -170,7 +221,7 @@
 
   // -------------------------------------------------------------- wiring
 
-  var TABS = ['check', 'make', 'restore'];
+  var TABS = ['check', 'make', 'restore', 'watch'];
   TABS.forEach(function (name) {
     $('tab-' + name).addEventListener('click', function () {
       clearError();
@@ -190,6 +241,7 @@
   });
   $('generate').addEventListener('click', generate);
   $('restore').addEventListener('click', restore);
+  $('watch').addEventListener('click', watch);
   $('print').addEventListener('click', function () { window.print(); });
   $('verify-jump').addEventListener('click', function () {
     $('tab-restore').click();
@@ -202,6 +254,27 @@
     fail(err.message);
     $('proof-checks').innerHTML = '<p class="error">The engine did not load, so nothing has been verified.</p>';
   });
+
+  document.addEventListener('click', function (event) {
+    var button = event.target.closest ? event.target.closest('.watch-json') : null;
+    if (!button) return;
+    download(button.dataset.json, button.dataset.name + '.json');
+  });
+
+  /* Writes text out as a file. The watch-only JSON holds a view key, so it goes
+     through a blob like everything else here and never near a URL. */
+  function download(text, name) {
+    var link = document.createElement('a');
+    link.href = objectUrl(new Blob([text], { type: 'application/json' }));
+    link.download = name;
+    link.click();
+  }
+
+  function objectUrl(blob) {
+    var url = URL.createObjectURL(blob);
+    liveUrls.push(url);
+    return url;
+  }
 
   window.addEventListener('pagehide', function () {
     liveUrls.forEach(URL.revokeObjectURL);

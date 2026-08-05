@@ -495,6 +495,127 @@ export function walletFromMnemonic(phrase: string | string[], network: Network =
 }
 
 // ---------------------------------------------------------------------------
+// Watching a wallet without being able to spend from it
+// ---------------------------------------------------------------------------
+
+/**
+ * A view key lets somebody see what arrives at an address and nothing else.
+ *
+ * That asymmetry is the reason this page can answer "what is my balance?"
+ * without becoming a wallet. The private *view* key finds incoming outputs;
+ * the private *spend* key authorises spending. Hand the view key to the
+ * official software and it will show the balance and every incoming payment,
+ * while the spend key stays on the paper where it belongs.
+ *
+ * It is not free, and the page says so: anyone holding the view key sees every
+ * payment that address ever receives, forever. That is a smaller secret than
+ * the spend key, not a public one.
+ */
+
+/** Monero's genesis block, 18 April 2014. */
+const GENESIS = Date.UTC(2014, 3, 18);
+/** Blocks were 60 seconds until the v2 fork at this height, and 120 after. */
+const FORK_HEIGHT = 1009827;
+const FORK_TIME = GENESIS + FORK_HEIGHT * 60_000;
+
+/**
+ * Roughly which block was current on a given date.
+ *
+ * Two eras, because Monero halved its block rate at the v2 fork and a single
+ * 120-second model is out by most of a million blocks. Checked against two
+ * landmarks: the fork lands on March 2016 and height 3,000,000 on October 2023,
+ * both of which are where they should be.
+ *
+ * An estimate, and deliberately never used as one directly: see restoreHeight.
+ */
+export function approximateHeight(when: number | Date = Date.now()): number {
+  const at = when instanceof Date ? when.getTime() : when;
+  if (at <= GENESIS) return 0;
+  if (at <= FORK_TIME) return Math.floor((at - GENESIS) / 60_000);
+  return FORK_HEIGHT + Math.floor((at - FORK_TIME) / 120_000);
+}
+
+/** A week of blocks, at two minutes each. */
+const WEEK_OF_BLOCKS = 7 * 24 * 30;
+
+/**
+ * Where a wallet created now should start scanning.
+ *
+ * The estimate, minus a margin, and the direction of that margin is the whole
+ * point. Start too early and the wallet scans for longer than it needed to,
+ * which costs patience. Start too *late* and it silently never sees the
+ * payments that arrived before that block: the balance reads zero and nothing
+ * says why. One of those is an inconvenience and the other looks exactly like
+ * money that did not arrive, so the arithmetic always errs early.
+ */
+export function restoreHeight(when: number | Date = Date.now(), marginBlocks = WEEK_OF_BLOCKS): number {
+  return Math.max(0, approximateHeight(when) - marginBlocks);
+}
+
+export interface WatchOnly {
+  address: string;
+  viewSecret: string;
+  height: number;
+  /** The JSON that `--generate-from-json` consumes. */
+  json: string;
+  /** What to type, in order, for the interactive route. */
+  steps: string[];
+  filename: string;
+}
+
+/**
+ * Everything needed to load this as a watch-only wallet elsewhere.
+ *
+ * Two routes because they suit different people: the interactive command is
+ * the one to trust, since it is the documented path and it prompts for each
+ * field so a typo is caught at the point of entry. The JSON file is for
+ * scripting, and is offered second.
+ */
+export function watchOnlyExport(
+  address: string,
+  viewSecret: string,
+  when: number | Date = Date.now(),
+  filename = 'watch-only',
+): WatchOnly {
+  const height = restoreHeight(when);
+  return {
+    address,
+    viewSecret,
+    height,
+    filename,
+    json: JSON.stringify(
+      { version: 1, filename, scan_from_height: height, password: '', viewkey: viewSecret, address },
+      null,
+      2,
+    ),
+    steps: [
+      `monero-wallet-cli --generate-from-view-key ${filename}`,
+      'Standard address: paste the address above',
+      'View key: paste the private view key above',
+      'Then choose a password for the wallet file, and set the restore height when asked.',
+    ],
+  };
+}
+
+/**
+ * Whether an address can be watched this way.
+ *
+ * `--generate-from-view-key` wants the primary address of the wallet. Handing
+ * it a subaddress produces a wallet that quietly watches the wrong thing, so
+ * the check is worth making before somebody spends an afternoon syncing.
+ */
+export function canWatch(parsed: ParsedAddress): { ok: boolean; problem: string | null } {
+  if (!parsed.valid) return { ok: false, problem: parsed.problem };
+  if (parsed.kind !== 'standard') {
+    return {
+      ok: false,
+      problem: `That is a ${parsed.kind} address. A watch-only wallet has to be built from the wallet's primary address, which starts with 4 on mainnet. A subaddress belongs to a wallet you would restore first.`,
+    };
+  }
+  return { ok: true, problem: null };
+}
+
+// ---------------------------------------------------------------------------
 // Proving it works, here, now
 // ---------------------------------------------------------------------------
 
@@ -611,6 +732,10 @@ globalScope.LOC1999_XMR = {
   walletFromSeed,
   walletFromEntropy,
   mixEntropy,
+  approximateHeight,
+  restoreHeight,
+  watchOnlyExport,
+  canWatch,
   walletFromMnemonic,
   selfTest,
   allChecksPass,

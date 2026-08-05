@@ -106,6 +106,7 @@ safe to use for anything, because they handle no secrets.
 <button type="button" id="tab-check" class="sheet-tab is-active">Check an address</button>
 <button type="button" id="tab-make" class="sheet-tab">Make a wallet</button>
 <button type="button" id="tab-restore" class="sheet-tab">Restore a phrase</button>
+<button type="button" id="tab-watch" class="sheet-tab">Watch a wallet</button>
 </p>
 
 <p id="error" class="error" role="alert"></p>
@@ -237,6 +238,49 @@ happen. If any of it fails, the generator stays switched off.
   <div id="restore-result"></div>
 </div>
 
+<!-- ---------------------------------------------------------- watch -->
+<div id="mode-watch" class="hidden">
+  <h3>Watch a wallet without being able to spend from it</h3>
+
+  <p class="note">
+    A Monero wallet has two secrets and they do different jobs. The
+    <strong>view key</strong> finds money arriving. The <strong>spend key</strong>
+    authorises money leaving. Hand only the view key to the official wallet and
+    it will show you the balance and every incoming payment, while the spend key
+    stays on the paper where you put it.
+  </p>
+
+  <p class="note">
+    That is how you check a paper wallet's balance without ever exposing it, and
+    it is why this page does not need to become a wallet to answer the question.
+  </p>
+
+  <div class="notice-box">
+  <p><strong>A view key is a smaller secret, not a public one.</strong></p>
+  <p class="note">
+    Anyone holding it can see every payment that address receives, for as long
+    as it exists, and can tell how much is there. They cannot move any of it.
+    Put it on a machine you would be comfortable having that history on, and do
+    not paste it into a block explorer or a "balance checker" website, which is
+    the same mistake as pasting a seed phrase, just quieter.
+  </p>
+  </div>
+
+  <p>
+    <label for="watch-address" class="inline">Primary address</label>
+  </p>
+  <p><textarea id="watch-address" rows="2" spellcheck="false" placeholder="4..."></textarea></p>
+  <p>
+    <label for="watch-view" class="inline">Private view key</label>
+  </p>
+  <p><textarea id="watch-view" rows="2" spellcheck="false" placeholder="64 hex characters"></textarea></p>
+  <p>
+    <button type="button" id="watch">Make the watch-only instructions</button>
+    <span id="watch-note" class="note"></span>
+  </p>
+  <div id="watch-result"></div>
+</div>
+
 <hr>
 
 <h3>Is this actually private?</h3>
@@ -251,6 +295,8 @@ happen. If any of it fails, the generator stays switched off.
   <li><strong>What they cannot prove.</strong> There is no published secret-to-address vector to test the private-to-public step against, and inventing one would prove nothing. That gap is exactly why the instruction to restore in the official wallet before funding is not a formality. It is the only check that closes it.</li>
   <li><strong>A saved copy of this page is safer than this one.</strong> Not because we would change it, but because a saved copy cannot be changed after you have looked at it. Save it, read it, disconnect, and use the copy. The whole page and everything it loads is in <a href="https://github.com/letsgettoworkbro/countlinesofcode">the repository</a>, and what is served is built from it with nothing added.</li>
   <li><strong>A paper wallet is a receiving address, not an account.</strong> Spending from it means importing the key into a real wallet, and at that moment it stops being cold. Sweep it in one go rather than repeatedly, and treat the paper as spent once you have.</li>
+  <li><strong>Checking the balance does not need this page.</strong> The <em>Watch a wallet</em> tab prints the exact command to load an address and its view key into the official wallet as watch-only. That gives you the balance and every incoming payment in software built for it, with nothing here talking to the network and the spend key never leaving your paper. It is the reason this page can stay read-only rather than growing into a wallet.</li>
+  <li><strong>The restore height is an estimate, and it errs early on purpose.</strong> A new wallet that scans from the genesis block takes days, so the export sets a starting height worked out from the date. Starting too early only costs patience; starting too late means the wallet silently never sees payments that arrived before that block, and the balance reads zero with nothing to say why. So the number is deliberately about a week behind, and if you know the real date the wallet was made, use that.</li>
   <li><strong>The view key is on the paper too.</strong> It lets someone see what arrives without being able to spend it, which is useful for watching a balance from a machine you trust less. It is still worth keeping private: anyone with it can see everything that address receives.</li>
 </ul>
 
