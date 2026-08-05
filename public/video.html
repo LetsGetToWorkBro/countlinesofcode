@@ -169,10 +169,28 @@ which one your settings mean and tells you before you press the button.
     </select>
   </p>
   <p>
+    <label for="target" class="inline">Fit under</label>
+    <select id="target">
+      <option value="">no size limit</option>
+      <option value="10">10 MB &mdash; Discord</option>
+      <option value="16">16 MB &mdash; WhatsApp</option>
+      <option value="25">25 MB &mdash; email attachment</option>
+      <option value="50">50 MB</option>
+      <option value="100">100 MB</option>
+      <option value="custom">a size I&rsquo;ll type&hellip;</option>
+    </select>
+    <input type="number" id="target-mb" class="narrow hidden" min="1" max="4000" step="1" value="25" aria-label="Target size in megabytes">
+    <span id="target-mb-unit" class="hidden note">MB</span>
+  </p>
+  <p>
     <label class="inline"><input type="checkbox" id="mute"> Remove the sound</label>
   </p>
 
   <div id="plan" class="notice-box"></div>
+
+  <p id="suggest-box" class="hidden note">
+    <button type="button" id="apply-suggestion" class="small">Use that size</button>
+  </p>
 
   <p id="exact-box" class="hidden note">
     <label class="inline"><input type="checkbox" id="exact"> Cut exactly where I asked instead</label>
@@ -198,6 +216,8 @@ which one your settings mean and tells you before you press the button.
   <li><strong>A copied cut lands on a keyframe.</strong> Every frame in a compressed video is stored as a change from the one before it, back to a keyframe — a frame stored whole. A copy has to begin at one, because there is nothing to describe its first frame against otherwise. The page reads your file to find the last keyframe before your start point and tells you exactly where the cut will land and by how much it moved. If you need the frame you actually pointed at, tick the box and it will re-encode to get there.</li>
   <li><strong>Copying needs no codec at all.</strong> Repackaging never decodes anything, so a video in a codec this browser cannot play — an old phone's HEVC, say — can still be trimmed and moved into another container here. Only re-encoding needs the codec, and the page says when it does not have it.</li>
   <li><strong>Which formats appear depends on your browser, and it is asked rather than assumed.</strong> The codecs come from the browser itself. Chrome, Edge and Safari ship H.264 and AAC, so MP4 works. Some builds of Chromium — and Firefox on some systems — ship only the open codecs, and there MP4 can only be written with AV1 or VP9 inside it. Rather than offer a format and fail three minutes in, the page asks the browser what it can actually encode and offers that.</li>
+  <li><strong>&ldquo;Fit under 10 MB&rdquo; is arithmetic, not a slider.</strong> A bitrate <em>is</em> a size divided by a duration, so the target sets it directly rather than being guessed at. The sound is subtracted first, because it is spent whatever happens to the picture &mdash; which is why a short clip at a small target can be impossible, and the page says so instead of producing something broken. Whether the result will look like anything is judged in bits per pixel, which is the only measure that means the same thing at 480p and at 4K.</li>
+  <li><strong>A sharp small picture beats a smeared large one.</strong> Squeezing 4K into 10 MB does not give you 4K, it gives you mush at 4K's dimensions. Where dropping the resolution would land the same target in the clear, the page names the height and offers to apply it.</li>
   <li><strong>Re-encoding is real work.</strong> It decodes and re-encodes every frame, using the same hardware video engine a video call uses. It is fast for a phone clip and slow for an hour of 4K, and it will make a laptop's fan audible. Trimming without re-encoding does not.</li>
   <li><strong>Large files are held in memory.</strong> The result is assembled in the tab before you download it, so a very large output can run a tab out of memory. Trimming first is the fix.</li>
   <li><strong>What it does not do:</strong> subtitles, chapters, multiple audio tracks, joining two videos, or anything creative. It cuts, converts, resizes, rotates, mutes and extracts.</li>

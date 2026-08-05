@@ -387,6 +387,14 @@ export interface Plan {
   mute?: boolean;
   frameRate?: number;
   /**
+   * Squeeze the output under a size, in bytes.
+   *
+   * The reason most people open a video converter at all: something has to fit
+   * under a limit and does not. Overrides `quality`, and always re-encodes —
+   * there is no other way to make a file smaller.
+   */
+  targetBytes?: number;
+  /**
    * Cut precisely where asked, at the cost of re-encoding.
    *
    * A copied cut can only begin at a keyframe, because every frame after one is
@@ -453,14 +461,18 @@ function trimsTheStart(plan: Plan): boolean {
  */
 export function changesPicture(plan: Plan, info: MediaInfo): boolean {
   if (plan.rotate || plan.frameRate || plan.quality) return true;
+  // A size limit is a ceiling, not a goal: a file that already fits is left
+  // alone rather than inflated to fill it.
+  if (plan.targetBytes && !targetAlreadyMet(plan, info)) return true;
   if (plan.exact && trimsTheStart(plan)) return true;
   if (!info.video) return false;
   const scaled = scaleTo(info.video.width, info.video.height, plan.maxHeight ?? 0);
   return scaled.width !== info.video.width || scaled.height !== info.video.height;
 }
 
-export function changesSound(plan: Plan): boolean {
-  return Boolean(plan.quality);
+export function changesSound(plan: Plan, info?: MediaInfo): boolean {
+  if (plan.quality) return true;
+  return Boolean(plan.targetBytes) && !(info && targetAlreadyMet(plan, info));
 }
 
 /**
@@ -474,7 +486,7 @@ export function fitFor(plan: Plan, format: OutputFormat, encodable: Encodable, i
   return fitFormat(format, encodable, {
     source: info,
     encodingVideo: changesPicture(plan, info),
-    encodingAudio: changesSound(plan),
+    encodingAudio: changesSound(plan, info),
   });
 }
 
@@ -487,7 +499,175 @@ function pictureUntouched(plan: Plan, info: MediaInfo, fit: FormatFit): boolean 
 
 function soundUntouched(plan: Plan, info: MediaInfo, fit: FormatFit): boolean {
   if (!info.audio || !fit.audio) return false;
-  return fit.audio === info.audio.codec && !changesSound(plan);
+  return fit.audio === info.audio.codec && !changesSound(plan, info);
+}
+
+// ---------------------------------------------------------------------------
+// Fitting a size
+// ---------------------------------------------------------------------------
+
+/** What the sound costs when a size is being budgeted for. */
+export const TARGET_AUDIO_BITRATE = 96e3;
+
+/** Container overhead, as a fraction. Muxing is not free. */
+const OVERHEAD = 1.03;
+
+/**
+ * The video bitrate that lands the output on a target size.
+ *
+ * Arithmetic, not a guess: a bitrate *is* a size divided by a duration. The
+ * sound is subtracted first because it is spent whatever happens to the
+ * picture, and it is what makes short clips at small targets impossible —
+ * fifteen seconds of audio at 96 kbps is already 180 KB.
+ */
+export function bitrateForTarget(targetBytes: number, duration: number, audioBitrate = 0): number {
+  if (!(targetBytes > 0) || !(duration > 0)) return 0;
+  const available = (targetBytes * 8) / OVERHEAD - audioBitrate * duration;
+  return Math.max(0, available / duration);
+}
+
+/**
+ * How much information a bitrate buys, per pixel per frame.
+ *
+ * The only honest way to answer "will this look alright?", because a bitrate on
+ * its own means nothing: two megabits is generous for a phone clip and
+ * catastrophic for 4K. Bits per pixel normalises for both resolution and frame
+ * rate, and the thresholds below are where the picture visibly falls apart.
+ */
+export function bitsPerPixel(bitrate: number, width: number, height: number, frameRate: number): number {
+  const pixels = width * height * (frameRate || 30);
+  return pixels > 0 ? bitrate / pixels : 0;
+}
+
+export type TargetVerdict = 'already' | 'good' | 'fair' | 'poor' | 'impossible';
+
+/**
+ * What the output would weigh if nothing were re-encoded.
+ *
+ * Measured bitrates where the file gave them up, and a share of the file's own
+ * size where it did not. Used to answer the question a size limit should always
+ * ask first: does this already fit?
+ */
+export function copySize(plan: Plan, info: MediaInfo): number {
+  const range = planTrim(plan, info.duration);
+  if (range.error) return 0;
+  const known = (info.video?.bitrate ?? 0) + (plan.mute ? 0 : info.audio?.bitrate ?? 0);
+  if (known > 0) return Math.round((known * range.duration) / 8);
+  const share = info.duration > 0 ? range.duration / info.duration : 1;
+  return Math.round(info.size * share);
+}
+
+/** Whether a size limit is already met without touching the file. */
+export function targetAlreadyMet(plan: Plan, info: MediaInfo): boolean {
+  return Boolean(plan.targetBytes) && copySize(plan, info) <= plan.targetBytes!;
+}
+
+export interface TargetJudgement {
+  verdict: TargetVerdict;
+  /** Video bits per second the target allows. */
+  bitrate: number;
+  bpp: number;
+  /** What to say about it. */
+  advice: string;
+  /** A height at which the same target would look decent, where one exists. */
+  suggestHeight?: number;
+}
+
+/* Bits per pixel at which H.264 starts to look soft, then bad.
+ *
+ * Calibrated against bitrates people actually meet, at 1080p30:
+ *
+ *   YouTube's recommended upload   8 Mbps   0.129
+ *   a streaming service            5 Mbps   0.080
+ *   ordinary web video             3 Mbps   0.048
+ *   visibly compressed             2 Mbps   0.032
+ *   unwatchable                    1 Mbps   0.016
+ *
+ * Newer codecs carry the same picture in fewer bits, so the measure is divided
+ * by their efficiency before being compared. */
+const BPP_GOOD = 0.07;
+const BPP_FAIR = 0.028;
+
+function codecEfficiency(codec: string | null): number {
+  return codec === 'av1' ? 0.55 : codec === 'vp9' || codec === 'hevc' ? 0.7 : 1;
+}
+
+/**
+ * Whether a target size is achievable, and at what cost.
+ *
+ * The useful part is the suggestion. "8 MB" and "4K" together mean a smeared
+ * mess, and every converter that accepts both without comment is wasting
+ * someone's afternoon. Dropping the resolution is nearly always the right
+ * answer — a sharp 480p clip beats a mushy 1080p one at the same size — so
+ * where a height exists that would land the same target in the clear, it is
+ * named.
+ */
+export function judgeTarget(plan: Plan, info: MediaInfo, fit: FormatFit): TargetJudgement | null {
+  if (!plan.targetBytes || !info.video) return null;
+
+  const range = planTrim(plan, info.duration);
+  if (range.error) return null;
+
+  if (targetAlreadyMet(plan, info)) {
+    return {
+      verdict: 'already',
+      bitrate: info.video.bitrate ?? 0,
+      bpp: 0,
+      advice: `It already fits — about ${formatBytes(copySize(plan, info))}. Nothing is re-encoded.`,
+    };
+  }
+
+  const audioBitrate = plan.mute || !info.audio ? 0 : TARGET_AUDIO_BITRATE;
+  const bitrate = bitrateForTarget(plan.targetBytes, range.duration, audioBitrate);
+  const size = scaleTo(info.video.width, info.video.height, plan.maxHeight ?? 0);
+  const frameRate = plan.frameRate || info.video.frameRate || 30;
+  const efficiency = codecEfficiency(fit.video);
+  const bpp = bitsPerPixel(bitrate, size.width, size.height, frameRate) / efficiency;
+
+  if (bitrate < 24e3) {
+    const spent = formatBytes((audioBitrate * range.duration) / 8);
+    return {
+      verdict: 'impossible',
+      bitrate,
+      bpp,
+      advice:
+        audioBitrate > 0
+          ? `The sound alone needs about ${spent} of that. Shorten the clip, or remove the sound.`
+          : 'That is too small for a clip this long. Shorten it.',
+    };
+  }
+
+  // The largest standard height at which this target would look clear.
+  const better = sizeChoices(info.video.height)
+    .filter((c) => c.height > 0 && c.height < size.height)
+    .find((c) => {
+      const at = scaleTo(info.video!.width, info.video!.height, c.height);
+      return bitsPerPixel(bitrate, at.width, at.height, frameRate) / efficiency >= BPP_GOOD;
+    });
+
+  if (bpp >= BPP_GOOD) {
+    return { verdict: 'good', bitrate, bpp, advice: 'That fits comfortably at this size.' };
+  }
+  if (bpp >= BPP_FAIR) {
+    return {
+      verdict: 'fair',
+      bitrate,
+      bpp,
+      advice: better
+        ? `It will fit, but detail and fast movement will suffer. At ${better.label} it would stay sharp.`
+        : 'It will fit, but detail and fast movement will suffer.',
+      ...(better ? { suggestHeight: better.height } : {}),
+    };
+  }
+  return {
+    verdict: 'poor',
+    bitrate,
+    bpp,
+    advice: better
+      ? `At this size that is far too little to look like anything. Drop to ${better.label} and it becomes watchable — a sharp small picture beats a smeared large one.`
+      : 'That is far too little for a picture this size. Shorten the clip or accept a blurry result.',
+    ...(better ? { suggestHeight: better.height } : {}),
+  };
 }
 
 /**
@@ -584,6 +764,11 @@ const QUALITY_BITS: Record<QualityLevel, number> = {
 export function estimateBytes(plan: Plan, info: MediaInfo, fit: FormatFit): number {
   const range = planTrim(plan, info.duration);
   if (range.error) return 0;
+  // A size target is not estimated, it is aimed at — unless the file already
+  // fits, in which case nothing changes and the copy is the answer.
+  if (plan.targetBytes && !targetAlreadyMet(plan, info) && judgeTarget(plan, info, fit)?.verdict !== 'impossible') {
+    return plan.targetBytes;
+  }
   const share = info.duration > 0 ? range.duration / info.duration : 1;
 
   let bits = 0;
@@ -635,6 +820,8 @@ export interface TrackOptions {
   frameRate?: number;
   codec?: string;
   quality?: QualityLevel;
+  /** An explicit bits-per-second budget, used when fitting a size. */
+  bitrate?: number;
   numberOfChannels?: number;
 }
 
@@ -676,6 +863,9 @@ export function instructionsFor(plan: Plan, info: MediaInfo, fit: FormatFit): In
   if (audioOnly && !info.audio) return bad('there is no sound in this file to extract');
   if (!audioOnly && !info.video) return bad('there is no picture in this file');
 
+  const target = judgeTarget(plan, info, fit);
+  if (target?.verdict === 'impossible') return bad(`${formatBytes(plan.targetBytes!)} is not enough. ${target.advice}`);
+
   let video: TrackOptions | null = null;
   if (audioOnly) {
     video = { discard: true };
@@ -690,6 +880,10 @@ export function instructionsFor(plan: Plan, info: MediaInfo, fit: FormatFit): In
     if (plan.rotate) video.rotate = plan.rotate;
     if (plan.frameRate) video.frameRate = plan.frameRate;
     if (plan.quality) video.quality = plan.quality;
+    if (plan.targetBytes && !targetAlreadyMet(plan, info)) {
+      const judged = judgeTarget(plan, info, fit);
+      if (judged) video.bitrate = Math.round(judged.bitrate);
+    }
   }
 
   let audio: TrackOptions | null = null;
@@ -698,6 +892,8 @@ export function instructionsFor(plan: Plan, info: MediaInfo, fit: FormatFit): In
   } else {
     audio = { codec: fit.audio };
     if (plan.quality) audio.quality = plan.quality;
+    // A size budget has to cover the sound too, or the output overshoots.
+    if (plan.targetBytes && !targetAlreadyMet(plan, info)) audio.bitrate = TARGET_AUDIO_BITRATE;
   }
 
   const instructions: Instructions = {
@@ -783,8 +979,18 @@ export function explainPlan(
     if (plan.rotate) reasons.push(`rotate ${plan.rotate}°`);
     if (plan.frameRate) reasons.push(`${plan.frameRate} fps`);
     if (plan.quality) reasons.push('a quality change');
+    if (plan.targetBytes && !targetAlreadyMet(plan, info)) reasons.push(`fitting ${formatBytes(plan.targetBytes)}`);
     if (plan.exact && trimsTheStart(plan)) reasons.push('cutting exactly where you asked');
     notes.push(`Re-encoding because of: ${reasons.join(', ') || 'the requested output'}. Expect it to take a while.`);
+  }
+  const target = judgeTarget(plan, info, fit);
+  if (target?.verdict === 'already') {
+    notes.push(`Asked to fit ${formatBytes(plan.targetBytes!)}. ${target.advice}`);
+  } else if (target) {
+    notes.push(
+      `${formatBytes(plan.targetBytes!)} over ${formatTime(range.duration)} is ${Math.round(target.bitrate / 1000)} kbps of picture. ` +
+        target.advice,
+    );
   }
   if (plan.mute) notes.push('The sound is dropped.');
   else if (!fit.audio && info.audio) notes.push('This browser cannot encode any audio codec this container holds, so the result is silent.');
@@ -796,6 +1002,21 @@ export function explainPlan(
     notes,
     offerExact,
   };
+}
+
+/**
+ * The size line under the button, worded for what it actually is.
+ *
+ * A target is a ceiling and an estimate is a guess, and calling either one the
+ * other is the kind of small dishonesty this page is supposed to be free of.
+ */
+export function describeEstimate(plan: Plan, info: MediaInfo, fit: FormatFit): string {
+  const bytes = estimateBytes(plan, info, fit);
+  const from = ` (from ${formatBytes(info.size)})`;
+  if (plan.targetBytes && !targetAlreadyMet(plan, info)) {
+    return `at most ${formatBytes(bytes)}${from} — aimed at, not guessed`;
+  }
+  return `roughly ${formatBytes(bytes)}${from} — an estimate, not a promise`;
 }
 
 /** The download name: the original, with the new extension. */
@@ -850,6 +1071,13 @@ globalScope.LOC1999_VIDEO = {
   isWholeFile,
   scaleTo,
   fitFor,
+  judgeTarget,
+  targetAlreadyMet,
+  copySize,
+  describeEstimate,
+  bitrateForTarget,
+  bitsPerPixel,
+  TARGET_AUDIO_BITRATE,
   changesPicture,
   changesSound,
   willCopyVideo,

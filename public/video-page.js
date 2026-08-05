@@ -37,6 +37,7 @@
   var runBtn = $('run');
   var cancelBtn = $('cancel');
   var exactBox = $('exact-box');
+  var suggestBox = $('suggest-box');
 
   var mb = null;          // the mediabunny module
   var planner = null;     // window.LOC1999_VIDEO
@@ -50,6 +51,7 @@
   var copyCancelled = false;   // the copy engine's own stop flag
   var running = false;
   var keyframe = null;         // last keyframe at or before the requested start
+  var suggestion = 0;          // a height that would rescue the chosen size limit
   var liveUrls = [];
   var clipStop = null;    // playhead limit while previewing just the clip
 
@@ -298,6 +300,8 @@
     $('end-time').value = planner.formatTime(info.duration);
     keyframe = 0;
     $('exact').checked = false;
+    $('target').value = '';
+    $('quality').value = '';
 
     refresh();
   }
@@ -330,7 +334,19 @@
     if (rotate) plan.rotate = rotate;
     if ($('mute').checked) plan.mute = true;
     if ($('exact').checked) plan.exact = true;
+    var target = targetBytes();
+    if (target) plan.targetBytes = target;
     return plan;
+  }
+
+  /* The size limit, in bytes, or 0 for none.
+     Megabytes here means what a chat app means by it — 1024 × 1024 — because
+     that is the number the limit is actually enforced in. */
+  function targetBytes() {
+    var choice = $('target').value;
+    if (!choice) return 0;
+    var mb = choice === 'custom' ? Number($('target-mb').value) : Number(choice);
+    return mb > 0 ? Math.round(mb * 1024 * 1024) : 0;
   }
 
   /* Recompute everything derived from the controls: the verdict, the estimate,
@@ -368,12 +384,27 @@
     // or an exact one already chosen.
     exactBox.classList.toggle('hidden', !explained.offerExact && !plan.exact);
 
+    // A size limit sets the bitrate, so a quality level on top of it means
+    // nothing; say so by disabling it rather than quietly ignoring it.
+    var hasTarget = Boolean(plan.targetBytes);
+    $('quality').disabled = audioOnly || hasTarget;
+    var custom = $('target').value === 'custom';
+    $('target-mb').classList.toggle('hidden', !custom);
+    $('target-mb-unit').classList.toggle('hidden', !custom);
+    $('target').disabled = audioOnly;
+
+    // "Drop to 480p and it becomes watchable" is only worth saying if the page
+    // will also do it for you.
+    var judged = hasTarget ? planner.judgeTarget(plan, info, fit) : null;
+    suggestion = judged && judged.suggestHeight ? judged.suggestHeight : 0;
+    suggestBox.classList.toggle('hidden', !suggestion);
+    if (suggestion) {
+      $('apply-suggestion').textContent = 'Drop to ' + suggestion + 'p';
+    }
+
     var instructions = planner.instructionsFor(plan, info, fit);
     runBtn.disabled = Boolean(instructions.error) || running;
-    estimateEl.textContent = instructions.error
-      ? instructions.error
-      : 'roughly ' + planner.formatBytes(planner.estimateBytes(plan, info, fit)) +
-        ' (from ' + planner.formatBytes(sourceSize) + ') — an estimate, not a promise';
+    estimateEl.textContent = instructions.error ? instructions.error : planner.describeEstimate(plan, info, fit);
   }
 
   function markField(field, ok) {
@@ -730,8 +761,15 @@
     }
   });
 
-  ['format', 'size', 'quality', 'rotate', 'mute', 'exact'].forEach(function (id) {
+  ['format', 'size', 'quality', 'rotate', 'mute', 'exact', 'target'].forEach(function (id) {
     $(id).addEventListener('change', refresh);
+  });
+  $('target-mb').addEventListener('input', refresh);
+
+  $('apply-suggestion').addEventListener('click', function () {
+    if (!suggestion) return;
+    $('size').value = String(suggestion);
+    refresh();
   });
 
   runBtn.addEventListener('click', run);

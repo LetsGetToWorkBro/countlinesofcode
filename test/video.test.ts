@@ -26,6 +26,13 @@ import {
   formatTime,
   instructionsFor,
   isWholeFile,
+  judgeTarget,
+  targetAlreadyMet,
+  copySize,
+  describeEstimate,
+  bitrateForTarget,
+  bitsPerPixel,
+  TARGET_AUDIO_BITRATE,
   outputName,
   parseTime,
   planTrim,
@@ -42,6 +49,15 @@ const h264: MediaInfo = {
   duration: 120,
   size: 40 * 1024 * 1024,
   video: { codec: 'avc', width: 1920, height: 1080, frameRate: 30, bitrate: 2.4e6, decodable: true },
+  audio: { codec: 'aac', channels: 2, sampleRate: 48000, bitrate: 128e3, decodable: true },
+};
+
+/** A phone recording: 1080p at the ~20 Mbps phones actually write. */
+const phone: MediaInfo = {
+  format: 'MP4',
+  duration: 120,
+  size: 302 * 1000 * 1000,
+  video: { codec: 'avc', width: 1920, height: 1080, frameRate: 30, bitrate: 20e6, decodable: true },
   audio: { codec: 'aac', channels: 2, sampleRate: 48000, bitrate: 128e3, decodable: true },
 };
 
@@ -627,6 +643,213 @@ describe('canCopyAll', () => {
     expect(canCopyAll({ formatId: 'mp3' }, h264, fitFormat(findFormat('mp3')!, full))).toBe(false);
     const mp3In: MediaInfo = { ...h264, audio: { ...h264.audio!, codec: 'mp3' } };
     expect(canCopyAll({ formatId: 'mp3' }, mp3In, fitFormat(findFormat('mp3')!, full))).toBe(true);
+  });
+});
+
+describe('bitrateForTarget', () => {
+  it('is a size divided by a duration, less the sound', () => {
+    // 10 MB over 100s with no audio is about 800 kbps, minus muxing overhead.
+    const rate = bitrateForTarget(10 * 1024 * 1024, 100, 0);
+    expect(rate).toBeGreaterThan(760e3);
+    expect(rate).toBeLessThan(840e3);
+  });
+
+  it('spends the sound first, because it is spent either way', () => {
+    const withSound = bitrateForTarget(10 * 1024 * 1024, 100, 96e3);
+    const without = bitrateForTarget(10 * 1024 * 1024, 100, 0);
+    expect(without - withSound).toBeCloseTo(96e3, -3);
+  });
+
+  it('never goes negative when the sound alone overruns the target', () => {
+    expect(bitrateForTarget(1000, 600, 128e3)).toBe(0);
+  });
+
+  it('is nothing for a nonsense target', () => {
+    expect(bitrateForTarget(0, 100, 0)).toBe(0);
+    expect(bitrateForTarget(1e6, 0, 0)).toBe(0);
+  });
+});
+
+describe('bitsPerPixel', () => {
+  it('normalises for resolution, which is the whole point', () => {
+    // The same bitrate is generous at 480p and hopeless at 4K.
+    const small = bitsPerPixel(2e6, 854, 480, 30);
+    const large = bitsPerPixel(2e6, 3840, 2160, 30);
+    expect(small).toBeGreaterThan(large * 15);
+  });
+
+  it('normalises for frame rate too', () => {
+    expect(bitsPerPixel(2e6, 1920, 1080, 30)).toBeCloseTo(bitsPerPixel(2e6, 1920, 1080, 60) * 2, 6);
+  });
+});
+
+describe('judgeTarget', () => {
+  const fit = fitFormat(mp4, full);
+
+  it('says nothing when no target is set', () => {
+    expect(judgeTarget({ formatId: 'mp4' }, h264, fit)).toBeNull();
+  });
+
+  it('says a limit the file already meets needs nothing done', () => {
+    expect(judgeTarget({ formatId: 'mp4', targetBytes: 200 * 1024 * 1024 }, h264, fit)?.verdict).toBe('already');
+  });
+
+  it('is happy with a target that is smaller but still generous', () => {
+    // Squeezing a phone's 20 Mbps down to 5 Mbps is what a streaming service
+    // gives 1080p, and looks it.
+    expect(judgeTarget({ formatId: 'mp4', targetBytes: 75 * 1024 * 1024 }, phone, fit)!.verdict).toBe('good');
+  });
+
+  it('rates an ordinary 1080p bitrate as fair rather than poor', () => {
+    // ~2.2 Mbps at 1080p is compressed but perfectly watchable; calling that
+    // "poor" would make the whole judgement useless.
+    expect(judgeTarget({ formatId: 'mp4', targetBytes: 34 * 1024 * 1024 }, phone, fit)!.verdict).toBe('fair');
+  });
+
+  it('calls a hopeless target what it is, and says to drop the resolution', () => {
+    // 8 MB of 1080p over two minutes is a smeared mess, and every converter
+    // that accepts it without comment wastes someone's afternoon.
+    const judged = judgeTarget({ formatId: 'mp4', targetBytes: 8 * 1024 * 1024 }, phone, fit)!;
+    expect(judged.verdict).toBe('poor');
+    expect(judged.suggestHeight).toBeGreaterThan(0);
+    expect(judged.suggestHeight).toBeLessThan(1080);
+    expect(judged.advice).toMatch(/sharp/i);
+  });
+
+  it('suggests a height that actually fixes it', () => {
+    const plan = { formatId: 'mp4', targetBytes: 8 * 1024 * 1024 };
+    const judged = judgeTarget(plan, phone, fit)!;
+    const fixed = judgeTarget({ ...plan, maxHeight: judged.suggestHeight }, phone, fit)!;
+    expect(fixed.verdict).toBe('good');
+  });
+
+  it('refuses a target the sound alone would overrun', () => {
+    const judged = judgeTarget({ formatId: 'mp4', targetBytes: 100 * 1024 }, phone, fit)!;
+    expect(judged.verdict).toBe('impossible');
+    expect(judged.advice).toMatch(/sound/i);
+  });
+
+  it('blames the length, not the sound, when the sound is already off', () => {
+    const judged = judgeTarget({ formatId: 'mp4', targetBytes: 100 * 1024, mute: true }, phone, fit)!;
+    expect(judged.verdict).toBe('impossible');
+    expect(judged.advice).not.toMatch(/sound/i);
+  });
+
+  it('credits a newer codec with needing fewer bits', () => {
+    // The same target is a better picture in AV1 than in H.264.
+    const av1Fit = fitFormat(mp4, { video: ['av1'], audio: ['opus'] });
+    const plan = { formatId: 'mp4', targetBytes: 20 * 1024 * 1024 };
+    expect(judgeTarget(plan, phone, av1Fit)!.bpp).toBeGreaterThan(judgeTarget(plan, phone, fit)!.bpp);
+  });
+
+  it('scales with how much of the file is kept', () => {
+    // The same target over ten seconds instead of two minutes is luxurious.
+    const whole = judgeTarget({ formatId: 'mp4', targetBytes: 8 * 1024 * 1024 }, phone, fit)!;
+    const clip = judgeTarget({ formatId: 'mp4', targetBytes: 8 * 1024 * 1024, start: 0, end: 30 }, phone, fit)!;
+    // A quarter of the length, so roughly four times the bitrate to spend.
+    expect(clip.bitrate).toBeGreaterThan(whole.bitrate * 4);
+  });
+});
+
+describe('a size limit that is already met', () => {
+  const fit = fitFormat(mp4, full);
+  // 40 MB of H.264; asking it to fit under 100 MB is asking for nothing.
+  const roomy = { formatId: 'mp4', targetBytes: 100 * 1024 * 1024 };
+
+  it('leaves the file alone rather than inflating it to fill the limit', () => {
+    // "Fit under 25 MB" must never make a 3 MB file bigger. A limit is a
+    // ceiling, not a goal.
+    expect(targetAlreadyMet(roomy, h264)).toBe(true);
+    expect(changesPicture(roomy, h264)).toBe(false);
+    expect(willCopyVideo(roomy, h264, fit)).toBe(true);
+  });
+
+  it('estimates the copy, not the limit', () => {
+    expect(estimateBytes(roomy, h264, fit)).toBeLessThan(roomy.targetBytes);
+  });
+
+  it('gives the encoder no bitrate, because there is no encoder', () => {
+    const out = instructionsFor(roomy, h264, fit);
+    expect(out.video?.bitrate).toBeUndefined();
+    expect(out.audio?.bitrate).toBeUndefined();
+  });
+
+  it('says so rather than staying silent', () => {
+    const out = explainPlan(roomy, h264, fit);
+    expect(out.lossless).toBe(true);
+    expect(out.notes.join(' ')).toMatch(/already fits/i);
+  });
+
+  it('notices once a trim makes a too-small limit reachable', () => {
+    const tight = { formatId: 'mp4', targetBytes: 4 * 1024 * 1024 };
+    expect(targetAlreadyMet(tight, h264)).toBe(false);
+    // Ten seconds of the same file is well under it.
+    expect(targetAlreadyMet({ ...tight, start: 0, end: 10 }, h264)).toBe(true);
+  });
+});
+
+describe('copySize', () => {
+  it('uses the measured bitrates when the file gave them up', () => {
+    // 2.4 Mbps video + 128 kbps audio over 120s.
+    expect(copySize({ formatId: 'mp4' }, h264)).toBeCloseTo(((2.4e6 + 128e3) * 120) / 8, -4);
+  });
+
+  it('drops the sound from the sum when the sound is being dropped', () => {
+    expect(copySize({ formatId: 'mp4', mute: true }, h264)).toBeLessThan(copySize({ formatId: 'mp4' }, h264));
+  });
+
+  it('falls back to a share of the file when no bitrate is known', () => {
+    const blind: MediaInfo = { ...h264, video: { ...h264.video!, bitrate: undefined }, audio: { ...h264.audio!, bitrate: undefined } };
+    expect(copySize({ formatId: 'mp4', start: 0, end: 60 }, blind)).toBeCloseTo(blind.size / 2, -4);
+  });
+});
+
+describe('describeEstimate', () => {
+  const fit = fitFormat(mp4, full);
+
+  it('calls a target a ceiling, because that is what it is', () => {
+    expect(describeEstimate({ formatId: 'mp4', targetBytes: 8 * 1024 * 1024 }, h264, fit)).toMatch(/^at most/);
+  });
+
+  it('calls everything else an estimate', () => {
+    expect(describeEstimate({ formatId: 'mp4' }, h264, fit)).toMatch(/^roughly/);
+    expect(describeEstimate({ formatId: 'mp4' }, h264, fit)).toMatch(/not a promise/);
+  });
+
+  it('calls a met target an estimate too, since nothing is being aimed at', () => {
+    expect(describeEstimate({ formatId: 'mp4', targetBytes: 999 * 1024 * 1024 }, h264, fit)).toMatch(/^roughly/);
+  });
+});
+
+describe('fitting a size, end to end', () => {
+  const fit = fitFormat(mp4, full);
+
+  it('aims at the target rather than estimating around it', () => {
+    const target = 20 * 1024 * 1024;
+    expect(estimateBytes({ formatId: 'mp4', targetBytes: target }, phone, fit)).toBe(target);
+  });
+
+  it('gives the encoder an explicit budget for both tracks', () => {
+    const out = instructionsFor({ formatId: 'mp4', targetBytes: 20 * 1024 * 1024 }, phone, fit);
+    expect(out.video?.bitrate).toBeGreaterThan(0);
+    expect(out.audio?.bitrate).toBe(TARGET_AUDIO_BITRATE);
+  });
+
+  it('refuses an impossible target instead of producing a plan', () => {
+    const out = instructionsFor({ formatId: 'mp4', targetBytes: 100 * 1024 }, phone, fit);
+    expect(out.error).toBeTruthy();
+    expect(out.video).toBeNull();
+  });
+
+  it('is never a copy, because shrinking means re-encoding', () => {
+    expect(willCopyVideo({ formatId: 'mp4', targetBytes: 20 * 1024 * 1024 }, phone, fit)).toBe(false);
+    expect(changesPicture({ formatId: 'mp4', targetBytes: 20 * 1024 * 1024 }, phone)).toBe(true);
+  });
+
+  it('says the target is why it is re-encoding, and how many kbps that is', () => {
+    const out = explainPlan({ formatId: 'mp4', targetBytes: 20 * 1024 * 1024 }, phone, fit);
+    expect(out.notes.join(' ')).toMatch(/fitting 20\.0 MB/i);
+    expect(out.notes.join(' ')).toMatch(/kbps/);
   });
 });
 
