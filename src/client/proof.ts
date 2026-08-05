@@ -193,6 +193,7 @@ export const SOURCES: Record<string, string[]> = {
   '/lock.html': ['public/lock-page.js', 'src/client/pgpkit.ts'],
   '/pgp.html': ['public/pgp-page.js', 'src/client/pgpkit.ts'],
   '/monero.html': ['public/monero-page.js', 'src/client/monero.ts', 'src/client/monero-words.ts'],
+  '/email.html': ['public/email-page.js', 'src/client/email.ts'],
   '/sign.html': ['public/sign.js', 'src/client/pdfedit.ts', 'src/client/pdfstream.ts'],
   '/convert.html': ['public/convert-page.js', 'src/client/convert.ts', 'src/client/docmodel.ts'],
   '/inspect.html': ['public/inspect-page.js', 'src/client/inspect.ts'],

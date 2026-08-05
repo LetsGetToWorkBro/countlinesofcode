@@ -67,6 +67,11 @@ export const BUNDLES = [
     banner: '/* 1999.LOC archive engine. Built from src/client/zipkit.ts. Do not edit. */',
   },
   {
+    entry: 'src/client/email.ts',
+    outfile: 'public/email.js',
+    banner: '/* 1999.LOC email checker. Built from src/client/email.ts. Do not edit. */',
+  },
+  {
     entry: 'src/client/monero.ts',
     outfile: 'public/monero.js',
     banner: '/* 1999.LOC Monero keys and addresses. Built from src/client/monero.ts. Do not edit. Bundles @noble/hashes and @noble/curves (MIT). */',
