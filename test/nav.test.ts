@@ -1,21 +1,26 @@
 /**
  * The toolkit bar exists in two places that cannot import each other: the
  * server pages build it from SITE_TOOLS, and the static pages in ./public each
- * carry a hand-written copy, because they have no template engine on purpose.
+ * carry a copy, because they have no template engine on purpose.
  *
  * That is a drift risk with no runtime symptom — a tool added to one and not
- * the other simply becomes invisible from half the site. These tests are the
- * thing that notices.
+ * the other simply becomes invisible from half the site, which had already
+ * happened once. The copies are now written by `npm run sync:nav` rather than
+ * by hand, and the first test below compares them character for character, so
+ * a hand-edited nav fails the suite instead of drifting quietly.
  */
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { SITE_TOOLS, siteNav } from '../src/worker/html';
+import { SITE_TOOLS, TOOL_GROUPS, siteNav } from '../src/worker/html';
+import { currentFor, navBlockFor, staticPages } from '../scripts/sync-nav';
 
 /** Static pages that carry the bar. Anything else in ./public is not a page. */
 const STATIC_PAGES = readdirSync('public')
   .filter((name) => name.endsWith('.html'))
   .map((name) => `public/${name}`);
+
+const navOf = (html: string) => /<p class="nav">[\s\S]*?<\/p>/.exec(html)?.[0] ?? '';
 
 describe('the toolkit bar', () => {
   it('is on every static page', () => {
@@ -25,21 +30,42 @@ describe('the toolkit bar', () => {
     }
   });
 
-  it('lists exactly the same tools everywhere', () => {
-    for (const path of STATIC_PAGES) {
-      const html = readFileSync(path, 'utf8');
-      const nav = /<p class="nav">([\s\S]*?)<\/p>/.exec(html)?.[1] ?? '';
-      expect(nav, `${path} has no nav block`).not.toBe('');
-
-      for (const tool of SITE_TOOLS) {
-        expect(nav, `${path} is missing the "${tool.label}" tool`).toContain(tool.label);
-        // The page you are on is bold text, so only the others need the href.
-        const isSelf = new RegExp(`<strong>${tool.label}</strong>`).test(nav);
-        if (!isSelf) {
-          expect(nav, `${path} links "${tool.label}" somewhere unexpected`).toContain(tool.href);
-        }
-      }
+  it('is character for character what siteNav produces, on every page', () => {
+    // The strong form of "they list the same tools": there is one source, and
+    // the pages hold its output verbatim. Anything else — a hand edit, a tool
+    // added to the server list only — fails here.
+    for (const file of staticPages()) {
+      const nav = navOf(readFileSync(`public/${file}`, 'utf8'));
+      expect(nav, `public/${file} is out of step — run \`npm run sync:nav\``).toBe(navBlockFor(file));
     }
+  });
+
+  it('knows which page is which, so each highlights itself', () => {
+    expect(currentFor('video.html')).toBe('video');
+    expect(currentFor('sign.html')).toBe('pdf');
+    // Pages that carry the bar without being in it highlight nothing.
+    expect(currentFor('index.html')).toBeUndefined();
+    expect(currentFor('unlock.html')).toBeUndefined();
+  });
+
+  it('puts every tool in a group that exists', () => {
+    const known = new Set(TOOL_GROUPS.map((g) => g.id));
+    for (const tool of SITE_TOOLS) {
+      expect(known.has(tool.group), `${tool.label} is in the unknown group "${tool.group}"`).toBe(true);
+    }
+  });
+
+  it('leaves no group empty, and none so long it defeats the grouping', () => {
+    for (const group of TOOL_GROUPS) {
+      const size = SITE_TOOLS.filter((t) => t.group === group.id).length;
+      expect(size, `the "${group.label}" group is empty`).toBeGreaterThan(0);
+      expect(size, `the "${group.label}" group has ${size} tools, which is a flat list again`).toBeLessThan(7);
+    }
+  });
+
+  it('names every group in the rendered bar', () => {
+    const rendered = siteNav();
+    for (const group of TOOL_GROUPS) expect(rendered).toContain(`>${group.label}<`);
   });
 
   it('marks at most one entry as the current page', () => {

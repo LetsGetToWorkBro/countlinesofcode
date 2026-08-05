@@ -80,35 +80,73 @@ ${body}
  * no template engine, deliberately, and `test/integration.test.ts` checks the
  * two stay in step.
  */
-export const SITE_TOOLS: { href: string; label: string; id: string }[] = [
-  { href: '/code.html', label: 'count code', id: 'count' },
-  { href: '/golf', label: 'golf', id: 'golf' },
+export type ToolGroup = 'documents' | 'media' | 'privacy' | 'code';
+
+/**
+ * The order the groups appear in, and what each is called.
+ *
+ * Grouping happened when the bar reached thirteen tools and a single
+ * pipe-separated line stopped being something anyone could scan. The labels
+ * name what the visitor is working on, not how the tools are built.
+ */
+export const TOOL_GROUPS: { id: ToolGroup; label: string }[] = [
+  { id: 'documents', label: 'documents' },
+  { id: 'media', label: 'media' },
+  { id: 'privacy', label: 'privacy' },
+  { id: 'code', label: 'code' },
+];
+
+export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolGroup }[] = [
   // The editor is the PDF tool now; the old merge/split page is retired and
   // /pdf.html redirects here. The URL stays /sign.html for the links already
   // out in the world.
-  { href: '/sign.html', label: 'pdf', id: 'pdf' },
-  { href: '/pages.html', label: 'pages', id: 'pages' },
-  { href: '/convert.html', label: 'convert', id: 'convert' },
-  { href: '/inspect.html', label: 'inspect', id: 'inspect' },
-  { href: '/sheet.html', label: 'sheets', id: 'sheets' },
-  { href: '/image.html', label: 'images', id: 'images' },
-  { href: '/video.html', label: 'video', id: 'video' },
-  { href: '/zip.html', label: 'zip', id: 'zip' },
-  { href: '/lock.html', label: 'lock', id: 'lock' },
-  { href: '/pgp.html', label: 'pgp', id: 'pgp' },
-  { href: 'https://delete.1999loc.com/', label: 'delete posts', id: 'delete' },
+  { href: '/sign.html', label: 'pdf', id: 'pdf', group: 'documents' },
+  { href: '/pages.html', label: 'pages', id: 'pages', group: 'documents' },
+  { href: '/convert.html', label: 'convert', id: 'convert', group: 'documents' },
+  { href: '/sheet.html', label: 'sheets', id: 'sheets', group: 'documents' },
+  // The archive tool sits with the documents because on this site it usually is
+  // one: a .docx, .xlsx and .epub are all ZIPs, and it opens them.
+  { href: '/zip.html', label: 'zip', id: 'zip', group: 'documents' },
+
+  { href: '/image.html', label: 'images', id: 'images', group: 'media' },
+  { href: '/video.html', label: 'video', id: 'video', group: 'media' },
+
+  { href: '/inspect.html', label: 'inspect', id: 'inspect', group: 'privacy' },
+  { href: '/lock.html', label: 'lock', id: 'lock', group: 'privacy' },
+  { href: '/pgp.html', label: 'pgp', id: 'pgp', group: 'privacy' },
+  { href: 'https://delete.1999loc.com/', label: 'delete posts', id: 'delete', group: 'privacy' },
+
+  { href: '/code.html', label: 'count code', id: 'count', group: 'code' },
+  { href: '/golf', label: 'golf', id: 'golf', group: 'code' },
 ];
 
-/** `current` renders as plain bold text rather than a link to the page you are on. */
+/**
+ * The toolkit bar, grouped.
+ *
+ * `current` renders as plain bold text rather than a link to the page you are
+ * already on. Groups are labelled and spaced apart so the eye can find the one
+ * it wants without reading all thirteen entries.
+ *
+ * The static pages in ./public carry a copy of this markup, written there by
+ * `npm run sync:nav` rather than by hand — thirteen tools across sixteen pages
+ * is well past what anyone keeps in step by editing, and test/nav.test.ts
+ * compares them character for character.
+ */
 export function siteNav(current?: string): string {
-  const items = SITE_TOOLS.map((tool) =>
-    tool.id === current
-      ? `<strong>${escapeHtml(tool.label)}</strong>`
-      : `<a href="${escapeHtml(tool.href)}">${escapeHtml(tool.label)}</a>`,
-  ).join('\n|\n');
+  const groups = TOOL_GROUPS.map((group) => {
+    const items = SITE_TOOLS.filter((tool) => tool.group === group.id)
+      .map((tool) =>
+        tool.id === current
+          ? `<strong>${escapeHtml(tool.label)}</strong>`
+          : `<a href="${escapeHtml(tool.href)}">${escapeHtml(tool.label)}</a>`,
+      )
+      .join('\n&middot;\n');
+    return `<span class="nav-group"><span class="nav-label">${escapeHtml(group.label)}</span>\n${items}</span>`;
+  }).join('\n');
+
   return `<hr>
 <p class="nav">
-${items}
+${groups}
 </p>
 <hr>`;
 }

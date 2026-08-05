@@ -11,11 +11,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm run build:client && npm run vendor:pdfjs && npm run test",
+    "check": "npm run typecheck && npm run build:client && npm run vendor:pdfjs && npm run sync:nav && npm run test",
     "verify:live": "vite-node scripts/live-check.ts",
     "preview": "vite-node scripts/preview-result.ts",
     "build:client": "node scripts/build-client.mjs",
-    "vendor:pdfjs": "node scripts/vendor-pdfjs.mjs"
+    "vendor:pdfjs": "node scripts/vendor-pdfjs.mjs",
+    "sync:nav": "npx vite-node scripts/sync-nav.ts -- --write"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260801.1",

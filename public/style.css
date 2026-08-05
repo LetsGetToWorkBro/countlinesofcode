@@ -57,10 +57,31 @@ hr {
 }
 
 /* The toolkit bar. A 1999 nav is links separated by pipes, and the page you
-   are on is bold text rather than a link to itself. */
+   are on is bold text rather than a link to itself.
+
+   Grouped once it reached thirteen tools: one flat line was no longer
+   something anyone could scan. Groups sit side by side on a wide screen and
+   stack on a narrow one, which is the whole of the responsive behaviour. */
 .nav {
   margin: 4px 0;
   font-size: 15px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 18px;
+  align-items: baseline;
+}
+
+.nav-group {
+  white-space: normal;
+}
+
+/* The group's name, set apart from the links so it does not read as one. */
+.nav-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #666666;
+  margin-right: 3px;
 }
 
 form {
