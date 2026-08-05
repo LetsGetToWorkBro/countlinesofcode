@@ -345,3 +345,10 @@ button.remove {
   max-width: 220px;
   vertical-align: middle;
 }
+
+.pic-thumb {
+  max-height: 90px;
+  max-width: 200px;
+  border: 1px solid #000000;
+  vertical-align: middle;
+}

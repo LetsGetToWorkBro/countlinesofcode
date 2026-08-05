@@ -11,13 +11,14 @@
  * Flattening needs a canvas, so that half is exercised in a browser.
  */
 
-import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { PDFDocument, PDFName, StandardFonts } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import {
   MIN_REDACTION_POINTS,
   applyEdits,
   canvasRectToPdf,
   canvasToPdf,
+  imageFormat,
   loadForEditing,
   pageTextOps,
   pagesNeedingRaster,
@@ -98,7 +99,7 @@ describe('usefulRedactions', () => {
   it('ignores text and signature edits entirely', () => {
     const edits: Edit[] = [
       { kind: 'text', page: 0, at: { x: 1, y: 1 }, value: 'hi', size: 12 },
-      { kind: 'stamp', page: 0, at: { x: 1, y: 1 }, png: new Uint8Array([1]), width: 100 },
+      { kind: 'stamp', page: 0, at: { x: 1, y: 1 }, bytes: new Uint8Array([1]), width: 100 },
       redact(0),
     ];
     expect(usefulRedactions(edits)).toHaveLength(1);
@@ -115,7 +116,7 @@ describe('pagesNeedingRaster', () => {
     // This is the property that keeps text selectable on untouched pages.
     const edits: Edit[] = [
       { kind: 'text', page: 0, at: { x: 1, y: 1 }, value: 'hi', size: 12 },
-      { kind: 'stamp', page: 2, at: { x: 1, y: 1 }, png: new Uint8Array([1]), width: 80 },
+      { kind: 'stamp', page: 2, at: { x: 1, y: 1 }, bytes: new Uint8Array([1]), width: 80 },
     ];
     expect(pagesNeedingRaster(edits).size).toBe(0);
   });
@@ -222,5 +223,114 @@ describe('applyEdits: surgical removal', () => {
     const page1 = await streamOf(out, 0);
     expect(page1).not.toContain('SUPERSECRETCODEWORD');
     expect(page1).toContain('REDACTED BY REQUEST');
+  });
+});
+
+/**
+ * Putting a picture in.
+ *
+ * The format is sniffed from the bytes rather than trusted from the file name
+ * or the browser's reported MIME type, because a PDF that embeds mislabelled
+ * bytes does not fail — it opens showing a blank rectangle where the photo
+ * should be, which nobody notices until it is printed.
+ */
+describe('imageFormat', () => {
+  const PNG_MAGIC = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const JPEG_MAGIC = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]);
+
+  it('recognises a PNG', () => {
+    expect(imageFormat(PNG_MAGIC)).toBe('png');
+  });
+
+  it('recognises a JPEG, whatever flavour of header it carries', () => {
+    expect(imageFormat(JPEG_MAGIC)).toBe('jpg');
+    // Exif rather than JFIF: different fourth byte, same file type.
+    expect(imageFormat(new Uint8Array([0xff, 0xd8, 0xff, 0xe1, 0, 0]))).toBe('jpg');
+  });
+
+  it('refuses anything else rather than guessing', () => {
+    expect(imageFormat(new Uint8Array([0x47, 0x49, 0x46, 0x38]))).toBeNull(); // GIF
+    expect(imageFormat(new Uint8Array([0x52, 0x49, 0x46, 0x46]))).toBeNull(); // WebP/RIFF
+    expect(imageFormat(new Uint8Array(0))).toBeNull();
+    expect(imageFormat(new Uint8Array([0x89, 0x50]))).toBeNull(); // truncated PNG
+  });
+});
+
+describe('applyEdits: pictures', () => {
+  /** A real 2x2 PNG, so pdf-lib actually decodes it. */
+  const PNG_2X2 = Uint8Array.from(
+    atob(
+      'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFUlEQVR4nGP8z8DAwMDAwMDEAAWEG' +
+        'ABBJgHl7fWlwQAAAABJRU5ErkJggg==',
+    ),
+    (c) => c.charCodeAt(0),
+  );
+
+  async function onePage(): Promise<Uint8Array> {
+    const doc = await PDFDocument.create();
+    doc.addPage([300, 300]);
+    doc.addPage([300, 300]);
+    return doc.save();
+  }
+
+  const place = (page: number, width = 100): Edit => ({
+    kind: 'stamp',
+    page,
+    at: { x: 20, y: 200 },
+    bytes: PNG_2X2,
+    width,
+  });
+
+  it('puts a picture into the page', async () => {
+    const out = await applyEdits(await onePage(), [place(0)], []);
+    const doc = await loadForEditing(out);
+    expect(doc.getPageCount()).toBe(2);
+    // An XObject reference is how a placed image shows up in the stream.
+    const stream = new TextDecoder('latin1').decode(readContentStream(doc, 0));
+    expect(stream).toContain('Do');
+  });
+
+  /** How many image XObjects the file actually carries. */
+  function imageCount(doc: PDFDocument): number {
+    let found = 0;
+    for (const [, object] of doc.context.enumerateIndirectObjects()) {
+      const dict = (object as { dict?: { get(name: PDFName): unknown } }).dict;
+      if (dict && String(dict.get(PDFName.of('Subtype'))) === '/Image') found++;
+    }
+    return found;
+  }
+
+  it('embeds one copy however many times it is placed', async () => {
+    // A logo stamped through a long document should not put a copy of itself
+    // in the file per page. Compared against a single placement rather than
+    // against 1, because a PNG with transparency embeds as two objects — the
+    // image and its soft mask — and file size is too blunt to tell either way.
+    const once = await applyEdits(await onePage(), [place(0)], []);
+    const many = await applyEdits(
+      await onePage(),
+      [place(0), place(0, 50), place(1), place(1, 70)],
+      [],
+    );
+    expect(imageCount(await loadForEditing(many))).toBe(imageCount(await loadForEditing(once)));
+  });
+
+  it('really does place it four times, so the count above means something', async () => {
+    const many = await applyEdits(await onePage(), [place(0), place(0, 50), place(1), place(1, 70)], []);
+    const doc = await loadForEditing(many);
+    const draws = (page: number) =>
+      (new TextDecoder('latin1').decode(readContentStream(doc, page)).match(/\bDo\b/g) || []).length;
+    expect(draws(0)).toBe(2);
+    expect(draws(1)).toBe(2);
+  });
+
+  it('refuses bytes that are not a picture a PDF can hold', async () => {
+    const bad: Edit = { kind: 'stamp', page: 0, at: { x: 1, y: 1 }, bytes: new Uint8Array([1, 2, 3]), width: 50 };
+    await expect(applyEdits(await onePage(), [bad], [])).rejects.toThrow(/PNG or a JPEG/);
+  });
+
+  it('leaves a page nothing was placed on unchanged', async () => {
+    const out = await applyEdits(await onePage(), [place(0)], []);
+    const doc = await loadForEditing(out);
+    expect(new TextDecoder('latin1').decode(readContentStream(doc, 1))).not.toContain('Do');
   });
 });

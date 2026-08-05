@@ -49,8 +49,8 @@ export interface StampEdit {
   kind: 'stamp';
   page: number;
   at: PdfPoint;
-  /** PNG bytes — a drawn signature, a typed one, or an uploaded image. */
-  png: Uint8Array;
+  /** PNG or JPEG bytes — a signature, or any picture being placed. */
+  bytes: Uint8Array;
   /** Width in points; height follows from the image's aspect ratio. */
   width: number;
 }
@@ -97,6 +97,25 @@ export function canvasRectToPdf(
     width: Math.abs(a.x - b.x),
     height: Math.abs(a.y - b.y),
   };
+}
+
+/**
+ * PNG and JPEG are the only two pictures a PDF carries as-is.
+ *
+ * Detected from the bytes rather than from the file extension or the browser's
+ * reported type, both of which are guesses about someone else's file. Anything
+ * that is neither is re-encoded to PNG before it gets here, because embedding
+ * mislabelled bytes produces a PDF that opens to a blank rectangle.
+ */
+export type ImageFormat = 'png' | 'jpg';
+
+export function imageFormat(bytes: Uint8Array): ImageFormat | null {
+  if (bytes.length >= 8 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) {
+    return 'png';
+  }
+  // JPEG has several flavours (JFIF, Exif, raw) but all start with SOI + a marker.
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'jpg';
+  return null;
 }
 
 /** Which pages carry a redaction, and therefore have to be flattened. */
@@ -222,6 +241,23 @@ export async function applyEdits(
   const rasterByPage = new Map(rasters.map((r) => [r.page, r.png]));
   const pageCount = src.getPageCount();
 
+  /* One copy per picture, however many times it is placed. Stamping the same
+   * signature or logo on forty pages should not put forty copies of it in the
+   * file. Keyed by identity because the caller reuses the same array for the
+   * same source image. */
+  const embedded = new Map<Uint8Array, Awaited<ReturnType<typeof out.embedPng>>>();
+  async function embed(bytes: Uint8Array) {
+    const already = embedded.get(bytes);
+    if (already) return already;
+    const format = imageFormat(bytes);
+    if (!format) {
+      throw new Error('That image is not a PNG or a JPEG, so it cannot be put into a PDF as it is.');
+    }
+    const image = format === 'png' ? await out.embedPng(bytes) : await out.embedJpg(bytes);
+    embedded.set(bytes, image);
+    return image;
+  }
+
   for (let index = 0; index < pageCount; index++) {
     const raster = rasterByPage.get(index);
     let page;
@@ -258,7 +294,7 @@ export async function applyEdits(
           });
         });
       } else if (edit.kind === 'stamp') {
-        const image = await out.embedPng(edit.png);
+        const image = await embed(edit.bytes);
         const height = (image.height / image.width) * edit.width;
         page.drawImage(image, {
           x: edit.at.x,
@@ -285,6 +321,7 @@ const globalScope = globalThis as unknown as {
     readContentStream: typeof readContentStream;
     pageTextOps: typeof pageTextOps;
     matchOpsToItems: typeof matchOpsToItems;
+    imageFormat: typeof imageFormat;
     canvasToPdf: typeof canvasToPdf;
     canvasRectToPdf: typeof canvasRectToPdf;
     pagesNeedingRaster: typeof pagesNeedingRaster;
@@ -298,6 +335,7 @@ globalScope.LOC1999_SIGN = {
   readContentStream,
   pageTextOps,
   matchOpsToItems,
+  imageFormat,
   canvasToPdf,
   canvasRectToPdf,
   pagesNeedingRaster,

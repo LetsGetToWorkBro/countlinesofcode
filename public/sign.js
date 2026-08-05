@@ -211,6 +211,55 @@
     return { x: at.x, y: at.y, w: width, h: height };
   }
 
+  /* Corner grips on whatever is selected. Kept in canvas pixels because that
+   * is where the pointer is; only the result is converted back to points. */
+  var GRIP = 9;
+
+  function gripsOf(obj) {
+    var b = boxOf(obj);
+    return [
+      { id: 'nw', x: b.x, y: b.y, anchor: { x: b.x + b.w, y: b.y + b.h } },
+      { id: 'ne', x: b.x + b.w, y: b.y, anchor: { x: b.x, y: b.y + b.h } },
+      { id: 'sw', x: b.x, y: b.y + b.h, anchor: { x: b.x + b.w, y: b.y } },
+      { id: 'se', x: b.x + b.w, y: b.y + b.h, anchor: { x: b.x, y: b.y } },
+    ];
+  }
+
+  function gripAt(point) {
+    if (!selected || selected.page !== pageIndex) return null;
+    var grips = gripsOf(selected);
+    for (var i = 0; i < grips.length; i++) {
+      if (Math.abs(point.x - grips[i].x) <= GRIP && Math.abs(point.y - grips[i].y) <= GRIP) return grips[i];
+    }
+    return null;
+  }
+
+  /**
+   * Resize to wherever the pointer is, keeping the opposite corner pinned and
+   * the shape unchanged. Driven by width alone: dragging a corner of a picture
+   * should never squash it, so the height always follows the aspect ratio.
+   */
+  function resizeTo(state, point) {
+    var obj = state.obj;
+    var scale = viewport.scale;
+    var width = Math.max(GRIP * 2, Math.abs(point.x - state.anchor.x));
+    var height = width * state.ratio;
+    var left = point.x >= state.anchor.x ? state.anchor.x : state.anchor.x - width;
+    var top = point.y >= state.anchor.y ? state.anchor.y : state.anchor.y - height;
+
+    obj.x = left / scale;
+    if (obj.kind === 'text') {
+      obj.size = Math.max(2, Math.round((height / scale) * 10) / 10);
+      // y is the baseline for text, which is the bottom of the box.
+      obj.y = (overlay.height - (top + height)) / scale;
+      $('text-size').value = obj.size;
+    } else {
+      obj.width = Math.round((width / scale) * 10) / 10;
+      obj.y = (overlay.height - top) / scale; // y is the top for a picture
+      $(obj.what === 'picture' ? 'image-width' : 'sig-width').value = obj.width;
+    }
+  }
+
   function objectAt(point) {
     for (var i = objects.length - 1; i >= 0; i--) {
       if (objects[i].page !== pageIndex) continue;
@@ -282,6 +331,13 @@
         ctx.setLineDash([4, 3]);
         ctx.strokeRect(b.x - 2, b.y - 2, b.w + 4, b.h + 4);
         ctx.setLineDash([]);
+        // Grips last, so they sit on top of the outline and are obvious.
+        gripsOf(obj).forEach(function (grip) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(grip.x - 4, grip.y - 4, 8, 8);
+          ctx.strokeStyle = '#0000ee';
+          ctx.strokeRect(grip.x - 4, grip.y - 4, 8, 8);
+        });
       }
     });
 
@@ -312,11 +368,22 @@
 
   // ------------------------------------------------------------- interactions
   var drag = null;
+  var resize = null;
   var boxFrom = null;
 
   overlay.addEventListener('pointerdown', function (event) {
     if (!doc) return;
     var point = canvasPoint(event);
+
+    // A grip is checked first: it sits on the object's own outline, so
+    // whichever is tested second can never be reached.
+    var grip = gripAt(point);
+    if (grip) {
+      var box = boxOf(selected);
+      resize = { obj: selected, anchor: grip.anchor, ratio: box.h / Math.max(1, box.w) };
+      overlay.setPointerCapture(event.pointerId);
+      return;
+    }
 
     // Anything already placed can be picked up, whatever tool is selected.
     var hit = objectAt(point);
@@ -344,6 +411,12 @@
     if (!doc) return;
     var point = canvasPoint(event);
 
+    if (resize) {
+      resizeTo(resize, point);
+      draw();
+      return;
+    }
+
     if (drag) {
       var target = { x: point.x - drag.dx, y: point.y - drag.dy };
       var snapped = snap(toPdf(target));
@@ -362,14 +435,23 @@
       return;
     }
 
-    // Hovering over deletable text should look deletable.
-    if (tool() === 'delete') overlay.style.cursor = itemAt(point) >= 0 ? 'pointer' : 'crosshair';
-    else overlay.style.cursor = objectAt(point) ? 'move' : 'crosshair';
+    // Hovering should say what a click will do.
+    var over = gripAt(point);
+    if (over) overlay.style.cursor = over.id === 'nw' || over.id === 'se' ? 'nwse-resize' : 'nesw-resize';
+    else if (objectAt(point)) overlay.style.cursor = 'move';
+    else if (tool() === 'delete') overlay.style.cursor = itemAt(point) >= 0 ? 'pointer' : 'crosshair';
+    else overlay.style.cursor = 'crosshair';
   });
 
   overlay.addEventListener('pointerup', function (event) {
     if (!doc) return;
     var point = canvasPoint(event);
+
+    if (resize) {
+      resize = null;
+      draw();
+      return;
+    }
 
     if (drag) {
       drag = null;
@@ -394,6 +476,7 @@
     if (tool() === 'delete') return deleteAt(point);
     if (tool() === 'text') return addText(point);
     if (tool() === 'stamp') return addSignature(point);
+    if (tool() === 'image') return addImage(point);
   });
 
   /* Double-click existing text to replace it: the old operator is deleted and
@@ -504,8 +587,8 @@
          * hangs your name underneath it and every signature needs dragging. */
         var height = (img.height / img.width) * width;
         var obj = {
-          id: nextId++, kind: 'stamp', page: pageIndex, x: at.x, y: at.y + height,
-          width: width, png: sig.bytes, img: img,
+          id: nextId++, kind: 'stamp', what: 'signature', page: pageIndex,
+          x: at.x, y: at.y + height, width: width, bytes: sig.bytes, img: img,
         };
         objects.push(obj);
         selected = obj;
@@ -522,12 +605,76 @@
     var picked = tool();
     $('text-options').className = picked === 'text' ? '' : 'hidden';
     $('sig-options').className = picked === 'stamp' ? '' : 'hidden';
+    $('image-options').className = picked === 'image' ? '' : 'hidden';
     overlay.style.cursor = 'crosshair';
+  }
+
+  // ------------------------------------------------------------------ pictures
+  var picture = null; // { bytes, url, img, name, size }
+
+  /* Base64 in chunks: String.fromCharCode.apply throws on a big photo, and a
+   * data: URL is the only kind an <img> may load here — img-src is 'self'
+   * data:, so a blob: URL is refused and the load event never fires. */
+  function bytesToDataUrl(bytes, mime) {
+    var parts = [];
+    for (var i = 0; i < bytes.length; i += 0x8000) {
+      parts.push(String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)));
+    }
+    return 'data:' + mime + ';base64,' + btoa(parts.join(''));
+  }
+
+  function loadPicture(file) {
+    return file.arrayBuffer().then(function (buf) {
+      var bytes = new Uint8Array(buf);
+      var format = window.LOC1999_SIGN.imageFormat(bytes);
+      var url = bytesToDataUrl(bytes, file.type || 'application/octet-stream');
+      // A PDF carries PNG and JPEG as they are. Everything else has to be
+      // repainted through a canvas, which is lossless but drops the original
+      // compression — a WebP photo can triple in size on the way in.
+      if (format) return withImage(bytes, url);
+      return repaintAsPng(url);
+    });
+  }
+
+  function withImage(bytes, url) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () { resolve({ bytes: bytes, url: url, img: img }); };
+      img.onerror = function () { reject(new Error('That file does not look like a picture this browser can open.')); };
+      img.src = url;
+    });
+  }
+
+  function repaintAsPng(url) {
+    return withImage(null, url).then(function (loaded) {
+      var canvas = document.createElement('canvas');
+      canvas.width = loaded.img.naturalWidth;
+      canvas.height = loaded.img.naturalHeight;
+      canvas.getContext('2d').drawImage(loaded.img, 0, 0);
+      var png = canvas.toDataURL('image/png');
+      return withImage(dataUrlBytes(png), png);
+    });
+  }
+
+  function addImage(point) {
+    if (!picture) return fail('Choose a picture first, then click where it goes.');
+    clearError();
+    var at = snap(toPdf(point));
+    var obj = {
+      id: nextId++, kind: 'stamp', what: 'picture', page: pageIndex,
+      // The click marks the top-left for a picture: that is where the cursor is.
+      x: at.x, y: at.y, width: Number($('image-width').value) || 200,
+      bytes: picture.bytes, img: picture.img,
+    };
+    objects.push(obj);
+    selected = obj;
+    snapLine = null;
+    draw();
   }
 
   function syncControls(obj) {
     if (obj.kind === 'text') $('text-size').value = obj.size;
-    else $('sig-width').value = obj.width;
+    else $(obj.what === 'picture' ? 'image-width' : 'sig-width').value = obj.width;
   }
 
   document.addEventListener('keydown', function (event) {
@@ -805,7 +952,7 @@
             var edits = objects.map(function (o) {
               return o.kind === 'text'
                 ? { kind: 'text', page: o.page, at: { x: o.x, y: o.y }, value: o.value, size: o.size }
-                : { kind: 'stamp', page: o.page, at: { x: o.x, y: o.y }, png: o.png, width: o.width };
+                : { kind: 'stamp', page: o.page, at: { x: o.x, y: o.y }, bytes: o.bytes, width: o.width };
             });
             return window.LOC1999_SIGN.applyEdits(basis.bytes, edits, rasters, basis.removals);
           });
@@ -874,6 +1021,38 @@
       selected.size = Number($('text-size').value) || selected.size;
       draw();
     }
+  });
+  $('image-width').addEventListener('input', function () {
+    $('image-mm').textContent = Math.round((Number($('image-width').value) || 0) / 72 * 25.4);
+    if (selected && selected.what === 'picture') {
+      selected.width = Number($('image-width').value) || selected.width;
+      draw();
+    }
+  });
+  $('image-file').addEventListener('change', function () {
+    var file = $('image-file').files[0];
+    if (!file) return;
+    statusEl.textContent = 'Reading the picture…';
+    loadEngines()
+      .then(function () { return loadPicture(file); })
+      .then(function (loaded) {
+        picture = loaded;
+        clearError();
+        statusEl.textContent = '';
+        var kind = window.LOC1999_SIGN.imageFormat(loaded.bytes) === 'jpg' ? 'JPEG' : 'PNG';
+        $('image-preview').innerHTML =
+          '<img class="pic-thumb" src="' + esc(loaded.url) + '" alt="the picture you chose"> ' +
+          '<span class="note">' + loaded.img.naturalWidth + ' &times; ' + loaded.img.naturalHeight +
+          ', ' + kind + ', ' + bytesLabel(loaded.bytes.length) + '</span>';
+        document.querySelector('input[value="image"]').checked = true;
+        syncTool();
+        statusEl.textContent = 'Now click the page where it goes.';
+      })
+      .catch(function (err) {
+        picture = null;
+        $('image-preview').innerHTML = '';
+        fail((err && err.message) || 'Could not read that picture.');
+      });
   });
 
   Array.prototype.forEach.call(document.querySelectorAll('input[name="tool"]'), function (radio) {
