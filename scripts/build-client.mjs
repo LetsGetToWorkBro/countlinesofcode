@@ -52,6 +52,11 @@ export const BUNDLES = [
     banner: '/* LOC.1999 PDF editor engine. Built from src/client/pdfedit.ts — do not edit. Bundles pdf-lib (MIT). */',
   },
   {
+    entry: 'src/client/proof.ts',
+    outfile: 'public/proof.js',
+    banner: '/* LOC.1999 proof panel logic. Built from src/client/proof.ts — do not edit. */',
+  },
+  {
     entry: 'src/client/pgpkit.ts',
     outfile: 'public/pgpkit.js',
     banner: '/* LOC.1999 encryption helpers. Built from src/client/pgpkit.ts — do not edit. The cryptography itself is OpenPGP.js, served from /vendor. */',
