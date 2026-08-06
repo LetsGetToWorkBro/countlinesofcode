@@ -735,9 +735,26 @@
     liveUrls = [];
   });
 
-  ready().then(function () {
-    renderKeyring();
-    showProfile();
-    updateMeter();
-  }).catch(function (err) { fail(err.message); });
+  function init() {
+    ready().then(function () {
+      renderKeyring();
+      showProfile();
+      updateMeter();
+    }).catch(function (err) { fail(err.message); });
+  }
+
+  // On the merged /lock.html the PGP tools share the page with password locking,
+  // which is the default tab. Loading OpenPGP (~390 KB) is the PGP half's cost,
+  // so don't pay it until someone opens the "Key pair" tab. tabs.js fires
+  // 'tab:shown' when it appears; on the standalone page (no tabs) init at once.
+  var tabs = document.querySelector('[data-tabs]');
+  if (tabs) {
+    var started = false;
+    var start = function () { if (!started) { started = true; init(); } };
+    tabs.addEventListener('tab:shown', function (e) { if (e.detail && e.detail.tab === 'pgp') start(); });
+    var panel = tabs.querySelector('[data-panel="pgp"]');
+    if (panel && !panel.classList.contains('hidden')) start();
+  } else {
+    init();
+  }
 })();

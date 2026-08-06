@@ -892,7 +892,6 @@ async function sitemap(request: Request, env: Env): Promise<Response> {
     `<url><loc>${escapeXml(origin)}/video.html</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/zip.html</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>`,
     `<url><loc>${escapeXml(origin)}/lock.html</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>`,
-    `<url><loc>${escapeXml(origin)}/pgp.html</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/unlock.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
     `<url><loc>${escapeXml(origin)}/shrink.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
     `<url><loc>${escapeXml(origin)}/security.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`,
@@ -965,6 +964,8 @@ const RETIRED_PAGES: Record<string, string> = {
   '/pdf.html': '/sign.html',
   // The throwaway inbox is now a tab on the email page.
   '/mail.html': '/email.html#inbox',
+  // PGP is now a tab on the encrypt page, beside password locking.
+  '/pgp.html': '/lock.html#pgp',
 };
 
 export function redirectRetiredPage(url: URL): Response | null {

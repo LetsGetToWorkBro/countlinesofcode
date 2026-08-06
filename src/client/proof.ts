@@ -190,8 +190,8 @@ export const SOURCES: Record<string, string[]> = {
   '/video.html': ['public/video-page.js', 'src/client/video.ts', 'src/client/gif.ts'],
   '/zip.html': ['public/zip-page.js', 'src/client/zipkit.ts', 'src/client/zip.ts'],
   '/pages.html': ['public/pages-page.js', 'src/client/pdfpages.ts'],
-  '/lock.html': ['public/lock-page.js', 'src/client/pgpkit.ts'],
-  '/pgp.html': ['public/pgp-page.js', 'src/client/pgpkit.ts'],
+  // 'encrypt' page: password locking and PGP keys, on tabs, over one engine.
+  '/lock.html': ['public/lock-page.js', 'public/pgp-page.js', 'public/tabs.js', 'src/client/pgpkit.ts'],
   '/monero.html': ['public/monero-page.js', 'src/client/monero.ts', 'src/client/monero-words.ts'],
   // Two tools on one page: the message checker, and the throwaway inbox (its
   // server half stores incoming mail for an hour).

@@ -166,7 +166,9 @@ describe('leakVerdict', () => {
 describe('sources', () => {
   it('points at the files behind the tool, not just the repository', () => {
     expect(sourcesFor('/video.html')).toContain('src/client/video.ts');
-    expect(sourcesFor('/pgp.html')).toContain('src/client/pgpkit.ts');
+    // PGP folded into the encrypt page; its sources moved with it.
+    expect(sourcesFor('/lock.html')).toContain('src/client/pgpkit.ts');
+    expect(sourcesFor('/lock.html')).toContain('public/pgp-page.js');
   });
 
   it('falls back rather than showing nothing', () => {

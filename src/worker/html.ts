@@ -116,8 +116,9 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
   // 'email' is two tools on one page now: the message checker and the throwaway
   // inbox (a tab). /mail.html redirects to /email.html#inbox.
   { href: '/email.html', label: 'email', id: 'email', group: 'privacy' },
-  { href: '/lock.html', label: 'lock', id: 'lock', group: 'privacy' },
-  { href: '/pgp.html', label: 'pgp', id: 'pgp', group: 'privacy' },
+  // 'encrypt' is two tools on one page: a password (symmetric) and PGP keys, on
+  // tabs. /pgp.html redirects to /lock.html#pgp.
+  { href: '/lock.html', label: 'encrypt', id: 'lock', group: 'privacy' },
   { href: 'https://delete.1999loc.com/', label: 'delete posts', id: 'delete', group: 'privacy' },
 
   { href: '/monero.html', label: 'monero', id: 'monero', group: 'money' },

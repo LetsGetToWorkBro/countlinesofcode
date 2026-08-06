@@ -655,6 +655,12 @@ describe('www handling', () => {
     expect(response.headers.get('location')).toBe('https://loc.example/email.html#inbox');
   });
 
+  it('301s the retired /pgp.html to the encrypt page PGP tab', async () => {
+    const response = await get('https://loc.example/pgp.html');
+    expect(response.status).toBe(301);
+    expect(response.headers.get('location')).toBe('https://loc.example/lock.html#pgp');
+  });
+
   it('leaves other hosts alone, so workers.dev and previews keep working', async () => {
     for (const host of ['loc1999.someone.workers.dev', '1a2b3c-loc1999.someone.workers.dev', 'localhost:8787']) {
       const response = await get(`https://${host}/api/meta`);
