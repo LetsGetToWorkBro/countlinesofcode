@@ -15,8 +15,8 @@
   'use strict';
 
   var $ = function (id) { return document.getElementById(id); };
-  var statusEl = $('status');
-  var errorEl = $('error');
+  var statusEl = $('pg-status');
+  var errorEl = $('pg-error');
   var gridEl = $('grid');
 
   var engine = null;       // window.LOC1999_PAGES
@@ -75,7 +75,7 @@
   function addFiles(files) {
     clearError();
     releaseUrls();
-    $('output').innerHTML = '';
+    $('pg-output').innerHTML = '';
 
     return loadEngines()
       .then(function () {
@@ -239,7 +239,7 @@
     // The output area is about to be replaced; revoke the previous build's URLs
     // first so re-saving while tuning ranges does not pin one PDF blob per save.
     releaseUrls();
-    $('output').innerHTML = '';
+    $('pg-output').innerHTML = '';
     $('progress').textContent = 'Building…';
 
     engine.buildPdf(docs, pages)
@@ -283,7 +283,7 @@
 
     clearError();
     releaseUrls();
-    $('output').innerHTML = '';
+    $('pg-output').innerHTML = '';
     $('progress').textContent = 'Building…';
 
     var stem = engine.outputName(sources.map(function (s) { return s.name; }), 'split').replace(/-split\.pdf$/, '');
@@ -332,29 +332,29 @@
   }
 
   function offer(name, blob) {
-    $('output').innerHTML = '<p><a id="download" download="' + esc(name) + '" href="' + objectUrl(blob) +
+    $('pg-output').innerHTML = '<p><a id="download" download="' + esc(name) + '" href="' + objectUrl(blob) +
       '">Download ' + esc(name) + '</a> <span class="note">' + Math.round(blob.size / 1024) + ' KB</span></p>';
   }
 
   // ---------------------------------------------------------------- wiring
 
-  $('drop').addEventListener('click', function () { $('file-input').click(); });
-  $('drop').addEventListener('keydown', function (event) {
-    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); $('file-input').click(); }
+  $('pg-drop').addEventListener('click', function () { $('pg-file-input').click(); });
+  $('pg-drop').addEventListener('keydown', function (event) {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); $('pg-file-input').click(); }
   });
-  $('drop').addEventListener('dragover', function (event) {
+  $('pg-drop').addEventListener('dragover', function (event) {
     event.preventDefault();
-    $('drop').classList.add('is-over');
+    $('pg-drop').classList.add('is-over');
   });
-  $('drop').addEventListener('dragleave', function () { $('drop').classList.remove('is-over'); });
-  $('drop').addEventListener('drop', function (event) {
+  $('pg-drop').addEventListener('dragleave', function () { $('pg-drop').classList.remove('is-over'); });
+  $('pg-drop').addEventListener('drop', function (event) {
     event.preventDefault();
-    $('drop').classList.remove('is-over');
+    $('pg-drop').classList.remove('is-over');
     var files = event.dataTransfer && event.dataTransfer.files;
     if (files && files.length) addFiles(files);
   });
-  $('file-input').addEventListener('change', function () {
-    if ($('file-input').files && $('file-input').files.length) addFiles($('file-input').files);
+  $('pg-file-input').addEventListener('change', function () {
+    if ($('pg-file-input').files && $('pg-file-input').files.length) addFiles($('pg-file-input').files);
   });
 
   // One listener for the whole grid: it is rebuilt on every change, and a

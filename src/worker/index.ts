@@ -883,8 +883,7 @@ async function sitemap(request: Request, env: Env): Promise<Response> {
     `<url><loc>${escapeXml(origin)}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/code.html</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/how.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
-    `<url><loc>${escapeXml(origin)}/sign.html</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>`,
-    `<url><loc>${escapeXml(origin)}/pages.html</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>`,
+    `<url><loc>${escapeXml(origin)}/sign.html</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/convert.html</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/inspect.html</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>`,
     `<url><loc>${escapeXml(origin)}/sheet.html</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>`,
@@ -966,6 +965,8 @@ const RETIRED_PAGES: Record<string, string> = {
   '/mail.html': '/email.html#inbox',
   // PGP is now a tab on the encrypt page, beside password locking.
   '/pgp.html': '/lock.html#pgp',
+  // Page operations are now a tab on the PDF editor.
+  '/pages.html': '/sign.html#pages',
 };
 
 export function redirectRetiredPage(url: URL): Response | null {

@@ -189,7 +189,6 @@ export const REPO = 'https://github.com/letsgettoworkbro/countlinesofcode';
 export const SOURCES: Record<string, string[]> = {
   '/video.html': ['public/video-page.js', 'src/client/video.ts', 'src/client/gif.ts'],
   '/zip.html': ['public/zip-page.js', 'src/client/zipkit.ts', 'src/client/zip.ts'],
-  '/pages.html': ['public/pages-page.js', 'src/client/pdfpages.ts'],
   // 'encrypt' page: password locking and PGP keys, on tabs, over one engine.
   '/lock.html': ['public/lock-page.js', 'public/pgp-page.js', 'public/tabs.js', 'src/client/pgpkit.ts'],
   '/monero.html': ['public/monero-page.js', 'src/client/monero.ts', 'src/client/monero-words.ts'],
@@ -203,7 +202,8 @@ export const SOURCES: Record<string, string[]> = {
     'src/worker/mail.ts',
     'src/lib/mailbox.ts',
   ],
-  '/sign.html': ['public/sign.js', 'src/client/pdfedit.ts', 'src/client/pdfstream.ts'],
+  // The PDF page: the editor and page operations, on tabs, over the same engine.
+  '/sign.html': ['public/sign.js', 'public/pages-page.js', 'public/tabs.js', 'src/client/pdfedit.ts', 'src/client/pdfstream.ts', 'src/client/pdfpages.ts'],
   '/convert.html': ['public/convert-page.js', 'src/client/convert.ts', 'src/client/docmodel.ts'],
   '/inspect.html': ['public/inspect-page.js', 'src/client/inspect.ts'],
   '/sheet.html': ['public/sheet-page.js', 'src/client/sheet.ts'],

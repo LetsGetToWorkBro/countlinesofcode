@@ -101,8 +101,10 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
   // The editor is the PDF tool now; the old merge/split page is retired and
   // /pdf.html redirects here. The URL stays /sign.html for the links already
   // out in the world.
+  // The PDF tool is two tools on one page now: the editor (sign, fill, redact)
+  // and page operations (merge, split, reorder, rotate), on tabs. /pages.html
+  // redirects to /sign.html#pages.
   { href: '/sign.html', label: 'pdf', id: 'pdf', group: 'documents' },
-  { href: '/pages.html', label: 'pages', id: 'pages', group: 'documents' },
   { href: '/convert.html', label: 'convert', id: 'convert', group: 'documents' },
   { href: '/sheet.html', label: 'sheets', id: 'sheets', group: 'documents' },
   // The archive tool sits with the documents because on this site it usually is
