@@ -233,6 +233,12 @@
   });
 
   $('check').addEventListener('click', check);
+  // Checking an address handles no secrets and makes no request, so run it on
+  // paste rather than making people find the button. The button stays for typed
+  // input.
+  $('check-text').addEventListener('paste', function () {
+    setTimeout(check, 0);
+  });
   $('check-ours').addEventListener('click', function () {
     ready().then(function () {
       $('check-text').value = xmr.KNOWN_ADDRESS;

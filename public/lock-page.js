@@ -208,6 +208,8 @@
     });
     input.addEventListener('change', function () {
       if (input.files && input.files[0]) onFile(input.files[0]);
+      // Clear it so choosing the same file again still fires a change event.
+      input.value = '';
     });
   }
 
@@ -284,6 +286,12 @@
   $('unlock').addEventListener('click', unlock);
   $('unpassword').addEventListener('keydown', function (event) {
     if (event.key === 'Enter') { event.preventDefault(); unlock(); }
+  });
+  // Enter locks, but only when the lock button would: a file is chosen and the
+  // two passphrases match. The gate is the same one on the button, so Enter can
+  // never lock with a mismatched or empty passphrase.
+  $('confirm').addEventListener('keydown', function (event) {
+    if (event.key === 'Enter' && !$('lock').disabled) { event.preventDefault(); lock(); }
   });
 
   window.addEventListener('pagehide', function () {

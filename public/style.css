@@ -309,6 +309,13 @@ ul.plain {
   background: #ffffcc;
 }
 
+/* The zone is one drop target. Without this, dragging over a child (the bold
+   line, the hint, the hidden input) fires dragleave on the parent and the
+   highlight strobes on and off during the drag. */
+.dropzone > * {
+  pointer-events: none;
+}
+
 /* A checkbox label that runs the width of the line rather than sitting in the
    130px column the form labels use. */
 label.wide,

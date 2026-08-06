@@ -75,6 +75,9 @@
         $('workbook').className = '';
         renderPicker();
         renderSheet();
+        // Move focus into the revealed panel so the next step (save) is one key
+        // away and a screen reader announces the new region.
+        $('save').focus();
       })
       .catch(function (err) {
         book = null;
@@ -123,6 +126,10 @@
     if (!book) return;
     var choice = $('delimiter').value;
     resetOutput();
+    // Writing a large .xlsx is async and takes a moment; disable the button so a
+    // second click cannot revoke the in-flight download URL, and say it is working.
+    $('save').disabled = true;
+    if (choice === 'xlsx') statusEl.textContent = 'Writing…';
     var work;
     if (choice === 'xlsx') {
       work = engine.writeXlsx(book).then(function (out) {
@@ -146,9 +153,11 @@
       var blob = new Blob([out.data], { type: out.type });
       var url = URL.createObjectURL(blob);
       liveUrls.push(url);
+      statusEl.textContent = '';
       $('output').innerHTML = '<ul class="plain"><li><a href="' + url + '" download="' + esc(out.name) + '">' +
         esc(out.name) + '</a> <span class="note">' + bytesLabel(blob.size) + '</span></li></ul>';
-    }).catch(function (err) { fail((err && err.message) || 'Could not write that file.'); });
+    }).catch(function (err) { fail((err && err.message) || 'Could not write that file.'); })
+      .then(function () { $('save').disabled = false; });
   }
 
   // ------------------------------------------------------------------ wiring

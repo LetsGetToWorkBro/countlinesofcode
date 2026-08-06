@@ -70,6 +70,8 @@
           controls.className = '';
           resultEl.innerHTML = '<strong>Opened:</strong> ' + doc.numPages + ' page' +
             (doc.numPages === 1 ? '' : 's') + ', ' + bytesLabel(sourceSize) + '. Pick a strength and shrink.';
+          // Focus the action so it is one key away once a file is open.
+          if ($('shrink')) $('shrink').focus();
         });
       })
       .catch(function (err) {

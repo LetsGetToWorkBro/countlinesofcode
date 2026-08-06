@@ -175,6 +175,19 @@
 
   $('check').addEventListener('click', function () { run($('source').value); });
 
+  // This tool is paste-driven, so act on the paste. The check reads the message
+  // and shows a verdict; it loads nothing and sends nothing, so there is no cost
+  // to running it the moment the headers land. The button stays for typed edits.
+  $('source').addEventListener('paste', function () {
+    setTimeout(function () { run($('source').value); }, 0);
+  });
+  // Ctrl or Cmd + Enter checks typed input without reaching for the mouse.
+  $('source').addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run($('source').value); }
+  });
+  // Land the cursor in the box: this is a paste-first page.
+  $('source').focus();
+
   $('sample').addEventListener('click', function () {
     // A message with every trick in it at once, so the page can be judged
     // without anyone having to find a real phish to feed it.

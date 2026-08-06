@@ -172,11 +172,33 @@
         originalEl.innerHTML = '<strong>Original:</strong> ' + source.width + ' &times; ' + source.height +
           ', ' + esc(source.kind) + ', ' + bytesLabel(bytes.length);
         syncQuality();
+        // Show the picture straight away, not just a line of stats about it, so
+        // there is something to look at before tuning. Convert replaces it with
+        // the result.
+        showSourcePreview();
+        $('convert').focus();
       });
     }).catch(function (err) {
       source = null;
       fail((err && err.message) || 'Could not open that image.');
     });
+  }
+
+  /* A downscaled preview of the opened image, kept small so a phone photo does
+     not become a multi-megabyte data URL just to be looked at. */
+  function showSourcePreview() {
+    if (!source) return;
+    var max = 512;
+    var scale = Math.min(1, max / Math.max(source.width, source.height));
+    var pw = Math.max(1, Math.round(source.width * scale));
+    var ph = Math.max(1, Math.round(source.height * scale));
+    var c = document.createElement('canvas');
+    c.width = pw;
+    c.height = ph;
+    var cx = c.getContext('2d');
+    cx.imageSmoothingQuality = 'high';
+    cx.drawImage(source.canvas, 0, 0, pw, ph);
+    previewEl.innerHTML = '<img class="pic-preview" src="' + c.toDataURL('image/png') + '" alt="the image you opened">';
   }
 
   // ----------------------------------------------------------------- convert
@@ -214,8 +236,11 @@
     ctx.drawImage(source.canvas, 0, 0, size.w, size.h);
 
     statusEl.textContent = 'Encoding…';
+    // Disabled while encoding: toBlob is async, and a second click would revoke
+    // the first run's blob URL out from under its own download link.
+    $('convert').disabled = true;
     canvas.toBlob(function (blob) {
-      if (!blob) { statusEl.textContent = ''; return fail('This browser could not encode that format. Try JPEG or PNG.'); }
+      if (!blob) { statusEl.textContent = ''; $('convert').disabled = false; return fail('This browser could not encode that format. Try JPEG or PNG.'); }
       // The download link uses a blob: URL (fine for a download). The preview is
       // an <img>, and img-src is 'self' data: — a blob: there is refused — so the
       // preview gets a data: URL instead. Same picture, two URL kinds for two jobs.
@@ -234,6 +259,7 @@
         outputEl.innerHTML = '<ul class="plain"><li><a href="' + url + '" download="' + esc(name) + '">' +
           esc(name) + '</a></li></ul>';
         previewEl.innerHTML = '<img class="pic-preview" src="' + reader.result + '" alt="the converted image">';
+        $('convert').disabled = false;
       };
       reader.readAsDataURL(blob);
     }, mime, quality);
@@ -269,6 +295,12 @@
   });
   dropzone.addEventListener('drop', function (e) {
     if (e.dataTransfer && e.dataTransfer.files[0]) open(e.dataTransfer.files[0]);
+  });
+  // Paste a screenshot straight in: the most common way to have an image in hand
+  // is on the clipboard, and saving it to disk first just to reopen it is friction.
+  document.addEventListener('paste', function (e) {
+    var file = e.clipboardData && e.clipboardData.files && e.clipboardData.files[0];
+    if (file && /^image\//.test(file.type)) { e.preventDefault(); open(file); }
   });
 
   $('convert').addEventListener('click', convert);
