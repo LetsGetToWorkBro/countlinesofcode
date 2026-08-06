@@ -95,12 +95,17 @@ so `/email.html#inbox` opens the right tab; the retired URLs 301 to it).
 
 | Tool | URL | What it does | Runs on |
 |---|---|---|---|
-| **Email** | `/email.html` | *Check a message* tab: is the sender forged (SPF/DKIM/DMARC) and what is tracking you, read straight from the source. *Throwaway inbox* tab: a disposable address that reads its own mail and self-destructs in an hour. | checker: your browser · **inbox: the server** (D1 + Email Routing) |
 | **Encrypt** | `/lock.html` | *Password* tab: lock a file with a passphrase (OpenPGP symmetric). *Key pair* tab: full PGP — generate, encrypt, decrypt, sign, verify. Your private key never leaves the tab. | your browser |
 | **Inspect a file** | `/inspect.html` | What a document is quietly carrying: text under black boxes, tracked changes, comments, author, timezone. | your browser |
 | **Delete posts** | [delete.1999loc.com](https://delete.1999loc.com/) | Bulk-delete your old social posts. | its own service |
 
-### Money
+### Communications
+
+| Tool | URL | What it does | Runs on |
+|---|---|---|---|
+| **Email** | `/email.html` | *Disposable inbox* tab: an address that reads its own mail and self-destructs in an hour. *Check a message* tab: is the sender forged (SPF/DKIM/DMARC) and what is tracking you, read straight from the source. | inbox: **the server** (D1 + Email Routing) · checker: your browser |
+
+### Monero
 
 | Tool | URL | What it does | Runs on |
 |---|---|---|---|

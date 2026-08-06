@@ -75,23 +75,25 @@ hr {
 .nav {
   margin: 4px 0;
   font-size: 15px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 18px;
-  align-items: baseline;
 }
 
+/* One group per line, the label in a fixed right-aligned column, so the bar
+   reads as a table of contents instead of a wrapped soup of underlines. */
 .nav-group {
-  white-space: normal;
+  display: block;
+  padding: 1px 0;
 }
 
 /* The group's name, set apart from the links so it does not read as one. */
 .nav-label {
-  font-size: 12px;
+  display: inline-block;
+  width: 112px;
+  text-align: right;
+  margin-right: 8px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: #666666;
-  margin-right: 3px;
 }
 
 form {
@@ -624,6 +626,35 @@ fieldset.tool-group table.tool-dir { margin: 0; }
 }
 .app-body > .tagline:first-child { margin-top: 2px; }
 .app-body p.tool-tabs { margin-top: 6px; }
+
+/* The desktop: the three tools the site leads with, as shortcuts on the
+   classic teal. Inline SVG icons, so nothing is fetched and nothing can be. */
+.desktop {
+  background: #008080;
+  border: 2px inset #c0c0c0;
+  display: flex;
+  gap: 10px;
+  padding: 14px 12px 10px 12px;
+  margin: 12px 0 16px 0;
+}
+.desk-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 84px;
+  padding: 6px 2px;
+  text-decoration: none;
+}
+.desk-icon svg { width: 34px; height: 34px; }
+.desk-icon span {
+  color: #ffffff;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  padding: 0 3px;
+  text-shadow: 1px 1px 0 #000000;
+}
+.desk-icon:hover span, .desk-icon:focus span { background: #000080; outline: 1px dotted #ffffff; }
 
 /* One window per page: the title bar belongs to the app window alone. */
 .client-title {

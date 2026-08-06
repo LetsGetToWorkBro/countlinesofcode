@@ -80,7 +80,7 @@ ${body}
  * no template engine, deliberately, and `test/integration.test.ts` checks the
  * two stay in step.
  */
-export type ToolGroup = 'documents' | 'media' | 'privacy' | 'money' | 'code';
+export type ToolGroup = 'documents' | 'media' | 'privacy' | 'communications' | 'money' | 'code';
 
 /**
  * The order the groups appear in, and what each is called.
@@ -90,10 +90,13 @@ export type ToolGroup = 'documents' | 'media' | 'privacy' | 'money' | 'code';
  * name what the visitor is working on, not how the tools are built.
  */
 export const TOOL_GROUPS: { id: ToolGroup; label: string }[] = [
+  // Ordered by what the site leads with: the wallet, then privacy (PGP first),
+  // then communications (the disposable inbox), then the workaday tools.
+  { id: 'money', label: 'monero' },
+  { id: 'privacy', label: 'privacy' },
+  { id: 'communications', label: 'communications' },
   { id: 'documents', label: 'documents' },
   { id: 'media', label: 'media' },
-  { id: 'privacy', label: 'privacy' },
-  { id: 'money', label: 'money' },
   { id: 'code', label: 'code' },
 ];
 
@@ -114,15 +117,17 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
   { href: '/image.html', label: 'images', id: 'images', group: 'media' },
   { href: '/video.html', label: 'video', id: 'video', group: 'media' },
 
-  { href: '/inspect.html', label: 'inspect file', id: 'inspect', group: 'privacy' },
-  // 'email' is two tools on one page now: the message checker and the throwaway
-  // inbox (a tab). /mail.html redirects to /email.html#inbox.
-  { href: '/email.html', label: 'email', id: 'email', group: 'privacy' },
   // 'pgp' is the honest name for the whole page: the password lock writes
   // OpenPGP too. Messages & keys lead; password-locking a file is the second
   // tab. /pgp.html redirects to /lock.html#pgp.
   { href: '/lock.html', label: 'pgp', id: 'lock', group: 'privacy' },
+  { href: '/inspect.html', label: 'inspect file', id: 'inspect', group: 'privacy' },
   { href: 'https://delete.1999loc.com/', label: 'delete posts', id: 'delete', group: 'privacy' },
+
+  // 'email' is two tools on one page: the disposable inbox and the message
+  // checker (tabs). /mail.html redirects to /email.html#inbox. Its own group,
+  // with room beside it if disposable numbers ever join it.
+  { href: '/email.html', label: 'email', id: 'email', group: 'communications' },
 
   // One page for money: the wallet leads, the address checker / paper wallet
   // is its second tab. /monero.html redirects to /wallet.html#addresses.
