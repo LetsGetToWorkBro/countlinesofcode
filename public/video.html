@@ -78,8 +78,8 @@
 <hr>
 
 <div class="desk-shell">
-<div class="app-window">
-<div class="client-title"><h2>Trim, convert, and make GIFs</h2></div>
+<div class="app-window" id="app">
+<div class="client-title"><h2>Trim, convert, and make GIFs</h2><a class="win-min" href="#" aria-label="Minimise Trim, convert, and make GIFs">_</a></div>
 <div class="app-body">
 <p class="tagline">In this tab. A two gigabyte holiday video never leaves your laptop.</p>
 
@@ -225,7 +225,7 @@ which one your settings mean and tells you before you press the button.
 </div>
 <div class="taskbar">
 <a class="start" href="/">Start</a>
-<span class="task-btn is-open">Trim, convert, and make GIFs</span>
+<a class="task-btn is-open" href="#app">Trim, convert, and make GIFs</a>
 <span class="task-clock">1999</span>
 </div>
 </div>
@@ -276,6 +276,7 @@ Monero, because a donation address should not also be a tracking pixel. You can
 
 </div>
 <script src="/video-page.js"></script>
+<script src="/desk.js"></script>
 <script src="/proof-panel.js"></script>
 </body>
 </html>

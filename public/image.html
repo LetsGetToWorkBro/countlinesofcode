@@ -70,8 +70,8 @@
 <hr>
 
 <div class="desk-shell">
-<div class="app-window">
-<div class="client-title"><h2>Image tools</h2></div>
+<div class="app-window" id="app">
+<div class="client-title"><h2>Image tools</h2><a class="win-min" href="#" aria-label="Minimise Image tools">_</a></div>
 <div class="app-body">
 <p class="tagline">Resize, compress and convert a picture. Your file never leaves this tab.</p>
 
@@ -148,7 +148,7 @@ not a setting you can forget to switch on.
 </div>
 <div class="taskbar">
 <a class="start" href="/">Start</a>
-<span class="task-btn is-open">Image tools</span>
+<a class="task-btn is-open" href="#app">Image tools</a>
 <span class="task-clock">1999</span>
 </div>
 </div>
@@ -188,6 +188,7 @@ Monero, because a donation address should not also be a tracking pixel. You can
 
 </div>
 <script src="/image.js"></script>
+<script src="/desk.js"></script>
 <script src="/proof-panel.js"></script>
 </body>
 </html>

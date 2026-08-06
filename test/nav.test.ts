@@ -146,6 +146,23 @@ describe('the toolkit bar', () => {
     expect(landing).not.toMatch(/app-window[^"]*(hidden|is-open)/); // nothing pre-hidden
   });
 
+  it('boots every tool from the taskbar, but only when scripting runs', () => {
+    // Each tool page's app window starts minimised under desk.js, restored
+    // from its taskbar button. Without JavaScript none of that happens, so
+    // the markup must show the window open (never pre-hidden) with its
+    // button already pressed.
+    const shellPages = STATIC_PAGES.filter((p) => readFileSync(p, 'utf8').includes('desk-shell'));
+    expect(shellPages.length).toBeGreaterThan(10);
+    for (const path of shellPages) {
+      const html = readFileSync(path, 'utf8');
+      expect(html, `${path} does not load desk.js`).toContain('<script src="/desk.js">');
+      expect(html, `${path} has no window for the taskbar to restore`).toContain('<div class="app-window" id="app">');
+      expect(html, `${path} has no taskbar toggle for its window`).toContain('href="#app"');
+      expect(html, `${path} has no minimise control`).toContain('class="win-min"');
+      expect(html, `${path} pre-hides its app window`).not.toMatch(/app-window[^"]*(hidden|is-open)/);
+    }
+  });
+
   it('sends the counter to its own page, not to the landing page', () => {
     // "/" stopped being the counter when the landing page took the slot; a
     // stale link here would put people on a page with no form on it.

@@ -763,6 +763,15 @@ fieldset.tool-group table.tool-dir { margin: 0; }
 .desk-shell .app-window { margin: 12px; }
 .desk-shell .taskbar { border-top: 2px outset #e0e0e0; }
 
+/* With desk.js running the tools boot minimised too: an empty patch of desk
+   with the app waiting on the taskbar. Flex pins the taskbar to the bottom
+   edge so the teal above it still reads as a desktop. Without JavaScript
+   none of this applies and the app is simply open. */
+.desk-js.desk-shell { display: flex; flex-direction: column; min-height: 150px; }
+.desk-js.desk-shell > .app-window { display: none; }
+.desk-js.desk-shell > .app-window.is-open { display: block; }
+.desk-js.desk-shell .taskbar { margin-top: auto; }
+
 /* One window per page: the title bar belongs to the app window alone. */
 .client-title {
   background: #000080;

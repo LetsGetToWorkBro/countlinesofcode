@@ -71,8 +71,8 @@
 <hr>
 
 <div class="desk-shell">
-<div class="app-window">
-<div class="client-title"><h2>What is hidden in this file?</h2></div>
+<div class="app-window" id="app">
+<div class="client-title"><h2>What is hidden in this file?</h2><a class="win-min" href="#" aria-label="Minimise What is hidden in this file?">_</a></div>
 <div class="app-body">
 <p class="tagline">Check a document before you send it. Your file never leaves this tab.</p>
 
@@ -129,7 +129,7 @@ tricks at once, without needing to know which one was used.
 </div>
 <div class="taskbar">
 <a class="start" href="/">Start</a>
-<span class="task-btn is-open">What is hidden in this file?</span>
+<a class="task-btn is-open" href="#app">What is hidden in this file?</a>
 <span class="task-clock">1999</span>
 </div>
 </div>
@@ -170,6 +170,7 @@ Monero, because a donation address should not also be a tracking pixel. You can
 
 </div>
 <script src="/inspect-page.js"></script>
+<script src="/desk.js"></script>
 <script src="/proof-panel.js"></script>
 </body>
 </html>

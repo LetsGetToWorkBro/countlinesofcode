@@ -73,8 +73,8 @@
 <hr>
 
 <div class="desk-shell">
-<div class="app-window">
-<div class="client-title"><h2>Monero</h2></div>
+<div class="app-window" id="app">
+<div class="client-title"><h2>Monero</h2><a class="win-min" href="#" aria-label="Minimise Monero">_</a></div>
 <div class="app-body">
 <p class="tagline">A wallet that lives in this tab, and an address checker beside it. Keys never leave the browser.</p>
 
@@ -522,7 +522,7 @@ happen. If any of it fails, the generator stays switched off.
 </div>
 <div class="taskbar">
 <a class="start" href="/">Start</a>
-<span class="task-btn is-open">Monero</span>
+<a class="task-btn is-open" href="#app">Monero</a>
 <span class="task-clock">1999</span>
 </div>
 </div>
@@ -566,6 +566,7 @@ Monero, because a donation address should not also be a tracking pixel. You can
 <script src="/wallet-page.js"></script>
 <script src="/monero-page.js"></script>
 <script src="/tabs.js"></script>
+<script src="/desk.js"></script>
 <script src="/proof-panel.js"></script>
 </body>
 </html>

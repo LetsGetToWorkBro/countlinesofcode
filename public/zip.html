@@ -72,8 +72,8 @@
 <hr>
 
 <div class="desk-shell">
-<div class="app-window">
-<div class="client-title"><h2>Open a ZIP, or make one</h2></div>
+<div class="app-window" id="app">
+<div class="client-title"><h2>Open a ZIP, or make one</h2><a class="win-min" href="#" aria-label="Minimise Open a ZIP, or make one">_</a></div>
 <div class="app-body">
 <p class="tagline">In this tab. The archive is never uploaded.</p>
 
@@ -160,7 +160,7 @@ one reads it where it already is, on your machine.
 </div>
 <div class="taskbar">
 <a class="start" href="/">Start</a>
-<span class="task-btn is-open">Open a ZIP, or make one</span>
+<a class="task-btn is-open" href="#app">Open a ZIP, or make one</a>
 <span class="task-clock">1999</span>
 </div>
 </div>
@@ -202,6 +202,7 @@ Monero, because a donation address should not also be a tracking pixel. You can
 
 </div>
 <script src="/zip-page.js"></script>
+<script src="/desk.js"></script>
 <script src="/proof-panel.js"></script>
 </body>
 </html>

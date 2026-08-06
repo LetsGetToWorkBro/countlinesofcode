@@ -1,24 +1,32 @@
 /* 1999.LOC desktop window manager. The smallest one ever shipped.
  *
- * Progressive enhancement only: without this file the landing page shows its
- * three windows open and the taskbar buttons are plain anchors, so nothing
- * needs JavaScript. With it, the desktop boots the way a desktop should —
- * windows minimised to the taskbar, restored when their button is pressed,
- * minimised again from the button or the _ in their title bar. A #hash in the
- * URL (or following a link to one) opens that window.
+ * Progressive enhancement only: without this file every window is simply
+ * open and the taskbar carries plain anchors, so nothing needs JavaScript.
+ * With it, things boot the way a desktop should: windows minimised to the
+ * taskbar, restored when their button is pressed, minimised again from the
+ * button or the _ in their title bar. A #hash in the URL (or following a
+ * link to one) opens the window that holds the target.
+ *
+ * Runs on the landing desktop (.desktop) and on every tool page's patch of
+ * desk (.desk-shell) alike; the tools start minimised too.
  */
 (function () {
   'use strict';
 
-  var desktop = document.querySelector('.desktop');
-  if (!desktop) return;
-  desktop.classList.add('desk-js');
+  var desk = document.querySelector('.desktop, .desk-shell');
+  if (!desk) return;
+  desk.classList.add('desk-js');
 
+  /* The window a #hash refers to: the window itself, or the one holding the
+   * element or tab panel the hash names. Tool pages deep-link to tabs
+   * (#inbox, #pgp), and those must open the app, not leave it minimised. */
   function windowFor(hash) {
     if (!hash) return null;
     var id = hash.replace(/^#/, '');
-    var el = document.getElementById(id);
-    return el && el.classList.contains('app-window') ? el : null;
+    if (!/^[\w-]+$/.test(id)) return null;
+    var el = document.getElementById(id) ||
+             document.querySelector('[data-panel="' + id + '"]');
+    return el ? el.closest('.app-window') : null;
   }
 
   function buttonFor(win) {
@@ -65,9 +73,13 @@
     });
   });
 
-  // Boot minimised, except a window the URL asks for.
+  /* Boot minimised, except a window the URL asks for. Tool pages mark their
+   * taskbar button pressed in the markup for the no-JS case; setOpen resets
+   * every button to match what is actually open. */
   var wanted = windowFor(location.hash);
-  if (wanted) setOpen(wanted, true);
+  Array.prototype.forEach.call(desk.querySelectorAll('.app-window'), function (win) {
+    setOpen(win, win === wanted);
+  });
 
   // Following an in-page anchor later (e.g. a link elsewhere) opens it too.
   window.addEventListener('hashchange', function () {

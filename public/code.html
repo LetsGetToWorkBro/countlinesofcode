@@ -84,8 +84,8 @@
 <hr>
 
 <div class="desk-shell">
-<div class="app-window">
-<div class="client-title"><h2>Count lines of code</h2></div>
+<div class="app-window" id="app">
+<div class="client-title"><h2>Count lines of code</h2><a class="win-min" href="#" aria-label="Minimise Count lines of code">_</a></div>
 <div class="app-body">
 <p class="tagline">Enter a repository. We will count the lines. That is all.</p>
 
@@ -163,7 +163,7 @@
 </div>
 <div class="taskbar">
 <a class="start" href="/">Start</a>
-<span class="task-btn is-open">Count lines of code</span>
+<a class="task-btn is-open" href="#app">Count lines of code</a>
 <span class="task-clock">1999</span>
 </div>
 </div>
@@ -190,6 +190,7 @@ Monero, because a donation address should not also be a tracking pixel. You can
 
 </div>
 <script src="/app.js"></script>
+<script src="/desk.js"></script>
 <script src="/proof-panel.js"></script>
 </body>
 </html>

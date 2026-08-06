@@ -73,8 +73,8 @@
 <hr>
 
 <div class="desk-shell">
-<div class="app-window">
-<div class="client-title"><h2>Email</h2></div>
+<div class="app-window" id="app">
+<div class="client-title"><h2>Email</h2><a class="win-min" href="#" aria-label="Minimise Email">_</a></div>
 <div class="app-body">
 <p class="tagline">A disposable address for the forms that do not deserve your real one, and a checker for the mail you already got.</p>
 
@@ -219,7 +219,7 @@ headers carry your address, your IP, and who you correspond with.
 </div>
 <div class="taskbar">
 <a class="start" href="/">Start</a>
-<span class="task-btn is-open">Email</span>
+<a class="task-btn is-open" href="#app">Email</a>
 <span class="task-clock">1999</span>
 </div>
 </div>
@@ -250,6 +250,7 @@ Monero, because a donation address should not also be a tracking pixel. You can
 <script src="/email-page.js"></script>
 <script src="/mail-page.js"></script>
 <script src="/tabs.js"></script>
+<script src="/desk.js"></script>
 <script src="/proof-panel.js"></script>
 </body>
 </html>

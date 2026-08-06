@@ -68,8 +68,8 @@
 <hr>
 
 <div class="desk-shell">
-<div class="app-window">
-<div class="client-title"><h2>Unlock a PDF</h2></div>
+<div class="app-window" id="app">
+<div class="client-title"><h2>Unlock a PDF</h2><a class="win-min" href="#" aria-label="Minimise Unlock a PDF">_</a></div>
 <div class="app-body">
 <p class="tagline">Remove the &ldquo;you may not print or copy this&rdquo; lock. Your file never leaves this tab.</p>
 
@@ -111,7 +111,7 @@ needs one to open, you will be asked for it, and you must know it.
 </div>
 <div class="taskbar">
 <a class="start" href="/">Start</a>
-<span class="task-btn is-open">Unlock a PDF</span>
+<a class="task-btn is-open" href="#app">Unlock a PDF</a>
 <span class="task-clock">1999</span>
 </div>
 </div>
@@ -152,6 +152,7 @@ Monero, because a donation address should not also be a tracking pixel. You can
 </div>
 <script src="/pdfrender.js"></script>
 <script src="/unlock.js"></script>
+<script src="/desk.js"></script>
 <script src="/proof-panel.js"></script>
 </body>
 </html>

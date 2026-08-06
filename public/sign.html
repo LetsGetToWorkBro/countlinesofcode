@@ -71,8 +71,8 @@
 <hr>
 
 <div class="desk-shell">
-<div class="app-window">
-<div class="client-title"><h2>PDF</h2></div>
+<div class="app-window" id="app">
+<div class="client-title"><h2>PDF</h2><a class="win-min" href="#" aria-label="Minimise PDF">_</a></div>
 <div class="app-body">
 <p class="tagline">Sign and fill a document, or rearrange its pages. Both run in this tab; your file is never uploaded.</p>
 
@@ -383,7 +383,7 @@ page that comes out of here is the page that went in, in a different place.
 </div>
 <div class="taskbar">
 <a class="start" href="/">Start</a>
-<span class="task-btn is-open">PDF</span>
+<a class="task-btn is-open" href="#app">PDF</a>
 <span class="task-clock">1999</span>
 </div>
 </div>
@@ -414,6 +414,7 @@ Monero, because a donation address should not also be a tracking pixel. You can
 <script src="/sign.js"></script>
 <script src="/pages-page.js"></script>
 <script src="/tabs.js"></script>
+<script src="/desk.js"></script>
 <script src="/proof-panel.js"></script>
 </body>
 </html>

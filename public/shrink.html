@@ -69,8 +69,8 @@
 <hr>
 
 <div class="desk-shell">
-<div class="app-window">
-<div class="client-title"><h2>Shrink a PDF</h2></div>
+<div class="app-window" id="app">
+<div class="client-title"><h2>Shrink a PDF</h2><a class="win-min" href="#" aria-label="Minimise Shrink a PDF">_</a></div>
 <div class="app-body">
 <p class="tagline">Make a heavy PDF small enough to email. Your file never leaves this tab.</p>
 
@@ -127,7 +127,7 @@ overwrites anything; you download a new file.
 </div>
 <div class="taskbar">
 <a class="start" href="/">Start</a>
-<span class="task-btn is-open">Shrink a PDF</span>
+<a class="task-btn is-open" href="#app">Shrink a PDF</a>
 <span class="task-clock">1999</span>
 </div>
 </div>
@@ -168,6 +168,7 @@ Monero, because a donation address should not also be a tracking pixel. You can
 </div>
 <script src="/pdfrender.js"></script>
 <script src="/shrink.js"></script>
+<script src="/desk.js"></script>
 <script src="/proof-panel.js"></script>
 </body>
 </html>

@@ -70,8 +70,8 @@
 <hr>
 
 <div class="desk-shell">
-<div class="app-window">
-<div class="client-title"><h2>Excel &harr; CSV</h2></div>
+<div class="app-window" id="app">
+<div class="client-title"><h2>Excel &harr; CSV</h2><a class="win-min" href="#" aria-label="Minimise Excel &harr; CSV">_</a></div>
 <div class="app-body">
 <p class="tagline">Both directions, in this tab. Your file never leaves it.</p>
 
@@ -131,7 +131,7 @@ semicolon-separated exports that most of Europe produces work without a setting.
 </div>
 <div class="taskbar">
 <a class="start" href="/">Start</a>
-<span class="task-btn is-open">Excel &harr; CSV</span>
+<a class="task-btn is-open" href="#app">Excel &harr; CSV</a>
 <span class="task-clock">1999</span>
 </div>
 </div>
@@ -173,6 +173,7 @@ Monero, because a donation address should not also be a tracking pixel. You can
 
 </div>
 <script src="/sheet-page.js"></script>
+<script src="/desk.js"></script>
 <script src="/proof-panel.js"></script>
 </body>
 </html>
