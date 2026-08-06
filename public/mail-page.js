@@ -103,6 +103,7 @@
     }).catch(function (err) {
       // A transient poll error should not wipe the inbox; just note it quietly.
       if (firstLoad) fail(readableSetupError(err));
+      else $('inbox-status').textContent = 'Could not check just now; it will try again in a few seconds.';
     });
   }
 
@@ -218,6 +219,15 @@
   });
 
   $('new').addEventListener('click', newAddress);
+
+  // The poll runs itself every few seconds, but a button that checks right now
+  // is the difference between trusting the page and watching it.
+  $('refresh').addEventListener('click', function () {
+    if (!address) return;
+    clearError();
+    $('inbox-status').textContent = 'Checking...';
+    poll();
+  });
 
   $('burn').addEventListener('click', function () {
     if (!address) return;

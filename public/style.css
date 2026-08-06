@@ -585,6 +585,20 @@ button.sheet-tab.is-active { border-style: inset; background: #ffffcc; }
 table.tool-dir { border: none; width: 100%; margin: 2px 0 12px 0; }
 table.tool-dir td { border: none; padding: 2px 0; }
 table.tool-dir td:first-child { font-weight: bold; white-space: nowrap; padding-right: 14px; width: 1%; }
+
+/* The directory's group panels: classic grouped boxes, side by side where the
+   width allows and stacked on a phone. The legend carries the h3 so the
+   heading structure (and the test that pins it to the nav's groups) is
+   unchanged. */
+.tool-groups { display: flex; flex-wrap: wrap; gap: 12px; margin: 10px 0 16px 0; }
+fieldset.tool-group {
+  flex: 1 1 290px;
+  border: 2px groove #d4d0c8;
+  margin: 0;
+  padding: 2px 10px 6px 10px;
+}
+fieldset.tool-group legend h3 { margin: 0; font-size: 16px; }
+fieldset.tool-group table.tool-dir { margin: 0; }
 /* The honest exception marker: the few tools that touch a server carry one. */
 .srv {
   font-size: 12px;
