@@ -25,13 +25,13 @@
     ------------------------------------------------------------
     count code | golf | pdf | convert | inspect | sheets | images
     ------------------------------------------------------------
-    The tools, grouped by category
-    PDF
-    +----------------+--------------------------+-------------+
-    | Edit a PDF     | fill, sign, delete text  | your tab    |
-    | PDF <-> Word   | convert, with a verdict  | your tab    |
+    The tools, in the same five groups as the nav bar
+    Documents
+    +----------------+---------------------------------+-------------+
+    | PDF            | Edit + Pages tabs               | your tab    |
+    | PDF <-> Word   | convert, with a verdict         | your tab    |
     ...
-    Documents & data / Images / Privacy / Code
+    Media / Privacy (email + encrypt are tabbed pairs) / Money / Code
     ...
     ------------------------------------------------------------
     Why it looks like this
@@ -90,23 +90,29 @@ in the tab you already have open.
 <h2>The tools</h2>
 
 <p class="note">
-Grouped by what you are working on. Almost everything runs in the tab you
-already have open; where a tool needs our server, it says so.
+The same five groups as the bar above, one row per page. A few pages are two
+tools sharing an engine, split into tabs; the links jump straight to a tab.
+Almost everything runs in the tab you already have open; where a tool needs our
+server, its &ldquo;runs on&rdquo; says so.
 </p>
 
-<h3>PDF</h3>
+<h3>Documents</h3>
 <table class="tools">
 <thead>
 <tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
 </thead>
 <tbody>
 <tr>
-  <th scope="row"><a href="/sign.html">Edit a PDF</a></th>
+  <th scope="row"><a href="/sign.html">PDF</a></th>
   <td>
-    Fill in a form by typing into its actual fields, sign it by hand or by name,
-    drop in a picture, and delete or replace text <em>properly</em>: click
-    a word and it leaves the file, no black box over the top and the rest of the
-    page still selectable. Everything you add can be dragged and resized.
+    Two tools in one page. <a href="/sign.html#edit">Edit</a>: fill in a form by
+    typing into its actual fields, sign it by hand or by name, drop in a
+    picture, and delete or replace text <em>properly</em>: click a word
+    and it leaves the file, no black box over the top.
+    <a href="/sign.html#pages">Pages</a>: combine several PDFs into one, split
+    one apart, drag pages into a new order, and turn sideways scans the right
+    way up. Pages are copied whole rather than redrawn, so text stays
+    selectable.
   </td>
   <td>Your browser</td>
 </tr>
@@ -121,11 +127,20 @@ already have open; where a tool needs our server, it says so.
   <td>Your browser</td>
 </tr>
 <tr>
-  <th scope="row"><a href="/sign.html#pages">Merge &amp; split pages</a></th>
+  <th scope="row"><a href="/sheet.html">Excel &harr; CSV</a></th>
   <td>
-    Combine several PDFs into one, split one apart, drag pages into a new order,
-    turn sideways scans the right way up, and delete the pages you do not want.
-    Pages are copied whole rather than redrawn, so the text stays selectable.
+    Convert a spreadsheet to CSV or a CSV to Excel. Detects semicolons, honours
+    quoted fields, and will not turn <code>007</code> into 7.
+  </td>
+  <td>Your browser</td>
+</tr>
+<tr>
+  <th scope="row"><a href="/zip.html">Open a ZIP, or make one</a></th>
+  <td>
+    See what is inside an archive without unpacking it, pull out only the files
+    you want, or build a ZIP from your own. A <code>.docx</code> or
+    <code>.epub</code> opens here too: they are ZIPs with a different
+    name on the end.
   </td>
   <td>Your browser</td>
 </tr>
@@ -149,24 +164,7 @@ already have open; where a tool needs our server, it says so.
 </tbody>
 </table>
 
-<h3>Documents &amp; data</h3>
-<table class="tools">
-<thead>
-<tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
-</thead>
-<tbody>
-<tr>
-  <th scope="row"><a href="/sheet.html">Excel &harr; CSV</a></th>
-  <td>
-    Convert a spreadsheet to CSV or a CSV to Excel. Detects semicolons, honours
-    quoted fields, and will not turn <code>007</code> into 7.
-  </td>
-  <td>Your browser</td>
-</tr>
-</tbody>
-</table>
-
-<h3>Images</h3>
+<h3>Media</h3>
 <table class="tools">
 <thead>
 <tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
@@ -181,15 +179,6 @@ already have open; where a tool needs our server, it says so.
   </td>
   <td>Your browser</td>
 </tr>
-</tbody>
-</table>
-
-<h3>Video</h3>
-<table class="tools">
-<thead>
-<tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
-</thead>
-<tbody>
 <tr>
   <th scope="row"><a href="/video.html">Video &amp; GIF</a></th>
   <td>
@@ -204,51 +193,12 @@ already have open; where a tool needs our server, it says so.
 </tbody>
 </table>
 
-<h3>Archives</h3>
-<table class="tools">
-<thead>
-<tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
-</thead>
-<tbody>
-<tr>
-  <th scope="row"><a href="/zip.html">Open a ZIP, or make one</a></th>
-  <td>
-    See what is inside an archive without unpacking it, pull out only the files
-    you want, or build a ZIP from your own. A <code>.docx</code> or
-    <code>.epub</code> opens here too: they are ZIPs with a different
-    name on the end.
-  </td>
-  <td>Your browser</td>
-</tr>
-</tbody>
-</table>
-
 <h3>Privacy</h3>
 <table class="tools">
 <thead>
 <tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
 </thead>
 <tbody>
-<tr>
-  <th scope="row"><a href="/lock.html#password">Lock a file with a password</a></th>
-  <td>
-    Encrypt a file before you send it, and unlock one somebody sent you. Neither
-    the file nor the password leaves the tab. It writes the OpenPGP standard, so
-    the person receiving it can open it with <code>gpg</code> rather than being
-    tied to this page.
-  </td>
-  <td>Your browser</td>
-</tr>
-<tr>
-  <th scope="row"><a href="/lock.html#pgp">PGP keys and messages</a></th>
-  <td>
-    Make a key pair, encrypt a message or file to someone&rsquo;s public key,
-    decrypt what they send back, sign and verify. Real OpenPGP, with no
-    keyserver and no upload. Your private key is generated in the tab and
-    stays there.
-  </td>
-  <td>Your browser</td>
-</tr>
 <tr>
   <th scope="row"><a href="/inspect.html">What&rsquo;s hidden in this file?</a></th>
   <td>
@@ -259,27 +209,52 @@ already have open; where a tool needs our server, it says so.
   <td>Your browser</td>
 </tr>
 <tr>
-  <th scope="row"><a href="/email.html">Check an email</a></th>
+  <th scope="row"><a href="/email.html">Email</a></th>
   <td>
-    Is it really from who it says? Read the SPF, DKIM and DMARC verdicts your
-    provider already recorded, and see the display name that says one thing
-    while the address says another. Then see every tracking pixel and wrapped
-    link watching you open it, named and counted and never loaded.
+    Two tools in one page. <a href="/email.html#check">Check a message</a>: is
+    it really from who it says? Read the SPF, DKIM and DMARC verdicts your
+    provider already recorded, and see every tracking pixel and wrapped link
+    watching you open it, named and never loaded.
+    <a href="/email.html#inbox">Throwaway inbox</a>: a disposable address that
+    reads its own mail, for the forms that do not deserve your real one.
+    Receive only, every message checked by the same reader and deleted an hour
+    after it lands.
+  </td>
+  <td>Checker: your browser. Inbox: a little server, briefly, and it says so</td>
+</tr>
+<tr>
+  <th scope="row"><a href="/lock.html">Encrypt</a></th>
+  <td>
+    Two tools in one page, both writing standard OpenPGP that <code>gpg</code>
+    can open. <a href="/lock.html#password">Password</a>: lock a file with a
+    passphrase before you send it, and unlock one somebody sent you.
+    <a href="/lock.html#pgp">Key pair (PGP)</a>: make a key pair, encrypt to
+    someone&rsquo;s public key, decrypt what they send back, sign and verify.
+    Neither the file, the password, nor your private key leaves the tab.
   </td>
   <td>Your browser</td>
 </tr>
 <tr>
-  <th scope="row"><a href="/email.html#inbox">Temporary inbox</a></th>
+  <th scope="row"><a href="https://delete.1999loc.com/">Delete posts</a></th>
   <td>
-    A throwaway email address that reads its own mail, for the forms that do not
-    deserve your real one. No account, receive only, and every message deletes
-    itself an hour after it lands. Each one is checked for a forged sender and
-    tracking pixels the same way the email checker is, and nothing is ever loaded
-    or run. It is the one tool here that keeps data on a server, briefly, and
-    says so.
+    Bulk-delete your own history on X, Threads and Facebook Pages through the
+    official APIs. Upload your archive, pick exactly what goes, dry run first.
+    It is the one tool that cannot run in your browser (deleting a post
+    means holding a token for your account and talking to X and Meta), so
+    it lives on <strong>its own domain</strong>, where those permissions are
+    fenced off and can never apply to anything on this one.
   </td>
-  <td>A little server</td>
+  <td>Our server, for you</td>
 </tr>
+</tbody>
+</table>
+
+<h3>Money</h3>
+<table class="tools">
+<thead>
+<tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
+</thead>
+<tbody>
 <tr>
   <th scope="row"><a href="/monero.html">Monero addresses</a></th>
   <td>
@@ -301,18 +276,6 @@ already have open; where a tool needs our server, it says so.
     the page says so first; use it for small amounts, not savings.
   </td>
   <td>A node, proxied</td>
-</tr>
-<tr>
-  <th scope="row"><a href="https://delete.1999loc.com/">Delete posts</a></th>
-  <td>
-    Bulk-delete your own history on X, Threads and Facebook Pages through the
-    official APIs. Upload your archive, pick exactly what goes, dry run first.
-    It is the one tool that cannot run in your browser (deleting a post
-    means holding a token for your account and talking to X and Meta), so
-    it lives on <strong>its own domain</strong>, where those permissions are
-    fenced off and can never apply to anything on this one.
-  </td>
-  <td>Our server, for you</td>
 </tr>
 </tbody>
 </table>

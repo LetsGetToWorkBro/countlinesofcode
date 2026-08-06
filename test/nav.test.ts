@@ -109,14 +109,13 @@ describe('the toolkit bar', () => {
     expect(landing).toContain('The tools');
   });
 
-  it('groups the tools on the landing page under categories', () => {
-    // The toolkit has outgrown one flat list, and it is about to stop being
-    // only about documents. Categories are what keep that legible.
+  it('groups the tools on the landing page under the same categories as the nav', () => {
+    // The landing page and the nav bar describe the same toolkit; letting
+    // their groupings drift apart is how a visitor learns two mental maps.
     const landing = readFileSync('public/index.html', 'utf8');
     const section = landing.slice(landing.indexOf('<h2>The tools</h2>'), landing.indexOf('<h2>Why it looks like this</h2>'));
-    const categories = [...section.matchAll(/<h3>([^<]+)<\/h3>/g)].map((m) => m[1]!);
-    expect(categories.length, 'the tools are not grouped at all').toBeGreaterThan(3);
-    expect(categories).toContain('PDF');
+    const categories = [...section.matchAll(/<h3>([^<]+)<\/h3>/g)].map((m) => m[1]!.toLowerCase());
+    expect(categories).toEqual(TOOL_GROUPS.map((g) => g.label.toLowerCase()));
   });
 
   it('leaves no tool sitting outside a category', () => {
