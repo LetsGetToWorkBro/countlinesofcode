@@ -208,15 +208,58 @@
 
   // ------------------------------------------------------------- wiring
 
+  // Copy with a real fallback chain, because the async clipboard API is the
+  // least reliable part of the modern web on a phone: try it, then the
+  // textarea + execCommand trick, and only if both fail select the address so
+  // a long-press copy is one step. Feedback lands on the button itself, which
+  // is where the visitor is already looking.
+  function fallbackCopy(text) {
+    var area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.className = 'offscreen';
+    document.body.appendChild(area);
+    area.select();
+    var copied = false;
+    try { copied = document.execCommand('copy'); } catch (e) { copied = false; }
+    document.body.removeChild(area);
+    return copied;
+  }
+
+  function selectAddress() {
+    try {
+      var range = document.createRange();
+      range.selectNodeContents($('address'));
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      return true;
+    } catch (e) { return false; }
+  }
+
   $('copy').addEventListener('click', function () {
     if (!address) return;
-    var done = function () { $('address-note').textContent = 'copied'; setTimeout(function () { $('address-note').textContent = ''; }, 1500); };
+    var button = $('copy');
+    var done = function () {
+      button.textContent = 'Copied';
+      setTimeout(function () { button.textContent = 'Copy'; }, 1500);
+    };
+    var fallen = function () {
+      if (fallbackCopy(address)) return done();
+      $('address-note').textContent = selectAddress()
+        ? 'copying is blocked here; the address is selected, copy it by hand'
+        : 'copying is blocked here; select the address and copy it by hand';
+    };
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(address).then(done, function () { $('address-note').textContent = 'press Ctrl+C to copy'; });
+      navigator.clipboard.writeText(address).then(done, fallen);
     } else {
-      $('address-note').textContent = 'select the address and press Ctrl+C';
+      fallen();
     }
   });
+
+  // Tapping the address selects it whole, so the long-press-copy path on a
+  // phone is one gesture instead of a fiddly drag across fourteen characters.
+  $('address').addEventListener('click', function () { if (address) selectAddress(); });
 
   $('new').addEventListener('click', newAddress);
 
