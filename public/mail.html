@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Temporary Email, a Throwaway Inbox in Your Browser | 1999.LOC</title>
+<meta name="description" content="A disposable email address that reads its own mail, in your browser. No account, nothing to install. Messages self-destruct an hour after they arrive, and every one is checked for a forged sender and tracking pixels, the same way the email checker does.">
+<link rel="canonical" href="https://1999loc.com/mail.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Temporary Email, a Throwaway Inbox in Your Browser | 1999.LOC">
+<meta property="og:description" content="A throwaway inbox for the forms that do not deserve your real address. Ephemeral, no account, and each message is checked for forgery and trackers.">
+<meta property="og:url" content="https://1999loc.com/mail.html">
+<meta property="og:site_name" content="1999.LOC">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<!--
+  EXPECTED LAYOUT (single column, ~680px, left aligned):
+
+    1999.LOC
+    ------------------------------------------------------------
+    ... | email | temp mail | lock | ...
+    ------------------------------------------------------------
+    TEMPORARY INBOX
+    [ warning: not private, not for anything real ]
+    Your address:  ( a8f2k...@1999loc.com )  [copy] [new] [burn]
+    ------------------------------------------------------------
+    Inbox (auto-refreshes)
+      From            Subject               When    checks
+      ...
+    ------------------------------------------------------------
+-->
+<div id="page">
+
+<h1><a href="/">1999.LOC</a></h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<span class="nav-group"><span class="nav-label">documents</span>
+<a href="/sign.html">pdf</a>
+&middot;
+<a href="/pages.html">pages</a>
+&middot;
+<a href="/convert.html">convert</a>
+&middot;
+<a href="/sheet.html">sheets</a>
+&middot;
+<a href="/zip.html">zip</a></span>
+<span class="nav-group"><span class="nav-label">media</span>
+<a href="/image.html">images</a>
+&middot;
+<a href="/video.html">video</a></span>
+<span class="nav-group"><span class="nav-label">privacy</span>
+<a href="/inspect.html">inspect</a>
+&middot;
+<a href="/email.html">email</a>
+&middot;
+<strong>temp mail</strong>
+&middot;
+<a href="/lock.html">lock</a>
+&middot;
+<a href="/pgp.html">pgp</a>
+&middot;
+<a href="https://delete.1999loc.com/">delete posts</a></span>
+<span class="nav-group"><span class="nav-label">money</span>
+<a href="/monero.html">monero</a>
+&middot;
+<a href="/wallet.html">wallet</a></span>
+<span class="nav-group"><span class="nav-label">code</span>
+<a href="/code.html">count code</a>
+&middot;
+<a href="/golf">golf</a></span>
+</p>
+<hr>
+
+<h2>Temporary inbox</h2>
+<p class="tagline">A throwaway address that reads its own mail. For the forms that do not deserve your real one.</p>
+
+<details class="notice-box">
+<summary><strong>This is not private, and not for anything that matters. Read this before you use it.</strong></summary>
+<p class="note">
+The address below is public in the only way that counts: it has no password, so
+anyone who learns it can read everything it receives. It is unguessable, which
+is the whole of its security, so do not post it anywhere and do not reuse it.
+</p>
+<p class="note">
+Use it for a signup you do not trust, a one-off verification code, a download
+that wants an address first: the places you would rather not hand your real
+inbox. Do <strong>not</strong> use it for anything you would mind a stranger
+reading, for password resets on accounts you care about, or for anything you
+need to keep. Messages are deleted an hour after they arrive, and everything is
+gone the moment you burn the inbox or the sweep runs.
+</p>
+<p class="note">
+Mail sent here does pass through this site's server to be stored for that hour,
+so unlike the other tools this one is not "nothing leaves your machine." It is
+the honest exception, like the delete-posts tool: a small, stated amount of
+server, fenced off and short-lived. Nothing you would call private should go
+near it.
+</p>
+</details>
+
+<h3>Your address</h3>
+<p id="address-line">
+  <code id="address" class="xmr">setting up...</code>
+</p>
+<p>
+  <button type="button" id="copy">Copy</button>
+  <button type="button" id="new">New address</button>
+  <button type="button" id="burn" class="linkish">burn this inbox</button>
+  <span id="address-note" class="note"></span>
+</p>
+<p class="note" id="model-note">
+This address works for as long as you keep this page open. Anything sent to it
+appears below within a few seconds. Each message deletes itself an hour after it
+arrives; "burn" wipes them now and hands you a fresh address.
+</p>
+
+<hr>
+
+<h3>Inbox</h3>
+<p id="mail-error" class="error" role="alert"></p>
+<p id="inbox-status" class="status" role="status" aria-live="polite">Waiting for mail...</p>
+<div id="inbox"></div>
+
+<!-- one opened message -->
+<div id="message-view" class="hidden">
+  <p><button type="button" id="back" class="linkish">back to the inbox</button></p>
+  <div id="message"></div>
+</div>
+
+<hr>
+
+<h3>Is this actually private?</h3>
+<div id="proof"></div>
+
+<details class="notes">
+<summary>The honest notes</summary>
+<ul class="plain">
+  <li><strong>It is receive-only, on purpose.</strong> You cannot send from this address, only read what arrives. That removes the hardest and most abusable half of running email, and it is all a throwaway inbox needs.</li>
+  <li><strong>Every message is checked, not just shown.</strong> The same reader the <a href="/email.html">email checker</a> uses runs over each incoming message, so a throwaway inbox also tells you whether the sender was forged (SPF, DKIM, DMARC) and lists any tracking pixels or click-wrappers it found. A verification code is safe to read; a "confirm your password" is flagged for what it is.</li>
+  <li><strong>Nothing is rendered as a live web page.</strong> A message is reduced to plain text before it is stored, and shown as text. Remote images, scripts and trackers never load, so opening a message here cannot report back that you did, and cannot run anything.</li>
+  <li><strong>It expires, and it is swept.</strong> A message carries a deletion time an hour out; a scheduled job deletes expired ones, and every read also filters them out, so an expired message is never shown even if the sweep is late. Burn removes everything for the address immediately.</li>
+  <li><strong>The address is the only secret.</strong> There is no login. Fourteen random characters is about seventy bits, which is not guessable, but it is the whole of the protection: treat the address itself as the password, because it is.</li>
+  <li><strong>This half runs on a server, and says so.</strong> Receiving mail needs somewhere for it to land, so this tool, alone among the tools here, stores data on this site's infrastructure for a short while. It is the reason it lives behind its own warning and holds nothing you would not shout across a room.</li>
+</ul>
+</details>
+
+<hr>
+
+<p class="footer">
+Hosted on Cloudflare &middot; Made with spite for bloat<br>
+<a href="/email.html">check an email</a> |
+<a href="/pgp.html">pgp</a> |
+<a href="/lock.html">lock a file</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+<p class="footer support">
+Nothing here is for sale, nothing is tracked, and there is no account to make.
+If something saved you an hour:<br>
+<code class="xmr">83TQcTwusSQ4WKbPQE5osrF3cR4GWe2zmcNWeozK6BSqHSaeLvjUVe476ouVwLKn1uVwEFcbJQvnme7W6dTV5SB93x45DEy</code><br>
+Monero, because a donation address should not also be a tracking pixel. You can
+<a href="/monero.html">check that address here</a> before sending anything.
+</p>
+
+</div>
+<script src="/mail-page.js"></script>
+<script src="/proof-panel.js"></script>
+</body>
+</html>

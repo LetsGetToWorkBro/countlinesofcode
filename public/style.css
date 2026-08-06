@@ -801,6 +801,20 @@ img.zip-image { max-width: 100%; display: block; }
    signal — the words say what the password actually resists. */
 .pw-terrible { color: #8a0000; }
 .pw-weak { color: #8a3b00; }
+
+/* The throwaway inbox: a plain clickable message list and a text body. */
+table.mail-table { width: 100%; }
+table.mail-table tbody tr { cursor: pointer; }
+table.mail-table tbody tr:hover { background: #ffffcc; }
+pre.mail-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #f8f8f8;
+  border: 1px solid #ddd;
+  padding: 8px;
+  max-height: 480px;
+  overflow: auto;
+}
 .pw-fair { color: #6a5500; }
 .pw-strong { color: #145214; }
 .pw-excellent { color: #145214; }

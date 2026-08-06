@@ -117,6 +117,22 @@ binding = "LOC_KV"
 id = "8c82bc2efc104b72b9b7e55aaebb4212"
 preview_id = "ee8bb66dee884755b2487fbe011ca055"
 
+# --- D1: temporary-inbox storage --------------------------------------------
+# Created with:  npx wrangler d1 create loc1999-tempmail   (already done; the id
+# below is real, so this binding will not fail the build). Schema in
+# migrations/0001_mailbox.sql, applied to the remote database out of band.
+[[d1_databases]]
+binding = "MAIL_DB"
+database_name = "loc1999-tempmail"
+database_id = "9dcf9dab-a5b2-46e9-b0c5-eb5a600e5871"
+migrations_dir = "migrations"
+
+# --- Cron: sweep expired throwaway messages ---------------------------------
+# Every message also self-filters on expiry at read time, so this only reclaims
+# space; a missed run leaks nothing.
+[triggers]
+crons = ["*/15 * * * *"]
+
 [vars]
 # APP_BASE_URL is deliberately not set: the Worker derives the OAuth
 # redirect_uri from the origin of the incoming request, so it is correct on
@@ -134,6 +150,11 @@ MAX_BLOB_FETCHES = "40"           # above this many files we switch to tarball m
 MAX_COUNT_BYTES = "2097152"
 FETCH_CONCURRENCY = "12"
 RATE_LIMIT_PER_MINUTE = "20"      # per IP, unauthenticated
+# The domain throwaway inbox addresses are handed out on. The tool is dark until
+# Email Routing for this domain has its catch-all pointed at this Worker (see the
+# runbook in docs/). Using the apex means all mail to it is captured; a dedicated
+# throwaway domain is cleaner for reputation. Change this to switch domains.
+MAIL_DOMAIN = "1999loc.com"
 
 # Secrets (never put these here — this file is committed):
 #   npx wrangler secret put GITHUB_TOKEN

@@ -3,6 +3,10 @@ import { DEFAULT_LIMITS, type CountLimits } from '../lib/counter';
 export interface Env {
   ASSETS?: Fetcher;
   LOC_KV?: KVNamespace;
+  /** Storage for the temporary-inbox tool (D1). */
+  MAIL_DB?: D1Database;
+  /** The domain throwaway addresses are handed out on. */
+  MAIL_DOMAIN?: string;
 
   APP_BASE_URL?: string;
   CANONICAL_ORIGIN?: string;

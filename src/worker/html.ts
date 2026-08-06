@@ -114,6 +114,7 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
 
   { href: '/inspect.html', label: 'inspect', id: 'inspect', group: 'privacy' },
   { href: '/email.html', label: 'email', id: 'email', group: 'privacy' },
+  { href: '/mail.html', label: 'temp mail', id: 'mail', group: 'privacy' },
   { href: '/lock.html', label: 'lock', id: 'lock', group: 'privacy' },
   { href: '/pgp.html', label: 'pgp', id: 'pgp', group: 'privacy' },
   { href: 'https://delete.1999loc.com/', label: 'delete posts', id: 'delete', group: 'privacy' },

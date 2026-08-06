@@ -22,6 +22,7 @@ import { ParseError, parseRepoInput, isValidOwner, isValidRepo, isValidRef } fro
 import { checkRateLimit, clientIp } from '../lib/ratelimit';
 import { CountOptionsSchema, CountRequestSchema, ShaSchema, type CountOptions, type CountResult } from '../lib/schema';
 import { resolveTarget as resolveXmrTarget } from '../lib/xmrproxy';
+import { handleIncomingEmail, mailApi, purgeExpired } from './mail';
 import { COUNTER_VERSION } from '../lib/version';
 import { handleCallback, handleLogin, handleLogout, handleMe, handleMyRepos, loadSession, oauthConfigured, scopesFor } from './auth';
 import { limitsFromEnv, rateLimitPerMinute, type Env } from './env';
@@ -173,6 +174,12 @@ export default {
 
       if (path.startsWith('/api/xmr/')) return await proxyXmr(request, path);
 
+      if (path.startsWith('/api/mail/')) {
+        const reply = await mailApi(request, env, path);
+        // A throwaway inbox is private and ephemeral; never let a reply cache.
+        return jsonResponse(reply.body, reply.status, { 'cache-control': 'no-store' });
+      }
+
       if (path.startsWith('/api/')) {
         return jsonError({ status: 404, code: 'not_found', message: 'No such endpoint.' });
       }
@@ -184,6 +191,30 @@ export default {
       if (path.startsWith('/api/')) return jsonError(mapped);
       return htmlResponse(errorPage(mapped.status, mapped.code, mapped.message, mapped.hint), mapped.status);
     }
+  },
+
+  /**
+   * Incoming mail for the temporary-inbox tool. Cloudflare Email Routing
+   * delivers messages here (the catch-all points at this Worker); the handler
+   * stores anything addressed to a generated inbox and drops the rest. Errors
+   * are swallowed so a malformed message can never bounce back to the sender or
+   * jam the routing.
+   */
+  async email(message, env): Promise<void> {
+    try {
+      const receipt = await handleIncomingEmail(message, env);
+      // No address, sender or body is logged — only that it landed and how big,
+      // so `wrangler tail` can confirm routing without leaking inbox contents.
+      if (receipt.stored) logEvent({ event: 'mail_received', size: receipt.size, trackers: receipt.trackers });
+      else logEvent({ event: 'mail_dropped', reason: receipt.reason });
+    } catch (error) {
+      logEvent({ event: 'mail_receive_failed', message: error instanceof Error ? error.message : String(error) });
+    }
+  },
+
+  /** The scheduled sweep of expired throwaway messages. */
+  async scheduled(_controller, env, ctx): Promise<void> {
+    ctx.waitUntil(purgeExpired(env).catch((error) => logEvent({ event: 'mail_purge_failed', message: String(error) })));
   },
 } satisfies ExportedHandler<Env>;
 
