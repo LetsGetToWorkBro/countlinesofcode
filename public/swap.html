@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Swap BTC or USDC to Monero, No Account | 1999.LOC</title>
+<meta name="description" content="Swap Bitcoin or USDC into Monero through instant exchanges, straight from one page: no account here, no wallet connection, nothing installed. Quotes from more than one provider, and honest words about what a swap service can see.">
+<link rel="canonical" href="https://1999loc.com/swap.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Swap BTC or USDC to Monero | 1999.LOC">
+<meta property="og:description" content="Instant-exchange swaps into Monero from one page: compare quotes, send the deposit, watch the status. No account here.">
+<meta property="og:url" content="https://1999loc.com/swap.html">
+<meta property="og:site_name" content="1999.LOC">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<!--
+  EXPECTED LAYOUT (single column, ~680px, left aligned):
+
+    1999.LOC
+    ------------------------------------------------------------
+    monero  wallet | swap        ...rest of the nav
+    ------------------------------------------------------------
+    [ Swap to Monero ]                                     [_]
+    From: ( Bitcoin v )   Amount: [ 0.05      ] [Get quotes]
+    Your Monero address: [ 4... / 8...                    ]
+    Refund address (optional): [                          ]
+    ------------------------------------------------------------
+    ( ) Exolix      8.70 XMR
+    ( ) ChangeNOW   8.75 XMR   best
+    [ Start the swap ]
+    ------------------------------------------------------------
+    Send exactly 0.05 BTC to:  bc1q...   [Copy]
+    Status: waiting for your deposit
+    ------------------------------------------------------------
+-->
+<div id="page">
+
+<h1><a href="/">1999.LOC</a></h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<span class="nav-group"><span class="nav-label">monero</span>
+<a href="/wallet.html">wallet</a>
+&middot;
+<strong>swap</strong></span>
+<span class="nav-group"><span class="nav-label">privacy</span>
+<a href="/lock.html">pgp</a>
+&middot;
+<a href="/inspect.html">inspect file</a>
+&middot;
+<a href="https://delete.1999loc.com/">delete posts</a></span>
+<span class="nav-group"><span class="nav-label">communications</span>
+<a href="/email.html">email</a></span>
+<span class="nav-group"><span class="nav-label">documents</span>
+<a href="/sign.html">pdf</a>
+&middot;
+<a href="/convert.html">convert</a>
+&middot;
+<a href="/sheet.html">sheets</a>
+&middot;
+<a href="/zip.html">zip</a></span>
+<span class="nav-group"><span class="nav-label">media</span>
+<a href="/image.html">images</a>
+&middot;
+<a href="/video.html">video</a></span>
+<span class="nav-group"><span class="nav-label">code</span>
+<a href="/code.html">count code</a>
+&middot;
+<a href="/golf">golf</a></span>
+</p>
+<hr>
+
+<div class="desk-shell">
+<div class="app-window" id="app">
+<div class="client-title"><h2>Swap to Monero</h2><a class="win-min" href="#" aria-label="Minimise Swap to Monero">_</a></div>
+<div class="app-body">
+<p class="tagline">Bitcoin or USDC in, Monero out, through instant exchanges. No account here, none there.</p>
+
+<details class="notice-box">
+<summary><strong>This is other people's exchange. Read this before you send anything.</strong></summary>
+<p class="note">
+The swap itself happens at an instant-exchange service (Exolix, and ChangeNOW
+when configured), not on this site. While it runs, they hold your coins: that
+is custody, however brief. These services advertise no accounts and no
+sign-up, and for ordinary amounts that is how it goes, but their terms let
+them freeze a deposit their risk system dislikes and ask for identification
+before releasing it. It is rare. It is not impossible. Do not swap more than
+you would be willing to have stuck in that conversation.
+</p>
+<p class="note">
+This page's server relays quotes and orders so the exchange sees Cloudflare
+rather than you, stores nothing about your swap, and never holds funds. The
+order id below is the only handle on your swap, and it lives in this tab.
+Send the deposit from a wallet you control, not from an exchange account:
+if anything is refunded, it has to have somewhere sensible to go back to.
+</p>
+</details>
+
+<h3>What are you sending?</h3>
+<p>
+  <label>From
+    <select id="from-coin">
+      <option value="btc" selected>Bitcoin</option>
+      <option value="usdc">USDC (ERC-20)</option>
+    </select>
+  </label>
+  <label>Amount
+    <input id="amount" type="text" inputmode="decimal" size="12" placeholder="0.05" autocomplete="off">
+  </label>
+  <button type="button" id="get-quotes">Get quotes</button>
+</p>
+
+<h3>Where should the Monero go?</h3>
+<p>
+  <input id="xmr-address" type="text" spellcheck="false" autocomplete="off" placeholder="4... or 8..., a mainnet Monero address">
+</p>
+<p class="note">
+Paste an address from your own wallet. The <a href="/wallet.html">wallet on this
+site</a> can make you one that never leaves your browser, and the
+<a href="/wallet.html#addresses">address checker</a> will confirm what you
+pasted is really an address before anything moves.
+</p>
+<p>
+  <label>Refund address <span class="note">(optional, but wise: where the deposit goes back to if the swap fails)</span>
+    <input id="refund" type="text" spellcheck="false" autocomplete="off" placeholder="an address of the coin you are sending">
+  </label>
+</p>
+
+<p id="swap-error" class="error" role="alert"></p>
+<p id="swap-status" class="status" role="status" aria-live="polite"></p>
+
+<div id="quotes-block" class="hidden">
+<h3>The quotes</h3>
+<div id="quotes"></div>
+<p class="note">
+Float rate: the number is an estimate at today's rate, and the exchange settles
+at the rate when your deposit confirms. Each provider also has a minimum below
+which it will refuse.
+</p>
+<p><button type="button" id="start-swap">Start the swap</button></p>
+</div>
+
+<div id="order-block" class="hidden">
+<h3>Your swap</h3>
+<p id="pay-line"></p>
+<p>
+  <code id="pay-address" class="xmr"></code>
+</p>
+<p>
+  <button type="button" id="copy-pay">Copy address</button>
+  <span id="copy-note" class="note"></span>
+</p>
+<p class="note" id="order-meta"></p>
+<p id="order-status" class="status" role="status" aria-live="polite"></p>
+<p>
+  <button type="button" id="check-status" class="small">Check now</button>
+  <span class="note">It also checks itself every half minute while this tab is open.</span>
+  <button type="button" id="new-swap" class="linkish">start a different swap</button>
+</p>
+</div>
+
+<details class="notes">
+<summary>The honest notes</summary>
+<ul class="plain">
+  <li><strong>Who does what.</strong> The exchange service does the swap and holds the coins while it runs. This site's server relays your quote and order requests so the exchange sees Cloudflare instead of your address, and stores nothing: no order table, no logs of amounts or addresses. The order id is kept in this tab and shown to you; lose both and only the exchange's own support can find your swap.</li>
+  <li><strong>Two providers, on purpose.</strong> Exolix answers without any server-side key, so swapping works out of the box. ChangeNOW appears alongside when this server has been given a key, and then the page simply shows you both numbers. Neither is an endorsement; both are established instant exchanges with the same trade-offs.</li>
+  <li><strong>The estimate is an estimate.</strong> These are floating-rate swaps: what arrives is priced when your deposit confirms, not when you clicked. The difference is normally small. A fixed-rate mode exists at both services; it pays for the certainty with a worse rate, and this page does not use it.</li>
+  <li><strong>Custody is real while it lasts.</strong> From the moment your deposit lands until the Monero leaves, the exchange controls the funds. Their risk systems occasionally hold a swap and ask the sender for identification, exactly the conversation Monero exists to avoid, which is why the warning above tells you not to send more than you can leave on the table.</li>
+  <li><strong>Send the exact amount, once, from your own wallet.</strong> A different amount than the order states can be refunded or repriced at the exchange's discretion, a second deposit to the same address is not a second swap, and an expired order's address is dead: money sent to it afterwards is gone into a support ticket.</li>
+  <li><strong>Privacy, honestly stated.</strong> A swap through a service like this is visible on both chains: the BTC or USDC you send is public forever, and the exchange knows it paid your Monero address. What you gain is that the Monero, once received, is yours to move privately. If the link between your coins and your XMR address matters to you, this convenience is not the tool for that job.</li>
+  <li><strong>This page needs its server.</strong> Like the disposable inbox, this tool is an honest exception to "nothing leaves your browser": quotes and orders go through this site's Worker to the exchange, because the browser is forbidden from talking to anyone else. The proof panel below shows exactly what was sent and where.</li>
+</ul>
+</details>
+
+</div>
+</div>
+<div class="taskbar">
+<a class="start" href="/">Start</a>
+<a class="task-btn is-open" href="#app">Swap to Monero</a>
+<span class="task-clock">1999</span>
+</div>
+</div>
+
+<h3>Is this actually private?</h3>
+<div id="proof"></div>
+
+<hr>
+
+<p class="footer">
+Hosted on Cloudflare &middot; Made with spite for bloat<br>
+<a href="/wallet.html">monero wallet</a> |
+<a href="/wallet.html#addresses">check an address</a> |
+<a href="/lock.html#pgp">pgp</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+<p class="footer support">
+Nothing here is for sale, nothing is tracked, and there is no account to make.
+If something saved you an hour:<br>
+<code class="xmr">83TQcTwusSQ4WKbPQE5osrF3cR4GWe2zmcNWeozK6BSqHSaeLvjUVe476ouVwLKn1uVwEFcbJQvnme7W6dTV5SB93x45DEy</code><br>
+Monero, because a donation address should not also be a tracking pixel. You can
+<a href="/wallet.html#addresses">check that address here</a> before sending anything.
+</p>
+
+</div>
+<script src="/swap-page.js"></script>
+<script src="/desk.js"></script>
+<script src="/proof-panel.js"></script>
+</body>
+</html>

@@ -23,6 +23,7 @@ import { checkRateLimit, clientIp } from '../lib/ratelimit';
 import { CountOptionsSchema, CountRequestSchema, ShaSchema, type CountOptions, type CountResult } from '../lib/schema';
 import { resolveTarget as resolveXmrTarget } from '../lib/xmrproxy';
 import { handleIncomingEmail, mailApi, purgeExpired } from './mail';
+import { swapApi } from './swap';
 import { COUNTER_VERSION } from '../lib/version';
 import { handleCallback, handleLogin, handleLogout, handleMe, handleMyRepos, loadSession, oauthConfigured, scopesFor } from './auth';
 import { limitsFromEnv, rateLimitPerMinute, type Env } from './env';
@@ -177,6 +178,12 @@ export default {
       if (path.startsWith('/api/mail/')) {
         const reply = await mailApi(request, env, path);
         // A throwaway inbox is private and ephemeral; never let a reply cache.
+        return jsonResponse(reply.body, reply.status, { 'cache-control': 'no-store' });
+      }
+
+      if (path.startsWith('/api/swap/')) {
+        const reply = await swapApi(request, env, path);
+        // Quotes go stale in seconds and orders are nobody else's business.
         return jsonResponse(reply.body, reply.status, { 'cache-control': 'no-store' });
       }
 

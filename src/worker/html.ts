@@ -132,6 +132,7 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
   // One page for money: the wallet leads, the address checker / paper wallet
   // is its second tab. /monero.html redirects to /wallet.html#addresses.
   { href: '/wallet.html', label: 'wallet', id: 'wallet', group: 'money' },
+  { href: '/swap.html', label: 'swap', id: 'swap', group: 'money' },
 
   { href: '/code.html', label: 'count code', id: 'count', group: 'code' },
   { href: '/golf', label: 'golf', id: 'golf', group: 'code' },
