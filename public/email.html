@@ -179,9 +179,11 @@ near it.
   <span id="address-note" class="note"></span>
 </p>
 <p class="note" id="model-note">
-This address works for as long as you keep this page open. Anything sent to it
-appears below within a few seconds. Each message deletes itself an hour after it
-arrives; "burn" wipes them now and hands you a fresh address.
+This address belongs to this tab and survives a refresh, so a code that is
+mid-flight is not lost to a reload. Only &ldquo;New address&rdquo;,
+&ldquo;burn&rdquo;, or closing the tab hands you a different one. Anything sent
+to it appears below within a few seconds, and each message deletes itself an
+hour after it arrives.
 </p>
 
 <hr>
@@ -205,6 +207,7 @@ arrives; "burn" wipes them now and hands you a fresh address.
   <li><strong>Nothing is rendered as a live web page.</strong> A message is reduced to plain text before it is stored, and shown as text. Remote images, scripts and trackers never load, so opening a message here cannot report back that you did, and cannot run anything.</li>
   <li><strong>It expires, and it is swept.</strong> A message carries a deletion time an hour out; a scheduled job deletes expired ones, and every read also filters them out, so an expired message is never shown even if the sweep is late. Burn removes everything for the address immediately.</li>
   <li><strong>The address is the only secret.</strong> There is no login. Fourteen random characters is about seventy bits, which is not guessable, but it is the whole of the protection: treat the address itself as the password, because it is.</li>
+  <li><strong>The tab remembers the address, and only the address.</strong> It is kept in this tab's session storage so a refresh does not lose a code that is mid-flight; closing the tab forgets it. No message content is ever stored in your browser.</li>
   <li><strong>This half runs on a server, and says so.</strong> Receiving mail needs somewhere for it to land, so the inbox, alone among the tools here, stores data on this site's infrastructure for a short while. It is the reason it lives behind its own warning and holds nothing you would not shout across a room.</li>
 </ul>
 </details>

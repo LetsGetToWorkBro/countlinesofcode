@@ -35,6 +35,16 @@
 
   // ------------------------------------------------------------- addresses
 
+  // The address survives a refresh: a visitor pastes it into a signup, and an
+  // accidental reload must not strand the verification code at an address they
+  // can no longer read. sessionStorage has exactly the right lifetime — it
+  // rides out refreshes and navigation within the tab, and dies when the tab
+  // closes, which is the ephemerality the page promises. Only "New address",
+  // "burn" or closing the tab hands out a different one.
+  var STORE_KEY = 'loc1999-mail-address';
+  function remember(value) { try { sessionStorage.setItem(STORE_KEY, value); } catch (e) { /* private browsing */ } }
+  function recall() { try { return sessionStorage.getItem(STORE_KEY) || null; } catch (e) { return null; } }
+
   function newAddress() {
     clearError();
     stopPolling();
@@ -45,6 +55,7 @@
     firstLoad = true;
     return api('new').then(function (data) {
       address = data.address;
+      remember(address);
       $('address').textContent = address;
       $('inbox-status').textContent = 'Waiting for mail...';
       startPolling();
@@ -52,6 +63,19 @@
       $('address').textContent = 'unavailable';
       fail(readableSetupError(err));
     });
+  }
+
+  /** Resume the tab's existing address if it has one, else mint. */
+  function beginInbox() {
+    var saved = recall();
+    if (saved && saved.indexOf('@') > 0) {
+      address = saved;
+      $('address').textContent = saved;
+      $('inbox-status').textContent = 'Waiting for mail...';
+      startPolling();
+      return;
+    }
+    newAddress();
   }
 
   function readableSetupError(err) {
@@ -214,7 +238,7 @@
   // 'tab:shown'/'tab:hidden' as the panel appears and disappears.
   var started = false;
   function activate() {
-    if (!started) { started = true; newAddress(); return; }
+    if (!started) { started = true; beginInbox(); return; }
     if (address && !pollTimer) startPolling();   // resume where we left off
   }
   var tabs = document.querySelector('[data-tabs]');
@@ -226,6 +250,6 @@
     var panel = tabs.querySelector('[data-panel="inbox"]');
     if (panel && !panel.classList.contains('hidden')) activate();
   } else {
-    newAddress();   // standalone page with no tabs: behave as before
+    beginInbox();   // standalone page with no tabs: behave as before
   }
 })();
