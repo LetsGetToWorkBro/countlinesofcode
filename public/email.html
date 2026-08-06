@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Check an Email or Get a Throwaway Inbox, in Your Browser | 1999.LOC</title>
-<meta name="description" content="Two email tools in one page. Check a message you were sent: is it really from who it claims, and who is tracking you. Or hand out a throwaway address that reads its own mail and self-destructs in an hour. Nothing you paste is uploaded.">
+<title>Disposable Email Inbox, and an Email Checker, in Your Browser | 1999.LOC</title>
+<meta name="description" content="A disposable email address that reads its own mail and self-destructs in an hour: no account, nothing to install. Beside it, a checker for mail you already got: is it really from who it claims, and who is tracking you. Nothing you paste is uploaded.">
 <link rel="canonical" href="https://1999loc.com/email.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Check an Email or Get a Throwaway Inbox | 1999.LOC">
-<meta property="og:description" content="Read the headers yourself instead of pasting them into somebody's server, or get a disposable address for the forms that do not deserve your real one.">
+<meta property="og:title" content="Disposable Email Inbox, and an Email Checker | 1999.LOC">
+<meta property="og:description" content="A disposable address for the forms that do not deserve your real one, and a header checker that reads the verdicts your provider already recorded.">
 <meta property="og:url" content="https://1999loc.com/email.html">
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
@@ -25,7 +25,7 @@
     ... | inspect | email | lock | pgp | monero
     ------------------------------------------------------------
     EMAIL
-    ( Check a message )  ( Throwaway inbox )
+    ( Disposable inbox )  ( Check a message )
     ------------------------------------------------------------
     [ Drop a .eml here, or paste the source ]        <- check
     +--------------------------------------------------+
@@ -56,11 +56,11 @@
 &middot;
 <a href="/video.html">video</a></span>
 <span class="nav-group"><span class="nav-label">privacy</span>
-<a href="/inspect.html">inspect</a>
+<a href="/inspect.html">inspect file</a>
 &middot;
 <strong>email</strong>
 &middot;
-<a href="/lock.html">encrypt</a>
+<a href="/lock.html">pgp</a>
 &middot;
 <a href="https://delete.1999loc.com/">delete posts</a></span>
 <span class="nav-group"><span class="nav-label">money</span>
@@ -75,74 +75,18 @@
 <hr>
 
 <h2>Email</h2>
-<p class="tagline">Check a message you were sent, or hand out an address you can throw away.</p>
+<p class="tagline">A disposable address for the forms that do not deserve your real one, and a checker for the mail you already got.</p>
 
 <div data-tabs>
 <p class="tool-tabs" role="tablist" aria-label="Email tools">
-<button type="button" class="sheet-tab is-active" data-tab="check" role="tab" aria-selected="true">Check a message</button>
-<button type="button" class="sheet-tab" data-tab="inbox" role="tab" aria-selected="false">Throwaway inbox</button>
+<button type="button" class="sheet-tab is-active" data-tab="inbox" role="tab" aria-selected="true">Disposable inbox</button>
+<button type="button" class="sheet-tab" data-tab="check" role="tab" aria-selected="false">Check a message</button>
 </p>
 
-<!-- ============================ CHECK A MESSAGE ============================ -->
-<div data-panel="check">
+<!-- ============================ DISPOSABLE INBOX ============================ -->
+<div data-panel="inbox">
 
-<p class="tagline">Who really sent it, and who is watching you read it.</p>
-
-<p class="note">
-Both answers are already inside the message: your provider's verdict on the
-sender, and every tracker, are in the source. No lookup needed, which matters,
-because the usual way is to paste your headers into somebody else's website, and
-headers carry your address, your IP, and who you correspond with.
-</p>
-
-<div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open an email file">
-  <strong>Drop a .eml or .msg-exported message here, or click to choose</strong>
-  <span>Read in this tab, never uploaded</span>
-  <input type="file" id="file-input" accept=".eml,.txt,.mbox,message/rfc822" hidden>
-</div>
-
-<p class="note">Or paste the message source, or just its headers:</p>
-<p><textarea id="source" rows="10" spellcheck="false" placeholder="Received: from ...&#10;From: ...&#10;Authentication-Results: ..."></textarea></p>
-<p>
-  <button type="button" id="check">Check it</button>
-  <button type="button" id="sample" class="small">Try a phishing example</button>
-  <span id="status" class="status" role="status" aria-live="polite"></span>
-</p>
-<p id="error" class="error" role="alert"></p>
-
-<div id="results"></div>
-
-<hr>
-
-<h3>Where do I find the headers?</h3>
-<ul class="plain">
-  <li><strong>Gmail:</strong> open the message, the three dots at the top right, &ldquo;Show original&rdquo;. Copy the whole thing.</li>
-  <li><strong>Outlook:</strong> open the message in its own window, File, Properties, and copy the &ldquo;Internet headers&rdquo; box. That gives you headers only, which is enough for the sender check but not for the tracker check.</li>
-  <li><strong>Apple Mail:</strong> View, Message, Raw Source.</li>
-  <li><strong>Thunderbird:</strong> Ctrl-U, or More, View Source.</li>
-  <li><strong>Anywhere:</strong> save or drag the message out as a <code>.eml</code> file and drop it above. That is the whole message, so both halves work.</li>
-</ul>
-
-<details class="notes">
-<summary>The honest notes</summary>
-<ul class="plain">
-  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The message is read from disk into this tab and never leaves it. There is also no lookup: the checker cannot make a request to any other domain at all, which is a rule your browser enforces rather than a promise from us.</li>
-  <li><strong>Nothing in the message is loaded, ever.</strong> The trackers are found, named and counted from the source text. Fetching one to "check" it is precisely the act that tells the sender you opened the message, so nothing here does, and the security policy would refuse it anyway.</li>
-  <li><strong>The authentication results are read, not recomputed.</strong> SPF depends on the IP address that connected, which is not in the message, and DKIM needs a DNS lookup. What the headers carry is the verdict your provider reached when it <em>could</em> check both. That is the real answer, recorded by the only party in a position to work it out, and it is why this can be honest without making a single request.</li>
-  <li><strong>Which means the headers have to be genuine.</strong> Everything below the first server you actually trust can be invented by the sender. If somebody emails you a suspicious message as an attachment, you are reading their copy, and a determined forger could have written those lines themselves. Headers taken from your own mailbox are the ones worth trusting.</li>
-  <li><strong>Passing is not the same as safe.</strong> A great deal of spam and plenty of fraud passes SPF, DKIM and DMARC perfectly, because the sender really does own the domain they are sending from. All a pass proves is that the From line is not forged. Whether the person behind it is honest is a different question and this cannot answer it.</li>
-  <li><strong>Failing is not always fraud.</strong> Mailing lists rewrite messages in ways that break DKIM, and forwarding routinely breaks SPF. A failure means the message cannot be proven genuine, which is worth knowing and is not a conviction.</li>
-  <li><strong>It errs towards saying nothing.</strong> A tool that flags every ordinary email is one you learn to ignore, so an unremarkable message comes back with an empty list rather than a manufactured worry.</li>
-  <li><strong>The tracker list is deliberately generous.</strong> A one-pixel transparent image is the textbook case and increasingly the rare one; the modern version is a normal-looking image on a marketing platform with your identifier in the path. Both are listed, and so is any plain remote image, because loading one still hands over your IP address and the moment you read it.</li>
-</ul>
-</details>
-
-</div>
-
-<!-- ============================ THROWAWAY INBOX ============================ -->
-<div data-panel="inbox" class="hidden">
-
-<p class="tagline">A throwaway address that reads its own mail. For the forms that do not deserve your real one.</p>
+<p class="tagline">A disposable address that reads its own mail. For the forms that do not deserve your real one.</p>
 
 <details class="notice-box">
 <summary><strong>This is not private, and not for anything that matters. Read this before you use it.</strong></summary>
@@ -206,8 +150,8 @@ hour after it arrives.
 <details class="notes">
 <summary>The honest notes</summary>
 <ul class="plain">
-  <li><strong>It is receive-only, on purpose.</strong> You cannot send from this address, only read what arrives. That removes the hardest and most abusable half of running email, and it is all a throwaway inbox needs.</li>
-  <li><strong>Every message is checked, not just shown.</strong> The same reader the <em>Check a message</em> tab uses runs over each incoming message, so a throwaway inbox also tells you whether the sender was forged (SPF, DKIM, DMARC) and lists any tracking pixels or click-wrappers it found. A verification code is safe to read; a "confirm your password" is flagged for what it is.</li>
+  <li><strong>It is receive-only, on purpose.</strong> You cannot send from this address, only read what arrives. That removes the hardest and most abusable half of running email, and it is all a disposable inbox needs.</li>
+  <li><strong>Every message is checked, not just shown.</strong> The same reader the <em>Check a message</em> tab uses runs over each incoming message, so a disposable inbox also tells you whether the sender was forged (SPF, DKIM, DMARC) and lists any tracking pixels or click-wrappers it found. A verification code is safe to read; a "confirm your password" is flagged for what it is.</li>
   <li><strong>Nothing is rendered as a live web page.</strong> A message is reduced to plain text before it is stored, and shown as text. Remote images, scripts and trackers never load, so opening a message here cannot report back that you did, and cannot run anything.</li>
   <li><strong>It expires, and it is swept.</strong> A message carries a deletion time an hour out; a scheduled job deletes expired ones, and every read also filters them out, so an expired message is never shown even if the sweep is late. Burn removes everything for the address immediately.</li>
   <li><strong>The address is the only secret.</strong> There is no login. Fourteen random characters is about seventy bits, which is not guessable, but it is the whole of the protection: treat the address itself as the password, because it is.</li>
@@ -217,6 +161,63 @@ hour after it arrives.
 </details>
 
 </div>
+
+<!-- ============================ CHECK A MESSAGE ============================ -->
+<div data-panel="check" class="hidden">
+
+<p class="tagline">Who really sent it, and who is watching you read it.</p>
+
+<p class="note">
+Both answers are already inside the message: your provider's verdict on the
+sender, and every tracker, are in the source. No lookup needed, which matters,
+because the usual way is to paste your headers into somebody else's website, and
+headers carry your address, your IP, and who you correspond with.
+</p>
+
+<div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open an email file">
+  <strong>Drop a .eml or .msg-exported message here, or click to choose</strong>
+  <span>Read in this tab, never uploaded</span>
+  <input type="file" id="file-input" accept=".eml,.txt,.mbox,message/rfc822" hidden>
+</div>
+
+<p class="note">Or paste the message source, or just its headers:</p>
+<p><textarea id="source" rows="10" spellcheck="false" placeholder="Received: from ...&#10;From: ...&#10;Authentication-Results: ..."></textarea></p>
+<p>
+  <button type="button" id="check">Check it</button>
+  <button type="button" id="sample" class="small">Try a phishing example</button>
+  <span id="status" class="status" role="status" aria-live="polite"></span>
+</p>
+<p id="error" class="error" role="alert"></p>
+
+<div id="results"></div>
+
+<hr>
+
+<h3>Where do I find the headers?</h3>
+<ul class="plain">
+  <li><strong>Gmail:</strong> open the message, the three dots at the top right, &ldquo;Show original&rdquo;. Copy the whole thing.</li>
+  <li><strong>Outlook:</strong> open the message in its own window, File, Properties, and copy the &ldquo;Internet headers&rdquo; box. That gives you headers only, which is enough for the sender check but not for the tracker check.</li>
+  <li><strong>Apple Mail:</strong> View, Message, Raw Source.</li>
+  <li><strong>Thunderbird:</strong> Ctrl-U, or More, View Source.</li>
+  <li><strong>Anywhere:</strong> save or drag the message out as a <code>.eml</code> file and drop it above. That is the whole message, so both halves work.</li>
+</ul>
+
+<details class="notes">
+<summary>The honest notes</summary>
+<ul class="plain">
+  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The message is read from disk into this tab and never leaves it. There is also no lookup: the checker cannot make a request to any other domain at all, which is a rule your browser enforces rather than a promise from us.</li>
+  <li><strong>Nothing in the message is loaded, ever.</strong> The trackers are found, named and counted from the source text. Fetching one to "check" it is precisely the act that tells the sender you opened the message, so nothing here does, and the security policy would refuse it anyway.</li>
+  <li><strong>The authentication results are read, not recomputed.</strong> SPF depends on the IP address that connected, which is not in the message, and DKIM needs a DNS lookup. What the headers carry is the verdict your provider reached when it <em>could</em> check both. That is the real answer, recorded by the only party in a position to work it out, and it is why this can be honest without making a single request.</li>
+  <li><strong>Which means the headers have to be genuine.</strong> Everything below the first server you actually trust can be invented by the sender. If somebody emails you a suspicious message as an attachment, you are reading their copy, and a determined forger could have written those lines themselves. Headers taken from your own mailbox are the ones worth trusting.</li>
+  <li><strong>Passing is not the same as safe.</strong> A great deal of spam and plenty of fraud passes SPF, DKIM and DMARC perfectly, because the sender really does own the domain they are sending from. All a pass proves is that the From line is not forged. Whether the person behind it is honest is a different question and this cannot answer it.</li>
+  <li><strong>Failing is not always fraud.</strong> Mailing lists rewrite messages in ways that break DKIM, and forwarding routinely breaks SPF. A failure means the message cannot be proven genuine, which is worth knowing and is not a conviction.</li>
+  <li><strong>It errs towards saying nothing.</strong> A tool that flags every ordinary email is one you learn to ignore, so an unremarkable message comes back with an empty list rather than a manufactured worry.</li>
+  <li><strong>The tracker list is deliberately generous.</strong> A one-pixel transparent image is the textbook case and increasingly the rare one; the modern version is a normal-looking image on a marketing platform with your identifier in the path. Both are listed, and so is any plain remote image, because loading one still hands over your IP address and the moment you read it.</li>
+</ul>
+</details>
+
+</div>
+
 </div>
 
 <hr>

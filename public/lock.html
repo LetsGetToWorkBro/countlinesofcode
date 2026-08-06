@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Encrypt a File or a Message: a Password or PGP Keys, in Your Browser | 1999.LOC</title>
-<meta name="description" content="Two ways to encrypt, in one page. Lock a file with a password and unlock one someone sent you, or use PGP: make a key pair, encrypt a message or a file to someone's public key, decrypt, sign and verify. Runs entirely in your browser and writes the OpenPGP standard, so GPG can open it.">
+<title>PGP in Your Browser: Encrypt Messages and Files, or Password-Lock One | 1999.LOC</title>
+<meta name="description" content="Real PGP in your browser: make a key pair, encrypt a message or a file to someone's public key, decrypt, sign and verify. Or skip the keys and lock a file with a password. Everything writes the OpenPGP standard, so GPG can open it, and nothing is uploaded.">
 <link rel="canonical" href="https://1999loc.com/lock.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Encrypt a File or a Message: a Password or PGP Keys | 1999.LOC">
-<meta property="og:description" content="Password-encrypt a file, or encrypt messages and files with real PGP keys, without uploading anything. Writes the OpenPGP standard, so the person you send it to is not tied to this page.">
+<meta property="og:title" content="PGP in Your Browser: Messages, Files, or a Password Lock | 1999.LOC">
+<meta property="og:description" content="Encrypt messages and files with real PGP keys, or password-lock a file, without uploading anything. Writes the OpenPGP standard, so the person you send it to is not tied to this page.">
 <meta property="og:url" content="https://1999loc.com/lock.html">
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
@@ -24,10 +24,10 @@
     ------------------------------------------------------------
     ... | inspect | email | encrypt | delete posts
     ------------------------------------------------------------
-    ENCRYPT
-    ( Password )  ( PGP: messages & keys )
+    PGP
+    ( Messages & keys )  ( Password-lock a file )
     ------------------------------------------------------------
-    -- Password --                       -- PGP --
+    -- PGP --                            -- Password --
     [ Drop a file here... ]              ( Keys )( Encrypt )...
     Password [________] [ suggest ]      Ada Lovelace <ada@...>
     [ Lock it ]  Download report.pdf.gpg [ Make a new key ]
@@ -53,11 +53,11 @@
 &middot;
 <a href="/video.html">video</a></span>
 <span class="nav-group"><span class="nav-label">privacy</span>
-<a href="/inspect.html">inspect</a>
+<a href="/inspect.html">inspect file</a>
 &middot;
 <a href="/email.html">email</a>
 &middot;
-<strong>encrypt</strong>
+<strong>pgp</strong>
 &middot;
 <a href="https://delete.1999loc.com/">delete posts</a></span>
 <span class="nav-group"><span class="nav-label">money</span>
@@ -71,152 +71,17 @@
 </p>
 <hr>
 
-<h2>Encrypt</h2>
-<p class="tagline">Files with a password, or messages and files with PGP keys. Both run in this tab; nothing is uploaded.</p>
+<h2>PGP</h2>
+<p class="tagline">Encrypt a message or a file to someone&rsquo;s key, or lock a file with a password. Both write the same OpenPGP; nothing is uploaded.</p>
 
 <div data-tabs>
 <p class="tool-tabs" role="tablist" aria-label="Encryption tools">
-<button type="button" class="sheet-tab is-active" data-tab="password" role="tab" aria-selected="true">Password</button>
-<button type="button" class="sheet-tab" data-tab="pgp" role="tab" aria-selected="false">PGP: messages &amp; keys</button>
+<button type="button" class="sheet-tab is-active" data-tab="pgp" role="tab" aria-selected="true">Messages &amp; keys</button>
+<button type="button" class="sheet-tab" data-tab="password" role="tab" aria-selected="false">Password-lock a file</button>
 </p>
-
-<!-- ============================== PASSWORD ============================== -->
-<div data-panel="password">
-
-<p class="tagline">One password locks the file; the same password opens it. The simplest kind, and enough for most things.</p>
-
-<p class="note">
-Every other &ldquo;encrypt a file online&rdquo; service asks you to upload the
-private thing, and the password, to their machine. This one has no endpoint;
-turn off your wifi after it loads and it still works.
-</p>
-
-<details class="notice-box">
-<summary><strong>It writes a standard file, not a format of our own.</strong></summary>
-<p class="note">
-The obvious way to build this is our own container: a header, a salt, a
-block of ciphertext. It would work, and it would be a trap: the person you send
-the file to could only open it by coming back to this page, and if this page is
-gone in five years so is their file.
-</p>
-<p class="note">
-So the output is OpenPGP, the format <code>gpg</code> has written since 1997.
-Anyone can open it with <code>gpg -d yourfile.gpg</code>, or with Kleopatra on
-Windows or GPG Suite on a Mac, whether or not they have ever heard of this site.
-Nothing here is a lock only we hold the key to.
-</p>
-</details>
-
-<p>
-<button type="button" id="tab-lock" class="sheet-tab is-active">Lock a file</button>
-<button type="button" id="tab-unlock" class="sheet-tab">Unlock one</button>
-</p>
-
-<hr>
-
-<div id="mode-lock">
-  <h3>1. Choose a file</h3>
-
-  <div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Choose a file to encrypt">
-    <strong>Drop a file here, or click to choose</strong>
-    <span>Any kind, any size your browser can hold; nothing is uploaded</span>
-    <input type="file" id="file-input" hidden>
-  </div>
-
-  <p id="chosen" class="note"></p>
-
-  <h3>2. Choose a password</h3>
-
-  <p>
-    <label for="password" class="inline">Password</label>
-    <input type="password" id="password" size="34" autocomplete="new-password" spellcheck="false">
-    <button type="button" id="show" class="small">show</button>
-  </p>
-  <p>
-    <label for="confirm" class="inline">Again</label>
-    <input type="password" id="confirm" size="34" autocomplete="new-password" spellcheck="false">
-    <span id="match" class="note"></span>
-  </p>
-  <p id="meter" class="note"></p>
-
-  <p class="note">
-    <button type="button" id="suggest" class="small">Suggest a passphrase</button>
-    <label for="words" class="inline">of</label>
-    <select id="words">
-      <option value="5">5 words</option>
-      <option value="6">6 words</option>
-      <option value="7">7 words</option>
-      <option value="8" selected>8 words</option>
-      <option value="10">10 words</option>
-    </select>
-    <span id="words-note"></span>
-  </p>
-
-  <details class="notice-box">
-  <summary><strong>There is no way to recover this.</strong></summary>
-  <p class="note">
-  No reset link, no support
-  address, no copy of the password anywhere. That is the point of it, and it
-  means a forgotten password is a lost file. Write it down somewhere real before
-  you send the file anywhere.
-  </p>
-  </details>
-
-  <h3>3. Lock it</h3>
-  <p>
-    <button type="button" id="lock">Lock the file</button>
-    <label class="inline"><input type="checkbox" id="armored"> As text, not bytes</label>.
-    <span class="note">A bit larger, but survives being pasted into an email.</span>
-  </p>
-  <p id="lock-progress" class="note"></p>
-  <p id="lock-error" class="error" role="alert"></p>
-  <div id="lock-output"></div>
-</div>
-
-<div id="mode-unlock" class="hidden">
-  <h3>1. Choose the locked file</h3>
-
-  <div id="undrop" class="dropzone" tabindex="0" role="button" aria-label="Choose a file to decrypt">
-    <strong>Drop a .gpg, .pgp or .asc here, or click to choose</strong>
-    <span>Opened in this tab; nothing is uploaded</span>
-    <input type="file" id="unfile-input" accept=".gpg,.pgp,.asc" hidden>
-  </div>
-
-  <p id="unchosen" class="note"></p>
-
-  <h3>2. The password</h3>
-  <p>
-    <label for="unpassword" class="inline">Password</label>
-    <input type="password" id="unpassword" size="34" autocomplete="off" spellcheck="false">
-    <button type="button" id="unshow" class="small">show</button>
-  </p>
-
-  <h3>3. Unlock it</h3>
-  <p><button type="button" id="unlock">Unlock the file</button></p>
-  <p id="unlock-progress" class="note"></p>
-  <p id="unlock-error" class="error" role="alert"></p>
-  <div id="unlock-output"></div>
-</div>
-
-<details class="notes">
-<summary>The honest notes</summary>
-<ul class="plain">
-  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. Neither the file nor the password leaves the tab, and there is nowhere for them to go.</li>
-  <li><strong>The output is OpenPGP, symmetric mode.</strong> The same thing <code>gpg --symmetric</code> produces: your password is stretched into a key, a random session key encrypts the data, and the result is a file any OpenPGP implementation can read. AES-256, and a file that has been tampered with fails to open rather than decrypting into something subtly wrong.</li>
-  <li><strong>It is the older format, and that is the choice.</strong> This tab used to say &ldquo;an authenticated mode&rdquo;, which was not accurate and has been corrected. What it writes is AES-256 in CFB with a modification-detection code appended, and your password stretched through 16,777,216 rounds of SHA-256. Tampering is caught either way, but the check happens after decrypting rather than as part of it. OpenPGP has had genuine authenticated encryption since RFC 9580 in 2024, along with Argon2 in place of that SHA-256 loop, and both are better. Neither is written here, because a great deal of installed software cannot read them yet and a file the recipient cannot open is not a stronger file. The <a href="#pgp">PGP tab</a> offers the newer format as a deliberate choice, where you know who is opening it.</li>
-  <li><strong>The password is the whole of the security.</strong> There is no key file, no second factor and no server-side rate limit, so an attacker with the file can guess at it as fast as their hardware allows. That is why the meter above is pessimistic and why a suggested passphrase is worth taking. Eight words from the list is 64 bits, which nobody is guessing. The list is published on this page, so those are its real bits, not the flattering number you get by counting the letters.</li>
-  <li><strong>There is no recovery.</strong> Nothing here stores the password, so nothing here can help you if it is forgotten. This is not a policy that could be relaxed; it is what the encryption <em>is</em>.</li>
-  <li><strong>The filename is kept inside the file, not on it.</strong> Locking <code>report.pdf</code> gives <code>report.pdf.gpg</code>, and unlocking gives <code>report.pdf</code> back even if somebody renamed the locked file on the way. The name is <em>inside</em> the encryption, so a person who intercepts it does not learn what you sent.</li>
-  <li><strong>The size still shows.</strong> Encryption hides the contents, not the fact that you sent a four megabyte file to someone. If that matters, padding it is on you.</li>
-  <li><strong>It downloads about 390&nbsp;KB</strong> the first time: <a href="https://github.com/openpgpjs/openpgpjs">OpenPGP.js</a>, served from this domain. It is the one library here that exists because writing it ourselves would be reckless: a cipher that is subtly wrong looks exactly like one that is right, and nobody holding the file could tell.</li>
-  <li><strong>Everything is in memory.</strong> A very large file will run a tab out of memory. There is no streaming mode here yet.</li>
-</ul>
-</details>
-
-</div>
 
 <!-- ============================== KEY PAIR (PGP) ============================== -->
-<div data-panel="pgp" class="hidden">
+<div data-panel="pgp">
 
 <p class="tagline">Keys, messages and files. Your private key never leaves this tab.</p>
 
@@ -434,6 +299,142 @@ any of it works without handing your key to a stranger.
 </details>
 
 </div>
+
+<!-- ============================== PASSWORD ============================== -->
+<div data-panel="password" class="hidden">
+
+<p class="tagline">One password locks the file; the same password opens it. The simplest kind, and enough for most things.</p>
+
+<p class="note">
+Every other &ldquo;encrypt a file online&rdquo; service asks you to upload the
+private thing, and the password, to their machine. This one has no endpoint;
+turn off your wifi after it loads and it still works.
+</p>
+
+<details class="notice-box">
+<summary><strong>It writes a standard file, not a format of our own.</strong></summary>
+<p class="note">
+The obvious way to build this is our own container: a header, a salt, a
+block of ciphertext. It would work, and it would be a trap: the person you send
+the file to could only open it by coming back to this page, and if this page is
+gone in five years so is their file.
+</p>
+<p class="note">
+So the output is OpenPGP, the format <code>gpg</code> has written since 1997.
+Anyone can open it with <code>gpg -d yourfile.gpg</code>, or with Kleopatra on
+Windows or GPG Suite on a Mac, whether or not they have ever heard of this site.
+Nothing here is a lock only we hold the key to.
+</p>
+</details>
+
+<p>
+<button type="button" id="tab-lock" class="sheet-tab is-active">Lock a file</button>
+<button type="button" id="tab-unlock" class="sheet-tab">Unlock one</button>
+</p>
+
+<hr>
+
+<div id="mode-lock">
+  <h3>1. Choose a file</h3>
+
+  <div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Choose a file to encrypt">
+    <strong>Drop a file here, or click to choose</strong>
+    <span>Any kind, any size your browser can hold; nothing is uploaded</span>
+    <input type="file" id="file-input" hidden>
+  </div>
+
+  <p id="chosen" class="note"></p>
+
+  <h3>2. Choose a password</h3>
+
+  <p>
+    <label for="password" class="inline">Password</label>
+    <input type="password" id="password" size="34" autocomplete="new-password" spellcheck="false">
+    <button type="button" id="show" class="small">show</button>
+  </p>
+  <p>
+    <label for="confirm" class="inline">Again</label>
+    <input type="password" id="confirm" size="34" autocomplete="new-password" spellcheck="false">
+    <span id="match" class="note"></span>
+  </p>
+  <p id="meter" class="note"></p>
+
+  <p class="note">
+    <button type="button" id="suggest" class="small">Suggest a passphrase</button>
+    <label for="words" class="inline">of</label>
+    <select id="words">
+      <option value="5">5 words</option>
+      <option value="6">6 words</option>
+      <option value="7">7 words</option>
+      <option value="8" selected>8 words</option>
+      <option value="10">10 words</option>
+    </select>
+    <span id="words-note"></span>
+  </p>
+
+  <details class="notice-box">
+  <summary><strong>There is no way to recover this.</strong></summary>
+  <p class="note">
+  No reset link, no support
+  address, no copy of the password anywhere. That is the point of it, and it
+  means a forgotten password is a lost file. Write it down somewhere real before
+  you send the file anywhere.
+  </p>
+  </details>
+
+  <h3>3. Lock it</h3>
+  <p>
+    <button type="button" id="lock">Lock the file</button>
+    <label class="inline"><input type="checkbox" id="armored"> As text, not bytes</label>.
+    <span class="note">A bit larger, but survives being pasted into an email.</span>
+  </p>
+  <p id="lock-progress" class="note"></p>
+  <p id="lock-error" class="error" role="alert"></p>
+  <div id="lock-output"></div>
+</div>
+
+<div id="mode-unlock" class="hidden">
+  <h3>1. Choose the locked file</h3>
+
+  <div id="undrop" class="dropzone" tabindex="0" role="button" aria-label="Choose a file to decrypt">
+    <strong>Drop a .gpg, .pgp or .asc here, or click to choose</strong>
+    <span>Opened in this tab; nothing is uploaded</span>
+    <input type="file" id="unfile-input" accept=".gpg,.pgp,.asc" hidden>
+  </div>
+
+  <p id="unchosen" class="note"></p>
+
+  <h3>2. The password</h3>
+  <p>
+    <label for="unpassword" class="inline">Password</label>
+    <input type="password" id="unpassword" size="34" autocomplete="off" spellcheck="false">
+    <button type="button" id="unshow" class="small">show</button>
+  </p>
+
+  <h3>3. Unlock it</h3>
+  <p><button type="button" id="unlock">Unlock the file</button></p>
+  <p id="unlock-progress" class="note"></p>
+  <p id="unlock-error" class="error" role="alert"></p>
+  <div id="unlock-output"></div>
+</div>
+
+<details class="notes">
+<summary>The honest notes</summary>
+<ul class="plain">
+  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. Neither the file nor the password leaves the tab, and there is nowhere for them to go.</li>
+  <li><strong>The output is OpenPGP, symmetric mode.</strong> The same thing <code>gpg --symmetric</code> produces: your password is stretched into a key, a random session key encrypts the data, and the result is a file any OpenPGP implementation can read. AES-256, and a file that has been tampered with fails to open rather than decrypting into something subtly wrong.</li>
+  <li><strong>It is the older format, and that is the choice.</strong> This tab used to say &ldquo;an authenticated mode&rdquo;, which was not accurate and has been corrected. What it writes is AES-256 in CFB with a modification-detection code appended, and your password stretched through 16,777,216 rounds of SHA-256. Tampering is caught either way, but the check happens after decrypting rather than as part of it. OpenPGP has had genuine authenticated encryption since RFC 9580 in 2024, along with Argon2 in place of that SHA-256 loop, and both are better. Neither is written here, because a great deal of installed software cannot read them yet and a file the recipient cannot open is not a stronger file. The <a href="#pgp">PGP tab</a> offers the newer format as a deliberate choice, where you know who is opening it.</li>
+  <li><strong>The password is the whole of the security.</strong> There is no key file, no second factor and no server-side rate limit, so an attacker with the file can guess at it as fast as their hardware allows. That is why the meter above is pessimistic and why a suggested passphrase is worth taking. Eight words from the list is 64 bits, which nobody is guessing. The list is published on this page, so those are its real bits, not the flattering number you get by counting the letters.</li>
+  <li><strong>There is no recovery.</strong> Nothing here stores the password, so nothing here can help you if it is forgotten. This is not a policy that could be relaxed; it is what the encryption <em>is</em>.</li>
+  <li><strong>The filename is kept inside the file, not on it.</strong> Locking <code>report.pdf</code> gives <code>report.pdf.gpg</code>, and unlocking gives <code>report.pdf</code> back even if somebody renamed the locked file on the way. The name is <em>inside</em> the encryption, so a person who intercepts it does not learn what you sent.</li>
+  <li><strong>The size still shows.</strong> Encryption hides the contents, not the fact that you sent a four megabyte file to someone. If that matters, padding it is on you.</li>
+  <li><strong>It downloads about 390&nbsp;KB</strong> the first time: <a href="https://github.com/openpgpjs/openpgpjs">OpenPGP.js</a>, served from this domain. It is the one library here that exists because writing it ourselves would be reckless: a cipher that is subtly wrong looks exactly like one that is right, and nobody holding the file could tell.</li>
+  <li><strong>Everything is in memory.</strong> A very large file will run a tab out of memory. There is no streaming mode here yet.</li>
+</ul>
+</details>
+
+</div>
+
 </div>
 
 <hr>

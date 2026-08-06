@@ -114,13 +114,14 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
   { href: '/image.html', label: 'images', id: 'images', group: 'media' },
   { href: '/video.html', label: 'video', id: 'video', group: 'media' },
 
-  { href: '/inspect.html', label: 'inspect', id: 'inspect', group: 'privacy' },
+  { href: '/inspect.html', label: 'inspect file', id: 'inspect', group: 'privacy' },
   // 'email' is two tools on one page now: the message checker and the throwaway
   // inbox (a tab). /mail.html redirects to /email.html#inbox.
   { href: '/email.html', label: 'email', id: 'email', group: 'privacy' },
-  // 'encrypt' is two tools on one page: a password (symmetric) and PGP keys, on
-  // tabs. /pgp.html redirects to /lock.html#pgp.
-  { href: '/lock.html', label: 'encrypt', id: 'lock', group: 'privacy' },
+  // 'pgp' is the honest name for the whole page: the password lock writes
+  // OpenPGP too. Messages & keys lead; password-locking a file is the second
+  // tab. /pgp.html redirects to /lock.html#pgp.
+  { href: '/lock.html', label: 'pgp', id: 'lock', group: 'privacy' },
   { href: 'https://delete.1999loc.com/', label: 'delete posts', id: 'delete', group: 'privacy' },
 
   { href: '/monero.html', label: 'monero', id: 'monero', group: 'money' },
