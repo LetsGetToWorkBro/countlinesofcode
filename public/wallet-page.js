@@ -75,9 +75,24 @@
     custom.value = 'custom';
     custom.textContent = 'A node of your own...';
     select.appendChild(custom);
+    syncNodeSummary();
   }
 
   function nodeIsCustom() { return $('node').value === 'custom'; }
+
+  /* The collapsed picker's one-line summary: which node the wallet will use. */
+  function syncNodeSummary() {
+    var el = $('node-summary');
+    if (!el) return;
+    if (nodeIsCustom()) {
+      var v = $('custom-node').value.trim();
+      el.textContent = v || 'your own node (enter it below)';
+    } else {
+      var sel = $('node');
+      var opt = sel.options[sel.selectedIndex];
+      el.textContent = opt ? opt.textContent : 'choosing...';
+    }
+  }
 
   /* The chosen node's network, so the wallet is created on the matching chain.
      A custom node is assumed mainnet, which is what almost every one is. */
@@ -103,6 +118,65 @@
     }
     $('node-note').textContent = '';
     return { uri: built.uri };
+  }
+
+  // ------------------------------------------------- node preflight/failover
+
+  /* Ask a node for its version through the proxy, with a hard timeout. It is
+     the same endpoint the wallet needs, so a node that fails this would fail
+     the wallet a minute later, more confusingly. */
+  function probeNode(uri) {
+    var ctl = window.AbortController ? new AbortController() : null;
+    var timer = ctl ? setTimeout(function () { ctl.abort(); }, 8000) : null;
+    var done = function (pass) { if (timer) clearTimeout(timer); return pass; };
+    return fetch(uri + '/json_rpc', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: '0', method: 'get_version' }),
+      signal: ctl ? ctl.signal : undefined,
+    }).then(function (r) {
+      done();
+      if (!r.ok) throw new Error('node unreachable');
+      return r.json();
+    }, function (err) { done(); throw err; }).then(function (j) {
+      if (!j || !j.result) throw new Error('node unreachable');
+    });
+  }
+
+  function labelFor(id) {
+    var n = kit.nodes().find(function (x) { return x.id === id; });
+    return n ? n.label : id;
+  }
+
+  /* Make sure the chosen node answers before a wallet is built against it. A
+     curated node that fails is swapped for the next curated one that works,
+     with a note saying so. A custom node that fails is an error, because
+     silently abandoning a node somebody chose on purpose would be worse. */
+  function ensureReachableNode() {
+    if ($('node-swap')) $('node-swap').textContent = '';
+    var origin = window.location.origin;
+    if (nodeIsCustom()) {
+      var built = kit.proxyUri({ mode: 'c', key: $('custom-node').value.trim() }, origin);
+      if (!built.ok) return Promise.reject(new Error(built.problem || 'That node cannot be used.'));
+      return probeNode(built.uri).catch(function () { throw new Error('node_unreachable'); });
+    }
+    var chosen = $('node').value.slice(2);
+    var ids = kit.nodes().map(function (n) { return n.id; });
+    var order = [chosen].concat(ids.filter(function (id) { return id !== chosen; }));
+    function attempt(i) {
+      if (i >= order.length) throw new Error('node_unreachable');
+      var id = order[i];
+      var built = kit.proxyUri({ mode: 'n', key: id }, origin);
+      if (!built.ok) return attempt(i + 1);
+      return probeNode(built.uri).then(function () {
+        if (id !== chosen) {
+          $('node').value = 'n:' + id;
+          syncNodeSummary();
+          if ($('node-swap')) $('node-swap').textContent = labelFor(chosen) + ' was not answering, so this wallet is on ' + labelFor(id) + ' instead.';
+        }
+      }, function () { return attempt(i + 1); });
+    }
+    return Promise.resolve().then(function () { return attempt(0); });
   }
 
   function networkTypeFor(name) {
@@ -147,9 +221,12 @@
 
   function createNew() {
     return withEngines(function () {
-      setSetupStatus('Creating a new wallet...');
-      var config = baseConfig();
-      return xmr.createWalletFull(config).then(afterOpen);
+      setSetupStatus('Checking the node...');
+      return ensureReachableNode().then(function () {
+        setSetupStatus('Creating a new wallet...');
+        var config = baseConfig();
+        return xmr.createWalletFull(config).then(afterOpen);
+      });
     });
   }
 
@@ -157,12 +234,15 @@
     return withEngines(function () {
       var seed = $('seed-in').value.trim().replace(/\s+/g, ' ');
       if (!seed) { setSetupError('Enter the seed phrase.'); return; }
+      setSetupStatus('Checking the node...');
+      return ensureReachableNode().then(function () {
       setSetupStatus('Restoring...');
       var config = baseConfig();
       config.seed = seed;
       var height = kit.restoreHeightForDate($('restore-date').value);
       if (height !== null) config.restoreHeight = height;
       return xmr.createWalletFull(config).then(afterOpen);
+      });
     });
   }
 
@@ -172,6 +252,8 @@
       var view = $('keys-view').value.trim();
       var spend = $('keys-spend').value.trim();
       if (!address || !view) { setSetupError('The address and the view key are both needed.'); return; }
+      setSetupStatus('Checking the node...');
+      return ensureReachableNode().then(function () {
       setSetupStatus('Opening...');
       var config = baseConfig();
       config.primaryAddress = address;
@@ -180,6 +262,7 @@
       var height = kit.restoreHeightForDate($('keys-date').value);
       if (height !== null) config.restoreHeight = height;
       return xmr.createWalletFull(config).then(afterOpen);
+      });
     });
   }
 

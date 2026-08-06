@@ -118,77 +118,84 @@ not written it down, you have not made a wallet, you have made a countdown.
 </p>
 </details>
 
-<h3>1. Choose a node</h3>
-<p class="note">
-A wallet has to talk to a Monero node to see the chain and to broadcast a
-payment. Your browser is not allowed to reach any other site from this page, so
-the traffic goes through this site's server to the node you pick. The node sees
-this site asking, never your address or your IP; it cannot spend anything and,
-because the scanning happens here in the tab, it cannot even see which payments
-are yours. Point it at your own node if you would rather not trust one of these.
-</p>
-<p>
-  <label for="node" class="inline">Node</label>
-  <select id="node"></select>
-</p>
-<p id="custom-node-row" class="hidden">
-  <label for="custom-node" class="inline">Your node</label>
-  <input type="text" id="custom-node" spellcheck="false" placeholder="https://your.node:18089" size="34">
-  <span id="node-note" class="note"></span>
-</p>
+<div id="setup" class="xmr-client">
+  <div class="client-title">Monero Wallet</div>
 
-<hr>
-
-<div id="setup">
-  <h3>2. Open a wallet</h3>
-  <p>
+  <p class="client-tabs">
     <button type="button" id="tab-create" class="sheet-tab is-active">Create new</button>
     <button type="button" id="tab-restore" class="sheet-tab">Restore from a seed</button>
     <button type="button" id="tab-keys" class="sheet-tab">Restore from keys</button>
   </p>
 
-  <p id="setup-error" class="error" role="alert"></p>
-  <p id="setup-status" class="status" role="status" aria-live="polite"></p>
+  <div class="client-body">
+    <p id="setup-error" class="error" role="alert"></p>
+    <p id="setup-status" class="status" role="status" aria-live="polite"></p>
 
-  <!-- create -->
-  <div id="mode-create">
-    <p class="note">
-      Makes a brand new wallet with a fresh 25 word seed. The seed is shown once,
-      here, and never sent anywhere. Write it down before you fund it.
-    </p>
-    <p><button type="button" id="create">Create a new wallet</button></p>
-  </div>
+    <!-- create -->
+    <div id="mode-create">
+      <p class="note">
+        Makes a brand new wallet with a fresh 25 word seed. The seed is shown once,
+        here, and never sent anywhere. Write it down before you fund it.
+      </p>
+      <p><button type="button" id="create">Create a new wallet</button></p>
+    </div>
 
-  <!-- restore from seed -->
-  <div id="mode-restore" class="hidden">
-    <p><label for="seed-in" class="inline">Seed phrase</label></p>
-    <p><textarea id="seed-in" rows="3" spellcheck="false" placeholder="25 words, in order"></textarea></p>
-    <p>
-      <label for="restore-date" class="inline">Roughly when was it made?</label>
-      <input type="date" id="restore-date">
-      <span class="note">Optional. It sets where scanning starts, so the wallet does not read the whole chain. If you leave it blank, scanning starts from the wallet's own guess, which is slower.</span>
-    </p>
-    <p><button type="button" id="restore">Restore this wallet</button></p>
-  </div>
+    <!-- restore from seed -->
+    <div id="mode-restore" class="hidden">
+      <p><label for="seed-in" class="inline">Seed phrase</label></p>
+      <p><textarea id="seed-in" rows="3" spellcheck="false" placeholder="25 words, in order"></textarea></p>
+      <p>
+        <label for="restore-date" class="inline">Roughly when was it made?</label>
+        <input type="date" id="restore-date">
+        <span class="note">Optional. It sets where scanning starts, so the wallet does not read the whole chain. If you leave it blank, scanning starts from the wallet's own guess, which is slower.</span>
+      </p>
+      <p><button type="button" id="restore">Restore this wallet</button></p>
+    </div>
 
-  <!-- restore from keys -->
-  <div id="mode-keys" class="hidden">
-    <p class="note">
-      For a wallet you hold as raw keys. Give the primary address and the private
-      spend key to open a full, spendable wallet; give only the view key to open
-      it watch-only, able to see the balance but not to spend.
-    </p>
-    <p><label for="keys-address" class="inline">Primary address</label></p>
-    <p><textarea id="keys-address" rows="2" spellcheck="false" placeholder="4..."></textarea></p>
-    <p><label for="keys-view" class="inline">Private view key</label></p>
-    <p><textarea id="keys-view" rows="2" spellcheck="false" placeholder="64 hex characters"></textarea></p>
-    <p><label for="keys-spend" class="inline">Private spend key</label> <span class="note">Leave blank for a watch-only wallet.</span></p>
-    <p><textarea id="keys-spend" rows="2" spellcheck="false" placeholder="64 hex characters, or blank"></textarea></p>
-    <p>
-      <label for="keys-date" class="inline">Roughly when was it made?</label>
-      <input type="date" id="keys-date">
-    </p>
-    <p><button type="button" id="restore-keys">Open this wallet</button></p>
+    <!-- restore from keys -->
+    <div id="mode-keys" class="hidden">
+      <p class="note">
+        For a wallet you hold as raw keys. Give the primary address and the private
+        spend key to open a full, spendable wallet; give only the view key to open
+        it watch-only, able to see the balance but not to spend.
+      </p>
+      <p><label for="keys-address" class="inline">Primary address</label></p>
+      <p><textarea id="keys-address" rows="2" spellcheck="false" placeholder="4..."></textarea></p>
+      <p><label for="keys-view" class="inline">Private view key</label></p>
+      <p><textarea id="keys-view" rows="2" spellcheck="false" placeholder="64 hex characters"></textarea></p>
+      <p><label for="keys-spend" class="inline">Private spend key</label> <span class="note">Leave blank for a watch-only wallet.</span></p>
+      <p><textarea id="keys-spend" rows="2" spellcheck="false" placeholder="64 hex characters, or blank"></textarea></p>
+      <p>
+        <label for="keys-date" class="inline">Roughly when was it made?</label>
+        <input type="date" id="keys-date">
+      </p>
+      <p><button type="button" id="restore-keys">Open this wallet</button></p>
+    </div>
+
+    <p id="node-swap" class="note"></p>
+
+    <details class="notice-box">
+      <summary><strong>Node:</strong> <span id="node-summary">choosing&hellip;</span> <span class="note">(change)</span></summary>
+      <p class="note">
+        A wallet has to talk to a Monero node to see the chain and to broadcast a
+        payment. Your browser is not allowed to reach any other site from this page, so
+        the traffic goes through this site's server to the node you pick. The node sees
+        this site asking, never your address or your IP; it cannot spend anything and,
+        because the scanning happens here in the tab, it cannot even see which payments
+        are yours. If the node you pick stops answering, the wallet quietly tries the
+        others and says so. Point it at your own node if you would rather not trust one
+        of these.
+      </p>
+      <p>
+        <label for="node" class="inline">Node</label>
+        <select id="node"></select>
+      </p>
+      <p id="custom-node-row" class="hidden">
+        <label for="custom-node" class="inline">Your node</label>
+        <input type="text" id="custom-node" spellcheck="false" placeholder="https://your.node:18089" size="34">
+        <span id="node-note" class="note"></span>
+      </p>
+    </details>
   </div>
 </div>
 
@@ -323,17 +330,18 @@ safe to use for anything, because they handle no secrets.
 </p>
 </details>
 
-<p>
+<div class="xmr-client">
+<div class="client-title">Monero Addresses</div>
+<p class="client-tabs">
 <button type="button" id="tab-check" class="sheet-tab is-active">Check an address</button>
 <button type="button" id="tab-make" class="sheet-tab">Make a wallet</button>
 <button type="button" id="tab-seed" class="sheet-tab">Restore a phrase</button>
 <button type="button" id="tab-watch" class="sheet-tab">Watch a wallet</button>
 </p>
 
+<div class="client-body">
 <p id="error" class="error" role="alert"></p>
 <p id="status" class="status" role="status" aria-live="polite"></p>
-
-<hr>
 
 <!-- ---------------------------------------------------------- proof -->
 <h3>Does this page actually work?</h3>
@@ -501,6 +509,10 @@ happen. If any of it fails, the generator stays switched off.
   </p>
   <div id="watch-result"></div>
 </div>
+</div>
+</div>
+
+
 
 
 <details class="notes">
