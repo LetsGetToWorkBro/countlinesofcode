@@ -39,7 +39,9 @@
     Hosted on Cloudflare - Made with spite for bloat - ...
 
   This is the landing page. The counter that used to live here is at
-  /code.html. Nothing on this page needs JavaScript, on purpose.
+  /code.html. Nothing on this page NEEDS JavaScript: without it the windows
+  are simply open and every button is a plain anchor. desk.js only adds the
+  desktop behaviour: windows boot minimised to the taskbar and open on click.
 -->
 <div id="page">
 
@@ -168,7 +170,7 @@
 <div class="desk-windows">
 
 <div class="app-window" id="the-tools">
-<div class="client-title"><h2>The tools</h2></div>
+<div class="client-title"><h2>The tools</h2><a class="win-min" href="#" aria-label="Minimise The tools">_</a></div>
 <div class="app-body">
 
 <p>
@@ -242,7 +244,7 @@ Everything runs in the tab you already have open, except the few marked
 </div>
 
 <div class="app-window" id="why">
-<div class="client-title"><h2>Why it looks like this</h2></div>
+<div class="client-title"><h2>Why it looks like this</h2><a class="win-min" href="#" aria-label="Minimise Why it looks like this">_</a></div>
 <div class="app-body">
 <p>
 Because the alternative is what you get everywhere else. Search for &ldquo;merge
@@ -268,7 +270,7 @@ to: turn off your wifi after the page loads and the PDF tools still work.
 </div>
 
 <div class="app-window" id="wont">
-<div class="client-title"><h2>What it will not do</h2></div>
+<div class="client-title"><h2>What it will not do</h2><a class="win-min" href="#" aria-label="Minimise What it will not do">_</a></div>
 <div class="app-body">
 <p class="note">
 Each tool says where its own limits are, in detail, on its own page. The short
@@ -329,5 +331,6 @@ Monero, because a donation address should not also be a tracking pixel. You can
 </p>
 
 </div>
+<script src="/desk.js"></script>
 </body>
 </html>

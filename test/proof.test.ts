@@ -251,9 +251,14 @@ describe('the panel is actually on the pages', () => {
     }
   });
 
-  it('is not on the landing page, which runs no JavaScript on purpose', () => {
+  it('is not on the landing page, which stays readable with no JavaScript', () => {
+    // The landing page carries exactly one script — the desktop window manager,
+    // which is pure enhancement — and no proof panel, because the page makes no
+    // claims a panel would need to prove.
     const landing = readFileSync('public/index.html', 'utf8');
-    expect(landing).not.toContain('<script');
+    const scripts = [...landing.matchAll(/<script[^>]*src="([^"]+)"/g)].map((m) => m[1]);
+    expect(scripts).toEqual(['/desk.js']);
+    expect(landing).not.toContain('proof-panel.js');
   });
 
   it('is mounted before the script that fills it', () => {

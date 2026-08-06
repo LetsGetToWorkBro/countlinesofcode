@@ -727,6 +727,32 @@ fieldset.tool-group table.tool-dir { margin: 0; }
 .desk-windows .app-window { margin: 0 0 14px 0; }
 .desk-windows .app-window:last-child { margin-bottom: 0; }
 
+/* With desk.js running, the desktop boots minimised: windows live on the
+   taskbar until their button is pressed. Without it, everything is open and
+   this block never applies. */
+.desk-js .desk-windows { padding-bottom: 2px; }
+.desk-js .desk-windows .app-window { display: none; }
+.desk-js .desk-windows .app-window.is-open { display: block; margin-bottom: 14px; }
+
+/* The _ minimise control in a desk window's title bar. Only shown when the
+   window manager is running, because without it there is no taskbar to
+   minimise to. */
+.client-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.win-min {
+  display: none;
+  border: 2px outset #e0e0e0;
+  background: #c0c0c0;
+  color: #000000;
+  font-family: "Courier New", Courier, monospace;
+  font-weight: bold;
+  font-size: 12px;
+  line-height: 1;
+  padding: 1px 6px 4px 6px;
+  text-decoration: none;
+}
+.win-min:active { border-style: inset; }
+.desk-js .win-min { display: inline-block; }
+
 /* Every tool page: the app window sits on its own patch of desk, with a
    taskbar whose Start goes back to the desktop. The page never left it. */
 .desk-shell {

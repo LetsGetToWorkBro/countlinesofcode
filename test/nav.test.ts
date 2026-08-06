@@ -135,8 +135,15 @@ describe('the toolkit bar', () => {
 
   it('needs no JavaScript to list the tools', () => {
     // A landing page that renders nothing without JS is the thing this site
-    // exists to be the opposite of.
-    expect(readFileSync('public/index.html', 'utf8')).not.toContain('<script');
+    // exists to be the opposite of. desk.js is progressive enhancement only —
+    // it minimises the info windows into the taskbar — so it is the one script
+    // allowed, and the markup must not pre-hide anything: with scripting off,
+    // every window and every tool listing is simply there.
+    const landing = readFileSync('public/index.html', 'utf8');
+    const scripts = [...landing.matchAll(/<script[^>]*src="([^"]+)"/g)].map((m) => m[1]);
+    expect(scripts).toEqual(['/desk.js']);
+    expect(landing).not.toMatch(/<script[^>]*>[^<]/);           // no inline code
+    expect(landing).not.toMatch(/app-window[^"]*(hidden|is-open)/); // nothing pre-hidden
   });
 
   it('sends the counter to its own page, not to the landing page', () => {
