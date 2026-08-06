@@ -551,4 +551,13 @@ describe('placeForRotation (finding: rotated pages misplace signatures)', () => 
     expect(placeForRotation(-90, NW, NH, 100, 700).angle).toBe(270);
     expect(placeForRotation(450, NW, NH, 100, 700).angle).toBe(90);
   });
+
+  it('passes a non-quarter-turn /Rotate through untransformed', () => {
+    // A /Rotate that is not a multiple of 90 is not rotated by the raster or
+    // pdf.js paths either, so it must not be rounded to the nearest quarter and
+    // transformed here; that placed the mark against a rotation nothing applied.
+    for (const odd of [45, 30, 137, -45]) {
+      expect(placeForRotation(odd, NW, NH, 100, 700), String(odd)).toEqual({ x: 100, y: 700, angle: 0 });
+    }
+  });
 });

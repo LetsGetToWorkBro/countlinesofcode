@@ -458,9 +458,15 @@ export const WORDS: string[] = [
  * Returns null when the text is not a phrase.
  */
 export function phraseBits(password: string): number | null {
+  // Split on the punctuation people actually put between words in a passphrase.
+  // Comma was the gap here: `edge,habit,cycle,dune,2024` split on `[\s._-]` was
+  // a single token, so this returned null, strength() skipped the phrase clamp,
+  // and a padded four-word phrase scored as raw character entropy: 'excellent'.
+  // `, ; : / |` are joined in; `$ ! + #` are deliberately not, because those
+  // are the fillers of a genuinely random password rather than word gaps.
   const parts = String(password ?? '')
     .toLowerCase()
-    .split(/[\s._-]+/)
+    .split(/[\s._\-,;:/|]+/)
     .filter(Boolean);
   if (parts.length < 3) return null;
 

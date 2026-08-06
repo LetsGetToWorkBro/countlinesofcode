@@ -94,6 +94,23 @@ describe('writeCsv', () => {
     const rows = [['name', 'note'], ['Ada', 'Lovelace, "the" first\nsecond line'], ['', 'x']];
     expect(parseCsv(writeCsv(rows))).toEqual(rows);
   });
+
+  it('neutralises every formula-trigger lead, including + and -', () => {
+    // Each of these is a live formula when Excel reopens the CSV. All must gain a
+    // leading apostrophe. `+` and `-` payloads slipped through when only = and @
+    // were handled.
+    const payloads = ['=1+1', '@SUM(A1)', '+HYPERLINK("http://evil")', '-2+3+cmd|"/c calc"!A1'];
+    const out = writeCsv([payloads]);
+    for (const cell of out.split(',')) {
+      // Quoted cells wrap in "..."; the apostrophe sits just inside.
+      expect(cell.replace(/^"/, '').startsWith("'"), cell).toBe(true);
+    }
+  });
+
+  it('leaves genuine signed numbers untouched', () => {
+    // -5 and +3.2 lead with a sign but are data, not formulas.
+    expect(writeCsv([['-5', '+3.2', '0.5']])).toBe('-5,+3.2,0.5');
+  });
 });
 
 describe('column references', () => {

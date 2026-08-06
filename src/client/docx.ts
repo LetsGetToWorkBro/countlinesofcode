@@ -147,7 +147,9 @@ function runsOf(paragraph: XmlNode): Run[] {
         for (const part of child.children) {
           if (part.name === 'w:t') text += part.text;
           else if (part.name === 'w:tab') text += '\t';
-          else if (part.name === 'w:br' || part.name === 'w:cr') text += '\n';
+          // A page break is a structural marker, not a line break; it must not
+          // add a newline to the text (that produced a spurious trailing '\n').
+          else if ((part.name === 'w:br' || part.name === 'w:cr') && part.attrs['w:type'] !== 'page') text += '\n';
         }
         if (text) {
           const run: Run = { text };
@@ -166,17 +168,58 @@ function runsOf(paragraph: XmlNode): Run[] {
   return runs;
 }
 
-/** Whether this paragraph carries an explicit page break. */
-function hasPageBreak(paragraph: XmlNode): boolean {
-  let found = false;
+/**
+ * Split a paragraph into segments at each page break.
+ *
+ * `<w:r>First</w:r><w:r><w:br w:type="page"/></w:r><w:r>Second</w:r>` yields
+ * `[[First], [Second]]`, so the caller can emit First, a page break, then
+ * Second — keeping Second on the new page. A paragraph with no page break
+ * yields exactly one segment. The break itself contributes no text.
+ */
+function paragraphSegments(paragraph: XmlNode): Run[][] {
+  const segments: Run[][] = [];
+  let current: Run[] = [];
   const walk = (node: XmlNode) => {
     for (const child of node.children) {
-      if (child.name === 'w:br' && child.attrs['w:type'] === 'page') found = true;
-      else walk(child);
+      if (child.name === 'w:r') {
+        const props = kid(child, 'w:rPr');
+        const bold = props ? toggleOn(kid(props, 'w:b')) : false;
+        const italic = props ? toggleOn(kid(props, 'w:i')) : false;
+        const half = props ? kid(props, 'w:sz')?.attrs['w:val'] : undefined;
+        const size = half ? Number(half) / 2 : undefined;
+        let text = '';
+        const flush = () => {
+          if (text) {
+            const run: Run = { text };
+            if (bold) run.bold = true;
+            if (italic) run.italic = true;
+            if (size && Number.isFinite(size)) run.size = size;
+            current.push(run);
+          }
+          text = '';
+        };
+        for (const part of child.children) {
+          if (part.name === 'w:t') text += part.text;
+          else if (part.name === 'w:tab') text += '\t';
+          else if ((part.name === 'w:br' || part.name === 'w:cr') && part.attrs['w:type'] === 'page') {
+            // The break ends the current segment. Flush the text seen so far,
+            // close the segment, and start a fresh one for what follows.
+            flush();
+            segments.push(current);
+            current = [];
+          } else if (part.name === 'w:br' || part.name === 'w:cr') {
+            text += '\n';
+          }
+        }
+        flush();
+      } else if (child.name !== 'w:pPr') {
+        walk(child);
+      }
     }
   };
   walk(paragraph);
-  return found;
+  segments.push(current);
+  return segments;
 }
 
 function cellOf(node: XmlNode): TableCell {
@@ -250,10 +293,9 @@ export async function readDocx(source: Uint8Array): Promise<Doc> {
       const styleId = props ? kid(props, 'w:pStyle')?.attrs['w:val'] : undefined;
       const level = headingLevel(styleId) ?? headingLevel(styleId ? names.get(styleId) : undefined);
       const numbered = props ? kid(props, 'w:numPr') : undefined;
-      const runs = runsOf(node);
-      const pageBreak = hasPageBreak(node);
+      const segments = paragraphSegments(node);
 
-      const pushContent = () => {
+      const pushContent = (runs: Run[]) => {
         if (numbered) {
           const numId = kid(numbered, 'w:numId')?.attrs['w:val'];
           const depth = Number(kid(numbered, 'w:ilvl')?.attrs['w:val'] ?? '0') + 1;
@@ -265,16 +307,16 @@ export async function readDocx(source: Uint8Array): Promise<Doc> {
         }
       };
 
-      // A paragraph can carry both text and a page break — pressing Ctrl+Enter
-      // after typing "Hello" produces exactly that. Emitting only the break, as
-      // before, silently dropped "Hello". Emit the content (when it has any),
-      // then the break.
-      if (pageBreak) {
-        if (runs.length) pushContent();
-        blocks.push({ kind: 'pageBreak', runs: [] });
-      } else {
-        pushContent();
-      }
+      // Emit each segment, with a page break between consecutive ones. So
+      // "First[Ctrl+Enter]Second" becomes First, a page break, then Second,
+      // and Second lands on the new page rather than before the break. A
+      // paragraph with no break has one segment; emit it even when empty so a
+      // blank paragraph survives as spacing. Empty segments produced by a
+      // leading or trailing break are skipped so only the break carries over.
+      segments.forEach((segRuns, i) => {
+        if (segRuns.length || segments.length === 1) pushContent(segRuns);
+        if (i < segments.length - 1) blocks.push({ kind: 'pageBreak', runs: [] });
+      });
     } else if (node.name === 'w:tbl') {
       const rows = kids(node, 'w:tr').map((row) => kids(row, 'w:tc').map(cellOf));
       blocks.push({ kind: 'table', runs: [], rows });

@@ -21,22 +21,29 @@
   var kit = null;   // window.LOC1999_PGP
   var toLock = null;
   var toUnlock = null;
-  var liveUrls = [];
+  // One live URL per pane, tracked apart. A single shared list was a
+  // regression: minting the lock pane's download revoked the unlock pane's
+  // still-live link (and the reverse), so whichever result you produced second
+  // silently broke the first pane's download button. Each pane only ever
+  // replaces its own previous URL.
+  var lockUrl = null;
+  var unlockUrl = null;
 
   function esc(v) {
     return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
-  function objectUrl(blob) {
-    // The lock and unlock results each replace the previous one, so the prior
-    // download URL is revoked before a new one is minted rather than left to
-    // accumulate for the session.
-    liveUrls.forEach(function (u) { URL.revokeObjectURL(u); });
-    liveUrls = [];
-    var url = URL.createObjectURL(blob);
-    liveUrls.push(url);
-    return url;
+  function lockObjectUrl(blob) {
+    if (lockUrl) URL.revokeObjectURL(lockUrl);
+    lockUrl = URL.createObjectURL(blob);
+    return lockUrl;
+  }
+
+  function unlockObjectUrl(blob) {
+    if (unlockUrl) URL.revokeObjectURL(unlockUrl);
+    unlockUrl = URL.createObjectURL(blob);
+    return unlockUrl;
   }
 
   function loadEngines() {
@@ -120,7 +127,7 @@
         var name = kit.lockedName(toLock.name, armored);
         $('lock-progress').textContent = '';
         $('lock-output').innerHTML =
-          '<p><a id="lock-download" download="' + esc(name) + '" href="' + objectUrl(blob) + '">Download ' +
+          '<p><a id="lock-download" download="' + esc(name) + '" href="' + lockObjectUrl(blob) + '">Download ' +
           esc(name) + '</a> <span class="note">' + esc(formatBytes(blob.size)) + '</span></p>' +
           '<p class="note">Anyone can open it with <code>gpg -d ' + esc(name) +
           '</code>, or by dropping it into the unlock tab here.</p>';
@@ -161,7 +168,7 @@
         var blob = new Blob([result.data], { type: 'application/octet-stream' });
         $('unlock-progress').textContent = '';
         $('unlock-output').innerHTML =
-          '<p><a id="unlock-download" download="' + esc(name) + '" href="' + objectUrl(blob) + '">Download ' +
+          '<p><a id="unlock-download" download="' + esc(name) + '" href="' + unlockObjectUrl(blob) + '">Download ' +
           esc(name) + '</a> <span class="note">' + esc(formatBytes(blob.size)) + '</span></p>';
       })
       .catch(function (err) {
@@ -280,8 +287,10 @@
   });
 
   window.addEventListener('pagehide', function () {
-    liveUrls.forEach(function (u) { URL.revokeObjectURL(u); });
-    liveUrls = [];
+    if (lockUrl) URL.revokeObjectURL(lockUrl);
+    if (unlockUrl) URL.revokeObjectURL(unlockUrl);
+    lockUrl = null;
+    unlockUrl = null;
   });
 
   updateLockButton();

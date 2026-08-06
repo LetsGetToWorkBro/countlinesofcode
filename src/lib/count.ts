@@ -38,6 +38,7 @@ export const ZERO: LineCounts = { lines: 0, code: 0, comment: 0, blank: 0 };
 type Mode =
   | { kind: 'normal' }
   | { kind: 'block'; open: string; close: string; depth: number; nested: boolean }
+  | { kind: 'soloBlock'; close: string }
   | { kind: 'string'; close: string; escape: boolean; multiline: boolean; interpolate: boolean };
 
 /** A `${ ... }` region suspended inside a template literal. */
@@ -72,6 +73,7 @@ interface CompiledSyntax {
   line: string[];
   block: [string, string][];
   lineStartBlock: [string, string][];
+  soloBlock: [string, string][];
   docString: [string, string][];
   nested: boolean;
   strings: StringSpec[];
@@ -115,6 +117,7 @@ function compile(syntax: Syntax): CompiledSyntax {
     line: sortByLength(syntax.line),
     block: sortByLength(syntax.block),
     lineStartBlock: sortByLength(syntax.lineStartBlock ?? []),
+    soloBlock: sortByLength(syntax.soloBlock ?? []),
     docString: sortByLength(syntax.docString ?? []),
     nested: syntax.nestedBlock === true,
     strings: [...syntax.strings].sort((a, b) => b.open.length - a.open.length),
@@ -236,6 +239,28 @@ function classify(text: string, rootSyntax: Syntax): LineCounts {
       continue;
     }
 
+    if (mode.kind === 'soloBlock') {
+      // The close (MATLAB `%}`) only ends the block when it stands alone on its
+      // line: whitespace before it (leading whitespace is skipped above, so this
+      // char being the first non-space means the line was blank until now) and
+      // only whitespace after it. Otherwise every non-blank line inside counts
+      // as comment, and a `%}` with trailing text keeps the block open.
+      const atLead = !sawNonSpace;
+      sawNonSpace = true;
+      sawComment = true;
+      if (atLead && startsWith(text, mode.close, i)) {
+        const nl = text.indexOf('\n', i);
+        const rest = text.slice(i + mode.close.length, nl === -1 ? n : nl);
+        if (rest.trim() === '') {
+          i += mode.close.length;
+          mode = NORMAL;
+          continue;
+        }
+      }
+      i++;
+      continue;
+    }
+
     if (mode.kind === 'string') {
       sawNonSpace = true;
       sawCode = true;
@@ -268,6 +293,9 @@ function classify(text: string, rootSyntax: Syntax): LineCounts {
     }
 
     // ---- normal mode -------------------------------------------------------
+    // Whether this is the first non-whitespace character on the line, captured
+    // before the flag is set, for the solo-block (MATLAB %{) open check below.
+    const atLineLead = !sawNonSpace;
     sawNonSpace = true;
 
     // Closing brace of a `${ ... }` returns to the template literal it opened in.
@@ -313,6 +341,26 @@ function classify(text: string, rootSyntax: Syntax): LineCounts {
           matched = true;
           break;
         }
+      }
+      if (matched) continue;
+    }
+
+    // Solo block comments (MATLAB %{ %}): the open must be the first non-space
+    // on its line (indentation allowed) and be alone, with only whitespace after
+    // it. A `%{ trailing` falls through to the `%` line comment instead of
+    // opening a block that would run to the next `%}`.
+    if (active.soloBlock.length > 0 && atLineLead) {
+      let matched = false;
+      for (const [open, close] of active.soloBlock) {
+        if (!startsWith(text, open, i)) continue;
+        const nl = text.indexOf('\n', i);
+        const rest = text.slice(i + open.length, nl === -1 ? n : nl);
+        if (rest.trim() !== '') continue; // not alone on the line: a line comment
+        sawComment = true;
+        mode = { kind: 'soloBlock', close };
+        i += open.length;
+        matched = true;
+        break;
       }
       if (matched) continue;
     }

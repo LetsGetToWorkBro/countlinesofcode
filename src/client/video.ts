@@ -144,6 +144,20 @@ export function codecName(codec: string | null | undefined): string {
   return codec.startsWith('pcm-') ? `uncompressed (${codec.slice(4)})` : codec;
 }
 
+/**
+ * Whether an audio codec keeps every bit of the original.
+ *
+ * Only these lose nothing: FLAC and ALAC (lossless compression) and any PCM
+ * (uncompressed). Re-encoding one of these to AAC/Opus/MP3 genuinely discards
+ * quality. Re-encoding an already-lossy source (MP3 to AAC) also loses quality,
+ * but it was never lossless to begin with, so the "a lossless track becomes
+ * lossy" phrasing would be a false claim about the input.
+ */
+export function isLosslessAudio(codec: string | null | undefined): boolean {
+  if (!codec) return false;
+  return codec === 'flac' || codec === 'alac' || codec.startsWith('pcm-') || codec.startsWith('pcm');
+}
+
 /** One line describing what was opened, for the page to print. */
 export function describeMedia(info: MediaInfo): string {
   const parts = [info.format, formatTime(info.duration), formatBytes(info.size)];
@@ -1059,7 +1073,15 @@ export function explainPlan(
   if (plan.mute) notes.push('The sound is dropped.');
   else if (!fit.audio && info.audio) notes.push('This browser cannot encode any audio codec this container holds, so the result is silent.');
   else if (copyAudio) notes.push('The sound is copied across untouched.');
-  else if (soundReencoded) notes.push(`The sound is re-encoded to ${codecName(fit.audio!)}, so a lossless audio track becomes lossy.`);
+  else if (soundReencoded) {
+    // Only claim a lossless track is being degraded when the source actually is
+    // lossless; an MP3 re-encoded to AAC was already lossy.
+    notes.push(
+      isLosslessAudio(info.audio!.codec)
+        ? `The sound is re-encoded to ${codecName(fit.audio!)}, so a lossless audio track becomes lossy.`
+        : `The sound is re-encoded to ${codecName(fit.audio!)}.`,
+    );
+  }
 
   const lossless = copyVideo && (copyAudio || !info.audio || Boolean(plan.mute));
 
@@ -1163,6 +1185,7 @@ globalScope.LOC1999_VIDEO = {
   formatTime,
   formatBytes,
   codecName,
+  isLosslessAudio,
   describeMedia,
   OUTPUT_FORMATS,
   findFormat,

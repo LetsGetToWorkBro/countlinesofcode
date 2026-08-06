@@ -135,12 +135,15 @@ export function parseCsv(text: string, delimiter?: string): Row[] {
  * formula that exfiltrates data. Prefixing a single quote makes the spreadsheet
  * treat it as text again.
  *
- * Deliberately only `=` and `@`, never `+` or `-`: those two lead ordinary
- * negative numbers, and a number never begins with `=` or `@`, so this cannot
- * corrupt numeric data — only the string content that is the actual payload.
+ * Excel triggers a formula on any of `= + - @` or a leading tab / carriage
+ * return, so all of them are neutralised: `+HYPERLINK(...)` and `-2+3+cmd|...`
+ * are live payloads exactly like the `=` form. The one exemption is a genuine
+ * number: `-5` and `+3.2` lead with a sign but are data, not a payload, so a
+ * value that `isNumeric` accepts is left exactly as it is. Restricting to `=`
+ * and `@` before let `+`/`-` formula payloads through untouched.
  */
 function csvSafeCell(value: string): string {
-  return /^[=@]/.test(value) ? `'${value}` : value;
+  return /^[=+\-@\t\r]/.test(value) && !isNumeric(value) ? `'${value}` : value;
 }
 
 export function writeCsv(rows: Row[], delimiter = ','): string {

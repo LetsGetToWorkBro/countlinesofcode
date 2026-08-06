@@ -46,6 +46,15 @@ export interface Syntax {
    */
   lineStartBlock?: [string, string][];
   /**
+   * Block comments whose open and close markers must each stand alone on their
+   * own line, with only whitespace around them (indentation allowed). MATLAB's
+   * `%{`/`%}` is the case: an indented `%{` opens the block, but `%{ trailing`
+   * is an ordinary line comment rather than a block open, and `%}` closes only
+   * when it too is alone. This is stricter than lineStartBlock, which fires on a
+   * column-0 marker regardless of what follows it.
+   */
+  soloBlock?: [string, string][];
+  /**
    * Triple-quoted strings that count as comments when they *begin* a line
    * (Python docstrings). Elsewhere they are treated as ordinary strings.
    */
@@ -79,8 +88,15 @@ const TRIPLE_SQ: StringSpec = { open: "'''", close: "'''", escape: false, multil
 // on the rare embedded "" — still far better than treating it as ordinary code.
 const CS_VERBATIM: StringSpec = { open: '@"', close: '"', escape: false, multiline: true };
 // Rust ordinary strings can span lines, and raw strings r"..." / r#"..."# carry
-// no escaping. Longer opens are tried first (compile sorts by open length).
+// no escaping. A raw string may use any number of hashes so a literal `"#` can
+// sit inside it (r##"has "# here"##); the count of hashes on the close must
+// match the open. Modelling one, two and three hashes covers effectively all
+// real code, and longer opens are tried first (compile sorts by open length),
+// so r###" wins over r##" wins over r#". Without the multi-hash forms an
+// r##"..."## ran away as an ordinary multiline "..." string.
 const RUST_DQ: StringSpec = { open: '"', close: '"', escape: true, multiline: true };
+const RUST_RAW_HASH3: StringSpec = { open: 'r###"', close: '"###', escape: false, multiline: true };
+const RUST_RAW_HASH2: StringSpec = { open: 'r##"', close: '"##', escape: false, multiline: true };
 const RUST_RAW_HASH: StringSpec = { open: 'r#"', close: '"#', escape: false, multiline: true };
 const RUST_RAW: StringSpec = { open: 'r"', close: '"', escape: false, multiline: true };
 
@@ -152,7 +168,7 @@ export const SYNTAX: Record<string, Syntax> = {
   'Kotlin': { ...C_LIKE, nestedBlock: true, strings: [TRIPLE_DQ, DQ, SQ] },
   'Scala': { ...C_LIKE, strings: [TRIPLE_DQ, DQ, SQ] },
   'Go': C_LIKE_TEMPLATE,
-  'Rust': { line: ['//'], block: [['/*', '*/']], nestedBlock: true, strings: [RUST_RAW_HASH, RUST_RAW, RUST_DQ, SQ] },
+  'Rust': { line: ['//'], block: [['/*', '*/']], nestedBlock: true, strings: [RUST_RAW_HASH3, RUST_RAW_HASH2, RUST_RAW_HASH, RUST_RAW, RUST_DQ, SQ] },
   'Swift': { line: ['//'], block: [['/*', '*/']], nestedBlock: true, strings: [TRIPLE_DQ, DQ] },
   'JavaScript': JS_LIKE,
   'JSX': JS_LIKE,
@@ -236,12 +252,13 @@ export const SYNTAX: Record<string, Syntax> = {
   'PLpgSQL': SQL_SYNTAX,
   'Assembly': { line: [';', '#'], block: [['/*', '*/']], strings: [DQ, SQ] },
   'Fortran': { line: ['!'], block: [], strings: [DQ, SQ] },
-  // %{ %} is a block comment only when it stands alone on its own line, like
-  // Ruby's =begin/=end. Declaring it as a general inline block let an inline
-  // `%{` (or a `%{...}` with no later `%}`) open a block comment that ran to the
-  // end of the file; as a line-start block plus the `%` line comment, an inline
-  // %{ is just an ordinary comment to end of line.
-  'MATLAB': { line: ['%'], block: [], lineStartBlock: [['%{', '%}']], strings: [DQ, SQ_RAW] },
+  // %{ %} is a block comment only when it stands alone on its own line. It may
+  // be indented (a lineStartBlock demanded column 0, so a `    %{` inside a
+  // function was miscounted as code), and it must be *alone*: `%{ trailing` is
+  // an ordinary line comment, not a block open, so soloBlock rather than
+  // lineStartBlock is the right rule. The `%` line comment handles every inline
+  // %{ that does not open a block.
+  'MATLAB': { line: ['%'], block: [], soloBlock: [['%{', '%}']], strings: [DQ, SQ_RAW] },
   'Tcl': HASH,
   'Vim script': { line: ['"'], block: [], strings: [SQ_RAW] },
   'AWK': HASH,

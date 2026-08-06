@@ -258,6 +258,27 @@ describe('trackers', () => {
     expect(findTrackers('<a href="mailto:a@b.c">mail</a><a href="#top">top</a>')).toEqual([]);
   });
 
+  it('finds a tracked link even when the anchor never closes', () => {
+    // No </a> anywhere: the label is empty but the tracker is still surfaced.
+    const html = '<a href="https://sendy.example/r?url=https%3A%2F%2Freal.example%2Fx">no close tag ever';
+    const [link] = findTrackers(html);
+    expect(link!.kind).toBe('link');
+    expect(link!.destination).toBe('https://real.example/x');
+  });
+
+  it('stays linear on a hostile body of unclosed anchors (ReDoS guard)', () => {
+    // Thousands of `<a>` openings with no closing tag was quadratic under the old
+    // lazy-tail regex. The opening-tag scan plus the no-close short-circuit make
+    // this near-instant; a generous ceiling catches a regression without being
+    // flaky on a slow machine.
+    const html = '<a href="http://x">'.repeat(40000);
+    const start = performance.now();
+    const found = findTrackers(html);
+    const elapsed = performance.now() - start;
+    expect(Array.isArray(found)).toBe(true);
+    expect(elapsed).toBeLessThan(2000);
+  });
+
   it('does not count the same thing twice', () => {
     const html = '<img src="https://t.example/p?uid=aaaaaaaa" width="1"><img src="https://t.example/p?uid=aaaaaaaa" width="1">';
     expect(findTrackers(html)).toHaveLength(1);

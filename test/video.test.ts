@@ -584,6 +584,26 @@ describe('explainPlan', () => {
     expect(out.lossless).toBe(true);
   });
 
+  it('only says a lossless track becomes lossy when the source actually was lossless', () => {
+    // FLAC copied-video-re-encoded-audio: the "becomes lossy" phrasing is true.
+    const flac: MediaInfo = { ...h264, audio: { codec: 'flac', channels: 2, sampleRate: 48000, decodable: true } };
+    const flacOut = explainPlan({ formatId: 'mp4' }, flac, fitFormat(mp4, full));
+    expect(flacOut.notes.join(' ')).toMatch(/lossless audio track becomes lossy/i);
+
+    // MP3 (already lossy) re-encoded to Opus for WebM while VP9 video copies:
+    // the note must not claim a lossless track is being degraded.
+    const vp9mp3: MediaInfo = {
+      ...h264,
+      format: 'Matroska',
+      video: { ...h264.video!, codec: 'vp9' },
+      audio: { codec: 'mp3', channels: 2, sampleRate: 48000, bitrate: 128e3, decodable: true },
+    };
+    const mp3Out = explainPlan({ formatId: 'webm' }, vp9mp3, fitFormat(webm, full));
+    expect(willCopyVideo({ formatId: 'webm' }, vp9mp3, fitFormat(webm, full))).toBe(true);
+    expect(mp3Out.notes.join(' ')).toMatch(/sound is re-encoded/i);
+    expect(mp3Out.notes.join(' ')).not.toMatch(/lossless audio track becomes lossy/i);
+  });
+
   it('warns when the output will be silent because the browser cannot encode audio', () => {
     const out = explainPlan({ formatId: 'webm' }, h264, fitFormat(webm, { video: ['vp9'], audio: [] }));
     expect(out.notes.join(' ')).toMatch(/silent/i);

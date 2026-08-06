@@ -194,12 +194,25 @@ describe('inspectPdf', () => {
     expect(line).toMatch(/photographic|patterned/i);
   });
 
-  it('does not claim the whole document is clean when only some pages were scanned', () => {
+  it('discloses an incomplete scan, and still keeps the textured-cover caveat', () => {
     const report = inspectPdf({}, { hiddenText: [], pages: 30, pagesChecked: 20 });
-    const line = report.clean.find((c) => /20 pages checked/i.test(c));
-    expect(line).toBeTruthy();
-    // And it does NOT assert an unconditional all-clear.
-    expect(report.clean.some((c) => /nothing is hiding|solid box or in white/i.test(c))).toBe(false);
+    // The scope of the scan is disclosed: 20 of 30 pages.
+    const scope = report.clean.find((c) => /first 20 of 30 page/i.test(c));
+    expect(scope).toBeTruthy();
+    expect(scope).toMatch(/not checked/i);
+    // The textured-cover caveat is NOT dropped just because the scan was partial;
+    // both facts must be stated.
+    const caveat = report.clean.find((c) => /photographic|patterned/i.test(c));
+    expect(caveat).toBeTruthy();
+  });
+
+  it('discloses an incomplete scan even when hidden text was found on a checked page', () => {
+    const report = inspectPdf({}, { hiddenText: [{ page: 2, text: 'REDACTED SALARY' }], pages: 30, pagesChecked: 20 });
+    // The hidden-text leak leads, but the report must not read as a full scan:
+    // the other ten pages were never examined.
+    expect(report.leaks[0]!.title).toMatch(/cannot see/i);
+    const scope = report.clean.find((c) => /first 20 of 30 page/i.test(c));
+    expect(scope).toBeTruthy();
   });
 
   it('reports the author, and treats it as serious', () => {

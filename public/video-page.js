@@ -127,6 +127,10 @@
   function readFile(file) {
     clearError();
     releaseUrls();
+    // Opening a new file also drops the previous run's output blob, which can be
+    // a whole re-encoded video; releaseUrls only touches the source preview, so
+    // without this the old output stayed resident for the rest of the session.
+    clearOutputUrls();
     outputEl.innerHTML = '';
     progressEl.textContent = '';
     sourceName = file.name || 'video';

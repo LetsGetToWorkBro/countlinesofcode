@@ -422,8 +422,14 @@ function knownTracker(host: string): string | null {
  * looking image on a tracking domain with a unique identifier in the path, and
  * calling only the tiny ones trackers would miss most of them.
  */
+/** Beyond this the scan is capped; a real HTML email part is far smaller. */
+const MAX_SCAN = 1_000_000;
+
 export function findTrackers(html: string): Tracker[] {
-  const source = String(html ?? '');
+  // Cap the scanned length: trackers live near the top of a real email's HTML,
+  // and this bounds the work on a hostile multi-megabyte body regardless of the
+  // regexes below.
+  const source = String(html ?? '').slice(0, MAX_SCAN);
   const found: Tracker[] = [];
   const seen = new Set<string>();
 
@@ -457,17 +463,27 @@ export function findTrackers(html: string): Tracker[] {
     }
   }
 
-  // The opening tag is matched up to its first `>` (linear), then href is
-  // pulled from the captured attributes. The old single pattern put two
-  // overlapping `[^>]*` runs around the href and backtracked quadratically on a
-  // body with `<a href=` followed by a long unclosed run — a real ReDoS on the
-  // attacker-authored input this tool exists to consume.
-  for (const match of source.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)) {
-    const href = /\bhref\s*=\s*["']?([^"'\s>]+)/i.exec(match[1]!)?.[1];
+  // Match only the opening tag (up to its first `>`, linear), then find the
+  // matching `</a>` by a forward index scan. The old single pattern paired an
+  // opening `[^>]*` with a lazy `[\s\S]*?...<\/a>` tail: on a body of many
+  // `<a ...>` openings with no closing tag it retried the tail from every
+  // opening, O(n^2) backtracking. Given N unclosed anchors this is a real
+  // ReDoS on the attacker-authored HTML this tool exists to consume. A single
+  // `includes('</a>')` check short-circuits the whole close-tag search when
+  // there is no closing tag anywhere.
+  const anyClose = source.includes('</a>');
+  const openTag = /<a\b([^>]*)>/gi;
+  let anchor: RegExpExecArray | null;
+  while ((anchor = openTag.exec(source)) !== null) {
+    const href = /\bhref\s*=\s*["']?([^"'\s>]+)/i.exec(anchor[1]!)?.[1];
     if (!href || /^(mailto:|tel:|#)/i.test(href)) continue;
     const host = hostOf(href);
     if (!host) continue;
-    const label = match[2]!.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    // The label is whatever sits before the next `</a>`. indexOf is a linear
+    // forward scan from the opening tag's end, not a backtracking match.
+    const closeAt = anyClose ? source.indexOf('</a>', openTag.lastIndex) : -1;
+    const inner = closeAt >= 0 ? source.slice(openTag.lastIndex, closeAt) : '';
+    const label = inner.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
     const service = knownTracker(host);
     const destination = redirectTarget(href);
 

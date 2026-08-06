@@ -277,9 +277,18 @@ describe('phraseBits', () => {
   });
 
   it('reads the separators people actually use', () => {
-    for (const separator of ['-', ' ', '.', '_']) {
+    for (const separator of ['-', ' ', '.', '_', ',', ';', ':', '/', '|']) {
       expect(phraseBits(WORDS.slice(0, 4).join(separator)), separator).toBe(32);
     }
+  });
+
+  it('does not let a comma-joined phrase pose as raw character entropy', () => {
+    // `edge,habit,cycle,dune,2024` split on `[\s._-]` was a single token, so
+    // phraseBits returned null and strength() rated the padded four-word phrase
+    // on its 26-character length: 'excellent'. It must be scored as a phrase.
+    const phrase = 'edge,habit,cycle,dune,2024';
+    expect(phraseBits(phrase)).not.toBeNull();
+    expect(strength(phrase).verdict).not.toBe('excellent');
   });
 });
 

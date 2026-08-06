@@ -595,7 +595,12 @@ export function placeForRotation(
   dx: number,
   dy: number,
 ): { x: number; y: number; angle: number } {
-  const r = (((Math.round(rotation / 90) * 90) % 360) + 360) % 360;
+  // Only the exact quarter turns get the coordinate transform. A /Rotate that
+  // is not a multiple of 90 (rare, but legal) is not something the raster and
+  // pdf.js paths rotate either — they treat it as upright — so rounding it to
+  // the nearest quarter here would place the mark against a rotation the rest of
+  // the pipeline never applied. Pass such a page through untransformed instead.
+  const r = ((rotation % 360) + 360) % 360;
   switch (r) {
     case 90:
       return { x: nativeW - dy, y: dx, angle: 90 };

@@ -351,6 +351,19 @@ describe('countLines - multiline strings do not open runaway comments', () => {
       { lines: 2, code: 2, comment: 0, blank: 0 });
   });
 
+  it('Rust: a raw string with two hashes holds a "# without closing early', () => {
+    // r##"has "# here"## contains a literal "#, which the single-hash spec would
+    // have closed on, spilling the rest of the line into a runaway multiline
+    // string. The two-hash spec closes only on "##.
+    expectCounts('let s = r##"has "# /* x"##;\nfn f() {}\n', 'Rust',
+      { lines: 2, code: 2, comment: 0, blank: 0 });
+  });
+
+  it('Rust: a three-hash raw string spanning lines is not a comment', () => {
+    expectCounts('let s = r###"a\n/* b "## c\n"###;\nfn f() {}\n', 'Rust',
+      { lines: 4, code: 4, comment: 0, blank: 0 });
+  });
+
   it('Kotlin: a /* inside a triple-quoted string is not a comment', () => {
     expectCounts('val q = """\na /* b\nc\n"""\nfun main() {}\n', 'Kotlin',
       { lines: 5, code: 5, comment: 0, blank: 0 });
@@ -402,5 +415,26 @@ describe('countLines - MATLAB block comments', () => {
   it('still reads an ordinary % line comment', () => {
     expectCounts('% just a comment\nx = 1\n', 'MATLAB',
       { lines: 2, code: 1, comment: 1, blank: 0 });
+  });
+
+  it('opens an indented block comment (marker need not be at column 0)', () => {
+    // A `%{`/`%}` inside a function body is indented; demanding column 0 counted
+    // the whole block as code.
+    expectCounts('function f()\n    %{\n    hidden\n    %}\n    x = 1;\nend\n', 'MATLAB',
+      { lines: 6, code: 3, comment: 3, blank: 0 });
+  });
+
+  it('does not open a block when %{ has trailing text on its line', () => {
+    // `%{ note` is a line comment, not a block open, so the following lines stay
+    // code rather than being swallowed to the next %}.
+    expectCounts('%{ note\nx = 1;\ny = 2;\n', 'MATLAB',
+      { lines: 3, code: 2, comment: 1, blank: 0 });
+  });
+
+  it('does not close a block on a %} that has trailing text', () => {
+    // The close must stand alone; `%} tail` keeps the block open, so everything
+    // through the real lone %} is comment.
+    expectCounts('%{\nhidden\n%} tail\nstill hidden\n%}\nx = 1;\n', 'MATLAB',
+      { lines: 6, code: 1, comment: 5, blank: 0 });
   });
 });

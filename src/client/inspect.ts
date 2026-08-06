@@ -124,6 +124,10 @@ export function inspectPdf(info: PdfInfo, features: PdfFeatures): Report {
 
   // The headline: text that is present but invisible.
   const hidden = features.hiddenText ?? [];
+  const checked = features.pagesChecked;
+  const total = features.pages;
+  const partialScan = checked !== undefined && total !== undefined && checked < total;
+
   if (hidden.length) {
     const sample = hidden.slice(0, 3).map((h) => `“${trim(h.text, 48)}” (page ${h.page + 1})`).join(', ');
     leaks.push({
@@ -136,18 +140,21 @@ export function inspectPdf(info: PdfInfo, features: PdfFeatures): Report {
         'If any of this was meant to be removed, it has not been. Delete it properly, or black it out with a tool that flattens the page.',
     });
   } else {
-    // Two honesty guards on the all-clear. First, if only some pages were
-    // scanned, do not claim the whole document is clean. Second, the check finds
-    // a flat cover (a solid box, white-on-white) but a photographic or patterned
+    // The all-clear always carries the textured-cover caveat: the check finds a
+    // flat cover (a solid box, white-on-white) but a photographic or patterned
     // cover has high pixel variance and reads as "visible", so the claim must
-    // not promise more than the method delivers.
-    const checked = features.pagesChecked;
-    const total = features.pages;
-    if (checked !== undefined && total !== undefined && checked < total) {
-      clean.push(`No hidden-but-copyable text in the ${checked} page${checked === 1 ? '' : 's'} checked (of ${total})`);
-    } else {
-      clean.push('No text hiding under a solid box or in white-on-white. A photographic or patterned cover over text could still hide it, so check those by eye');
-    }
+    // not promise more than the method delivers. This caveat used to vanish
+    // whenever the scan was partial, replaced by a scope line that made no
+    // mention of the method's blind spot.
+    clean.push('No text hiding under a solid box or in white-on-white. A photographic or patterned cover over text could still hide it, so check those by eye');
+  }
+
+  // Disclose an incomplete scan independently of whether anything was found: a
+  // clean result on 20 of 30 pages says nothing about the other 10, and neither
+  // does a hit on page 3. Previously the scope note only appeared on a clean
+  // scan, so a document with hidden text on a checked page looked fully scanned.
+  if (partialScan) {
+    clean.push(`Only the first ${checked} of ${total} page${checked === 1 ? '' : 's'} ${checked === 1 ? 'was' : 'were'} scanned for hidden text; the rest were not checked`);
   }
 
   if (info.Author) {
