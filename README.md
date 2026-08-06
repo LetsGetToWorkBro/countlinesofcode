@@ -8,6 +8,11 @@ totals. Runs entirely on Cloudflare's edge.
 The UI looks like it was made in Notepad in 1999. That is deliberate. The
 engineering behind it is not.
 
+The line counter is where it started. It has since grown a family of small,
+private tools that share the same Worker and the same rule — your file does not
+leave your browser unless the page tells you it must. **[Jump to the
+toolkit](#the-toolkit).**
+
 ```
 1999.LOC
 Enter a repository. We will count the lines. That is all.
@@ -53,6 +58,71 @@ owner/repo                                          [fresh]
   visible warning — partial results are always labelled partial.
 
 Full methodology, including known limitations: **[`/how.html`](public/how.html)**.
+
+---
+
+## The toolkit
+
+Everything below is served by the one Worker (`src/worker/index.ts`) with a
+`[assets]` binding — one origin, no accounts, no upload. Almost every tool is a
+static page and a few kilobytes of vanilla JavaScript that does its work *in the
+tab*; each page carries a **"Prove it"** panel that shows, from the browser's own
+Performance timeline and Content-Security-Policy, that nothing left. The three
+tools that genuinely need a server say so on the page and in the table below.
+
+Three tools are two-in-one, on tabs (a shared `public/tabs.js`, hash-deep-linked
+so `/email.html#inbox` opens the right tab; the retired URLs 301 to it).
+
+### Documents
+
+| Tool | URL | What it does | Runs on |
+|---|---|---|---|
+| **PDF** | `/sign.html` | *Edit* tab: sign, fill a form's real fields, add a picture, and delete/replace text so it truly leaves the file — not a black box over the top. *Pages* tab: merge, split, reorder, rotate. | your browser |
+| **PDF ↔ Word** | `/convert.html` | Convert either direction, with a quality verdict *before* you commit; scans read by OCR. | your browser |
+| **Excel ↔ CSV** | `/sheet.html` | Semicolon-aware, quote-honouring, won't turn `007` into `7`. | your browser |
+| **ZIP** | `/zip.html` | Look inside an archive without unpacking it, extract only what you want, or build one. | your browser |
+| **Unlock a PDF** | `/unlock.html` | Strip "no printing / no copying" from a PDF that opens without a password. | your browser |
+| **Shrink a PDF** | `/shrink.html` | Make a heavy PDF smaller, mostly by shrinking oversized scans. | your browser |
+
+### Media
+
+| Tool | URL | What it does | Runs on |
+|---|---|---|---|
+| **Image tools** | `/image.html` | Resize, compress and convert between PNG/JPEG/WebP, including HEIC off an iPhone; location and camera data stripped on the way out. | your browser |
+| **Video & GIF** | `/video.html` | Cut a clip, change format, squeeze under a size limit, make a GIF, pull the audio — *copying* rather than re-encoding where it can, and it tells you which. | your browser |
+
+### Privacy
+
+| Tool | URL | What it does | Runs on |
+|---|---|---|---|
+| **Email** | `/email.html` | *Check a message* tab: is the sender forged (SPF/DKIM/DMARC) and what is tracking you, read straight from the source. *Throwaway inbox* tab: a disposable address that reads its own mail and self-destructs in an hour. | checker: your browser · **inbox: the server** (D1 + Email Routing) |
+| **Encrypt** | `/lock.html` | *Password* tab: lock a file with a passphrase (OpenPGP symmetric). *Key pair* tab: full PGP — generate, encrypt, decrypt, sign, verify. Your private key never leaves the tab. | your browser |
+| **Inspect a file** | `/inspect.html` | What a document is quietly carrying: text under black boxes, tracked changes, comments, author, timezone. | your browser |
+| **Delete posts** | [delete.1999loc.com](https://delete.1999loc.com/) | Bulk-delete your old social posts. | its own service |
+
+### Money
+
+| Tool | URL | What it does | Runs on |
+|---|---|---|---|
+| **Monero** | `/monero.html` | Check an address, or generate a paper wallet offline; every derivation step verified against published test vectors. | your browser |
+| **Wallet** | `/wallet.html` | A full Monero hot wallet in the tab — create, restore, receive, send. Keys never leave the browser; node traffic is proxied through `/api/xmr` so the node never sees your address or IP. | browser + **node proxy** |
+
+### Code
+
+| Tool | URL | What it does | Runs on |
+|---|---|---|---|
+| **Count code** | `/code.html` | The line counter — the rest of this README. | server, or your browser for big repos |
+| **Code golf** | `/golf` | The fewest-lines leaderboard, one stated problem per board. | server |
+
+The tools' client engines live in `src/client/` (`pdfedit.ts`, `email.ts`,
+`pgpkit.ts`, `monero.ts`, `zipkit.ts`, `convert.ts`, …), built to committed
+bundles in `public/` by `npm run build:client`. The two server-backed newcomers
+are the throwaway inbox (`src/worker/mail.ts`, `src/lib/mailbox.ts`, a D1
+database, and an `email()` handler fed by Cloudflare Email Routing — see
+[`docs/tempmail.md`](docs/tempmail.md)) and the Monero node proxy
+(`src/lib/xmrproxy.ts`). The nav bar is generated from one list
+(`SITE_TOOLS` in `src/worker/html.ts`) and written into every static page by
+`npm run sync:nav`, so a tool cannot go missing from half the site.
 
 ---
 
@@ -136,7 +206,18 @@ from.
 ### Layout
 
 ```
-public/            the 1999 UI: index.html, how.html, style.css, app.js, favicon
+public/            every tool page (index/how/code/sign/convert/sheet/zip/
+                   image/video/inspect/email/lock/monero/wallet/…), the
+                   committed client bundles, style.css, tabs.js, favicon
+src/client/        the in-browser tool engines, built to public/ bundles:
+  bigcount.ts      browser-side line counting (shares the counter's core)
+  pdfedit.ts       PDF edit / sign / redact + page ops (pdfpages.ts)
+  convert.ts       PDF <-> Word, with docmodel.ts and OCR
+  sheet.ts         Excel <-> CSV        zipkit.ts   read / write ZIP
+  email.ts         SPF/DKIM/DMARC + tracker parser (reused server-side)
+  pgpkit.ts        OpenPGP: password locking and full PGP
+  monero.ts        address check + offline paper-wallet derivation
+  inspect.ts       document metadata / hidden-content scanner
 src/lib/
   parse-url.ts     input parsing + the SSRF gate (owner/repo/ref validators)
   languages.ts     extension/filename detection + per-language comment syntax
@@ -147,17 +228,20 @@ src/lib/
   counter.ts       the pipeline (resolve -> tree -> content -> classify)
   board.ts         the standings: ranking rules, purely from cache metadata
   challenges.ts    code golf: the challenge list and fewest-lines ranking
-  cache.ts         KV keys and TTLs
-  ratelimit.ts     per-IP fixed window
-  schema.ts        zod contracts for every request and response
-  pool.ts          bounded-concurrency map
+  mailbox.ts       throwaway-inbox primitives (address gen, TTL, trimming)
+  xmrproxy.ts      Monero node allowlist + RPC proxy target resolution
+  cache.ts         KV keys and TTLs      ratelimit.ts  per-IP fixed window
+  schema.ts        zod contracts        pool.ts       bounded-concurrency map
 src/worker/
-  index.ts         router, error mapping, SSE, security headers
+  index.ts         router, error mapping, SSE, security headers, email()+cron
   auth.ts          GitHub OAuth + server-side session storage
-  html.ts          server-rendered result and error pages
+  mail.ts          throwaway inbox: receive, store (D1), and the /api/mail/* API
+  html.ts          server-rendered pages + SITE_TOOLS (the one nav source)
   board-html.ts    the standings page
   golf-html.ts     the golf course and its per-challenge pages
   env.ts           bindings and tunables
+migrations/        D1 schema for the throwaway inbox
+docs/tempmail.md   operator runbook for turning the inbox on (Email Routing)
 test/              unit + fixture-driven integration tests (no live network)
 ```
 
@@ -198,7 +282,7 @@ sha, and a request for an explicit sha that is already cached returns without
 contacting GitHub at all — so shared `/r/` links are free.
 
 ```bash
-npm test          # 181 tests, no network access required
+npm test          # 1,200+ tests, no network access required
 npm run typecheck
 npm run check     # both
 ```
@@ -291,6 +375,8 @@ npx wrangler deploy --dry-run
 | Setting | Value | Why |
 |---|---|---|
 | KV namespace `LOC_KV` | `8c82bc2e…4212` (preview `ee8bb66d…a055`) | result cache, ref cache, sessions, rate limits |
+| D1 database `MAIL_DB` | `loc1999-tempmail` | throwaway-inbox storage; schema in `migrations/`. The binding is inert until Email Routing is pointed at the Worker — see [`docs/tempmail.md`](docs/tempmail.md) |
+| Cron trigger | `*/15 * * * *` | sweeps expired throwaway messages (expiry is also enforced on every read, so a missed run leaks nothing) |
 | Static assets | `./public`, `not_found_handling = "none"` | unmatched paths fall through to the Worker so `/r/…` renders |
 | | `html_handling = "none"` | keeps `/how.html` at `/how.html` instead of 307-ing to `/how` |
 | `[observability]` | enabled | structured logs visible in the dashboard and `wrangler tail` |
