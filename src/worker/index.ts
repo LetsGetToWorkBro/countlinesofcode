@@ -989,6 +989,17 @@ export function redirectRetiredPage(url: URL): Response | null {
 }
 
 function redirectFromWww(url: URL, env: Env): Response | null {
+  // The API is served on www, never redirected. Canonicalisation is for pages;
+  // for an API the 301 was a disaster measured in the wild: the static pages
+  // are served directly on www by the asset router, so a www visitor's page
+  // called /api/* on www, the Worker 301ed it, and the browser followed by
+  // turning POST into GET and dropping the body — which made every Monero RPC
+  // fail on every node identically ("could not reach the node"), and silently
+  // broke every other POST endpoint from www. CSP connect-src 'self' also
+  // means a www page can only ever call www, so serving is the only option
+  // that works at all.
+  if (url.pathname.startsWith('/api/')) return null;
+
   const configured = env.CANONICAL_ORIGIN;
   if (!configured || !/^https?:\/\//.test(configured)) return null;
 

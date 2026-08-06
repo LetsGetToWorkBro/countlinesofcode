@@ -635,6 +635,30 @@ describe('www handling', () => {
     );
   });
 
+  it('serves the API on www rather than redirecting it', async () => {
+    // The asset router serves pages directly on www, so a www page's API calls
+    // arrive on www too. A 301 here makes browsers replay POSTs as GETs with
+    // the body dropped — measured in the wild as the Monero wallet failing on
+    // every node at once. APIs are served wherever they are asked for.
+    const meta = await get('https://www.loc.example/api/meta');
+    expect(meta.status).toBe(200);
+
+    const ctx = fakeCtx();
+    const rpc = await worker.fetch(
+      new Request('https://www.loc.example/api/xmr/n/cake/json_rpc', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'cf-connecting-ip': '203.0.113.7' },
+        body: '{"jsonrpc":"2.0","id":"0","method":"get_version"}',
+      }),
+      env,
+      ctx,
+    );
+    await ctx.settled();
+    // Not a redirect: the proxy handled it (whatever the upstream fake answers).
+    expect(rpc.status).not.toBe(301);
+    expect(rpc.headers.get('location')).toBeNull();
+  });
+
   it('serves the apex normally', async () => {
     const response = await get('https://loc.example/api/meta');
     expect(response.status).toBe(200);
