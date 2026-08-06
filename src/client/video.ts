@@ -931,11 +931,28 @@ export function instructionsFor(plan: Plan, info: MediaInfo, fit: FormatFit): In
     video = { discard: true };
   } else if (info.video) {
     video = { codec: fit.video ?? undefined };
-    const size = scaleTo(info.video.width, info.video.height, plan.maxHeight ?? 0);
-    if (size.width !== info.video.width || size.height !== info.video.height) {
+    // Dimensions are set in two cases, and NOT when the picture is copied. The
+    // old code set them whenever scaleTo's even-rounding differed from the
+    // source, so an anamorphic odd-dimension source (853 -> 854) with no
+    // downscale asked for got width:854, which forced a decode/re-encode while
+    // explainPlan and willCopyVideo still promised a bit-for-bit copy. Now:
+    //  - a real downscale sets the scaled size, as before;
+    //  - a re-encode that is happening anyway evens odd source dimensions, which
+    //    some encoders require, but only then;
+    //  - a copy sets nothing, so the two paths agree that nothing is touched.
+    const maxHeight = plan.maxHeight ?? 0;
+    if (maxHeight > 0 && info.video.height > maxHeight) {
+      const size = scaleTo(info.video.width, info.video.height, maxHeight);
       video.width = size.width;
       video.height = size.height;
       video.fit = 'contain';
+    } else if (!willCopyVideo(plan, info, fit)) {
+      const size = scaleTo(info.video.width, info.video.height, 0);
+      if (size.width !== info.video.width || size.height !== info.video.height) {
+        video.width = size.width;
+        video.height = size.height;
+        video.fit = 'contain';
+      }
     }
     if (plan.rotate) video.rotate = plan.rotate;
     if (plan.frameRate) video.frameRate = plan.frameRate;

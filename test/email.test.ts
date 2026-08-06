@@ -279,6 +279,19 @@ describe('trackers', () => {
     expect(elapsed).toBeLessThan(2000);
   });
 
+  it('stays linear even with a single trailing </a> (the bypass the re-audit found)', () => {
+    // A lone trailing `</a>` defeated the first fix's `includes('</a>')`
+    // short-circuit: every opening then scanned forward to that far-off close,
+    // O(n^2) again, ~45s at a ~1MB body. The precomputed close positions plus a
+    // monotonic pointer and a capped label make this linear regardless.
+    const html = '<a href="http://a.com/">'.repeat(40000) + '</a>';
+    const start = performance.now();
+    const found = findTrackers(html);
+    const elapsed = performance.now() - start;
+    expect(Array.isArray(found)).toBe(true);
+    expect(elapsed).toBeLessThan(2000);
+  });
+
   it('does not count the same thing twice', () => {
     const html = '<img src="https://t.example/p?uid=aaaaaaaa" width="1"><img src="https://t.example/p?uid=aaaaaaaa" width="1">';
     expect(findTrackers(html)).toHaveLength(1);

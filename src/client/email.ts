@@ -463,26 +463,34 @@ export function findTrackers(html: string): Tracker[] {
     }
   }
 
-  // Match only the opening tag (up to its first `>`, linear), then find the
-  // matching `</a>` by a forward index scan. The old single pattern paired an
-  // opening `[^>]*` with a lazy `[\s\S]*?...<\/a>` tail: on a body of many
-  // `<a ...>` openings with no closing tag it retried the tail from every
-  // opening, O(n^2) backtracking. Given N unclosed anchors this is a real
-  // ReDoS on the attacker-authored HTML this tool exists to consume. A single
-  // `includes('</a>')` check short-circuits the whole close-tag search when
-  // there is no closing tag anywhere.
-  const anyClose = source.includes('</a>');
+  // Precompute every `</a>` position once (a single linear pass), so each
+  // opening tag can find the close bounding its label by advancing ONE forward
+  // pointer that never rewinds. The previous attempt did `indexOf('</a>', ...)`
+  // per opening: with N openings and a single far-off `</a>`, each scanned to
+  // that same close, O(n^2) again, and a lone trailing `</a>` defeated the
+  // `includes` short-circuit entirely (a ~1MB body of `<a>` tags hung the tab
+  // for ~45s). The pointer below is monotonic, and the label slice is capped,
+  // so the whole loop is linear in the body length regardless of the input.
+  const closePositions: number[] = [];
+  for (let idx = source.indexOf('</a>'); idx !== -1; idx = source.indexOf('</a>', idx + 4)) {
+    closePositions.push(idx);
+  }
+  const LABEL_CAP = 300; // link text is short; this bounds each slice to O(1)
   const openTag = /<a\b([^>]*)>/gi;
   let anchor: RegExpExecArray | null;
+  let closeIdx = 0;
   while ((anchor = openTag.exec(source)) !== null) {
     const href = /\bhref\s*=\s*["']?([^"'\s>]+)/i.exec(anchor[1]!)?.[1];
     if (!href || /^(mailto:|tel:|#)/i.test(href)) continue;
     const host = hostOf(href);
     if (!host) continue;
-    // The label is whatever sits before the next `</a>`. indexOf is a linear
-    // forward scan from the opening tag's end, not a backtracking match.
-    const closeAt = anyClose ? source.indexOf('</a>', openTag.lastIndex) : -1;
-    const inner = closeAt >= 0 ? source.slice(openTag.lastIndex, closeAt) : '';
+    // Advance the close pointer to the first `</a>` at or after this opening.
+    // Across all openings this pointer only moves forward, so it is O(n) total,
+    // not O(n) per opening.
+    while (closeIdx < closePositions.length && closePositions[closeIdx]! < openTag.lastIndex) closeIdx++;
+    const closeAt = closeIdx < closePositions.length ? closePositions[closeIdx]! : -1;
+    const labelEnd = Math.min(openTag.lastIndex + LABEL_CAP, closeAt >= 0 ? closeAt : source.length);
+    const inner = source.slice(openTag.lastIndex, labelEnd);
     const label = inner.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
     const service = knownTracker(host);
     const destination = redirectTarget(href);

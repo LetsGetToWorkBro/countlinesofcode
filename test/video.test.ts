@@ -496,6 +496,23 @@ describe('instructionsFor', () => {
     }
   });
 
+  it('does not resize an anamorphic odd-dimension source when no downscale is asked', () => {
+    // The re-audit case: a 16:9 480p source is 853 wide (853 = round(480*16/9)).
+    // scaleTo evens that to 854, and setting width:854 forced a re-encode while
+    // explainPlan promised a lossless copy. With no downscale requested the
+    // engine must leave the dimensions alone so the two paths agree.
+    const odd: MediaInfo = { ...h264, video: { ...h264.video!, width: 853, height: 480 } };
+    const plan = { formatId: 'mp4' };
+    const fit = fitFormat(mp4, full);
+    // This is a copy case (avc into mp4, untouched), so the UI promises lossless.
+    expect(willCopyVideo(plan, odd, fit)).toBe(true);
+    expect(explainPlan(plan, odd, fit).lossless).toBe(true);
+    // The engine instruction must therefore not smuggle in a resize.
+    const out = instructionsFor(plan, odd, fit);
+    expect(out.video?.width).toBeUndefined();
+    expect(out.video?.height).toBeUndefined();
+  });
+
   it('discards the picture for an audio-only format', () => {
     const out = instructionsFor({ formatId: 'mp3' }, h264, fitFormat(findFormat('mp3')!, full));
     expect(out.video?.discard).toBe(true);

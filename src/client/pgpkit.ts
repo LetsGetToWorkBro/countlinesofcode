@@ -458,16 +458,20 @@ export const WORDS: string[] = [
  * Returns null when the text is not a phrase.
  */
 export function phraseBits(password: string): number | null {
-  // Split on the punctuation people actually put between words in a passphrase.
-  // Comma was the gap here: `edge,habit,cycle,dune,2024` split on `[\s._-]` was
-  // a single token, so this returned null, strength() skipped the phrase clamp,
-  // and a padded four-word phrase scored as raw character entropy: 'excellent'.
-  // `, ; : / |` are joined in; `$ ! + #` are deliberately not, because those
-  // are the fillers of a genuinely random password rather than word gaps.
-  const parts = String(password ?? '')
-    .toLowerCase()
-    .split(/[\s._\-,;:/|]+/)
-    .filter(Boolean);
+  const lower = String(password ?? '').toLowerCase();
+
+  // A real passphrase uses ONE separator between its words, consistently. A
+  // random password merely sprinkled with symbols uses several: `k9:Rwm/ptaQ,vXbz`
+  // mixes `:` `/` `,`. Splitting that into "words" and scoring each cluster as a
+  // dictionary word rated a ~90-bit random secret 'weak', which is a false claim.
+  // So the phrase reading only applies when every gap is the same separator;
+  // otherwise this is not a phrase and character entropy stands. `edge,habit,
+  // cycle,dune,2024` (all commas) still reads as a phrase, which is the case the
+  // separator set was widened for in the first place.
+  const gaps = lower.match(/[\s._\-,;:/|]+/g) ?? [];
+  if (gaps.length > 0 && !gaps.every((g) => g === gaps[0])) return null;
+
+  const parts = lower.split(/[\s._\-,;:/|]+/).filter(Boolean);
   if (parts.length < 3) return null;
 
   // Each token's alpha core is what decides if it is a word. Requiring the whole

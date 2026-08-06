@@ -88,7 +88,12 @@ function decodeEntities(value: string): string {
     const value = code.startsWith('#x') || code.startsWith('#X')
       ? parseInt(code.slice(2), 16)
       : parseInt(code.slice(1), 10);
-    return Number.isFinite(value) ? String.fromCodePoint(value) : whole;
+    // String.fromCodePoint throws RangeError on a value above U+10FFFF, a
+    // negative one, or a surrogate. Number.isFinite alone let those through, so
+    // a single &#x110000; anywhere in the document crashed the whole read. Leave
+    // an out-of-range reference as its literal text, exactly as sheet.ts does.
+    if (!Number.isInteger(value) || value < 0 || value > 0x10ffff || (value >= 0xd800 && value <= 0xdfff)) return whole;
+    return String.fromCodePoint(value);
   });
 }
 

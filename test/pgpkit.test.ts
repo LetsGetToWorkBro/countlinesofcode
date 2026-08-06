@@ -290,6 +290,16 @@ describe('phraseBits', () => {
     expect(phraseBits(phrase)).not.toBeNull();
     expect(strength(phrase).verdict).not.toBe('excellent');
   });
+
+  it('does not clamp a random password sprinkled with mixed symbols', () => {
+    // The re-audit found the widened separator set over-reached: a strong random
+    // password using several different symbols (: / ,) was split into "words",
+    // each scored as a 13-bit dictionary word, and rated 'weak'. A phrase uses
+    // ONE consistent separator; mixed separators mean it is not a phrase.
+    const random = 'k9:Rwm/ptaQ,vXbz';
+    expect(phraseBits(random)).toBeNull();
+    expect(['strong', 'excellent']).toContain(strength(random).verdict);
+  });
 });
 
 describe('passphraseBits', () => {
