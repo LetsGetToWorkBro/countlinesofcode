@@ -703,7 +703,39 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   border: 2px inset #e0e0e0;
   padding: 1px 8px;
   color: #333333;
+  margin-left: auto;
 }
+
+/* Taskbar buttons for the windows open on the desktop. The pressed look marks
+   the one you are in, exactly as the era drew a focused window's button. */
+.task-btn {
+  border: 2px outset #e0e0e0;
+  background: #c0c0c0;
+  padding: 1px 10px;
+  color: #000000;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 40%;
+}
+.task-btn:active { border-style: inset; }
+.task-btn.is-open { border-style: inset; background: #e0e0e0; font-weight: bold; }
+
+/* The windows sitting on the landing desktop, teal showing around them. */
+.desk-windows { padding: 2px 12px 12px 12px; }
+.desk-windows .app-window { margin: 0 0 14px 0; }
+.desk-windows .app-window:last-child { margin-bottom: 0; }
+
+/* Every tool page: the app window sits on its own patch of desk, with a
+   taskbar whose Start goes back to the desktop. The page never left it. */
+.desk-shell {
+  background: #008080;
+  border: 2px inset #c0c0c0;
+  margin: 12px 0 16px 0;
+}
+.desk-shell .app-window { margin: 12px; }
+.desk-shell .taskbar { border-top: 2px outset #e0e0e0; }
 
 /* One window per page: the title bar belongs to the app window alone. */
 .client-title {
