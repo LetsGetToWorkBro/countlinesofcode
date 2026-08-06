@@ -579,6 +579,44 @@ details[open] > summary {
 button.sheet-tab { font-size: 14px; padding: 1px 8px; }
 button.sheet-tab.is-active { border-style: inset; background: #ffffcc; }
 
+/* The row that splits a merged page into its tools (email checker / inbox,
+   password / PGP, edit / pages). These are file-folder tabs, not buttons: they
+   sit ON a rule and the open one is joined to the page below it, which is the
+   clearest "this page is several tools" a browser can draw. Only the top-level
+   row gets this; the small .sheet-tab buttons inside a tool keep their plain
+   look, so the hierarchy reads at a glance. */
+p.tool-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 6px;
+  border-bottom: 2px solid #808080;
+  margin: 16px 0 14px 0;
+  padding: 0 8px;
+}
+p.tool-tabs button.sheet-tab {
+  font-size: 16px;
+  padding: 6px 18px;
+  border: 2px solid #808080;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: #e0e0e0;
+  color: #333333;
+  margin: 0;
+}
+p.tool-tabs button.sheet-tab:hover { background: #f0f0f0; }
+p.tool-tabs button.sheet-tab.is-active {
+  background: #ffffff;
+  color: #000000;
+  font-weight: bold;
+  border-style: solid;
+  /* Sit over the rule and erase it underneath, so the open tab and the page
+     below are one shape. */
+  margin-bottom: -2px;
+  border-bottom: 2px solid #ffffff;
+  padding-bottom: 8px;
+}
+
 /* A button that reads as a plain text link: for a secondary action (cancel,
    close, send max) sitting next to a real button. */
 button.linkish {
