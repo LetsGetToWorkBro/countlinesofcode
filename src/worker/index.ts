@@ -1226,9 +1226,8 @@ async function proxyXmr(request: Request, path: string): Promise<Response> {
     });
   } catch (err) {
     const aborted = err instanceof Error && err.name === 'AbortError';
-    console.error('xmr-proxy fetch failed', target.url, err && (err as Error).name, err && (err as Error).message, err && (err as Error).stack);
     return new Response(
-      JSON.stringify({ error: { code: aborted ? 'node_timeout' : 'node_unreachable', message: aborted ? 'The node did not answer in time.' : 'Could not reach that node.', diag: String(err && ((err as Error).name + ': ' + (err as Error).message)) } }),
+      JSON.stringify({ error: { code: aborted ? 'node_timeout' : 'node_unreachable', message: aborted ? 'The node did not answer in time.' : 'Could not reach that node.' } }),
       { status: 502, headers: { 'content-type': 'application/json; charset=utf-8', ...XMR_PROXY_HEADERS } },
     );
   } finally {

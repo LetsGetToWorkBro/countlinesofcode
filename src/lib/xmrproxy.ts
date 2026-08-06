@@ -47,34 +47,33 @@ export interface XmrNode {
  * you ask about; it cannot spend, and with a full wallet it cannot even do that
  * much, because the scanning happens in the browser.
  */
+// Every entry here is verified to answer through the proxy: a valid TLS
+// certificate (Cloudflare rejects the self-signed certs most public nodes use
+// with a 526) and a live daemon. The list is short because that bar removes
+// most public nodes; a visitor who trusts none of these can point the wallet at
+// their own. Re-test with scripts before adding one: a dead node in this list
+// is a wallet that will not sync.
 export const XMR_NODES: XmrNode[] = [
   {
     id: 'seth',
     label: 'node.sethforprivacy.com',
     origin: 'https://node.sethforprivacy.com',
     network: 'mainnet',
-    note: 'Run by Seth Simmons. No logs, TLS, widely used.',
+    note: 'Run by Seth Simmons. No logs, valid TLS, widely used.',
   },
   {
-    id: 'monerujo',
-    label: 'nodex.monerujo.io',
-    origin: 'https://nodex.monerujo.io',
+    id: 'cake',
+    label: 'xmr-node.cakewallet.com',
+    origin: 'https://xmr-node.cakewallet.com:18081',
     network: 'mainnet',
-    note: 'Run by the Monerujo wallet team.',
+    note: 'Run by the Cake Wallet team.',
   },
   {
-    id: 'monerodevs',
-    label: 'node.monerodevs.org',
-    origin: 'https://node.monerodevs.org:18089',
+    id: 'stack',
+    label: 'monero.stackwallet.com',
+    origin: 'https://monero.stackwallet.com:18081',
     network: 'mainnet',
-    note: 'Community node maintained by Monero developers.',
-  },
-  {
-    id: 'stagenet',
-    label: 'stagenet.community.rino.io (stagenet)',
-    origin: 'https://stagenet.community.rino.io:38081',
-    network: 'stagenet',
-    note: 'Stagenet, for testing with worthless coins before you risk real ones.',
+    note: 'Run by the Stack Wallet team.',
   },
 ];
 
