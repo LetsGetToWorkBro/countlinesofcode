@@ -25,13 +25,12 @@
     ------------------------------------------------------------
     count code | golf | pdf | convert | inspect | sheets | images
     ------------------------------------------------------------
-    The tools, in the same five groups as the nav bar
+    The tools, in the same five groups as the nav bar, one line each
     Documents
-    +----------------+---------------------------------+-------------+
-    | PDF            | Edit + Pages tabs               | your tab    |
-    | PDF <-> Word   | convert, with a verdict         | your tab    |
-    ...
-    Media / Privacy (email + encrypt are tabbed pairs) / Money / Code
+      pdf: sign it, fill its form, delete text; or merge, split, reorder
+      convert: PDF to Word and back, graded before you commit
+      ...
+    Media / Privacy / Money / Code   (server-touching tools carry a [server] tag)
     ...
     ------------------------------------------------------------
     Why it looks like this
@@ -90,223 +89,47 @@ in the tab you already have open.
 <h2>The tools</h2>
 
 <p class="note">
-The same five groups as the bar above, one row per page. A few pages are two
-tools sharing an engine, split into tabs; the links jump straight to a tab.
-Almost everything runs in the tab you already have open; where a tool needs our
-server, its &ldquo;runs on&rdquo; says so.
+The same five groups as the bar above. One line per tool; every page explains
+itself fully once you are on it. Everything runs in the tab you already have
+open except the few marked <span class="srv">server</span>, and each of those
+says on its page exactly what touches one and why.
 </p>
 
 <h3>Documents</h3>
-<table class="tools">
-<thead>
-<tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
-</thead>
-<tbody>
-<tr>
-  <th scope="row"><a href="/sign.html">PDF</a></th>
-  <td>
-    Two tools in one page. <a href="/sign.html#edit">Edit</a>: fill in a form by
-    typing into its actual fields, sign it by hand or by name, drop in a
-    picture, and delete or replace text <em>properly</em>: click a word
-    and it leaves the file, no black box over the top.
-    <a href="/sign.html#pages">Pages</a>: combine several PDFs into one, split
-    one apart, drag pages into a new order, and turn sideways scans the right
-    way up. Pages are copied whole rather than redrawn, so text stays
-    selectable.
-  </td>
-  <td>Your browser</td>
-</tr>
-<tr>
-  <th scope="row"><a href="/convert.html">PDF &harr; Word</a></th>
-  <td>
-    Convert a PDF into an editable Word document, or a Word document into a PDF.
-    The only converter that tells you <em>how well it will go</em> before you
-    commit, and the only one that never sees your file. Scanned pages are
-    read with optical recognition, in the tab.
-  </td>
-  <td>Your browser</td>
-</tr>
-<tr>
-  <th scope="row"><a href="/sheet.html">Excel &harr; CSV</a></th>
-  <td>
-    Convert a spreadsheet to CSV or a CSV to Excel. Detects semicolons, honours
-    quoted fields, and will not turn <code>007</code> into 7.
-  </td>
-  <td>Your browser</td>
-</tr>
-<tr>
-  <th scope="row"><a href="/zip.html">Open a ZIP, or make one</a></th>
-  <td>
-    See what is inside an archive without unpacking it, pull out only the files
-    you want, or build a ZIP from your own. A <code>.docx</code> or
-    <code>.epub</code> opens here too: they are ZIPs with a different
-    name on the end.
-  </td>
-  <td>Your browser</td>
-</tr>
-<tr>
-  <th scope="row"><a href="/unlock.html">Unlock a PDF</a></th>
-  <td>
-    Remove the &ldquo;no printing, no copying&rdquo; restrictions from a PDF that
-    opens without a password. Not a password cracker: a file that needs a
-    password to open still needs it.
-  </td>
-  <td>Your browser</td>
-</tr>
-<tr>
-  <th scope="row"><a href="/shrink.html">Shrink a PDF</a></th>
-  <td>
-    Make a heavy PDF smaller, mostly by shrinking oversized scanned pages. Shows
-    you the before and after and lets you keep whichever is smaller.
-  </td>
-  <td>Your browser</td>
-</tr>
-</tbody>
-</table>
+<ul class="tool-list">
+<li><a href="/sign.html">pdf</a>: <a href="/sign.html#edit">sign it, fill its real form fields, delete text so it leaves the file</a>, or <a href="/sign.html#pages">merge, split, reorder and rotate its pages</a>.</li>
+<li><a href="/convert.html">convert</a>: PDF to Word and back, graded honestly before you commit; scans are read by OCR.</li>
+<li><a href="/sheet.html">sheets</a>: Excel to CSV and back, without turning <code>007</code> into 7.</li>
+<li><a href="/zip.html">zip</a>: see inside an archive without unpacking it, take only what you want, or make one.</li>
+<li><a href="/unlock.html">unlock</a>: strip &ldquo;no printing, no copying&rdquo; from a PDF that opens without a password.</li>
+<li><a href="/shrink.html">shrink</a>: make a heavy PDF smaller, and keep whichever of before and after is better.</li>
+</ul>
 
 <h3>Media</h3>
-<table class="tools">
-<thead>
-<tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
-</thead>
-<tbody>
-<tr>
-  <th scope="row"><a href="/image.html">Image tools</a></th>
-  <td>
-    Resize, compress and convert an image between PNG, JPEG and WebP,
-    including HEIC straight off an iPhone. The location and camera data are
-    stripped on the way out.
-  </td>
-  <td>Your browser</td>
-</tr>
-<tr>
-  <th scope="row"><a href="/video.html">Video &amp; GIF</a></th>
-  <td>
-    Cut a clip out of a video, change its format, squeeze it under a size limit,
-    turn it into an animated GIF, or pull the sound out, without uploading
-    a two gigabyte file to anyone. Where it can, it <em>copies</em> your video
-    rather than re-encoding it, so the result is bit for bit the original and
-    takes seconds. It tells you which of the two is about to happen.
-  </td>
-  <td>Your browser</td>
-</tr>
-</tbody>
-</table>
+<ul class="tool-list">
+<li><a href="/image.html">images</a>: resize, compress and convert, HEIC included; location and camera data stripped on the way out.</li>
+<li><a href="/video.html">video</a>: cut, convert, squeeze under a size limit, make a GIF, pull the audio; copies rather than re-encodes when it can.</li>
+</ul>
 
 <h3>Privacy</h3>
-<table class="tools">
-<thead>
-<tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
-</thead>
-<tbody>
-<tr>
-  <th scope="row"><a href="/inspect.html">What&rsquo;s hidden in this file?</a></th>
-  <td>
-    Before you send a document, see what it is quietly carrying: text under
-    black boxes that can still be copied, tracked changes, comments, author
-    names, the company, even the timezone it was written in.
-  </td>
-  <td>Your browser</td>
-</tr>
-<tr>
-  <th scope="row"><a href="/email.html">Email</a></th>
-  <td>
-    Two tools in one page. <a href="/email.html#check">Check a message</a>: is
-    it really from who it says? Read the SPF, DKIM and DMARC verdicts your
-    provider already recorded, and see every tracking pixel and wrapped link
-    watching you open it, named and never loaded.
-    <a href="/email.html#inbox">Throwaway inbox</a>: a disposable address that
-    reads its own mail, for the forms that do not deserve your real one.
-    Receive only, every message checked by the same reader and deleted an hour
-    after it lands.
-  </td>
-  <td>Checker: your browser. Inbox: a little server, briefly, and it says so</td>
-</tr>
-<tr>
-  <th scope="row"><a href="/lock.html">Encrypt</a></th>
-  <td>
-    Two tools in one page, both writing standard OpenPGP that <code>gpg</code>
-    can open. <a href="/lock.html#password">Password</a>: lock a file with a
-    passphrase before you send it, and unlock one somebody sent you.
-    <a href="/lock.html#pgp">PGP</a>: make a key pair, encrypt a message or a
-    file to someone&rsquo;s public key, decrypt what they send back, sign and
-    verify. Neither the file, the password, nor your private key leaves the tab.
-  </td>
-  <td>Your browser</td>
-</tr>
-<tr>
-  <th scope="row"><a href="https://delete.1999loc.com/">Delete posts</a></th>
-  <td>
-    Bulk-delete your own history on X, Threads and Facebook Pages through the
-    official APIs. Upload your archive, pick exactly what goes, dry run first.
-    It is the one tool that cannot run in your browser (deleting a post
-    means holding a token for your account and talking to X and Meta), so
-    it lives on <strong>its own domain</strong>, where those permissions are
-    fenced off and can never apply to anything on this one.
-  </td>
-  <td>Our server, for you</td>
-</tr>
-</tbody>
-</table>
+<ul class="tool-list">
+<li><a href="/inspect.html">inspect</a>: what a document quietly carries before you send it: hidden text, tracked changes, author, timezone.</li>
+<li><a href="/email.html">email</a>: <a href="/email.html#check">check who really sent a message and what tracks you in it</a>, or <a href="/email.html#inbox">a throwaway inbox that reads its own mail</a> <span class="srv">inbox: server, briefly</span>.</li>
+<li><a href="/lock.html">encrypt</a>: <a href="/lock.html#password">lock a file with a password</a>, or <a href="/lock.html#pgp">full PGP for messages and files: keys, encrypt, decrypt, sign, verify</a>.</li>
+<li><a href="https://delete.1999loc.com/">delete posts</a>: bulk-delete your history on X, Threads and Facebook Pages, dry run first <span class="srv">its own server &amp; domain</span>.</li>
+</ul>
 
 <h3>Money</h3>
-<table class="tools">
-<thead>
-<tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
-</thead>
-<tbody>
-<tr>
-  <th scope="row"><a href="/monero.html">Monero addresses</a></th>
-  <td>
-    Check a Monero address before you send to it, restore a seed phrase to see
-    which wallet it opens, or generate a paper wallet offline. The generator
-    verifies its own arithmetic against published test vectors in front of you
-    and refuses to run if any of it fails, and still tells you to confirm
-    the result in the official wallet before trusting it with anything.
-  </td>
-  <td>Your browser</td>
-</tr>
-<tr>
-  <th scope="row"><a href="/wallet.html">Monero wallet</a></th>
-  <td>
-    A real Monero wallet in a browser tab: create or restore one, watch the
-    balance, receive and send. The keys stay in the tab and nothing is stored,
-    so the seed phrase is the only copy. Node traffic is proxied through this
-    site so the node never sees you. It is the least safe way to hold Monero and
-    the page says so first; use it for small amounts, not savings.
-  </td>
-  <td>A node, proxied</td>
-</tr>
-</tbody>
-</table>
+<ul class="tool-list">
+<li><a href="/monero.html">monero</a>: check an address, restore a seed, or make a paper wallet offline, verified against test vectors in front of you.</li>
+<li><a href="/wallet.html">wallet</a>: a full Monero wallet in the tab; keys never leave it, and node traffic is proxied so the node never sees you <span class="srv">node, proxied</span>.</li>
+</ul>
 
 <h3>Code</h3>
-<table class="tools">
-<thead>
-<tr><th>Tool</th><th>What it does</th><th>Runs on</th></tr>
-</thead>
-<tbody>
-<tr>
-  <th scope="row"><a href="/code.html">Count code</a></th>
-  <td>
-    Lines of code in any public GitHub repository, split into code, comments and
-    blanks, per language. Comment-aware, so it does not just count newlines, and
-    it skips <code>node_modules</code> and lockfiles instead of pretending they
-    are yours.
-  </td>
-  <td>Our server, or your browser for big repos</td>
-</tr>
-<tr>
-  <th scope="row"><a href="/golf">Code golf</a></th>
-  <td>
-    One stated task, fewest lines wins. Build a URL shortener or a JSON parser,
-    count it here, and it joins that challenge&rsquo;s board. Every entry solves
-    the same problem, which is the only way a line count means anything.
-  </td>
-  <td>Our server</td>
-</tr>
-</tbody>
-</table>
+<ul class="tool-list">
+<li><a href="/code.html">count code</a>: comment-aware line counts for any public GitHub repository, pinned to a commit <span class="srv">server, or your browser for big repos</span>.</li>
+<li><a href="/golf">golf</a>: fewest lines wins, and every entry solves the same stated task <span class="srv">server</span>.</li>
+</ul>
 
 <h2>Why it looks like this</h2>
 

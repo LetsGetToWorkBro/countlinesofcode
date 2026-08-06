@@ -579,6 +579,21 @@ details[open] > summary {
 button.sheet-tab { font-size: 14px; padding: 1px 8px; }
 button.sheet-tab.is-active { border-style: inset; background: #ffffcc; }
 
+/* The landing page's tool directory: one line per tool, which reads at any
+   width. The old three-column tables were unreadable on a phone. */
+ul.tool-list { list-style: none; padding: 0 0 0 2px; margin: 4px 0 14px 0; }
+ul.tool-list li { margin: 0 0 8px 0; }
+ul.tool-list > li > a:first-child { font-weight: bold; }
+/* The honest exception marker: the few tools that touch a server carry one. */
+.srv {
+  font-size: 12px;
+  font-family: Arial, sans-serif;
+  border: 1px solid #999999;
+  background: #f0f0f0;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
 /* The row that splits a merged page into its tools (email checker / inbox,
    password / PGP, edit / pages). These are file-folder tabs, not buttons: they
    sit ON a rule and the open one is joined to the page below it, which is the
