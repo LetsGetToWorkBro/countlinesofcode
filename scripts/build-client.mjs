@@ -83,7 +83,72 @@ export const BUNDLES = [
     outfile: 'public/video.js',
     banner: '/* 1999.LOC video planner. Built from src/client/video.ts. Do not edit. */',
   },
+  {
+    entry: 'src/client/walletkit.ts',
+    outfile: 'public/walletkit.js',
+    banner: '/* 1999.LOC wallet helpers. Built from src/client/walletkit.ts. Do not edit. */',
+  },
 ];
+
+/**
+ * The Monero wallet library itself, on its own terms.
+ *
+ * monero-ts is a large CommonJS package that reaches for a handful of Node
+ * built-ins behind isNode checks the browser never takes. esbuild bundles it
+ * into one IIFE with those built-ins aliased to browser shims (scripts/shims),
+ * and then applyEvalPatches removes the `new Function(...)` environment probes
+ * so the file runs under `script-src 'self'` with no 'unsafe-eval'. The wallet
+ * cryptography runs in the vendored Web Worker; this is the main-thread API that
+ * drives it. Kept out of BUNDLES because it needs the aliases and the eval pass,
+ * and test/client-bundle.test.ts rebuilds it the same way to catch a stale copy.
+ */
+export const MONERO_LIB = {
+  entry: 'src/client/xmrlib.js',
+  outfile: 'public/xmrlib.js',
+  banner: '/* 1999.LOC Monero wallet library (monero-ts, MIT). Bundled with browser shims and eval probes removed. Do not edit. */',
+};
+
+const SHIM = (name) => join(root, 'scripts/shims', name);
+export const MONERO_ALIAS = {
+  assert: SHIM('assert.js'),
+  path: SHIM('path.js'),
+  fs: SHIM('empty.js'),
+  http: SHIM('empty.js'),
+  https: SHIM('empty.js'),
+  url: SHIM('empty.js'),
+  util: SHIM('empty.js'),
+  stream: SHIM('empty.js'),
+  zlib: SHIM('empty.js'),
+  crypto: SHIM('empty.js'),
+  os: SHIM('empty.js'),
+  net: SHIM('empty.js'),
+  tls: SHIM('empty.js'),
+  child_process: SHIM('empty.js'),
+  worker_threads: SHIM('empty.js'),
+  module: SHIM('empty.js'),
+  events: SHIM('empty.js'),
+  buffer: SHIM('empty.js'),
+  tty: SHIM('empty.js'),
+};
+
+export function moneroLibOptions() {
+  return {
+    ...COMMON,
+    entryPoints: [join(root, MONERO_LIB.entry)],
+    banner: { js: MONERO_LIB.banner },
+    alias: MONERO_ALIAS,
+    // The library detects its environment; keep it honest about being a browser.
+    define: { 'process.env.NODE_ENV': '"production"' },
+  };
+}
+
+/** Build the Monero library bundle and return its final (eval-patched) text.
+ *  esbuild already stamps the banner, so this only removes the eval probes. */
+export async function buildMoneroLib() {
+  const { applyEvalPatches } = await import('./eval-patches.mjs');
+  const result = await build({ ...moneroLibOptions(), write: false });
+  return applyEvalPatches(result.outputFiles?.[0]?.text ?? '');
+}
 
 /** Kept for callers that only care about the counter bundle's options. */
 export const BUILD_OPTIONS = {
@@ -105,9 +170,13 @@ export async function bundle(outfile, spec = BUNDLES[0]) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
+  const { writeFileSync } = await import('node:fs');
   for (const spec of BUNDLES) {
     const result = await bundle(join(root, spec.outfile), spec);
     const bytes = Object.values(result.metafile.outputs)[0]?.bytes ?? 0;
     console.log(`${spec.outfile.padEnd(20)} ${(bytes / 1024).toFixed(1)} KB`);
   }
+  const moneroLib = await buildMoneroLib();
+  writeFileSync(join(root, MONERO_LIB.outfile), moneroLib);
+  console.log(`${MONERO_LIB.outfile.padEnd(20)} ${(Buffer.byteLength(moneroLib) / 1024).toFixed(1)} KB`);
 }

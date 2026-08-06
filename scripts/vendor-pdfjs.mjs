@@ -17,7 +17,7 @@
  * test/vendor.test.ts compares them against node_modules so a stale copy fails
  * the suite rather than shipping quietly.
  */
-import { cpSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { cpSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { createRequire } from 'node:module';
@@ -137,6 +137,20 @@ export const VENDORED_LIBS = [
 ];
 
 /**
+ * monero-ts's wallet worker: the full Monero wallet, WebAssembly inlined, run
+ * as a Web Worker so the cryptography never blocks the page. Vendored WITH the
+ * eval patches from scripts/eval-patches.mjs applied, because the worker runs
+ * under the same CSP as everything else on this origin and the stock file
+ * probes its environment through `new Function(...)`. test/vendor.test.ts
+ * re-applies the patches to a pristine node_modules copy and compares, so the
+ * committed file can be neither stale nor hand-edited.
+ */
+export const VENDORED_PATCHED = [
+  { pkg: 'monero-ts', from: 'dist/monero.worker.js', to: 'public/vendor/monero-ts/monero.worker.js' },
+  { pkg: 'monero-ts', from: 'LICENSE.txt', to: 'public/vendor/monero-ts/LICENSE.txt' },
+];
+
+/**
  * Where a package lives on disk.
  *
  * `require.resolve('pkg/package.json')` is the obvious way and works for most
@@ -178,6 +192,10 @@ export function mediabunnyVersion() {
   return JSON.parse(readFileSync(join(packageRoot('mediabunny'), 'package.json'), 'utf8')).version;
 }
 
+export function moneroTsVersion() {
+  return JSON.parse(readFileSync(join(packageRoot('monero-ts'), 'package.json'), 'utf8')).version;
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   mkdirSync(join(root, 'public/vendor'), { recursive: true });
   for (const spec of VENDORED) {
@@ -197,7 +215,17 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const kb = statSync(libTarget(spec)).size / 1024;
     console.log(`${spec.to.padEnd(32)} ${kb.toFixed(0)} KB`);
   }
-  console.log(`pdf.js ${pdfjsVersion()} · libheif-js ${libheifVersion()} · mediabunny ${mediabunnyVersion()} · openpgp ${openpgpVersion()}`);
+  {
+    const { applyEvalPatches } = await import('./eval-patches.mjs');
+    for (const spec of VENDORED_PATCHED) {
+      mkdirSync(dirname(libTarget(spec)), { recursive: true });
+      const patched = applyEvalPatches(readFileSync(libSource(spec), 'utf8'));
+      writeFileSync(libTarget(spec), patched);
+      const kb = statSync(libTarget(spec)).size / 1024;
+      console.log(`${spec.to.padEnd(32)} ${kb.toFixed(0)} KB (eval patches applied)`);
+    }
+  }
+  console.log(`pdf.js ${pdfjsVersion()} · libheif-js ${libheifVersion()} · mediabunny ${mediabunnyVersion()} · openpgp ${openpgpVersion()} · monero-ts ${moneroTsVersion()}`);
   // Touched only to prove the files are readable after copying.
   readFileSync(vendoredPath(VENDORED[0]), 'utf8');
 }

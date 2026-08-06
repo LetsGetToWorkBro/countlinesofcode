@@ -21,6 +21,7 @@ import { GitHubClient, GitHubError } from '../lib/github';
 import { ParseError, parseRepoInput, isValidOwner, isValidRepo, isValidRef } from '../lib/parse-url';
 import { checkRateLimit, clientIp } from '../lib/ratelimit';
 import { CountOptionsSchema, CountRequestSchema, ShaSchema, type CountOptions, type CountResult } from '../lib/schema';
+import { resolveTarget as resolveXmrTarget } from '../lib/xmrproxy';
 import { COUNTER_VERSION } from '../lib/version';
 import { handleCallback, handleLogin, handleLogout, handleMe, handleMyRepos, loadSession, oauthConfigured, scopesFor } from './auth';
 import { limitsFromEnv, rateLimitPerMinute, type Env } from './env';
@@ -88,10 +89,16 @@ export const SECURITY_HEADERS: Record<string, string> = {
    * <video> element is refused with "Media load rejected by URL safety check",
    * which was measured here rather than guessed. blob: cannot reach the
    * network: it names data this page already holds, so the widening admits
-   * nothing that was not already in the tab. */
+   * nothing that was not already in the tab.
+   *
+   * worker-src is 'self' for the Monero wallet: monero-ts runs the wallet in a
+   * dedicated Web Worker (/vendor/monero-ts/monero.worker.js) so the scanning
+   * cryptography never freezes the page. worker-src otherwise falls back to
+   * default-src 'none', which refuses the worker outright and leaves the wallet
+   * dead on load; it names this origin only, so nothing off-origin can spawn. */
   'content-security-policy':
     "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: blob:; " +
-    "font-src 'self'; connect-src 'self'; media-src blob:; form-action 'self'; base-uri 'none'; " +
+    "font-src 'self'; connect-src 'self'; media-src blob:; worker-src 'self'; form-action 'self'; base-uri 'none'; " +
     "frame-ancestors 'none'",
 };
 
@@ -163,6 +170,8 @@ export default {
       if (path === '/api/auth/repos' && request.method === 'GET') return await handleMyRepos(request, env);
 
       if (path.startsWith('/r/') && request.method === 'GET') return await resultPage(request, env, ctx, path);
+
+      if (path.startsWith('/api/xmr/')) return await proxyXmr(request, path);
 
       if (path.startsWith('/api/')) {
         return jsonError({ status: 404, code: 'not_found', message: 'No such endpoint.' });
@@ -1133,6 +1142,85 @@ async function atEdge(
   const fresh = await build();
   if (fresh.ok) ctx.waitUntil(cache.put(request, fresh.clone()).catch(() => undefined));
   return fresh;
+}
+
+// ---------------------------------------------------------------------------
+// Monero node proxy
+// ---------------------------------------------------------------------------
+
+/** Response headers common to every proxied reply: the site policy, plus a hard
+ *  no-store so a wallet's sync data never lingers in a shared cache. */
+const XMR_PROXY_HEADERS: Record<string, string> = {
+  ...SECURITY_HEADERS,
+  'cache-control': 'no-store',
+  'x-robots-tag': 'noindex',
+};
+
+/**
+ * Forward a wallet's RPC call to the chosen Monero node.
+ *
+ * The wallet page can only reach this origin (connect-src 'self'), so it points
+ * monero-ts at `/api/xmr/<mode>/<node>` and the library appends the RPC method.
+ * resolveXmrTarget does all the deciding: it turns the path into a concrete node
+ * URL or refuses it, gating both the node (curated id or a validated custom
+ * https host, never a private address) and the method (a single daemon
+ * endpoint). This function is only plumbing: stream the body across, hand back
+ * the node's status and bytes, and let nothing be cached.
+ */
+async function proxyXmr(request: Request, path: string): Promise<Response> {
+  if (request.method !== 'POST' && request.method !== 'GET') {
+    return jsonError({ status: 405, code: 'method_not_allowed', message: 'Use GET or POST.' });
+  }
+
+  const segments = path.replace(/^\/api\/xmr\//, '').split('/').filter(Boolean).map(decodeURIComponent);
+  const target = resolveXmrTarget(segments);
+  if (!target.ok || !target.url) {
+    return new Response(JSON.stringify({ error: { code: 'bad_node', message: target.problem ?? 'Cannot forward that.' } }), {
+      status: target.status ?? 400,
+      headers: { 'content-type': 'application/json; charset=utf-8', ...XMR_PROXY_HEADERS },
+    });
+  }
+
+  // A generous but finite ceiling on a request body, so the proxy cannot be
+  // pushed into forwarding something enormous. A real signed transaction is a
+  // few kilobytes; wallet sync requests are smaller.
+  const body = request.method === 'POST' ? await request.arrayBuffer() : undefined;
+  if (body && body.byteLength > 1_000_000) {
+    return jsonError({ status: 413, code: 'too_large', message: 'That request body is too large to forward.' });
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const upstream = await fetch(target.url, {
+      method: request.method,
+      // Only the content type is forwarded. The visitor's cookies, referrer,
+      // user-agent and IP are deliberately NOT: that privacy is the point of
+      // proxying rather than letting the browser hit the node directly.
+      headers: { 'content-type': request.headers.get('content-type') ?? 'application/octet-stream' },
+      body,
+      signal: controller.signal,
+      redirect: 'error',
+    });
+
+    // Pass the node's own content type through (json_rpc is JSON, the sync
+    // endpoints are binary), but replace every other header with our own.
+    return new Response(upstream.body, {
+      status: upstream.status,
+      headers: {
+        'content-type': upstream.headers.get('content-type') ?? 'application/octet-stream',
+        ...XMR_PROXY_HEADERS,
+      },
+    });
+  } catch (err) {
+    const aborted = err instanceof Error && err.name === 'AbortError';
+    return new Response(
+      JSON.stringify({ error: { code: aborted ? 'node_timeout' : 'node_unreachable', message: aborted ? 'The node did not answer in time.' : 'Could not reach that node.' } }),
+      { status: 502, headers: { 'content-type': 'application/json; charset=utf-8', ...XMR_PROXY_HEADERS } },
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function jsonResponse(body: unknown, status = 200, extra: Record<string, string> = {}): Response {

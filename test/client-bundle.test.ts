@@ -11,7 +11,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { build } from 'esbuild';
-import { BUNDLES, optionsFor } from '../scripts/build-client.mjs';
+import { BUNDLES, MONERO_LIB, buildMoneroLib, optionsFor } from '../scripts/build-client.mjs';
 
 const spec = (outfile: string) => {
   const found = BUNDLES.find((b: { outfile: string }) => b.outfile === outfile);
@@ -72,5 +72,38 @@ describe('public/pdfsign.js', () => {
    */
   it('stays inside the size the page promises', () => {
     expect(readFileSync('public/pdfsign.js').length).toBeLessThan(600 * 1024);
+  });
+});
+
+describe('public/walletkit.js', () => {
+  it('matches a fresh build of src/client/walletkit.ts', async () => {
+    const fresh = await freshBuild('public/walletkit.js');
+    const committed = readFileSync('public/walletkit.js', 'utf8');
+    expect(fresh.length).toBeGreaterThan(1000);
+    expect(committed, 'public/walletkit.js is stale — run `npm run build:client`').toBe(fresh);
+  });
+
+  it('exposes its helpers and inlines its imports', () => {
+    const committed = readFileSync('public/walletkit.js', 'utf8');
+    expect(committed).toContain('LOC1999_WALLET');
+    expect(committed).not.toMatch(/\bfrom\s*["']\.\.?\//);
+  });
+});
+
+describe('public/xmrlib.js', () => {
+  it('matches a fresh, eval-patched build of the Monero library', async () => {
+    const fresh = await buildMoneroLib();
+    const committed = readFileSync(MONERO_LIB.outfile, 'utf8');
+    expect(fresh.length).toBeGreaterThan(100000);
+    expect(committed, 'public/xmrlib.js is stale — run `npm run build:client`').toBe(fresh);
+  });
+
+  it('needs no eval under script-src self', () => {
+    // The wallet page is the one that would hurt most if a string became code,
+    // so this is asserted on the shipped bytes rather than trusted.
+    const committed = readFileSync(MONERO_LIB.outfile, 'utf8');
+    expect(committed, 'no new Function("...") probe').not.toMatch(/new Function\("/);
+    expect(committed, 'no bare eval(').not.toMatch(/[^.\w]eval\(/);
+    expect(committed).toContain('LOC1999_XMRLIB');
   });
 });

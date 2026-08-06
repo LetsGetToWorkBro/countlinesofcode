@@ -364,7 +364,7 @@
      the same string as src/worker/index.ts and public/_headers, and a test
      holds all three to each other. */
   var POLICY = "default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; " +
-    "img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; media-src blob:; " +
+    "img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; media-src blob:; worker-src 'self'; " +
     "form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
 
   // ------------------------------------------------------------ the toggle

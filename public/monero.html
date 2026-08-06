@@ -64,9 +64,11 @@
 &middot;
 <a href="/pgp.html">pgp</a>
 &middot;
+<a href="https://delete.1999loc.com/">delete posts</a></span>
+<span class="nav-group"><span class="nav-label">money</span>
 <strong>monero</strong>
 &middot;
-<a href="https://delete.1999loc.com/">delete posts</a></span>
+<a href="/wallet.html">wallet</a></span>
 <span class="nav-group"><span class="nav-label">code</span>
 <a href="/code.html">count code</a>
 &middot;
@@ -294,7 +296,7 @@ happen. If any of it fails, the generator stays switched off.
   <li><strong>What the checks above actually prove.</strong> Keccak against published vectors, the ed25519 base point against its one published encoding, and base58 and the checksum against a real address that the official Monero wallet produced rather than this code. The last of those is a genuine cross-check against software that is not ours. The seed-phrase checksum is verified against Monero's own published test vector too, in the test suite.</li>
   <li><strong>What they cannot prove.</strong> There is no published secret-to-address vector to test the private-to-public step against, and inventing one would prove nothing. That gap is exactly why the instruction to restore in the official wallet before funding is not a formality. It is the only check that closes it.</li>
   <li><strong>A saved copy of this page is safer than this one.</strong> Not because we would change it, but because a saved copy cannot be changed after you have looked at it. Save it, read it, disconnect, and use the copy. The whole page and everything it loads is in <a href="https://github.com/letsgettoworkbro/countlinesofcode">the repository</a>, and what is served is built from it with nothing added.</li>
-  <li><strong>A paper wallet is a receiving address, not an account.</strong> Spending from it means importing the key into a real wallet, and at that moment it stops being cold. Sweep it in one go rather than repeatedly, and treat the paper as spent once you have.</li>
+  <li><strong>A paper wallet is a receiving address, not an account.</strong> Spending from it means importing the key into a real wallet, and at that moment it stops being cold. Sweep it in one go rather than repeatedly, and treat the paper as spent once you have. If you want to spend in the browser rather than install anything, the <a href="/wallet.html">wallet page</a> runs a real Monero wallet in the tab, with all the caveats that implies stated up front.</li>
   <li><strong>Checking the balance does not need this page.</strong> The <em>Watch a wallet</em> tab prints the exact command to load an address and its view key into the official wallet as watch-only. That gives you the balance and every incoming payment in software built for it, with nothing here talking to the network and the spend key never leaving your paper. It is the reason this page can stay read-only rather than growing into a wallet.</li>
   <li><strong>The restore height is an estimate, and it errs early on purpose.</strong> A new wallet that scans from the genesis block takes days, so the export sets a starting height worked out from the date. Starting too early only costs patience; starting too late means the wallet silently never sees payments that arrived before that block, and the balance reads zero with nothing to say why. So the number is deliberately about a week behind, and if you know the real date the wallet was made, use that.</li>
   <li><strong>The view key is on the paper too.</strong> It lets someone see what arrives without being able to spend it, which is useful for watching a balance from a machine you trust less. It is still worth keeping private: anyone with it can see everything that address receives.</li>

@@ -537,6 +537,22 @@ button.remove {
 button.sheet-tab { font-size: 14px; padding: 1px 8px; }
 button.sheet-tab.is-active { border-style: inset; background: #ffffcc; }
 
+/* A button that reads as a plain text link: for a secondary action (cancel,
+   close, send max) sitting next to a real button. */
+button.linkish {
+  border: none;
+  background: none;
+  padding: 0;
+  color: #0000ee;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: inherit;
+}
+button.linkish:hover { color: #551a8b; }
+
+/* The wallet balance, a touch larger so the number is the thing you see. */
+.xmr-balance { font-size: 20px; }
+
 /* The landing page's per-category tool tables. Fixed layout so all five line
    up with each other rather than each sizing itself to its own contents. */
 table.tools { table-layout: fixed; }

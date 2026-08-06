@@ -21,6 +21,8 @@ export const VENDORED_HASHES: Record<string, string> = {
     '793b36c913689784b2bfba60456fd87c14ed49e2d13f3b4d2611baaf05148f81',
   'public/vendor/mediabunny/mediabunny.min.mjs':
     '558a756ce3b08175145be6ffe5aaf3ec98ea2ae7302df8f8d958dbdca7744fb6',
+  'public/vendor/monero-ts/monero.worker.js':
+    '86374f96893de802b26d0a30f83732124658f09fb71935bcda24a1eceec4de7e',
   'public/vendor/openpgp/openpgp.min.mjs':
     '6bd32571c519dca96e7e2be6c7a578a12cd60d18f05a07af1a1475e1d34bbd03',
   'public/vendor/pdf.min.mjs':

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monero Web Wallet, in Your Browser | 1999.LOC</title>
+<meta name="description" content="A Monero wallet that runs entirely in your browser tab: create or restore a wallet, watch the balance, receive and send. Keys never leave the tab, and node traffic is proxied so the node never sees your address. Read the warnings first: a hot web wallet is the least safe way to hold Monero.">
+<link rel="canonical" href="https://1999loc.com/wallet.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Monero Web Wallet, in Your Browser | 1999.LOC">
+<meta property="og:description" content="Create, restore, receive and send Monero in a browser tab. Keys stay in the tab; node traffic is proxied. For small amounts you can afford to lose.">
+<meta property="og:url" content="https://1999loc.com/wallet.html">
+<meta property="og:site_name" content="1999.LOC">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<!--
+  EXPECTED LAYOUT (single column, ~680px, left aligned):
+
+    1999.LOC
+    ------------------------------------------------------------
+    ... | monero | wallet | delete posts
+    ------------------------------------------------------------
+    MONERO WALLET
+    [ big warning box ]
+    Node: ( node.sethforprivacy.com v )   custom [ ............ ]
+    ( Create new )  ( Restore )
+    ------------------------------------------------------------
+    balance 0.00 XMR (0.00 unlocked)      syncing 12%
+    receive: 4AdUn... [subaddresses]
+    send: [ address ] [ amount ]  ( Review )
+    history: ...
+    ------------------------------------------------------------
+-->
+<div id="page">
+
+<h1><a href="/">1999.LOC</a></h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<span class="nav-group"><span class="nav-label">documents</span>
+<a href="/sign.html">pdf</a>
+&middot;
+<a href="/pages.html">pages</a>
+&middot;
+<a href="/convert.html">convert</a>
+&middot;
+<a href="/sheet.html">sheets</a>
+&middot;
+<a href="/zip.html">zip</a></span>
+<span class="nav-group"><span class="nav-label">media</span>
+<a href="/image.html">images</a>
+&middot;
+<a href="/video.html">video</a></span>
+<span class="nav-group"><span class="nav-label">privacy</span>
+<a href="/inspect.html">inspect</a>
+&middot;
+<a href="/email.html">email</a>
+&middot;
+<a href="/lock.html">lock</a>
+&middot;
+<a href="/pgp.html">pgp</a>
+&middot;
+<a href="https://delete.1999loc.com/">delete posts</a></span>
+<span class="nav-group"><span class="nav-label">money</span>
+<a href="/monero.html">monero</a>
+&middot;
+<strong>wallet</strong></span>
+<span class="nav-group"><span class="nav-label">code</span>
+<a href="/code.html">count code</a>
+&middot;
+<a href="/golf">golf</a></span>
+</p>
+<hr>
+
+<h2>Monero wallet</h2>
+<p class="tagline">A real wallet, in this tab. Create it, watch it, spend from it.</p>
+
+<div class="notice-box">
+<p><strong>Read this before you put a single coin in it. A wallet that lives in a browser tab is the least safe way to hold Monero, and being honest about that is the point of this page.</strong></p>
+<p class="note">
+The keys are made and kept in this tab and nowhere else. That is the good part.
+The bad part is everything a browser tab is: it shares a process with every
+other page you have open, it cannot reliably wipe a secret out of memory, and it
+is delivered fresh from a server every time you load it, so a single altered
+script on a single day would harvest every key made that day. The
+<a href="/monero.html">paper wallet page</a> spells this out at length and it
+all applies here, more so, because this page also holds the spend key while it
+runs.
+</p>
+<p class="note">
+So the honest recommendation is the same one that page makes: for anything you
+would be upset to lose, use the
+<a href="https://www.getmonero.org/downloads/">official Monero wallet</a>,
+offline. Use this for a small, spendable amount you can afford to lose, the way
+you would carry cash in a pocket rather than keep your savings there. Write the
+seed phrase down when you create a wallet: it is the only copy, and closing this
+tab erases everything else.
+</p>
+<p class="note">
+<strong>Nothing is stored.</strong> The wallet lives in memory for as long as
+this tab is open and is gone the moment you close it or reload. That is
+deliberate: a wallet file sitting in browser storage is a wallet file waiting to
+be read. It also means the seed phrase is the only way back in, so if you have
+not written it down, you have not made a wallet, you have made a countdown.
+</p>
+</div>
+
+<h3>1. Choose a node</h3>
+<p class="note">
+A wallet has to talk to a Monero node to see the chain and to broadcast a
+payment. Your browser is not allowed to reach any other site from this page, so
+the traffic goes through this site's server to the node you pick. The node sees
+this site asking, never your address or your IP; it cannot spend anything and,
+because the scanning happens here in the tab, it cannot even see which payments
+are yours. Point it at your own node if you would rather not trust one of these.
+</p>
+<p>
+  <label for="node" class="inline">Node</label>
+  <select id="node"></select>
+</p>
+<p id="custom-node-row" class="hidden">
+  <label for="custom-node" class="inline">Your node</label>
+  <input type="text" id="custom-node" spellcheck="false" placeholder="https://your.node:18089" size="34">
+  <span id="node-note" class="note"></span>
+</p>
+
+<hr>
+
+<div id="setup">
+  <h3>2. Open a wallet</h3>
+  <p>
+    <button type="button" id="tab-create" class="sheet-tab is-active">Create new</button>
+    <button type="button" id="tab-restore" class="sheet-tab">Restore from a seed</button>
+    <button type="button" id="tab-keys" class="sheet-tab">Restore from keys</button>
+  </p>
+
+  <p id="setup-error" class="error" role="alert"></p>
+  <p id="setup-status" class="status" role="status" aria-live="polite"></p>
+
+  <!-- create -->
+  <div id="mode-create">
+    <p class="note">
+      Makes a brand new wallet with a fresh 25 word seed. The seed is shown once,
+      here, and never sent anywhere. Write it down before you fund it.
+    </p>
+    <p><button type="button" id="create">Create a new wallet</button></p>
+  </div>
+
+  <!-- restore from seed -->
+  <div id="mode-restore" class="hidden">
+    <p><label for="seed-in" class="inline">Seed phrase</label></p>
+    <p><textarea id="seed-in" rows="3" spellcheck="false" placeholder="25 words, in order"></textarea></p>
+    <p>
+      <label for="restore-date" class="inline">Roughly when was it made?</label>
+      <input type="date" id="restore-date">
+      <span class="note">Optional. It sets where scanning starts, so the wallet does not read the whole chain. If you leave it blank, scanning starts from the wallet's own guess, which is slower.</span>
+    </p>
+    <p><button type="button" id="restore">Restore this wallet</button></p>
+  </div>
+
+  <!-- restore from keys -->
+  <div id="mode-keys" class="hidden">
+    <p class="note">
+      For a wallet you hold as raw keys. Give the primary address and the private
+      spend key to open a full, spendable wallet; give only the view key to open
+      it watch-only, able to see the balance but not to spend.
+    </p>
+    <p><label for="keys-address" class="inline">Primary address</label></p>
+    <p><textarea id="keys-address" rows="2" spellcheck="false" placeholder="4..."></textarea></p>
+    <p><label for="keys-view" class="inline">Private view key</label></p>
+    <p><textarea id="keys-view" rows="2" spellcheck="false" placeholder="64 hex characters"></textarea></p>
+    <p><label for="keys-spend" class="inline">Private spend key</label> <span class="note">Leave blank for a watch-only wallet.</span></p>
+    <p><textarea id="keys-spend" rows="2" spellcheck="false" placeholder="64 hex characters, or blank"></textarea></p>
+    <p>
+      <label for="keys-date" class="inline">Roughly when was it made?</label>
+      <input type="date" id="keys-date">
+    </p>
+    <p><button type="button" id="restore-keys">Open this wallet</button></p>
+  </div>
+</div>
+
+<!-- the wallet itself -->
+<div id="wallet" class="hidden">
+  <hr>
+  <div id="watch-banner" class="notice-box hidden">
+    <p><strong>Watch-only.</strong> This wallet has no spend key, so it can show the balance and incoming payments but cannot send. Open it with the spend key to spend.</p>
+  </div>
+
+  <h3>Balance</h3>
+  <p>
+    <strong id="balance" class="xmr-balance">0</strong> XMR
+    <span class="note">(<span id="unlocked">0</span> unlocked)</span>
+  </p>
+  <p id="sync-line" class="status" role="status" aria-live="polite">Starting to sync...</p>
+  <p class="note" id="height-line"></p>
+
+  <hr>
+  <h3>Receive</h3>
+  <p class="note">Anyone can pay you at this address. A fresh subaddress for each payer keeps them from seeing each other's payments.</p>
+  <p><code id="primary-address" class="xmr"></code></p>
+  <p>
+    <button type="button" id="new-subaddress">New subaddress</button>
+    <span id="subaddress-note" class="note"></span>
+  </p>
+  <div id="subaddresses"></div>
+
+  <div id="send-section">
+    <hr>
+    <h3>Send</h3>
+    <p id="send-error" class="error" role="alert"></p>
+    <p><label for="send-address" class="inline">To</label></p>
+    <p><textarea id="send-address" rows="2" spellcheck="false" placeholder="4... or 8... address"></textarea></p>
+    <p>
+      <label for="send-amount" class="inline">Amount</label>
+      <input type="text" id="send-amount" spellcheck="false" placeholder="0.00" size="16"> XMR
+      <button type="button" id="send-max" class="linkish">send max</button>
+    </p>
+    <p><button type="button" id="review">Review payment</button></p>
+
+    <div id="confirm" class="notice-box hidden">
+      <p><strong>Confirm this payment.</strong> Once sent, it cannot be reversed.</p>
+      <p class="note" id="confirm-detail"></p>
+      <p>
+        <button type="button" id="send-now">Send it</button>
+        <button type="button" id="send-cancel" class="linkish">cancel</button>
+      </p>
+    </div>
+    <div id="send-result"></div>
+  </div>
+
+  <hr>
+  <h3>History</h3>
+  <p id="history-note" class="note">No transactions yet.</p>
+  <div id="history"></div>
+
+  <hr>
+  <h3>Wallet secrets</h3>
+  <p class="note">The seed phrase is the whole wallet. Anyone who reads it owns the coins. Reveal it only where nobody can see the screen, write it on paper, and do not save it to this machine.</p>
+  <p>
+    <button type="button" id="reveal-seed">Reveal seed phrase</button>
+    <button type="button" id="close-wallet" class="linkish">close wallet</button>
+  </p>
+  <div id="seed-out"></div>
+</div>
+
+<hr>
+
+<h3>Is this actually private?</h3>
+<div id="proof"></div>
+
+<h3>The honest notes</h3>
+<ul class="plain">
+  <li><strong>The keys never leave the tab.</strong> Creating, restoring, scanning and signing all happen in this page, in a background worker. What crosses the network is what any wallet sends a node: requests for blocks, and a finished transaction to broadcast. The security policy served with this page forbids it opening a connection to anywhere but this site, which your browser enforces, and the panel above lets you watch it do so.</li>
+  <li><strong>The node talks to our server, not to you.</strong> Your browser cannot reach a node directly under that policy, so the request goes to this site and this site forwards it. The upside is real: the node never learns your IP address, and it never learns which of the transactions it hands over are the ones you care about, because that matching happens in your tab. The downside is that this site's server sees that some visitor is talking to that node. It does not see your address, your keys or your balance, none of which are ever sent to it. If even that is too much, run your own node and point the wallet at it.</li>
+  <li><strong>Nothing is stored, on purpose.</strong> There is no wallet file, in this site's storage or anywhere else. The wallet is held in memory while the tab is open and discarded when it closes or reloads. That removes a whole category of risk (a wallet file left behind on a shared computer) and puts the entire weight on the seed phrase, which is why the page will not stop reminding you to write it down.</li>
+  <li><strong>The cryptography is not ours, and this time we mean all of it.</strong> The wallet is <a href="https://github.com/woodser/monero-ts">monero-ts</a>, which wraps Monero's own C++ wallet compiled to WebAssembly. Writing a Monero wallet from scratch would be exactly the irresponsible thing the paper-wallet page warns against, so this does not: it runs the same code the official wallet does, in your browser. It is served from this domain, unmodified except for removing an environment check that the security policy forbids, and the exact bytes are pinned by a test in the repository.</li>
+  <li><strong>A saved copy is safer than this one.</strong> As with the paper wallet, a copy of this page saved to disk cannot be changed after you have looked at it, which closes the supply-chain risk that a fresh load each time cannot. Everything the page needs is served from this domain and built from <a href="https://github.com/letsgettoworkbro/countlinesofcode">the repository</a>.</li>
+  <li><strong>Sending is deliberate, not instant.</strong> A payment is built first, its fee shown, and nothing leaves until you confirm the exact amount and destination on a second screen. Check the address on that screen: malware that swaps an address on the clipboard swaps in one that looks just as valid.</li>
+  <li><strong>Restoring is slow the first time.</strong> A wallet has to scan the chain from its restore height to catch up, and on a phone that can take a while. Setting the date it was made, when you know it, is what keeps that from being the whole chain.</li>
+</ul>
+
+<hr>
+
+<p class="footer">
+Hosted on Cloudflare &middot; Made with spite for bloat<br>
+<a href="/monero.html">paper wallet</a> |
+<a href="/pgp.html">pgp</a> |
+<a href="/lock.html">lock a file</a> |
+<a href="https://www.getmonero.org/">getmonero.org</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+<p class="footer support">
+Nothing here is for sale, nothing is tracked, and there is no account to make.
+If something saved you an hour:<br>
+<code class="xmr">83TQcTwusSQ4WKbPQE5osrF3cR4GWe2zmcNWeozK6BSqHSaeLvjUVe476ouVwLKn1uVwEFcbJQvnme7W6dTV5SB93x45DEy</code><br>
+Monero, because a donation address should not also be a tracking pixel. You can
+<a href="/monero.html">check that address here</a> before sending anything.
+</p>
+
+</div>
+<script src="/wallet-page.js"></script>
+<script src="/proof-panel.js"></script>
+</body>
+</html>

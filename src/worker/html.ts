@@ -80,7 +80,7 @@ ${body}
  * no template engine, deliberately, and `test/integration.test.ts` checks the
  * two stay in step.
  */
-export type ToolGroup = 'documents' | 'media' | 'privacy' | 'code';
+export type ToolGroup = 'documents' | 'media' | 'privacy' | 'money' | 'code';
 
 /**
  * The order the groups appear in, and what each is called.
@@ -93,6 +93,7 @@ export const TOOL_GROUPS: { id: ToolGroup; label: string }[] = [
   { id: 'documents', label: 'documents' },
   { id: 'media', label: 'media' },
   { id: 'privacy', label: 'privacy' },
+  { id: 'money', label: 'money' },
   { id: 'code', label: 'code' },
 ];
 
@@ -115,8 +116,10 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
   { href: '/email.html', label: 'email', id: 'email', group: 'privacy' },
   { href: '/lock.html', label: 'lock', id: 'lock', group: 'privacy' },
   { href: '/pgp.html', label: 'pgp', id: 'pgp', group: 'privacy' },
-  { href: '/monero.html', label: 'monero', id: 'monero', group: 'privacy' },
   { href: 'https://delete.1999loc.com/', label: 'delete posts', id: 'delete', group: 'privacy' },
+
+  { href: '/monero.html', label: 'monero', id: 'monero', group: 'money' },
+  { href: '/wallet.html', label: 'wallet', id: 'wallet', group: 'money' },
 
   { href: '/code.html', label: 'count code', id: 'count', group: 'code' },
   { href: '/golf', label: 'golf', id: 'golf', group: 'code' },

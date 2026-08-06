@@ -13,16 +13,19 @@ import {
   VENDORED,
   VENDORED_DIRS,
   VENDORED_LIBS,
+  VENDORED_PATCHED,
   dirTarget,
   libSource,
   libTarget,
   libheifVersion,
   mediabunnyVersion,
+  moneroTsVersion,
   openpgpVersion,
   pdfjsVersion,
   sourcePath,
   vendoredPath,
 } from '../scripts/vendor-pdfjs.mjs';
+import { applyEvalPatches } from '../scripts/eval-patches.mjs';
 
 describe('public/vendor', () => {
   it('matches the installed pdfjs-dist', () => {
@@ -114,5 +117,31 @@ describe('public/vendor', () => {
     // thing to get wrong under the CSP.
     const heif = VENDORED_LIBS.find((l) => l.pkg === 'libheif-js');
     expect(heif?.from).toContain('bundle');
+  });
+
+  it('ships the Monero worker patched from the installed package, not hand-edited', () => {
+    // The committed worker must be exactly the pristine node_modules file with
+    // the documented eval patches applied, so it can be neither stale nor
+    // quietly altered. This re-derives it and compares byte for byte.
+    for (const spec of VENDORED_PATCHED.filter((s) => s.to.endsWith('.js'))) {
+      const derived = applyEvalPatches(readFileSync(libSource(spec), 'utf8'));
+      const committed = readFileSync(libTarget(spec), 'utf8');
+      expect(
+        committed === derived,
+        `${spec.to} is stale — run \`npm run vendor:pdfjs\` and commit the result`,
+      ).toBe(true);
+    }
+  });
+
+  it('ships a Monero worker that needs no eval under script-src self', () => {
+    const worker = VENDORED_PATCHED.find((s) => s.to.endsWith('monero.worker.js'))!;
+    const source = readFileSync(libTarget(worker), 'utf8');
+    // No environment probe that builds code from a string survives; the WASM the
+    // wallet actually runs is covered by 'wasm-unsafe-eval', not this.
+    expect(source, 'no bare eval(').not.toMatch(/[^.\w]eval\(/);
+    expect(source, 'no new Function("...") probe').not.toMatch(/new Function\("/);
+    // And no dangling sourcemap comment pointing at a file that is not shipped.
+    expect(source).not.toContain('sourceMappingURL');
+    expect(moneroTsVersion()).toMatch(/^\d+\.\d+/);
   });
 });
