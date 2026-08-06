@@ -627,23 +627,43 @@ fieldset.tool-group table.tool-dir { margin: 0; }
 .app-body > .tagline:first-child { margin-top: 2px; }
 .app-body p.tool-tabs { margin-top: 6px; }
 
-/* The desktop: the three tools the site leads with, as shortcuts on the
-   classic teal. Inline SVG icons, so nothing is fetched and nothing can be. */
+/* The desktop: every app as a shortcut on the classic teal, grouped the way
+   the nav groups them, with a taskbar along the bottom. Inline SVG icons, so
+   nothing is fetched and nothing can be. */
 .desktop {
   background: #008080;
   border: 2px inset #c0c0c0;
-  display: flex;
-  gap: 10px;
-  padding: 14px 12px 10px 12px;
   margin: 12px 0 16px 0;
+}
+.desk-groups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px 14px;
+  padding: 12px 12px 10px 12px;
+}
+.desk-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.desk-group-label {
+  flex-basis: 100%;
+  color: #b8dcdc;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-shadow: 1px 1px 0 #004040;
+  margin: 4px 0 2px 4px;
 }
 .desk-icon {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 5px;
-  width: 84px;
-  padding: 6px 2px;
+  width: 80px;
+  padding: 6px 2px 8px 2px;
   text-decoration: none;
 }
 .desk-icon svg { width: 34px; height: 34px; }
@@ -652,9 +672,38 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   font-family: Arial, Helvetica, sans-serif;
   font-size: 13px;
   padding: 0 3px;
+  text-align: center;
   text-shadow: 1px 1px 0 #000000;
 }
 .desk-icon:hover span, .desk-icon:focus span { background: #000080; outline: 1px dotted #ffffff; }
+
+/* The taskbar. Start scrolls to the read-me window below the desktop, which
+   is where the information lives. */
+.taskbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #c0c0c0;
+  border-top: 2px outset #e0e0e0;
+  padding: 3px 6px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+}
+.taskbar .start {
+  border: 2px outset #e0e0e0;
+  background: #c0c0c0;
+  padding: 1px 10px;
+  font-weight: bold;
+  color: #000000;
+  text-decoration: none;
+}
+.taskbar .start:active { border-style: inset; }
+.task-note { color: #333333; flex: 1; }
+.task-clock {
+  border: 2px inset #e0e0e0;
+  padding: 1px 8px;
+  color: #333333;
+}
 
 /* One window per page: the title bar belongs to the app window alone. */
 .client-title {
