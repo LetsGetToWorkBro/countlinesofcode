@@ -53,14 +53,12 @@ export interface XmrNode {
 // most public nodes; a visitor who trusts none of these can point the wallet at
 // their own. Re-test with scripts before adding one: a dead node in this list
 // is a wallet that will not sync.
+// Order matters: the first entry is the picker's default. Measured 2026-08-06
+// against production, seth's json_rpc endpoint (the one a wallet must have to
+// connect) timed out 522 on most attempts while its light endpoints answered —
+// which as the default made the wallet look broken. Cake and stack answered
+// json_rpc reliably, so cake leads and seth sits last as a fallback.
 export const XMR_NODES: XmrNode[] = [
-  {
-    id: 'seth',
-    label: 'node.sethforprivacy.com',
-    origin: 'https://node.sethforprivacy.com',
-    network: 'mainnet',
-    note: 'Run by Seth Simmons. No logs, valid TLS, widely used.',
-  },
   {
     id: 'cake',
     label: 'xmr-node.cakewallet.com',
@@ -74,6 +72,13 @@ export const XMR_NODES: XmrNode[] = [
     origin: 'https://monero.stackwallet.com:18081',
     network: 'mainnet',
     note: 'Run by the Stack Wallet team.',
+  },
+  {
+    id: 'seth',
+    label: 'node.sethforprivacy.com',
+    origin: 'https://node.sethforprivacy.com',
+    network: 'mainnet',
+    note: 'Run by Seth Simmons. No logs, widely used; can be slow under load.',
   },
 ];
 

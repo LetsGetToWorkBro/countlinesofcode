@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Encrypt a File: a Password or PGP Keys, in Your Browser | 1999.LOC</title>
-<meta name="description" content="Two ways to encrypt, in one page. Lock a file with a password and unlock one someone sent you, or use PGP: make a key pair, encrypt to someone's public key, decrypt, sign and verify. Runs entirely in your browser and writes the OpenPGP standard, so GPG can open it.">
+<title>Encrypt a File or a Message: a Password or PGP Keys, in Your Browser | 1999.LOC</title>
+<meta name="description" content="Two ways to encrypt, in one page. Lock a file with a password and unlock one someone sent you, or use PGP: make a key pair, encrypt a message or a file to someone's public key, decrypt, sign and verify. Runs entirely in your browser and writes the OpenPGP standard, so GPG can open it.">
 <link rel="canonical" href="https://1999loc.com/lock.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Encrypt a File: a Password or PGP Keys | 1999.LOC">
-<meta property="og:description" content="Password-encrypt a file, or use real PGP keys, without uploading anything. Writes the OpenPGP standard, so the person you send it to is not tied to this page.">
+<meta property="og:title" content="Encrypt a File or a Message: a Password or PGP Keys | 1999.LOC">
+<meta property="og:description" content="Password-encrypt a file, or encrypt messages and files with real PGP keys, without uploading anything. Writes the OpenPGP standard, so the person you send it to is not tied to this page.">
 <meta property="og:url" content="https://1999loc.com/lock.html">
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
@@ -25,9 +25,9 @@
     ... | inspect | email | encrypt | delete posts
     ------------------------------------------------------------
     ENCRYPT
-    ( Password )  ( Key pair (PGP) )
+    ( Password )  ( PGP: messages & keys )
     ------------------------------------------------------------
-    -- Password --                       -- Key pair --
+    -- Password --                       -- PGP --
     [ Drop a file here... ]              ( Keys )( Encrypt )...
     Password [________] [ suggest ]      Ada Lovelace <ada@...>
     [ Lock it ]  Download report.pdf.gpg [ Make a new key ]
@@ -72,12 +72,12 @@
 <hr>
 
 <h2>Encrypt</h2>
-<p class="tagline">A password for the simple case, or PGP keys for the real one. Both run in this tab; nothing is uploaded.</p>
+<p class="tagline">Files with a password, or messages and files with PGP keys. Both run in this tab; nothing is uploaded.</p>
 
 <div data-tabs>
 <p role="tablist" aria-label="Encryption tools">
 <button type="button" class="sheet-tab is-active" data-tab="password" role="tab" aria-selected="true">Password</button>
-<button type="button" class="sheet-tab" data-tab="pgp" role="tab" aria-selected="false">Key pair (PGP)</button>
+<button type="button" class="sheet-tab" data-tab="pgp" role="tab" aria-selected="false">PGP: messages &amp; keys</button>
 </p>
 
 <!-- ============================== PASSWORD ============================== -->
@@ -203,7 +203,7 @@ Nothing here is a lock only we hold the key to.
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. Neither the file nor the password leaves the tab, and there is nowhere for them to go.</li>
   <li><strong>The output is OpenPGP, symmetric mode.</strong> The same thing <code>gpg --symmetric</code> produces: your password is stretched into a key, a random session key encrypts the data, and the result is a file any OpenPGP implementation can read. AES-256, and a file that has been tampered with fails to open rather than decrypting into something subtly wrong.</li>
-  <li><strong>It is the older format, and that is the choice.</strong> This tab used to say &ldquo;an authenticated mode&rdquo;, which was not accurate and has been corrected. What it writes is AES-256 in CFB with a modification-detection code appended, and your password stretched through 16,777,216 rounds of SHA-256. Tampering is caught either way, but the check happens after decrypting rather than as part of it. OpenPGP has had genuine authenticated encryption since RFC 9580 in 2024, along with Argon2 in place of that SHA-256 loop, and both are better. Neither is written here, because a great deal of installed software cannot read them yet and a file the recipient cannot open is not a stronger file. The <a href="#pgp">Key pair tab</a> offers the newer format as a deliberate choice, where you know who is opening it.</li>
+  <li><strong>It is the older format, and that is the choice.</strong> This tab used to say &ldquo;an authenticated mode&rdquo;, which was not accurate and has been corrected. What it writes is AES-256 in CFB with a modification-detection code appended, and your password stretched through 16,777,216 rounds of SHA-256. Tampering is caught either way, but the check happens after decrypting rather than as part of it. OpenPGP has had genuine authenticated encryption since RFC 9580 in 2024, along with Argon2 in place of that SHA-256 loop, and both are better. Neither is written here, because a great deal of installed software cannot read them yet and a file the recipient cannot open is not a stronger file. The <a href="#pgp">PGP tab</a> offers the newer format as a deliberate choice, where you know who is opening it.</li>
   <li><strong>The password is the whole of the security.</strong> There is no key file, no second factor and no server-side rate limit, so an attacker with the file can guess at it as fast as their hardware allows. That is why the meter above is pessimistic and why a suggested passphrase is worth taking. Eight words from the list is 64 bits, which nobody is guessing. The list is published on this page, so those are its real bits, not the flattering number you get by counting the letters.</li>
   <li><strong>There is no recovery.</strong> Nothing here stores the password, so nothing here can help you if it is forgotten. This is not a policy that could be relaxed; it is what the encryption <em>is</em>.</li>
   <li><strong>The filename is kept inside the file, not on it.</strong> Locking <code>report.pdf</code> gives <code>report.pdf.gpg</code>, and unlocking gives <code>report.pdf</code> back even if somebody renamed the locked file on the way. The name is <em>inside</em> the encryption, so a person who intercepts it does not learn what you sent.</li>
