@@ -104,8 +104,7 @@ so `/email.html#inbox` opens the right tab; the retired URLs 301 to it).
 
 | Tool | URL | What it does | Runs on |
 |---|---|---|---|
-| **Monero** | `/monero.html` | Check an address, or generate a paper wallet offline; every derivation step verified against published test vectors. | your browser |
-| **Wallet** | `/wallet.html` | A full Monero hot wallet in the tab — create, restore, receive, send. Keys never leave the browser; node traffic is proxied through `/api/xmr` so the node never sees your address or IP. | browser + **node proxy** |
+| **Monero** | `/wallet.html` | *Wallet* tab: a full hot wallet in the tab — create, restore, receive, send; keys never leave the browser, node traffic proxied through `/api/xmr`. *Check an address* tab: validate an address, restore a seed, or generate a paper wallet offline, verified against published test vectors. | wallet: browser + **node proxy** · checker: browser |
 
 ### Code
 

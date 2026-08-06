@@ -145,9 +145,9 @@
       watchOnlyHtml(wallet.address, wallet.viewSecret,
         'Watching this wallet later, without exposing it');
 
-    $('wallet').classList.remove('hidden');
+    $('mx-wallet').classList.remove('hidden');
     $('generate-note').textContent = 'Made. Nothing about it is stored anywhere.';
-    $('wallet').scrollIntoView({ block: 'start' });
+    $('mx-wallet').scrollIntoView({ block: 'start' });
   }
 
 
@@ -221,7 +221,7 @@
 
   // -------------------------------------------------------------- wiring
 
-  var TABS = ['check', 'make', 'restore', 'watch'];
+  var TABS = ['check', 'make', 'seed', 'watch'];
   TABS.forEach(function (name) {
     $('tab-' + name).addEventListener('click', function () {
       clearError();
@@ -246,20 +246,34 @@
     }).catch(function (err) { fail(err.message); });
   });
   $('generate').addEventListener('click', generate);
-  $('restore').addEventListener('click', restore);
+  $('mx-restore').addEventListener('click', restore);
   $('watch').addEventListener('click', watch);
   $('print').addEventListener('click', function () { window.print(); });
   $('verify-jump').addEventListener('click', function () {
-    $('tab-restore').click();
+    $('tab-seed').click();
     $('restore-text').focus();
   });
 
-  // The checks run on load, not on first use: somebody should be able to see
-  // whether this page works before deciding to trust it with anything.
-  ready().then(runChecks).catch(function (err) {
-    fail(err.message);
-    $('proof-checks').innerHTML = '<p class="error">The engine did not load, so nothing has been verified.</p>';
-  });
+  // The checks run when the tool is opened, not on first use: somebody should
+  // be able to see whether this page works before deciding to trust it with
+  // anything. On the merged wallet page this tool is the second tab, so the
+  // engine and its self-checks wait until that tab is shown.
+  function boot() {
+    ready().then(runChecks).catch(function (err) {
+      fail(err.message);
+      $('proof-checks').innerHTML = '<p class="error">The engine did not load, so nothing has been verified.</p>';
+    });
+  }
+  var tabsRoot = document.querySelector('[data-tabs]');
+  if (tabsRoot) {
+    var booted = false;
+    var start = function () { if (!booted) { booted = true; boot(); } };
+    tabsRoot.addEventListener('tab:shown', function (e) { if (e.detail && e.detail.tab === 'addresses') start(); });
+    var panel = tabsRoot.querySelector('[data-panel="addresses"]');
+    if (panel && !panel.classList.contains('hidden')) start();
+  } else {
+    boot();
+  }
 
   document.addEventListener('click', function (event) {
     var button = event.target.closest ? event.target.closest('.watch-json') : null;

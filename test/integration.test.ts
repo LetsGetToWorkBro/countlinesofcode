@@ -667,6 +667,12 @@ describe('www handling', () => {
     expect(response.headers.get('location')).toBe('https://loc.example/sign.html#pages');
   });
 
+  it('301s the retired /monero.html to the wallet page addresses tab', async () => {
+    const response = await get('https://loc.example/monero.html');
+    expect(response.status).toBe(301);
+    expect(response.headers.get('location')).toBe('https://loc.example/wallet.html#addresses');
+  });
+
   it('leaves other hosts alone, so workers.dev and previews keep working', async () => {
     for (const host of ['loc1999.someone.workers.dev', '1a2b3c-loc1999.someone.workers.dev', 'localhost:8787']) {
       const response = await get(`https://${host}/api/meta`);

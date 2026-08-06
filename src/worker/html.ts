@@ -124,7 +124,8 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
   { href: '/lock.html', label: 'pgp', id: 'lock', group: 'privacy' },
   { href: 'https://delete.1999loc.com/', label: 'delete posts', id: 'delete', group: 'privacy' },
 
-  { href: '/monero.html', label: 'monero', id: 'monero', group: 'money' },
+  // One page for money: the wallet leads, the address checker / paper wallet
+  // is its second tab. /monero.html redirects to /wallet.html#addresses.
   { href: '/wallet.html', label: 'wallet', id: 'wallet', group: 'money' },
 
   { href: '/code.html', label: 'count code', id: 'count', group: 'code' },

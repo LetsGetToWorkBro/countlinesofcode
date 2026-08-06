@@ -191,7 +191,16 @@ export const SOURCES: Record<string, string[]> = {
   '/zip.html': ['public/zip-page.js', 'src/client/zipkit.ts', 'src/client/zip.ts'],
   // 'encrypt' page: password locking and PGP keys, on tabs, over one engine.
   '/lock.html': ['public/lock-page.js', 'public/pgp-page.js', 'public/tabs.js', 'src/client/pgpkit.ts'],
-  '/monero.html': ['public/monero-page.js', 'src/client/monero.ts', 'src/client/monero-words.ts'],
+  // The money page: the wallet and the address checker, on tabs.
+  '/wallet.html': [
+    'public/wallet-page.js',
+    'src/client/walletkit.ts',
+    'public/monero-page.js',
+    'src/client/monero.ts',
+    'src/client/monero-words.ts',
+    'public/tabs.js',
+    'src/lib/xmrproxy.ts',
+  ],
   // Two tools on one page: the message checker, and the throwaway inbox (its
   // server half stores incoming mail for an hour).
   '/email.html': [
@@ -234,7 +243,8 @@ export const SERVER_PAGES: Record<string, string> = {
   '/code.html': 'Counting a repository means fetching it. Public repositories go through our server; connecting your GitHub account sends the request from your browser instead.',
   '/golf': 'Submitting a score records it on our server, which is what a leaderboard is.',
   '/board': 'The standings are held on our server.',
-  '/email.html': 'The throwaway-inbox tab asks this site’s server for mail sent to your address, and the server stores it for an hour. The message-checker tab makes no network request at all; it reads what you paste, in the tab.',
+  '/email.html': 'The disposable-inbox tab asks this site’s server for mail sent to your address, and the server stores it for an hour. The message-checker tab makes no network request at all; it reads what you paste, in the tab.',
+  '/wallet.html': 'The wallet tab talks to a Monero node through this site’s server, which is what syncing a wallet is; the node never sees your address or IP. The address-checker tab makes no network request at all.',
 };
 
 export function networkNote(path: string): string | null {
