@@ -579,11 +579,12 @@ details[open] > summary {
 button.sheet-tab { font-size: 14px; padding: 1px 8px; }
 button.sheet-tab.is-active { border-style: inset; background: #ffffcc; }
 
-/* The landing page's tool directory: one line per tool, which reads at any
-   width. The old three-column tables were unreadable on a phone. */
-ul.tool-list { list-style: none; padding: 0 0 0 2px; margin: 4px 0 14px 0; }
-ul.tool-list li { margin: 0 0 8px 0; }
-ul.tool-list > li > a:first-child { font-weight: bold; }
+/* The landing page's tool directory: a menu, not prose. Bold name in its own
+   column, a few plain words beside it, one link per row. Overrides the site's
+   bordered-table default because a menu with a grid around it is a form. */
+table.tool-dir { border: none; width: 100%; margin: 2px 0 12px 0; }
+table.tool-dir td { border: none; padding: 2px 0; }
+table.tool-dir td:first-child { font-weight: bold; white-space: nowrap; padding-right: 14px; width: 1%; }
 /* The honest exception marker: the few tools that touch a server carry one. */
 .srv {
   font-size: 12px;
