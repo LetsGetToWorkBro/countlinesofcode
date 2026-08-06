@@ -85,15 +85,15 @@ endpoint to send a picture to, and you can check the network tab. Turn off your
 wifi once the page has loaded and everything below still works.
 </p>
 
-<div class="notice-box">
-<p><strong>Location and camera data are removed.</strong></p>
+<details class="notice-box">
+<summary><strong>Location and camera data are removed.</strong></summary>
 <p class="note">
 A photo carries EXIF metadata: often the GPS coordinates it was taken at,
 the camera, the date and time. Re-encoding the picture here drops all of it, so
 what you download is just the image. That is a side effect of how this works,
 not a setting you can forget to switch on.
 </p>
-</div>
+</details>
 
 <hr>
 
@@ -156,7 +156,8 @@ not a setting you can forget to switch on.
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
 
-<h3>The honest notes</h3>
+<details class="notes">
+<summary>The honest notes</summary>
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The picture is decoded, resized and re-encoded in your browser.</li>
   <li><strong>Metadata is always dropped.</strong> Re-encoding cannot keep EXIF, so the location and camera data go. If you needed to <em>keep</em> it, this is the wrong tool, but for sharing a photo, losing it is the point.</li>
@@ -164,6 +165,7 @@ not a setting you can forget to switch on.
   <li><strong>Very large photos use memory.</strong> A 100-megapixel image is held uncompressed while it is worked on, so a phone may struggle where a laptop will not.</li>
   <li><strong>This does not upscale.</strong> Asking for a longest side larger than the original just re-encodes at the original size; enlarging a picture cannot invent detail that was never there.</li>
 </ul>
+</details>
 
 <hr>
 

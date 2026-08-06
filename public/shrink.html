@@ -77,8 +77,8 @@
 <h2>Shrink a PDF</h2>
 <p class="tagline">Make a heavy PDF small enough to email. Your file never leaves this tab.</p>
 
-<div class="notice-box">
-<p><strong>This works by re-rendering the pages, so know what it is good at.</strong></p>
+<details class="notice-box">
+<summary><strong>This works by re-rendering the pages, so know what it is good at.</strong></summary>
 <p class="note">
 The usual reason a PDF is enormous is that it is a scan: big photographs
 of pages at a far higher resolution than anyone needs. This re-renders each page
@@ -92,7 +92,7 @@ or may even make it larger, because there is nothing oversized to shrink. So it
 shows you the before and after and lets you keep the original if it won. It never
 overwrites anything; you download a new file.
 </p>
-</div>
+</details>
 
 <hr>
 
@@ -133,7 +133,8 @@ overwrites anything; you download a new file.
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
 
-<h3>The honest notes</h3>
+<details class="notes">
+<summary>The honest notes</summary>
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The PDF is rendered and rewritten in your browser.</li>
   <li><strong>It re-renders; it does not optimise in place.</strong> Every page becomes a re-compressed image with an invisible text layer over it. That is what shrinks a scan dramatically, and what makes it the wrong tool for a document that was already efficient vector text, where it will show no gain and you keep the original.</li>
@@ -141,6 +142,7 @@ overwrites anything; you download a new file.
   <li><strong>Fonts and vector art become pixels.</strong> A shrunk page is an image, so zooming in far enough shows softness a vector PDF would not. At Light strength on a normal document that is hard to notice; at Strong on a dense page it is visible.</li>
   <li><strong>Big documents use memory and time.</strong> Each page is rendered at full size before being compressed, so a 300-page scan is real work for a phone. It runs a page at a time so the tab does not freeze.</li>
 </ul>
+</details>
 
 <hr>
 

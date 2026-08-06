@@ -76,8 +76,8 @@
 <h2>Unlock a PDF</h2>
 <p class="tagline">Remove the &ldquo;you may not print or copy this&rdquo; lock. Your file never leaves this tab.</p>
 
-<div class="notice-box">
-<p><strong>Read this first, because the word &ldquo;unlock&rdquo; is used for two different things.</strong></p>
+<details class="notice-box">
+<summary><strong>Read this first, because the word &ldquo;unlock&rdquo; is used for two different things.</strong></summary>
 <p class="note">
 Some PDFs open fine but refuse to let you print, copy the text, or edit them.
 That is an <em>owner</em> password, and it is a request the reader is trusting you
@@ -90,7 +90,7 @@ password, and the file is genuinely encrypted. This is <strong>not a
 cracker</strong>: it cannot guess a password you do not have. If your file
 needs one to open, you will be asked for it, and you must know it.
 </p>
-</div>
+</details>
 
 <hr>
 
@@ -117,7 +117,8 @@ needs one to open, you will be asked for it, and you must know it.
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
 
-<h3>The honest notes</h3>
+<details class="notes">
+<summary>The honest notes</summary>
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The PDF is opened, decoded and rebuilt in your browser.</li>
   <li><strong>How it works, and the cost.</strong> The reader here can open a restricted file, so it rebuilds it as a fresh PDF with no restrictions. Each page is rendered to an image, and the text is laid back over it invisibly, so you can still select and search it, but the pages are now pictures with a text layer, not the original vector text. The file usually gets larger, and very fine text is a touch softer. That is the trade for removing the lock without a server.</li>
@@ -125,6 +126,7 @@ needs one to open, you will be asked for it, and you must know it.
   <li><strong>Use it on your own documents.</strong> Owner restrictions are usually there for a reason even when they are trivial to remove. This exists for the everyday case (a statement you cannot print, a form you cannot fill), not for getting around someone else's wishes.</li>
   <li><strong>It downloads about 700&nbsp;KB</strong> the first time, to render pages (<a href="https://mozilla.github.io/pdf.js/">pdf.js</a>) and write the new file (<a href="https://github.com/Hopding/pdf-lib">pdf-lib</a>), served from this domain because the security policy forbids third-party scripts.</li>
 </ul>
+</details>
 
 <hr>
 

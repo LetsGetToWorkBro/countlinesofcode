@@ -87,15 +87,15 @@ medical letters and signed contracts through them because it is the only obvious
 way. There is no endpoint here to send anything to.
 </p>
 
-<div class="notice-box">
-<p><strong>It rearranges. It does not re-render.</strong></p>
+<details class="notice-box">
+<summary><strong>It rearranges. It does not re-render.</strong></summary>
 <p class="note">
 Pages are copied across whole: their fonts, their images, their form
 fields and their annotations come with them. Nothing is rasterised, nothing is
 re-compressed, and text stays selectable and searchable exactly as it was. A
 page that comes out of here is the page that went in, in a different place.
 </p>
-</div>
+</details>
 
 <hr>
 
@@ -173,7 +173,8 @@ page that comes out of here is the page that went in, in a different place.
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
 
-<h3>The honest notes</h3>
+<details class="notes">
+<summary>The honest notes</summary>
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The PDFs are read from disk into this tab and the result is written back out of it.</li>
   <li><strong>Pages are copied, not redrawn.</strong> Fonts, images, form fields, links and annotations travel with the page. This is the difference between a rearranged document and a photograph of one: the text is still text, still selectable, still searchable, and the file does not balloon.</li>
@@ -184,6 +185,7 @@ page that comes out of here is the page that went in, in a different place.
   <li><strong>Everything is in memory.</strong> A few hundred pages is fine; a thousand-page scan on a phone may not be. The thumbnails are rendered at a small size for exactly this reason.</li>
   <li><strong>It downloads about 430&nbsp;KB</strong> the first time: <a href="https://mozilla.github.io/pdf.js/">pdf.js</a> to draw the thumbnails and <a href="https://github.com/Hopding/pdf-lib">pdf-lib</a> to write the file. Shared with the <a href="/sign.html">editor</a>, so if you have used that it is already cached.</li>
 </ul>
+</details>
 
 <hr>
 

@@ -168,7 +168,8 @@ reads the archive where it already is: on your machine.
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
 
-<h3>The honest notes</h3>
+<details class="notes">
+<summary>The honest notes</summary>
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The archive is read from disk into this tab and anything you extract is written back out of it.</li>
   <li><strong>The list costs nothing.</strong> A ZIP keeps an index of its contents at the end of the file, so what is in a 500&nbsp;MB archive can be shown without unpacking any of it. Only the files you actually ask for are decompressed.</li>
@@ -178,6 +179,7 @@ reads the archive where it already is: on your machine.
   <li><strong>The compression is the browser's own.</strong> <code>DecompressionStream</code> is built in and is exactly the algorithm ZIP uses, so there is no decompressor here to get wrong and nothing extra to download. The whole tool is under seven kilobytes.</li>
   <li><strong>It works in memory.</strong> Everything is held in the tab, so a very large archive can run one out of memory. Extracting a few files at a time is the fix.</li>
 </ul>
+</details>
 
 <hr>
 

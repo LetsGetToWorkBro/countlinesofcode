@@ -85,8 +85,8 @@ notoriously awkward, which is why people paste their private keys into websites
 they know nothing about. This page has no server to paste them to.
 </p>
 
-<div class="notice-box">
-<p><strong>Read this before you trust it with anything that matters.</strong></p>
+<details class="notice-box">
+<summary><strong>Read this before you trust it with anything that matters.</strong></summary>
 <p class="note">
 This is real OpenPGP, done properly, in your browser. But a browser tab is not a
 hardware token and this page is not <a href="https://gnupg.org/">GnuPG</a>. If
@@ -96,7 +96,7 @@ also running a hundred other tabs. This is for the enormous middle ground:
 sending a colleague something private, checking a signature, and learning how
 any of it works without handing your key to a stranger.
 </p>
-</div>
+</details>
 
 <p>
 <button type="button" id="tab-keys" class="sheet-tab is-active">Keys</button>
@@ -145,15 +145,15 @@ any of it works without handing your key to a stranger.
     <span id="key-suggested"></span>
   </p>
 
-  <div class="notice-box">
-  <p><strong>A private key is only kept here if it has a passphrase.</strong></p>
+  <details class="notice-box">
+  <summary><strong>A private key is only kept here if it has a passphrase.</strong></summary>
   <p class="note">
     Without one, what would sit in this browser's storage is the key itself, in
     the clear. So a key made without a passphrase is still made and still
     downloaded, but it is not remembered. That is not a nag you can dismiss;
     it is the rule.
   </p>
-  </div>
+  </details>
 
   <p>
     <label for="key-type" class="inline">Kind</label>
@@ -281,7 +281,8 @@ any of it works without handing your key to a stranger.
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
 
-<h3>The honest notes</h3>
+<details class="notes">
+<summary>The honest notes</summary>
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account, no keyserver. Your private key is generated in the tab and stays there.</li>
   <li><strong>A private key is never stored here without a passphrase.</strong> Local storage is convenient and it is not a vault: anything running as this site's origin could read it, and clearing your browsing data deletes it. With a passphrase, what is in there is a block that costs a real search to open. Without one it would be the key itself. So a key made without a passphrase is downloaded and not kept, and a private key imported without one is locked with a passphrase you give before it is stored. Export anything you want to keep, and put the export somewhere you actually back up.</li>
@@ -296,6 +297,7 @@ any of it works without handing your key to a stranger.
   <li><strong>What it does not do:</strong> keyservers, the web of trust, revocation certificates, subkey editing, and encrypting to more than one recipient at a time. An expiry can be set when a key is made but not changed afterwards. Those are real PGP features and this is deliberately the small end of it.</li>
   <li><strong>It downloads about 390&nbsp;KB</strong> the first time: <a href="https://github.com/openpgpjs/openpgpjs">OpenPGP.js</a>, LGPL, served unmodified from this domain. The one library here that exists because writing it ourselves would be reckless.</li>
 </ul>
+</details>
 
 <hr>
 

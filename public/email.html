@@ -121,7 +121,8 @@ your IP, who you correspond with and your employer's internal mail servers.
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
 
-<h3>The honest notes</h3>
+<details class="notes">
+<summary>The honest notes</summary>
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The message is read from disk into this tab and never leaves it. There is also no lookup: this page cannot make a request to any other domain at all, which is a rule your browser enforces rather than a promise from us.</li>
   <li><strong>Nothing in the message is loaded, ever.</strong> The trackers are found, named and counted from the source text. Fetching one to "check" it is precisely the act that tells the sender you opened the message, so nothing here does, and the security policy would refuse it anyway.</li>
@@ -133,6 +134,7 @@ your IP, who you correspond with and your employer's internal mail servers.
   <li><strong>The tracker list is deliberately generous.</strong> A one-pixel transparent image is the textbook case and increasingly the rare one; the modern version is a normal-looking image on a marketing platform with your identifier in the path. Both are listed, and so is any plain remote image, because loading one still hands over your IP address and the moment you read it.</li>
   <li><strong>It is under ten kilobytes and downloads nothing extra.</strong> Parsing an email is string handling, and there is no library here to get wrong.</li>
 </ul>
+</details>
 
 <hr>
 

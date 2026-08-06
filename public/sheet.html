@@ -78,8 +78,8 @@
 <h2>Excel &harr; CSV</h2>
 <p class="tagline">Both directions, in this tab. Your file never leaves it.</p>
 
-<div class="notice-box">
-<p><strong>It will not turn your postcodes into numbers.</strong></p>
+<details class="notice-box">
+<summary><strong>It will not turn your postcodes into numbers.</strong></summary>
 <p class="note">
 The classic way a spreadsheet tool destroys data is by being clever: it sees
 <code>007</code> and stores 7, sees <code>SW1A 1AA</code> and mangles it, sees a
@@ -93,7 +93,7 @@ CSV is read with its quoting rules honoured, so a comma inside a quoted field
 stays inside that field. The delimiter is detected rather than assumed, so the
 semicolon-separated exports that most of Europe produces work without a setting.
 </p>
-</div>
+</details>
 
 <hr>
 
@@ -137,7 +137,8 @@ semicolon-separated exports that most of Europe produces work without a setting.
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
 
-<h3>The honest notes</h3>
+<details class="notes">
+<summary>The honest notes</summary>
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. An .xlsx is a ZIP of XML and the browser already has a ZIP engine, so this half needs no download at all.</li>
   <li><strong>Values, not formulas.</strong> A cell containing a formula exports the value it last calculated, which is what the spreadsheet was showing. Formulas themselves are not carried into CSV, because CSV has no way to hold one.</li>
@@ -147,6 +148,7 @@ semicolon-separated exports that most of Europe produces work without a setting.
   <li><strong>Every sheet is read.</strong> Pick which one to export; CSV holds exactly one grid, so one sheet at a time. Exporting to .xlsx keeps them all.</li>
   <li><strong>Big files are real work.</strong> Everything is held in the tab, so a spreadsheet with hundreds of thousands of rows will be slow on a phone.</li>
 </ul>
+</details>
 
 <hr>
 

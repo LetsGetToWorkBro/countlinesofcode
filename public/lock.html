@@ -85,8 +85,8 @@ password you also gave them, and trust that they threw both away. This one has
 no endpoint. Turn off your wifi after the page loads and it still works.
 </p>
 
-<div class="notice-box">
-<p><strong>It writes a standard file, not a format of our own.</strong></p>
+<details class="notice-box">
+<summary><strong>It writes a standard file, not a format of our own.</strong></summary>
 <p class="note">
 The obvious way to build this is our own container: a header, a salt, a
 block of ciphertext. It would work, and it would be a trap: the person you send
@@ -99,7 +99,7 @@ Anyone can open it with <code>gpg -d yourfile.gpg</code>, or with Kleopatra on
 Windows or GPG Suite on a Mac, whether or not they have ever heard of this site.
 Nothing here is a lock only we hold the key to.
 </p>
-</div>
+</details>
 
 <p>
 <button type="button" id="tab-lock" class="sheet-tab is-active">Lock a file</button>
@@ -146,14 +146,15 @@ Nothing here is a lock only we hold the key to.
     <span id="words-note"></span>
   </p>
 
-  <div class="notice-box">
+  <details class="notice-box">
+  <summary><strong>There is no way to recover this.</strong></summary>
   <p class="note">
-  <strong>There is no way to recover this.</strong> No reset link, no support
+  No reset link, no support
   address, no copy of the password anywhere. That is the point of it, and it
   means a forgotten password is a lost file. Write it down somewhere real before
   you send the file anywhere.
   </p>
-  </div>
+  </details>
 
   <h3>3. Lock it</h3>
   <p>
@@ -198,7 +199,8 @@ Nothing here is a lock only we hold the key to.
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
 
-<h3>The honest notes</h3>
+<details class="notes">
+<summary>The honest notes</summary>
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. Neither the file nor the password leaves the tab, and there is nowhere for them to go.</li>
   <li><strong>The output is OpenPGP, symmetric mode.</strong> The same thing <code>gpg --symmetric</code> produces: your password is stretched into a key, a random session key encrypts the data, and the result is a file any OpenPGP implementation can read. AES-256, and a file that has been tampered with fails to open rather than decrypting into something subtly wrong.</li>
@@ -210,6 +212,7 @@ Nothing here is a lock only we hold the key to.
   <li><strong>It downloads about 390&nbsp;KB</strong> the first time: <a href="https://github.com/openpgpjs/openpgpjs">OpenPGP.js</a>, served from this domain. It is the one library here that exists because writing it ourselves would be reckless: a cipher that is subtly wrong looks exactly like one that is right, and nobody holding the file could tell.</li>
   <li><strong>Everything is in memory.</strong> A very large file will run a tab out of memory. There is no streaming mode here yet.</li>
 </ul>
+</details>
 
 <hr>
 

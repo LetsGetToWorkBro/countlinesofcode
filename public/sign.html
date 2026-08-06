@@ -87,8 +87,8 @@ document to, and you can check the network tab. Turn off your wifi once the page
 has loaded and everything below still works.
 </p>
 
-<div class="notice-box">
-<p><strong>About deleting text, because this one matters.</strong></p>
+<details class="notice-box">
+<summary><strong>About deleting text, because this one matters.</strong></summary>
 <p class="note">
 Drawing a black rectangle over text is not redaction, and it is how governments
 and law firms have leaked documents for twenty years. The text stays in the file
@@ -113,7 +113,7 @@ stops being selectable text and the file gets bigger. Only the pages you black
 out are affected. If you black out a page, check the preview covers every
 character, because what your box misses is still readable as pixels.
 </p>
-</div>
+</details>
 
 <hr>
 
@@ -254,7 +254,8 @@ character, because what your box misses is still readable as pixels.
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
 
-<h3>The honest notes</h3>
+<details class="notes">
+<summary>The honest notes</summary>
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account.</li>
   <li><strong>This is not a digital signature.</strong> It draws your signature onto the page, exactly like signing a printout and scanning it. It is what almost everyone means by &ldquo;sign this PDF&rdquo;, and it is what most people are asked for, but it carries no cryptographic proof of who signed. If you need a certifying signature that Acrobat will validate, you need a certificate, and this is not that.</li>
@@ -264,6 +265,7 @@ character, because what your box misses is still readable as pixels.
   <li><strong>It downloads about 700&nbsp;KB</strong> the first time you open a file: <a href="https://mozilla.github.io/pdf.js/">pdf.js</a> to render pages, <a href="https://github.com/Hopding/pdf-lib">pdf-lib</a> to write them, plus font metrics for whatever your document uses. All served from this domain, because the security policy here forbids third-party scripts and a page handling your contracts is the wrong place to make an exception.</li>
   <li><strong>Large scans use memory.</strong> Everything is in the tab, so a 200-page scan may struggle on a phone.</li>
 </ul>
+</details>
 
 <p class="note">
 Too big to email? <a href="/shrink.html">Shrink it</a>. Locked against copying?

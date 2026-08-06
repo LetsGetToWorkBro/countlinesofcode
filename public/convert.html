@@ -89,8 +89,8 @@ thinking about where the file went. This one has no endpoint to send anything
 to: turn off your wifi after the page loads and it still works.
 </p>
 
-<div class="notice-box">
-<p><strong>It tells you how well it will go, before you commit.</strong></p>
+<details class="notice-box">
+<summary><strong>It tells you how well it will go, before you commit.</strong></summary>
 <p class="note">
 PDF was designed to look the same everywhere, not to be edited. Some PDFs
 carry a hidden description of their own structure: which text is a
@@ -106,7 +106,7 @@ and no converter on earth does it perfectly. The difference here is that you are
 told which of the two you have <em>before</em> you convert, and what to check
 afterwards.
 </p>
-</div>
+</details>
 
 <hr>
 
@@ -172,7 +172,8 @@ afterwards.
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
 
-<h3>The honest notes</h3>
+<details class="notes">
+<summary>The honest notes</summary>
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. Both directions run in your browser.</li>
   <li><strong>EPUB is the better choice for <em>reading</em> a long PDF.</strong> A PDF is a fixed page, so on a phone you pinch and pan across a sheet designed for A4. An EPUB re-flows to whatever screen and text size you like, and chapters are split at the document's own top-level headings. It carries the words, the headings, the lists and the tables, but not the page design, which is the entire point of the format.</li>
@@ -184,6 +185,7 @@ afterwards.
   <li><strong>It learns locally, and only locally.</strong> Correcting the heading detection stores a number in <em>this browser</em>, against the software that produced the PDF. Nothing is collected, because nothing is sent anywhere, which is also why it cannot learn from anyone else's documents.</li>
   <li><strong>It downloads about 700&nbsp;KB</strong> the first time, to read PDFs (<a href="https://mozilla.github.io/pdf.js/">pdf.js</a>) and write them (<a href="https://github.com/Hopding/pdf-lib">pdf-lib</a>). The Word half needs nothing extra: a .docx is a ZIP of XML, and the browser already has a ZIP engine.</li>
 </ul>
+</details>
 
 <hr>
 

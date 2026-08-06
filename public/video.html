@@ -94,8 +94,8 @@ alternative. This one has no endpoint to upload to: turn off your wifi
 after the page loads and it still works.
 </p>
 
-<div class="notice-box">
-<p><strong>It tells you whether it is copying or re-encoding.</strong></p>
+<details class="notice-box">
+<summary><strong>It tells you whether it is copying or re-encoding.</strong></summary>
 <p class="note">
 Cutting a video does not have to re-encode it. If the output can hold the codec
 the file already uses, the compressed video is copied across untouched, so
@@ -108,7 +108,7 @@ quality.
 Every other converter re-encodes everything and says nothing. This one works out
 which one your settings mean and tells you before you press the button.
 </p>
-</div>
+</details>
 
 <hr>
 
@@ -234,7 +234,8 @@ which one your settings mean and tells you before you press the button.
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
 
-<h3>The honest notes</h3>
+<details class="notes">
+<summary>The honest notes</summary>
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The file is read from disk into this tab and the result is written back out of it.</li>
   <li><strong>Copying is not re-encoding, and the difference is the whole point.</strong> When the output container can hold the codec your file already uses and nothing about the picture changes, the compressed video is copied across untouched: identical quality, and roughly ten times faster. The panel above says which of the two your settings mean before you start.</li>
@@ -253,6 +254,7 @@ which one your settings mean and tells you before you press the button.
   <li><strong>What it does not do:</strong> subtitles, chapters, multiple audio tracks, joining two videos, or anything creative. It cuts, converts, resizes, rotates, mutes, extracts and animates.</li>
   <li><strong>It downloads about 620&nbsp;KB</strong> the first time, once you open a file: <a href="https://github.com/Vanilagy/mediabunny">mediabunny</a>, which reads and writes the container formats. The codecs themselves are the browser's own <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API">WebCodecs</a>. There is no ffmpeg here and no WebAssembly, which is why it is quick.</li>
 </ul>
+</details>
 
 <hr>
 

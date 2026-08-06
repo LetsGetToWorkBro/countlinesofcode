@@ -403,6 +403,41 @@ button.remove {
   margin: 4px 0;
 }
 
+/* Collapsible info. A warning box or a block of notes can be a <details>: the
+   summary line stays visible so the point still lands, and the elaboration
+   folds away so the tool, not the wall of text, fills the page. Native
+   <details>, so it needs no script and works under the policy that forbids one.
+   The default disclosure triangle is kept, which suits a page with no other
+   chrome. */
+summary {
+  cursor: pointer;
+}
+
+details.notice-box > summary {
+  font-weight: bold;
+  margin: 2px 0;
+}
+
+/* Bold headlines inside a summary are already bold from the box; keep the
+   summary from doubling the weight or adding a stray bullet. */
+details.notice-box > summary > strong {
+  font-weight: bold;
+}
+
+details.notes {
+  margin: 10px 0;
+}
+
+details.notes > summary {
+  font-weight: bold;
+  color: #333;
+}
+
+/* A little breathing room between the summary and what it reveals. */
+details[open] > summary {
+  margin-bottom: 6px;
+}
+
 /* Saved signatures: a thumbnail and two buttons, nothing more. */
 .sig-thumb {
   max-height: 40px;
