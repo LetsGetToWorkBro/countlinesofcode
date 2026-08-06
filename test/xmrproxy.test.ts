@@ -81,6 +81,22 @@ describe('base64url round trip', () => {
     expect(() => decodeBase64Url('has spaces')).toThrow();
     expect(() => decodeBase64Url('a/b+c=')).toThrow();
   });
+
+  it('round-trips origins of every length (the padding bug hit some)', () => {
+    // The old padding formula added one '=' too few for encoded lengths where
+    // len % 4 was 2 or 3, so e.g. https://api.github.com decoded as malformed.
+    // Cover a spread of hostnames so all residues are exercised.
+    for (const origin of [
+      'https://a.io',
+      'https://api.github.com',
+      'https://node.example.com:18089',
+      'https://checkip.amazonaws.com',
+      'https://nodex.monerujo.io',
+      'https://x.example.org:443',
+    ]) {
+      expect(decodeBase64Url(encodeBase64Url(origin)), origin).toBe(origin);
+    }
+  });
 });
 
 describe('resolveTarget', () => {

@@ -251,7 +251,11 @@ export function resolveTarget(segments: string[]): ResolvedTarget {
 /** base64url -> string, throwing on anything that is not clean base64url. */
 export function decodeBase64Url(value: string): string {
   if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new Error('not base64url');
-  const b64 = value.replace(/-/g, '+').replace(/_/g, '/') + '=='.slice((value.length + 3) % 4);
+  // Restore the exact padding: an unpadded base64 of length L needs (4 - L%4)%4
+  // '=' characters. The old `'=='.slice((L+3)%4)` added one '=' too few for
+  // L%4===2 and L%4===3, so atob rejected those keys as malformed.
+  const pad = (4 - (value.length % 4)) % 4;
+  const b64 = value.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat(pad);
   // atob exists in Workers and browsers; in Node tests, Buffer covers it.
   if (typeof atob === 'function') return atob(b64);
   return Buffer.from(b64, 'base64').toString('binary');

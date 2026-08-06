@@ -1200,8 +1200,20 @@ async function proxyXmr(request: Request, path: string): Promise<Response> {
       headers: { 'content-type': request.headers.get('content-type') ?? 'application/octet-stream' },
       body,
       signal: controller.signal,
-      redirect: 'error',
+      // 'manual', not 'error': the Workers runtime rejects redirect: 'error'
+      // (it threw on every request, so no node was ever reachable), and 'manual'
+      // still does NOT follow a redirect, which is the SSRF property we want. A
+      // node has no business redirecting an RPC call, so a 3xx is refused rather
+      // than chased toward wherever it points.
+      redirect: 'manual',
     });
+
+    if (upstream.status >= 300 && upstream.status < 400) {
+      return new Response(
+        JSON.stringify({ error: { code: 'node_redirected', message: 'That node answered with a redirect, which this will not follow.' } }),
+        { status: 502, headers: { 'content-type': 'application/json; charset=utf-8', ...XMR_PROXY_HEADERS } },
+      );
+    }
 
     // Pass the node's own content type through (json_rpc is JSON, the sync
     // endpoints are binary), but replace every other header with our own.
@@ -1214,8 +1226,9 @@ async function proxyXmr(request: Request, path: string): Promise<Response> {
     });
   } catch (err) {
     const aborted = err instanceof Error && err.name === 'AbortError';
+    console.error('xmr-proxy fetch failed', target.url, err && (err as Error).name, err && (err as Error).message, err && (err as Error).stack);
     return new Response(
-      JSON.stringify({ error: { code: aborted ? 'node_timeout' : 'node_unreachable', message: aborted ? 'The node did not answer in time.' : 'Could not reach that node.' } }),
+      JSON.stringify({ error: { code: aborted ? 'node_timeout' : 'node_unreachable', message: aborted ? 'The node did not answer in time.' : 'Could not reach that node.', diag: String(err && ((err as Error).name + ': ' + (err as Error).message)) } }),
       { status: 502, headers: { 'content-type': 'application/json; charset=utf-8', ...XMR_PROXY_HEADERS } },
     );
   } finally {
