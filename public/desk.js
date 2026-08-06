@@ -7,8 +7,9 @@
  * button or the _ in their title bar. A #hash in the URL (or following a
  * link to one) opens the window that holds the target.
  *
- * Runs on the landing desktop (.desktop) and on every tool page's patch of
- * desk (.desk-shell) alike; the tools start minimised too.
+ * Runs on the landing desktop (.desktop), where windows boot minimised, and
+ * on every tool page's patch of desk (.desk-shell), where the app you came
+ * for boots open but can be minimised to the taskbar and restored.
  */
 (function () {
   'use strict';
@@ -73,12 +74,15 @@
     });
   });
 
-  /* Boot minimised, except a window the URL asks for. Tool pages mark their
-   * taskbar button pressed in the markup for the no-JS case; setOpen resets
-   * every button to match what is actually open. */
+  /* The landing desktop boots minimised, except a window the URL asks for.
+   * A tool page boots its app open: the visitor clicked its icon to get
+   * here, and a tool drawing inside a display:none window would measure a
+   * zero-size layout. setOpen still runs so every taskbar button matches
+   * what is actually open. */
+  var isShell = desk.classList.contains('desk-shell');
   var wanted = windowFor(location.hash);
   Array.prototype.forEach.call(desk.querySelectorAll('.app-window'), function (win) {
-    setOpen(win, win === wanted);
+    setOpen(win, isShell || win === wanted);
   });
 
   // Following an in-page anchor later (e.g. a link elsewhere) opens it too.
