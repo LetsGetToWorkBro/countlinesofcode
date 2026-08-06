@@ -624,18 +624,8 @@ fieldset.tool-group table.tool-dir { margin: 0; }
 }
 .app-body > .tagline:first-child { margin-top: 2px; }
 .app-body p.tool-tabs { margin-top: 6px; }
-/* A window inside a window (the open wallet inside the Monero app) keeps its
-   own chrome; the nesting is the charm, not a bug. */
-.app-body .xmr-client { margin: 10px 0; }
 
-/* The open wallet as a little client program: title bar, tabs, a content
-   pane, and a status strip carrying the sync line. Straight out of 1999. */
-.xmr-client {
-  border: 2px outset #c0c0c0;
-  background: #c0c0c0;
-  padding: 2px;
-  margin: 12px 0;
-}
+/* One window per page: the title bar belongs to the app window alone. */
 .client-title {
   background: #000080;
   color: #ffffff;
@@ -644,18 +634,12 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   font-size: 14px;
   padding: 3px 8px;
 }
-.client-tabs { margin: 4px 4px 0 4px; display: flex; flex-wrap: wrap; gap: 2px; }
-.client-body {
-  background: #ffffff;
-  border: 2px inset #c0c0c0;
-  margin: 0 4px;
-  padding: 8px 12px;
-}
-.client-body h3:first-child { margin-top: 2px; }
+/* The wallet's status bar: a sunken strip at the bottom of its pane carrying
+   the sync line, the way a client program reports what it is doing. */
 .client-status {
   border: 2px inset #c0c0c0;
   background: #f0f0f0;
-  margin: 4px;
+  margin: 10px 0 4px 0;
   padding: 2px 8px;
   font-size: 13px;
   font-family: Arial, Helvetica, sans-serif;

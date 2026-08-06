@@ -118,17 +118,14 @@ not written it down, you have not made a wallet, you have made a countdown.
 </p>
 </details>
 
-<div id="setup" class="xmr-client">
-  <div class="client-title">Monero Wallet</div>
-
-  <p class="client-tabs">
+<div id="setup">
+  <p>
     <button type="button" id="tab-create" class="sheet-tab is-active">Create new</button>
     <button type="button" id="tab-restore" class="sheet-tab">Restore from a seed</button>
     <button type="button" id="tab-keys" class="sheet-tab">Restore from keys</button>
   </p>
 
-  <div class="client-body">
-    <p id="setup-error" class="error" role="alert"></p>
+  <p id="setup-error" class="error" role="alert"></p>
     <p id="setup-status" class="status" role="status" aria-live="polite"></p>
 
     <!-- create -->
@@ -195,16 +192,13 @@ not written it down, you have not made a wallet, you have made a countdown.
         <input type="text" id="custom-node" spellcheck="false" placeholder="https://your.node:18089" size="34">
         <span id="node-note" class="note"></span>
       </p>
-    </details>
-  </div>
+  </details>
 </div>
 
 <!-- The wallet itself: a little client. A title bar, tabs down the middle,
      and the sync state in a status strip, the way a wallet program looks. -->
-<div id="wallet" class="hidden xmr-client">
-  <div class="client-title">Monero Wallet</div>
-
-  <p class="client-tabs">
+<div id="wallet" class="hidden">
+  <p>
     <button type="button" id="wtab-overview" class="sheet-tab is-active">Overview</button>
     <button type="button" id="wtab-receive" class="sheet-tab">Receive</button>
     <button type="button" id="wtab-send" class="sheet-tab">Send</button>
@@ -212,8 +206,7 @@ not written it down, you have not made a wallet, you have made a countdown.
     <button type="button" id="wtab-secrets" class="sheet-tab">Secrets</button>
   </p>
 
-  <div class="client-body">
-    <div id="watch-banner" class="notice-box hidden">
+  <div id="watch-banner" class="notice-box hidden">
       <p><strong>Watch-only.</strong> This wallet has no spend key, so it can show the balance and incoming payments but cannot send. Open it with the spend key to spend.</p>
     </div>
 
@@ -278,8 +271,6 @@ not written it down, you have not made a wallet, you have made a countdown.
       </p>
       <div id="seed-out"></div>
     </div>
-  </div>
-
   <div class="client-status">
     <span id="sync-line" class="status" role="status" aria-live="polite">Starting to sync...</span>
   </div>
@@ -330,16 +321,13 @@ safe to use for anything, because they handle no secrets.
 </p>
 </details>
 
-<div class="xmr-client">
-<div class="client-title">Monero Addresses</div>
-<p class="client-tabs">
+<p>
 <button type="button" id="tab-check" class="sheet-tab is-active">Check an address</button>
 <button type="button" id="tab-make" class="sheet-tab">Make a wallet</button>
 <button type="button" id="tab-seed" class="sheet-tab">Restore a phrase</button>
 <button type="button" id="tab-watch" class="sheet-tab">Watch a wallet</button>
 </p>
 
-<div class="client-body">
 <p id="error" class="error" role="alert"></p>
 <p id="status" class="status" role="status" aria-live="polite"></p>
 
@@ -509,11 +497,6 @@ happen. If any of it fails, the generator stays switched off.
   </p>
   <div id="watch-result"></div>
 </div>
-</div>
-</div>
-
-
-
 
 <details class="notes">
 <summary>The honest notes</summary>
