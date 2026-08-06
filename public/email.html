@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Check an Email: Is It Phishing, and Who Is Tracking You? | 1999.LOC</title>
-<meta name="description" content="Paste an email's headers to see whether it really came from who it claims, and drop in the whole message to see every tracking pixel and wrapped link watching you open it. Nothing is uploaded.">
+<title>Check an Email or Get a Throwaway Inbox, in Your Browser | 1999.LOC</title>
+<meta name="description" content="Two email tools in one page. Check a message you were sent: is it really from who it claims, and who is tracking you. Or hand out a throwaway address that reads its own mail and self-destructs in an hour. Nothing you paste is uploaded.">
 <link rel="canonical" href="https://1999loc.com/email.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Check an Email: Is It Phishing, and Who Is Tracking You? | 1999.LOC">
-<meta property="og:description" content="Read the headers yourself instead of pasting them into somebody's server. SPF, DKIM and DMARC explained, and every tracker in the message named.">
+<meta property="og:title" content="Check an Email or Get a Throwaway Inbox | 1999.LOC">
+<meta property="og:description" content="Read the headers yourself instead of pasting them into somebody's server, or get a disposable address for the forms that do not deserve your real one.">
 <meta property="og:url" content="https://1999loc.com/email.html">
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
@@ -24,14 +24,16 @@
     ------------------------------------------------------------
     ... | inspect | email | lock | pgp | monero
     ------------------------------------------------------------
-    CHECK AN EMAIL
-    [ Drop a .eml here, or paste the source ]
+    EMAIL
+    ( Check a message )  ( Throwaway inbox )
+    ------------------------------------------------------------
+    [ Drop a .eml here, or paste the source ]        <- check
     +--------------------------------------------------+
     | DMARC passed, so the From line is really theirs   |
-    |   spf   pass   example.com                        |
-    |   dkim  pass   example.com                        |
     +--------------------------------------------------+
-    3 trackers, across 2 hosts
+    OR
+    Your address:  ( a8f2k...@mail.1999loc.com ) [copy]   <- inbox
+    Inbox (auto-refreshes)   From  Subject  When  checks
     ------------------------------------------------------------
 -->
 <div id="page">
@@ -60,8 +62,6 @@
 &middot;
 <strong>email</strong>
 &middot;
-<a href="/mail.html">temp mail</a>
-&middot;
 <a href="/lock.html">lock</a>
 &middot;
 <a href="/pgp.html">pgp</a>
@@ -78,7 +78,18 @@
 </p>
 <hr>
 
-<h2>Check an email</h2>
+<h2>Email</h2>
+<p class="tagline">Check a message you were sent, or hand out an address you can throw away.</p>
+
+<div data-tabs>
+<p role="tablist" aria-label="Email tools">
+<button type="button" class="sheet-tab is-active" data-tab="check" role="tab" aria-selected="true">Check a message</button>
+<button type="button" class="sheet-tab" data-tab="inbox" role="tab" aria-selected="false">Throwaway inbox</button>
+</p>
+
+<!-- ============================ CHECK A MESSAGE ============================ -->
+<div data-panel="check">
+
 <p class="tagline">Who really sent it, and who is watching you read it.</p>
 
 <p class="note">
@@ -116,15 +127,10 @@ headers carry your address, your IP, and who you correspond with.
   <li><strong>Anywhere:</strong> save or drag the message out as a <code>.eml</code> file and drop it above. That is the whole message, so both halves work.</li>
 </ul>
 
-<hr>
-
-<h3>Is this actually private?</h3>
-<div id="proof"></div>
-
 <details class="notes">
 <summary>The honest notes</summary>
 <ul class="plain">
-  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The message is read from disk into this tab and never leaves it. There is also no lookup: this page cannot make a request to any other domain at all, which is a rule your browser enforces rather than a promise from us.</li>
+  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The message is read from disk into this tab and never leaves it. There is also no lookup: the checker cannot make a request to any other domain at all, which is a rule your browser enforces rather than a promise from us.</li>
   <li><strong>Nothing in the message is loaded, ever.</strong> The trackers are found, named and counted from the source text. Fetching one to "check" it is precisely the act that tells the sender you opened the message, so nothing here does, and the security policy would refuse it anyway.</li>
   <li><strong>The authentication results are read, not recomputed.</strong> SPF depends on the IP address that connected, which is not in the message, and DKIM needs a DNS lookup. What the headers carry is the verdict your provider reached when it <em>could</em> check both. That is the real answer, recorded by the only party in a position to work it out, and it is why this can be honest without making a single request.</li>
   <li><strong>Which means the headers have to be genuine.</strong> Everything below the first server you actually trust can be invented by the sender. If somebody emails you a suspicious message as an attachment, you are reading their copy, and a determined forger could have written those lines themselves. Headers taken from your own mailbox are the ones worth trusting.</li>
@@ -132,9 +138,88 @@ headers carry your address, your IP, and who you correspond with.
   <li><strong>Failing is not always fraud.</strong> Mailing lists rewrite messages in ways that break DKIM, and forwarding routinely breaks SPF. A failure means the message cannot be proven genuine, which is worth knowing and is not a conviction.</li>
   <li><strong>It errs towards saying nothing.</strong> A tool that flags every ordinary email is one you learn to ignore, so an unremarkable message comes back with an empty list rather than a manufactured worry.</li>
   <li><strong>The tracker list is deliberately generous.</strong> A one-pixel transparent image is the textbook case and increasingly the rare one; the modern version is a normal-looking image on a marketing platform with your identifier in the path. Both are listed, and so is any plain remote image, because loading one still hands over your IP address and the moment you read it.</li>
-  <li><strong>It is under ten kilobytes and downloads nothing extra.</strong> Parsing an email is string handling, and there is no library here to get wrong.</li>
 </ul>
 </details>
+
+</div>
+
+<!-- ============================ THROWAWAY INBOX ============================ -->
+<div data-panel="inbox" class="hidden">
+
+<p class="tagline">A throwaway address that reads its own mail. For the forms that do not deserve your real one.</p>
+
+<details class="notice-box">
+<summary><strong>This is not private, and not for anything that matters. Read this before you use it.</strong></summary>
+<p class="note">
+The address below is public in the only way that counts: it has no password, so
+anyone who learns it can read everything it receives. It is unguessable, which
+is the whole of its security, so do not post it anywhere and do not reuse it.
+</p>
+<p class="note">
+Use it for a signup you do not trust, a one-off verification code, a download
+that wants an address first: the places you would rather not hand your real
+inbox. Do <strong>not</strong> use it for anything you would mind a stranger
+reading, for password resets on accounts you care about, or for anything you
+need to keep. Messages are deleted an hour after they arrive, and everything is
+gone the moment you burn the inbox or the sweep runs.
+</p>
+<p class="note">
+Mail sent here does pass through this site's server to be stored for that hour,
+so unlike the checker beside it this half is not "nothing leaves your machine."
+It is the honest exception, like the delete-posts tool: a small, stated amount
+of server, fenced off and short-lived. Nothing you would call private should go
+near it.
+</p>
+</details>
+
+<h3>Your address</h3>
+<p id="address-line">
+  <code id="address" class="xmr">open this tab to get one</code>
+</p>
+<p>
+  <button type="button" id="copy">Copy</button>
+  <button type="button" id="new">New address</button>
+  <button type="button" id="burn" class="linkish">burn this inbox</button>
+  <span id="address-note" class="note"></span>
+</p>
+<p class="note" id="model-note">
+This address works for as long as you keep this page open. Anything sent to it
+appears below within a few seconds. Each message deletes itself an hour after it
+arrives; "burn" wipes them now and hands you a fresh address.
+</p>
+
+<hr>
+
+<h3>Inbox</h3>
+<p id="mail-error" class="error" role="alert"></p>
+<p id="inbox-status" class="status" role="status" aria-live="polite">Waiting for mail...</p>
+<div id="inbox"></div>
+
+<!-- one opened message -->
+<div id="message-view" class="hidden">
+  <p><button type="button" id="back" class="linkish">back to the inbox</button></p>
+  <div id="message"></div>
+</div>
+
+<details class="notes">
+<summary>The honest notes</summary>
+<ul class="plain">
+  <li><strong>It is receive-only, on purpose.</strong> You cannot send from this address, only read what arrives. That removes the hardest and most abusable half of running email, and it is all a throwaway inbox needs.</li>
+  <li><strong>Every message is checked, not just shown.</strong> The same reader the <em>Check a message</em> tab uses runs over each incoming message, so a throwaway inbox also tells you whether the sender was forged (SPF, DKIM, DMARC) and lists any tracking pixels or click-wrappers it found. A verification code is safe to read; a "confirm your password" is flagged for what it is.</li>
+  <li><strong>Nothing is rendered as a live web page.</strong> A message is reduced to plain text before it is stored, and shown as text. Remote images, scripts and trackers never load, so opening a message here cannot report back that you did, and cannot run anything.</li>
+  <li><strong>It expires, and it is swept.</strong> A message carries a deletion time an hour out; a scheduled job deletes expired ones, and every read also filters them out, so an expired message is never shown even if the sweep is late. Burn removes everything for the address immediately.</li>
+  <li><strong>The address is the only secret.</strong> There is no login. Fourteen random characters is about seventy bits, which is not guessable, but it is the whole of the protection: treat the address itself as the password, because it is.</li>
+  <li><strong>This half runs on a server, and says so.</strong> Receiving mail needs somewhere for it to land, so the inbox, alone among the tools here, stores data on this site's infrastructure for a short while. It is the reason it lives behind its own warning and holds nothing you would not shout across a room.</li>
+</ul>
+</details>
+
+</div>
+</div>
+
+<hr>
+
+<h3>Is this actually private?</h3>
+<div id="proof"></div>
 
 <hr>
 
@@ -157,6 +242,8 @@ Monero, because a donation address should not also be a tracking pixel. You can
 
 </div>
 <script src="/email-page.js"></script>
+<script src="/mail-page.js"></script>
+<script src="/tabs.js"></script>
 <script src="/proof-panel.js"></script>
 </body>
 </html>

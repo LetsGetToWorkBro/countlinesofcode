@@ -208,5 +208,24 @@
 
   window.addEventListener('pagehide', stopPolling);
 
-  newAddress();
+  // On the merged /email.html this inbox lives in a tab beside the message
+  // checker. Most visitors come for the checker, so don't mint an address or
+  // poll the server until someone actually opens the inbox. tabs.js fires
+  // 'tab:shown'/'tab:hidden' as the panel appears and disappears.
+  var started = false;
+  function activate() {
+    if (!started) { started = true; newAddress(); return; }
+    if (address && !pollTimer) startPolling();   // resume where we left off
+  }
+  var tabs = document.querySelector('[data-tabs]');
+  if (tabs) {
+    tabs.addEventListener('tab:shown', function (e) { if (e.detail && e.detail.tab === 'inbox') activate(); });
+    tabs.addEventListener('tab:hidden', function (e) { if (e.detail && e.detail.tab === 'inbox') stopPolling(); });
+    // Belt and suspenders: if the panel is already visible by the time this
+    // runs (script order changed), start it without waiting for the event.
+    var panel = tabs.querySelector('[data-panel="inbox"]');
+    if (panel && !panel.classList.contains('hidden')) activate();
+  } else {
+    newAddress();   // standalone page with no tabs: behave as before
+  }
 })();

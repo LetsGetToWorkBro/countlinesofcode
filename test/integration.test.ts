@@ -647,6 +647,14 @@ describe('www handling', () => {
     expect(response.headers.get('location')).toBe('https://loc.example/sign.html');
   });
 
+  it('301s the retired /mail.html to the inbox tab, fragment and all', async () => {
+    // The throwaway inbox is now a tab on the email page; old links must land
+    // on that tab, not just the page.
+    const response = await get('https://loc.example/mail.html');
+    expect(response.status).toBe(301);
+    expect(response.headers.get('location')).toBe('https://loc.example/email.html#inbox');
+  });
+
   it('leaves other hosts alone, so workers.dev and previews keep working', async () => {
     for (const host of ['loc1999.someone.workers.dev', '1a2b3c-loc1999.someone.workers.dev', 'localhost:8787']) {
       const response = await get(`https://${host}/api/meta`);

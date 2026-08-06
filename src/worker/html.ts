@@ -113,8 +113,9 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
   { href: '/video.html', label: 'video', id: 'video', group: 'media' },
 
   { href: '/inspect.html', label: 'inspect', id: 'inspect', group: 'privacy' },
+  // 'email' is two tools on one page now: the message checker and the throwaway
+  // inbox (a tab). /mail.html redirects to /email.html#inbox.
   { href: '/email.html', label: 'email', id: 'email', group: 'privacy' },
-  { href: '/mail.html', label: 'temp mail', id: 'mail', group: 'privacy' },
   { href: '/lock.html', label: 'lock', id: 'lock', group: 'privacy' },
   { href: '/pgp.html', label: 'pgp', id: 'pgp', group: 'privacy' },
   { href: 'https://delete.1999loc.com/', label: 'delete posts', id: 'delete', group: 'privacy' },

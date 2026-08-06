@@ -963,13 +963,17 @@ export function redirectMovedCounter(url: URL): Response | null {
  */
 const RETIRED_PAGES: Record<string, string> = {
   '/pdf.html': '/sign.html',
+  // The throwaway inbox is now a tab on the email page.
+  '/mail.html': '/email.html#inbox',
 };
 
 export function redirectRetiredPage(url: URL): Response | null {
   const to = RETIRED_PAGES[url.pathname];
   if (!to) return null;
-  const target = new URL(url);
-  target.pathname = to;
+  // `to` may carry a fragment (/email.html#inbox); new URL keeps path and hash
+  // apart so the redirect lands on the right tab. Any query string is preserved.
+  const target = new URL(to, url.origin);
+  target.search = url.search;
   return new Response(null, {
     status: 301,
     headers: {

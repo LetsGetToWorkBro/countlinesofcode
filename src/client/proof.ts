@@ -193,7 +193,16 @@ export const SOURCES: Record<string, string[]> = {
   '/lock.html': ['public/lock-page.js', 'src/client/pgpkit.ts'],
   '/pgp.html': ['public/pgp-page.js', 'src/client/pgpkit.ts'],
   '/monero.html': ['public/monero-page.js', 'src/client/monero.ts', 'src/client/monero-words.ts'],
-  '/email.html': ['public/email-page.js', 'src/client/email.ts'],
+  // Two tools on one page: the message checker, and the throwaway inbox (its
+  // server half stores incoming mail for an hour).
+  '/email.html': [
+    'public/email-page.js',
+    'src/client/email.ts',
+    'public/mail-page.js',
+    'public/tabs.js',
+    'src/worker/mail.ts',
+    'src/lib/mailbox.ts',
+  ],
   '/sign.html': ['public/sign.js', 'src/client/pdfedit.ts', 'src/client/pdfstream.ts'],
   '/convert.html': ['public/convert-page.js', 'src/client/convert.ts', 'src/client/docmodel.ts'],
   '/inspect.html': ['public/inspect-page.js', 'src/client/inspect.ts'],
@@ -225,6 +234,7 @@ export const SERVER_PAGES: Record<string, string> = {
   '/code.html': 'Counting a repository means fetching it. Public repositories go through our server; connecting your GitHub account sends the request from your browser instead.',
   '/golf': 'Submitting a score records it on our server, which is what a leaderboard is.',
   '/board': 'The standings are held on our server.',
+  '/email.html': 'The throwaway-inbox tab asks this site’s server for mail sent to your address, and the server stores it for an hour. The message-checker tab makes no network request at all; it reads what you paste, in the tab.',
 };
 
 export function networkNote(path: string): string | null {
