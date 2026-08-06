@@ -179,6 +179,50 @@
     return Promise.resolve().then(function () { return attempt(0); });
   }
 
+  /* Whether an error smells like the node, as opposed to bad input. Only
+     node-shaped failures are worth retrying somewhere else. */
+  function isNodeError(err) {
+    var m = String((err && err.message) || err || '');
+    return /connect|connection|daemon|network|fetch|timeout|unreachable|node_|502|503|522|rpc/i.test(m);
+  }
+
+  /* Advance the picker to the next curated node not yet tried. Returns its id,
+     or null when the list is exhausted (or a custom node is chosen, which is
+     never abandoned silently). */
+  function advanceNode(tried) {
+    if (nodeIsCustom()) return null;
+    var ids = kit.nodes().map(function (n) { return n.id; });
+    for (var i = 0; i < ids.length; i++) {
+      if (tried.indexOf(ids[i]) === -1) {
+        $('node').value = 'n:' + ids[i];
+        syncNodeSummary();
+        return ids[i];
+      }
+    }
+    return null;
+  }
+
+  /* Open a wallet with failover: the preflight can pass and the node still
+     fail seconds later, so the open itself retries on the next curated node
+     when the failure is node-shaped. buildConfig() is called fresh per
+     attempt, so it picks up the advanced node. */
+  function openWithFailover(buildConfig) {
+    var tried = [];
+    function attempt() {
+      return xmr.createWalletFull(buildConfig()).catch(function (err) {
+        if (nodeIsCustom() || !isNodeError(err)) throw err;
+        var failed = $('node').value.slice(2);
+        tried.push(failed);
+        var next = advanceNode(tried);
+        if (!next) throw err;
+        if ($('node-swap')) $('node-swap').textContent = labelFor(failed) + ' failed while opening, so this wallet is on ' + labelFor(next) + ' instead.';
+        setSetupStatus('Trying ' + labelFor(next) + '\u2026');
+        return attempt();
+      });
+    }
+    return attempt();
+  }
+
   function networkTypeFor(name) {
     if (name === 'stagenet') return xmr.MoneroNetworkType.STAGENET;
     if (name === 'testnet') return xmr.MoneroNetworkType.TESTNET;
@@ -224,8 +268,7 @@
       setSetupStatus('Checking the node...');
       return ensureReachableNode().then(function () {
         setSetupStatus('Creating a new wallet...');
-        var config = baseConfig();
-        return xmr.createWalletFull(config).then(afterOpen);
+        return openWithFailover(baseConfig).then(afterOpen);
       });
     });
   }
@@ -237,11 +280,13 @@
       setSetupStatus('Checking the node...');
       return ensureReachableNode().then(function () {
       setSetupStatus('Restoring...');
-      var config = baseConfig();
-      config.seed = seed;
       var height = kit.restoreHeightForDate($('restore-date').value);
-      if (height !== null) config.restoreHeight = height;
-      return xmr.createWalletFull(config).then(afterOpen);
+      return openWithFailover(function () {
+        var config = baseConfig();
+        config.seed = seed;
+        if (height !== null) config.restoreHeight = height;
+        return config;
+      }).then(afterOpen);
       });
     });
   }
@@ -255,13 +300,15 @@
       setSetupStatus('Checking the node...');
       return ensureReachableNode().then(function () {
       setSetupStatus('Opening...');
-      var config = baseConfig();
-      config.primaryAddress = address;
-      config.privateViewKey = view;
-      if (spend) config.privateSpendKey = spend;
       var height = kit.restoreHeightForDate($('keys-date').value);
-      if (height !== null) config.restoreHeight = height;
-      return xmr.createWalletFull(config).then(afterOpen);
+      return openWithFailover(function () {
+        var config = baseConfig();
+        config.primaryAddress = address;
+        config.privateViewKey = view;
+        if (spend) config.privateSpendKey = spend;
+        if (height !== null) config.restoreHeight = height;
+        return config;
+      }).then(afterOpen);
       });
     });
   }
@@ -294,14 +341,39 @@
       .catch(function (err) { setSetupError(kit.prettyError(err)); });
   }
 
+  var syncTried = [];
+
   function startSync() {
     return Promise.resolve()
       .then(function () { return wallet.startSyncing(10000); })
-      .then(function () { return refreshEverything(); })
-      .catch(function (err) {
-        $('sync-line').textContent = kit.prettyError(err);
-        $('height-line').textContent = 'The wallet is open and can receive, but cannot see the chain until it reaches a node.';
-      });
+      .then(function () { syncTried = []; return refreshEverything(); })
+      .catch(function (err) { return syncFailover(err); });
+  }
+
+  /* An open wallet whose node stops answering is re-pointed at the next
+     curated node — monero-ts can switch daemons on a live wallet — rather than
+     told to go reopen itself. A custom node is never abandoned, and when every
+     listed node has been tried the message says exactly that. */
+  function syncFailover(err) {
+    if (nodeIsCustom() || !isNodeError(err)) {
+      $('sync-line').textContent = kit.prettyError(err);
+      $('height-line').textContent = 'The wallet is open and can receive, but cannot see the chain until it reaches a node.';
+      return;
+    }
+    var failed = $('node').value.slice(2);
+    if (syncTried.indexOf(failed) === -1) syncTried.push(failed);
+    var next = advanceNode(syncTried);
+    if (!next) {
+      $('sync-line').textContent = 'None of the listed nodes are answering right now. They will be retried automatically; you can also set your own under Node.';
+      syncTried = [];
+      return;
+    }
+    $('sync-line').textContent = labelFor(failed) + ' stopped answering; switching to ' + labelFor(next) + '\u2026';
+    var built = kit.proxyUri({ mode: 'n', key: next }, window.location.origin);
+    return Promise.resolve()
+      .then(function () { return wallet.setDaemonConnection(built.uri); })
+      .then(function () { return startSync(); })
+      .catch(function (e2) { return syncFailover(e2); });
   }
 
   function attachListener() {
