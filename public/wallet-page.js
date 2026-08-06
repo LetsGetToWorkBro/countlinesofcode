@@ -194,6 +194,8 @@
         watchOnly = !spendKey || /^0+$/.test(spendKey);
         $('watch-banner').classList.toggle('hidden', !watchOnly);
         $('send-section').classList.toggle('hidden', watchOnly);
+        // A watch-only wallet cannot send, so its client does not offer the tab.
+        if ($('wtab-send')) $('wtab-send').classList.toggle('hidden', watchOnly);
         $('setup').classList.add('hidden');
         $('wallet').classList.remove('hidden');
         return showPrimaryAddress();
@@ -424,6 +426,23 @@
   // so its keys do not sit in a detached worker after the page is gone.
   window.addEventListener('pagehide', function () {
     if (wallet) { try { wallet.close(); } catch (e) { /* going away anyway */ } }
+  });
+
+  // The open wallet is a little client: Overview / Receive / Send / History /
+  // Secrets are its tabs. Plain show-hide, same pattern as the setup modes.
+  var WSECTIONS = ['overview', 'receive', 'send', 'history', 'secrets'];
+  function showSection(which) {
+    WSECTIONS.forEach(function (name) {
+      var tab = $('wtab-' + name);
+      var section = $('wsec-' + name);
+      if (!tab || !section) return;
+      section.classList.toggle('hidden', name !== which);
+      tab.classList.toggle('is-active', name === which);
+    });
+  }
+  WSECTIONS.forEach(function (name) {
+    var tab = $('wtab-' + name);
+    if (tab) tab.addEventListener('click', function () { showSection(name); });
   });
 
   // Populate the node list as soon as the helpers are available. The heavy

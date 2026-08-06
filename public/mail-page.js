@@ -13,7 +13,9 @@
 
   var address = null;
   var pollTimer = null;
-  var seen = {};        // id -> true, to mark arrivals
+  var expandedIds = {}; // id -> true while a message is open
+  var readIds = {};     // id -> true once a message has ever been opened
+  var msgCache = {};    // id -> the fetched message, so re-renders are free
   var firstLoad = true;
 
   function esc(v) {
@@ -50,8 +52,9 @@
     stopPolling();
     $('address').textContent = 'setting up...';
     $('inbox').innerHTML = '';
-    $('message-view').classList.add('hidden');
-    seen = {};
+    expandedIds = {};
+    readIds = {};
+    msgCache = {};
     firstLoad = true;
     return api('new').then(function (data) {
       address = data.address;
@@ -107,6 +110,10 @@
     });
   }
 
+  // The inbox is a little mail client: every message is a row that opens and
+  // closes in place, so several can be open at once and none of them needs a
+  // separate screen. Bodies are fetched on first open and cached; the 4-second
+  // poll re-renders the list from state, so open messages stay open.
   function renderInbox(messages) {
     firstLoad = false;
     if (!messages.length) {
@@ -115,22 +122,56 @@
       return;
     }
     $('inbox-status').textContent = messages.length + (messages.length === 1 ? ' message' : ' messages') + '. Auto-refreshing.';
-    var rows = messages.map(function (m) {
-      var fresh = !seen[m.id];
-      seen[m.id] = true;
-      var badge = verdictBadge(m.verdict, m.trackerCount);
-      return '<tr class="mail-row" data-id="' + esc(m.id) + '">' +
-        '<td>' + (fresh ? '<strong>new</strong> ' : '') + esc(shortSender(m.sender)) + '</td>' +
-        '<td>' + esc(m.subject || '(no subject)') + '</td>' +
-        '<td class="note">' + esc(ago(m.receivedAt)) + '</td>' +
-        '<td>' + badge + '</td></tr>';
+    $('inbox').innerHTML = messages.map(function (m) {
+      var open = !!expandedIds[m.id];
+      var unread = !readIds[m.id];
+      return '<div class="mail-msg' + (open ? ' open' : '') + (unread ? ' unread' : '') + '" data-id="' + esc(m.id) + '">' +
+        '<div class="mail-head" role="button" tabindex="0" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+          '<span class="mail-toggle">' + (open ? '[\u2212]' : '[+]') + '</span>' +
+          '<span class="mail-from">' + esc(shortSender(m.sender)) + '</span>' +
+          '<span class="mail-when">' + esc(ago(m.receivedAt)) + '</span>' +
+          '<span class="mail-subj">' + esc(m.subject || '(no subject)') + '</span>' +
+          '<span class="mail-badges">' + verdictBadge(m.verdict, m.trackerCount) + '</span>' +
+        '</div>' +
+        '<div class="mail-open-area' + (open ? '' : ' hidden') + '"></div>' +
+      '</div>';
     }).join('');
-    $('inbox').innerHTML =
-      '<table class="mail-table"><thead><tr><th>From</th><th>Subject</th><th>When</th><th>Checks</th></tr></thead>' +
-      '<tbody>' + rows + '</tbody></table>';
-    Array.prototype.forEach.call($('inbox').querySelectorAll('.mail-row'), function (row) {
-      row.addEventListener('click', function () { openMessage(row.getAttribute('data-id')); });
+    messages.forEach(function (m) { if (expandedIds[m.id]) fillBody(m.id); });
+  }
+
+  function bodySlot(id) {
+    var msg = $('inbox').querySelector('.mail-msg[data-id="' + id + '"]');
+    return msg ? msg.querySelector('.mail-open-area') : null;
+  }
+
+  function fillBody(id) {
+    var slot = bodySlot(id);
+    if (!slot) return;
+    if (msgCache[id]) { slot.innerHTML = messageHtml(msgCache[id]); return; }
+    slot.innerHTML = '<p class="note">Opening\u2026</p>';
+    api('message?address=' + encodeURIComponent(address) + '&id=' + encodeURIComponent(id)).then(function (m) {
+      msgCache[id] = m;
+      var s = bodySlot(id);
+      if (s) s.innerHTML = messageHtml(m);
+    }).catch(function (err) {
+      var s = bodySlot(id);
+      if (s) s.innerHTML = '<p class="error">' + esc((err && err.message) || 'Could not open that message.') + '</p>';
     });
+  }
+
+  function toggleMessage(id) {
+    var open = !expandedIds[id];
+    if (open) { expandedIds[id] = true; readIds[id] = true; }
+    else delete expandedIds[id];
+    var msg = $('inbox').querySelector('.mail-msg[data-id="' + id + '"]');
+    if (!msg) return;
+    msg.classList.toggle('open', open);
+    msg.classList.remove('unread');
+    var head = msg.querySelector('.mail-head');
+    head.setAttribute('aria-expanded', open ? 'true' : 'false');
+    msg.querySelector('.mail-toggle').textContent = open ? '[\u2212]' : '[+]';
+    msg.querySelector('.mail-open-area').classList.toggle('hidden', !open);
+    if (open) fillBody(id);
   }
 
   function verdictBadge(verdict, trackerCount) {
@@ -144,25 +185,16 @@
   }
 
   function shortVerdict(v) {
-    return String(v).length > 28 ? String(v).slice(0, 27) + '…' : v;
+    return String(v).length > 28 ? String(v).slice(0, 27) + '\u2026' : v;
   }
   function shortSender(s) {
     s = String(s || 'unknown');
-    return s.length > 40 ? s.slice(0, 39) + '…' : s;
+    return s.length > 40 ? s.slice(0, 39) + '\u2026' : s;
   }
 
-  // ------------------------------------------------------------- one message
+  // ----------------------------------------------------- one open message
 
-  function openMessage(id) {
-    clearError();
-    api('message?address=' + encodeURIComponent(address) + '&id=' + encodeURIComponent(id)).then(function (m) {
-      renderMessage(m);
-      $('message-view').classList.remove('hidden');
-      $('message-view').scrollIntoView({ block: 'start' });
-    }).catch(function (err) { fail((err && err.message) || 'Could not open that message.'); });
-  }
-
-  function renderMessage(m) {
+  function messageHtml(m) {
     var a = m.analysis || {};
     var html = '<table>' +
       '<tr><th scope="row">From</th><td><code>' + esc(m.sender || 'unknown') + '</code></td></tr>' +
@@ -171,7 +203,6 @@
       '<tr><th scope="row">Received</th><td>' + esc(ago(m.receivedAt)) + ', deletes ' + esc(deletesIn(m.expiresAt)) + '</td></tr>' +
       '</table>';
 
-    // The checker's verdict on this message, inline.
     if (a.verdict) {
       var bad = /fail|forg|spoof|mismatch|caution|suspicious/i.test(a.verdict);
       html += '<p class="' + (bad ? 'error' : 'note') + '"><strong>Sender check:</strong> ' + esc(a.verdict) + '</p>';
@@ -182,12 +213,9 @@
         a.trackers.slice(0, 6).map(function (t) { return esc(t.host); }).join(', ') + '</p>';
     }
 
-    // The body, as plain text. Escaped and shown in a pre so nothing executes
-    // and no remote content is ever fetched.
     html += '<p class="note">The message, as text (images, links and trackers are shown but never loaded):</p>' +
       '<pre class="mail-body">' + esc(m.bodyText || '(no readable text in this message)') + '</pre>';
-
-    $('message').innerHTML = html;
+    return html;
   }
 
   // ------------------------------------------------------------- time
@@ -279,8 +307,19 @@
     newAddress();
   });
 
-  $('back').addEventListener('click', function () {
-    $('message-view').classList.add('hidden');
+  // One listener for the whole inbox: rows are re-rendered every poll, and a
+  // listener per row would be re-attached forty times a minute.
+  $('inbox').addEventListener('click', function (event) {
+    var head = event.target.closest ? event.target.closest('.mail-head') : null;
+    if (!head || !$('inbox').contains(head)) return;
+    toggleMessage(head.parentNode.getAttribute('data-id'));
+  });
+  $('inbox').addEventListener('keydown', function (event) {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    var head = event.target.closest ? event.target.closest('.mail-head') : null;
+    if (!head) return;
+    event.preventDefault();
+    toggleMessage(head.parentNode.getAttribute('data-id'));
   });
 
   window.addEventListener('pagehide', stopPolling);

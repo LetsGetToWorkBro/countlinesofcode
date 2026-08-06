@@ -190,68 +190,90 @@ are yours. Point it at your own node if you would rather not trust one of these.
   </div>
 </div>
 
-<!-- the wallet itself -->
-<div id="wallet" class="hidden">
-  <hr>
-  <div id="watch-banner" class="notice-box hidden">
-    <p><strong>Watch-only.</strong> This wallet has no spend key, so it can show the balance and incoming payments but cannot send. Open it with the spend key to spend.</p>
-  </div>
+<!-- The wallet itself: a little client. A title bar, tabs down the middle,
+     and the sync state in a status strip, the way a wallet program looks. -->
+<div id="wallet" class="hidden xmr-client">
+  <div class="client-title">Monero Wallet</div>
 
-  <h3>Balance</h3>
-  <p>
-    <strong id="balance" class="xmr-balance">0</strong> XMR
-    <span class="note">(<span id="unlocked">0</span> unlocked)</span>
+  <p class="client-tabs">
+    <button type="button" id="wtab-overview" class="sheet-tab is-active">Overview</button>
+    <button type="button" id="wtab-receive" class="sheet-tab">Receive</button>
+    <button type="button" id="wtab-send" class="sheet-tab">Send</button>
+    <button type="button" id="wtab-history" class="sheet-tab">History</button>
+    <button type="button" id="wtab-secrets" class="sheet-tab">Secrets</button>
   </p>
-  <p id="sync-line" class="status" role="status" aria-live="polite">Starting to sync...</p>
-  <p class="note" id="height-line"></p>
 
-  <hr>
-  <h3>Receive</h3>
-  <p class="note">Anyone can pay you at this address. A fresh subaddress for each payer keeps them from seeing each other's payments.</p>
-  <p><code id="primary-address" class="xmr"></code></p>
-  <p>
-    <button type="button" id="new-subaddress">New subaddress</button>
-    <span id="subaddress-note" class="note"></span>
-  </p>
-  <div id="subaddresses"></div>
-
-  <div id="send-section">
-    <hr>
-    <h3>Send</h3>
-    <p id="send-error" class="error" role="alert"></p>
-    <p><label for="send-address" class="inline">To</label></p>
-    <p><textarea id="send-address" rows="2" spellcheck="false" placeholder="4... or 8... address"></textarea></p>
-    <p>
-      <label for="send-amount" class="inline">Amount</label>
-      <input type="text" id="send-amount" spellcheck="false" placeholder="0.00" size="16"> XMR
-      <button type="button" id="send-max" class="linkish">send max</button>
-    </p>
-    <p><button type="button" id="review">Review payment</button></p>
-
-    <div id="confirm" class="notice-box hidden">
-      <p><strong>Confirm this payment.</strong> Once sent, it cannot be reversed.</p>
-      <p class="note" id="confirm-detail"></p>
-      <p>
-        <button type="button" id="send-now">Send it</button>
-        <button type="button" id="send-cancel" class="linkish">cancel</button>
-      </p>
+  <div class="client-body">
+    <div id="watch-banner" class="notice-box hidden">
+      <p><strong>Watch-only.</strong> This wallet has no spend key, so it can show the balance and incoming payments but cannot send. Open it with the spend key to spend.</p>
     </div>
-    <div id="send-result"></div>
+
+    <div id="wsec-overview">
+      <h3>Balance</h3>
+      <p>
+        <strong id="balance" class="xmr-balance">0</strong> XMR
+        <span class="note">(<span id="unlocked">0</span> unlocked)</span>
+      </p>
+      <p class="note" id="height-line"></p>
+      <p class="note">Receiving and sending live on their own tabs above. The seed phrase is under Secrets; write it down if you have not.</p>
+    </div>
+
+    <div id="wsec-receive" class="hidden">
+      <h3>Receive</h3>
+      <p class="note">Anyone can pay you at this address. A fresh subaddress for each payer keeps them from seeing each other's payments.</p>
+      <p><code id="primary-address" class="xmr"></code></p>
+      <p>
+        <button type="button" id="new-subaddress">New subaddress</button>
+        <span id="subaddress-note" class="note"></span>
+      </p>
+      <div id="subaddresses"></div>
+    </div>
+
+    <div id="wsec-send" class="hidden">
+      <div id="send-section">
+        <h3>Send</h3>
+        <p id="send-error" class="error" role="alert"></p>
+        <p><label for="send-address" class="inline">To</label></p>
+        <p><textarea id="send-address" rows="2" spellcheck="false" placeholder="4... or 8... address"></textarea></p>
+        <p>
+          <label for="send-amount" class="inline">Amount</label>
+          <input type="text" id="send-amount" spellcheck="false" placeholder="0.00" size="16"> XMR
+          <button type="button" id="send-max" class="linkish">send max</button>
+        </p>
+        <p><button type="button" id="review">Review payment</button></p>
+
+        <div id="confirm" class="notice-box hidden">
+          <p><strong>Confirm this payment.</strong> Once sent, it cannot be reversed.</p>
+          <p class="note" id="confirm-detail"></p>
+          <p>
+            <button type="button" id="send-now">Send it</button>
+            <button type="button" id="send-cancel" class="linkish">cancel</button>
+          </p>
+        </div>
+        <div id="send-result"></div>
+      </div>
+    </div>
+
+    <div id="wsec-history" class="hidden">
+      <h3>History</h3>
+      <p id="history-note" class="note">No transactions yet.</p>
+      <div id="history"></div>
+    </div>
+
+    <div id="wsec-secrets" class="hidden">
+      <h3>Wallet secrets</h3>
+      <p class="note">The seed phrase is the whole wallet. Anyone who reads it owns the coins. Reveal it only where nobody can see the screen, write it on paper, and do not save it to this machine.</p>
+      <p>
+        <button type="button" id="reveal-seed">Reveal seed phrase</button>
+        <button type="button" id="close-wallet" class="linkish">close wallet</button>
+      </p>
+      <div id="seed-out"></div>
+    </div>
   </div>
 
-  <hr>
-  <h3>History</h3>
-  <p id="history-note" class="note">No transactions yet.</p>
-  <div id="history"></div>
-
-  <hr>
-  <h3>Wallet secrets</h3>
-  <p class="note">The seed phrase is the whole wallet. Anyone who reads it owns the coins. Reveal it only where nobody can see the screen, write it on paper, and do not save it to this machine.</p>
-  <p>
-    <button type="button" id="reveal-seed">Reveal seed phrase</button>
-    <button type="button" id="close-wallet" class="linkish">close wallet</button>
-  </p>
-  <div id="seed-out"></div>
+  <div class="client-status">
+    <span id="sync-line" class="status" role="status" aria-live="polite">Starting to sync...</span>
+  </div>
 </div>
 
 <details class="notes">
