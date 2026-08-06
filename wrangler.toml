@@ -152,9 +152,12 @@ FETCH_CONCURRENCY = "12"
 RATE_LIMIT_PER_MINUTE = "20"      # per IP, unauthenticated
 # The domain throwaway inbox addresses are handed out on. The tool is dark until
 # Email Routing for this domain has its catch-all pointed at this Worker (see the
-# runbook in docs/). Using the apex means all mail to it is captured; a dedicated
-# throwaway domain is cleaner for reputation. Change this to switch domains.
-MAIL_DOMAIN = "1999loc.com"
+# runbook in docs/tempmail.md). A subdomain is used on purpose: a public throwaway
+# inbox attracts spam and its addresses leak into lists, and keeping that off the
+# apex protects the main domain's mail reputation. It costs nothing — the
+# subdomain lives in the same Cloudflare zone (Email Routing -> Settings ->
+# Subdomains), not a domain you buy. Change this to switch domains.
+MAIL_DOMAIN = "mail.1999loc.com"
 
 # Secrets (never put these here — this file is committed):
 #   npx wrangler secret put GITHUB_TOKEN
