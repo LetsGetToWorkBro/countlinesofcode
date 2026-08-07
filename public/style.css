@@ -757,7 +757,9 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   padding: 6px 2px 8px 2px;
   text-decoration: none;
 }
-.desk-icon svg { width: 48px; height: 48px; }
+/* The era's icons were drawn with a hard shadow one pixel down and right.
+   It is also what stops a flat SVG sinking into a flat teal. */
+.desk-icon svg { width: 48px; height: 48px; filter: drop-shadow(1px 1px 0 rgba(0, 0, 0, 0.5)); }
 .desk-icon span {
   color: #ffffff;
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
@@ -1568,8 +1570,22 @@ textarea {
 body {
   margin: 0;
   padding: 26px 16px 64px 16px;
-  background: #14181e;
-  background-image: radial-gradient(125% 95% at 50% 6%, #3d4757 0%, #232a33 52%, #12161b 100%);
+  /* The room is dark and the only thing lighting it is the screen. Two
+     layers: the cyan the tube throws onto the wall behind the case, and
+     the near-black everything falls off into. The glow is what makes the
+     machine read as switched on from across the room rather than as a
+     beige rectangle on a grey background. */
+  background: #05070a;
+  background-image:
+    /* Grain. A dark room photographed at this exposure is never clean, and
+       a perfectly smooth gradient is the thing that says "CSS". Drawn by
+       the browser from a data URI, which the policy allows under img-src,
+       for about three hundred bytes. It cannot go on the case: a border
+       takes no background, and border-image would throw away the rounded
+       corners the case is made of. */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E"),
+    radial-gradient(70% 55% at 50% 40%, rgba(0, 235, 235, 0.40) 0%, rgba(0, 150, 160, 0.20) 34%, rgba(0, 60, 70, 0.07) 58%, rgba(0, 0, 0, 0) 78%),
+    radial-gradient(130% 100% at 50% 26%, #1a2027 0%, #0c1015 52%, #05070a 100%);
   background-attachment: fixed;
   min-height: 100vh;
   box-sizing: border-box;
@@ -1585,22 +1601,29 @@ body {
   max-width: 1120px;
   margin: 0 auto;
   background: #ffffff;
-  padding: 16px 18px 20px 18px;
+  padding: 22px 24px 24px 24px;
   /* A 1999 monitor is mostly plastic. The bezel is thick, the chin below
      the glass is thicker still because that is where the tube's neck and
      the controls went, and the corners are generous because the glass
      itself was curved. Fifteen even pixels read as a picture frame; this
      reads as a case with a tube in it. */
   border-style: solid;
-  border-color: #d3ccba;
+  border-color: #cec7b4;
   border-width: 28px 30px 54px 30px;
   border-radius: 30px / 36px;
   box-shadow:
-    inset 0 0 0 3px #9d9684,           /* the lip where plastic meets glass */
-    0 0 0 2px #8b8574,                 /* the seam around the case */
-    0 4px 0 5px #b3ad9d,               /* the moulding catching the light */
-    0 34px 70px rgba(0, 0, 0, 0.6),    /* the monitor on the desk */
-    0 0 110px rgba(0, 128, 128, 0.16); /* what the screen throws back */
+    /* The recess. The glass sits down inside the plastic rather than
+       flush with it, so there is a lip that catches light along the top
+       and throws a shadow along the bottom. Two hairlines rather than
+       one, because a single ring reads as a border and a pair reads as
+       something with a thickness. */
+    inset 0 2px 1px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 3px #a29b88,
+    inset 0 -1px 0 4px #e6e0cf,
+    0 0 0 2px #857f6f,                 /* the seam around the case */
+    0 5px 0 5px #b3ad9d,               /* the moulding catching the light */
+    0 40px 80px rgba(0, 0, 0, 0.7),    /* the monitor on the desk */
+    0 0 130px 20px rgba(0, 190, 190, 0.13); /* what the screen throws back */
 }
 
 /* A desktop page fills the glass with the desktop itself, and fills the
@@ -1617,8 +1640,8 @@ body {
      that needs, which is why the machine is squarer than the window it is
      sitting in and why it stops growing on a wide screen.
 
-     The 328 is the 210 above plus the 118 of bezel and padding between the
-     case edge and the glass; the 96 puts the bezel's own width back. Both
+     The 338 is the 210 above plus the 128 of bezel and padding between the
+     case edge and the glass; the 108 puts the bezel's own width back. Both
      move if those do, and the test in test/style.test.ts says so.
 
      The 840 floor is not decoration. Hold 4:3 with no floor and a short
@@ -1629,7 +1652,7 @@ body {
      monitor. Below the floor the shape gives way rather than the layout:
      the case keeps its width, stops being 4:3, and the page scrolls,
      because a 4:3 box that narrow cannot hold a desktop. */
-  max-width: min(1120px, max(840px, calc((100vh - 328px) * 4 / 3 + 96px)));
+  max-width: min(1120px, max(840px, calc((100vh - 338px) * 4 / 3 + 108px)));
   display: flex;
   flex-direction: column;
 }
@@ -1671,7 +1694,7 @@ body {
   position: sticky;
   bottom: 0;
   z-index: 12;
-  margin: 8px -18px -20px -18px;
+  margin: 8px -24px -24px -24px;
   border-top: 2px outset #e0e0e0;
 }
 @media (max-width: 700px) {
@@ -1687,10 +1710,16 @@ body {
   inset: 0;
   z-index: 3;
   pointer-events: none;
-  border-radius: 6px / 8px;
+  border-radius: 9px / 11px;
   box-shadow:
-    inset 0 0 0 2px rgba(0, 0, 0, 0.55),
-    inset 0 0 70px rgba(0, 0, 0, 0.35);
+    /* The picture does not meet the plastic. There is a black frame
+       between them, and the tube's own glass sits down inside that. This
+       is the single detail that stops the screen reading as a coloured
+       div with a beige border around it. */
+    inset 0 0 0 8px #0a0d0f,
+    inset 0 0 0 9px rgba(255, 255, 255, 0.07),
+    inset 0 0 60px 12px rgba(0, 0, 0, 0.45),
+    inset 0 0 120px rgba(0, 0, 0, 0.3);
   background-image:
     /* The room, caught in the glass. A CRT's face is curved and it is the
        only reason a dark screen still shows you the window behind you.
@@ -1771,10 +1800,13 @@ body {
   box-sizing: border-box;
   width: 100%;
   max-width: 1120px;
-  /* The stand is drawn 56px below the case and takes up no space of its
-     own, so the gap has to clear it or the notes land on the neck. 64 is
-     the 56 plus a hair; it does not go lower while the stand is there. */
-  margin: 64px auto 0 auto;
+  /* Stuck to the machine rather than lying on the floor in front of it.
+     The negative pull puts the top of each note over the bottom bezel,
+     which is where somebody actually sticks a note, and the two go to
+     opposite corners so the stand comes down between them. */
+  margin: -30px auto 0 auto;
+  max-width: 980px;
+  justify-content: space-between;
   padding: 0 4px 8px 4px;
   display: flex;
   flex-wrap: wrap;
@@ -1790,8 +1822,8 @@ body {
    somebody might actually want to copy off a note. */
 .desk-note {
   position: relative;
-  flex: 1 1 320px;
-  max-width: 470px;
+  flex: 0 1 388px;
+  max-width: 388px;
   box-sizing: border-box;
   background: #fbee5d;
   background-image: linear-gradient(160deg, #fdf47f 0%, #f7e64c 62%, #eeda42 100%);
