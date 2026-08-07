@@ -647,46 +647,77 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   margin: 12px 0 16px 0;
 }
 /* The icon field.
-   It used to be flex-wrap over groups of two, three and four icons, which
-   meant every group started wherever the previous one happened to end: a
-   one-icon group landing mid-row, holes down the right, nothing lining up
-   with anything. A desktop's icons sit on a grid, so this is a grid. Each
-   group is two icon-widths across and tiles as a block, which puts every
-   icon on the same column rhythm no matter how many its group has. */
+
+   Two goes at this were wrong in the same way. Groups of two, three, one
+   and six icons were laid out as blocks, first with flex-wrap and then
+   with columns, and either way a group started wherever the last one
+   happened to end. The one-icon group left a column three quarters
+   empty, labels sat at six different heights, and nothing lined up with
+   anything.
+
+   The fix is to stop tiling groups against each other and let each one
+   be a band: a heading with a rule running off it, then its icons on one
+   shared column rhythm underneath. Bands cannot leave holes beside each
+   other because there is nothing beside them. Two stacks of three bands
+   on a wide screen, one stack on a narrow one, and the icons inside a
+   band flow to fill whatever width the band has. */
 .desk-groups {
-  /* Columns rather than a grid of groups: a grid puts every group in the
-     same row band, so one group two icons deep leaves a hole under every
-     group that is one deep. Columns let each group take the height it
-     needs and flow into the next column, which is how icons actually
-     land on a desktop. */
-  columns: 184px auto;
-  column-gap: 18px;
-  padding: 12px 12px 10px 12px;
+  padding: 14px 16px 10px 16px;
+}
+@media (min-width: 900px) {
+  /* Two columns, and column flow rather than a grid of rows. A grid ties
+     the two stacks together at every row, so Documents needing a second
+     line of icons pushes a hole into the band opposite it. Columns are
+     independent: bands stack tight down one and then tight down the
+     other, and a hole cannot appear beside a band because there is no
+     row for it to appear in. */
+  .desk-groups {
+    columns: 2;
+    column-gap: 36px;
+  }
 }
 .desk-group {
   break-inside: avoid;
   display: grid;
-  grid-template-columns: repeat(2, 88px);
+  grid-template-columns: repeat(auto-fill, 88px);
+  justify-content: start;
   align-content: start;
-  gap: 2px 4px;
-  margin: 0 0 10px 0;
+  gap: 0 4px;
+  margin: 0 0 14px 0;
 }
 .desk-group-label {
   grid-column: 1 / -1;
-  color: #b8dcdc;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #a8d3d3;
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.09em;
   text-shadow: 1px 1px 0 #004040;
-  margin: 4px 0 2px 4px;
+  margin: 0 0 3px 2px;
+}
+/* The rule that turns a label into a heading. It fades out rather than
+   stopping dead, so it reads as a divider and not as an underline
+   belonging to the last word. */
+.desk-group-label::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0));
 }
 .desk-icon {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
   gap: 5px;
   width: 88px;
+  /* No reserved height. A grid row is already as tall as its tallest
+     cell and stretches the rest to match, so the row holding Inspect File
+     stays square without every other row carrying a spare line's worth of
+     teal underneath it. */
   box-sizing: border-box;
   padding: 6px 2px 8px 2px;
   text-decoration: none;
@@ -1982,6 +2013,11 @@ body {
   padding: 3px 8px;
   pointer-events: none;
   z-index: 11;
+  /* It floats over the desktop, and on a phone the icons run right down
+     to the taskbar, so it will land on one. A tooltip with a shadow under
+     it reads as being in front of the icon; without one it reads as
+     having collided with it. */
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
   animation: begin-hint 9s ease-out both;
 }
 /* The arrow, pointing back at the button it is talking about. */
@@ -2090,12 +2126,14 @@ body {
   .desk-note { flex: 1 1 100%; max-width: none; transform: rotate(-0.5deg); padding: 16px 15px 15px 15px; }
   .desk-note-tip { transform: rotate(0.5deg); }
 
-  /* Desktop icons and shortcuts pack tighter, and the group's two columns
-     narrow with them so the icons still fill their cells rather than
-     sitting inside 88px boxes with a hole down the right. */
-  .desk-icon, .desk-shortcut { width: 74px; }
-  .desk-groups { columns: 156px auto; column-gap: 8px; padding: 6px 2px 8px 2px; }
-  .desk-group { grid-template-columns: repeat(2, 74px); margin-bottom: 6px; }
+  /* Icons and shortcuts pack tighter, and a band's cells narrow with them
+     so four fit across a phone instead of two with a hole down the right.
+     One stack of bands rather than two: at this width a second column is
+     44 pixels of icon and a wrapped heading. */
+  .desk-icon, .desk-shortcut { width: 76px; }
+  .desk-groups { padding: 8px 6px 8px 6px; }
+  .desk-group { grid-template-columns: repeat(auto-fill, 76px); gap: 0 2px; margin-bottom: 10px; }
+  .desk-group-label { font-size: 10.5px; gap: 8px; }
 
   /* The wallpaper mark is furniture for a big screen. A phone screen is
      the size of the furniture, and the icons reach the bottom corner, so
