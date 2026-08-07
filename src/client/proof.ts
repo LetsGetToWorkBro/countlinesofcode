@@ -191,15 +191,18 @@ export const SOURCES: Record<string, string[]> = {
   '/zip.html': ['public/zip-page.js', 'src/client/zipkit.ts', 'src/client/zip.ts'],
   // 'encrypt' page: password locking and PGP keys, on tabs, over one engine.
   '/lock.html': ['public/lock-page.js', 'public/pgp-page.js', 'public/tabs.js', 'src/client/pgpkit.ts'],
-  // The money page: the wallet and the address checker, on tabs.
+  // The money page: the Monero and Bitcoin wallets and the address checker.
   '/wallet.html': [
     'public/wallet-page.js',
     'src/client/walletkit.ts',
+    'public/btc-page.js',
+    'src/client/btcwallet.ts',
     'public/monero-page.js',
     'src/client/monero.ts',
     'src/client/monero-words.ts',
     'public/tabs.js',
     'src/lib/xmrproxy.ts',
+    'src/lib/btcproxy.ts',
   ],
   // The swap page: a thin client over the Worker's relay to the exchanges.
   '/swap.html': ['public/swap-page.js', 'src/worker/swap.ts', 'src/lib/swapkit.ts'],
@@ -246,7 +249,7 @@ export const SERVER_PAGES: Record<string, string> = {
   '/golf': 'Submitting a score records it on our server, which is what a leaderboard is.',
   '/board': 'The standings are held on our server.',
   '/email.html': 'The disposable-inbox tab asks this site’s server for mail sent to your address, and the server stores it for an hour. The message-checker tab makes no network request at all; it reads what you paste, in the tab.',
-  '/wallet.html': 'The wallet tab talks to a Monero node through this site’s server, which is what syncing a wallet is; the node never sees your address or IP. The address-checker tab makes no network request at all.',
+  '/wallet.html': 'The Monero tab talks to a Monero node, and the Bitcoin tab to a block explorer, both through this site’s server, which is what syncing a wallet is; neither ever sees your IP, and no key ever crosses the wire. The address-checker tab makes no network request at all.',
   '/swap.html': 'Quotes and orders go to the exchange services (Exolix, ChangeNOW) through this site’s server, so they see Cloudflare rather than you. The server stores nothing about a swap; the order id lives in this tab alone.',
 };
 

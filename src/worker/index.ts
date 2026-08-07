@@ -22,6 +22,7 @@ import { ParseError, parseRepoInput, isValidOwner, isValidRepo, isValidRef } fro
 import { checkRateLimit, clientIp } from '../lib/ratelimit';
 import { CountOptionsSchema, CountRequestSchema, ShaSchema, type CountOptions, type CountResult } from '../lib/schema';
 import { resolveTarget as resolveXmrTarget } from '../lib/xmrproxy';
+import { resolveBtcTarget } from '../lib/btcproxy';
 import { handleIncomingEmail, mailApi, purgeExpired } from './mail';
 import { swapApi } from './swap';
 import { COUNTER_VERSION } from '../lib/version';
@@ -174,6 +175,7 @@ export default {
       if (path.startsWith('/r/') && request.method === 'GET') return await resultPage(request, env, ctx, path);
 
       if (path.startsWith('/api/xmr/')) return await proxyXmr(request, path);
+      if (path.startsWith('/api/btc/')) return await proxyBtc(request, path);
 
       if (path.startsWith('/api/mail/')) {
         const reply = await mailApi(request, env, path);
@@ -1285,6 +1287,70 @@ async function proxyXmr(request: Request, path: string): Promise<Response> {
     const aborted = err instanceof Error && err.name === 'AbortError';
     return new Response(
       JSON.stringify({ error: { code: aborted ? 'node_timeout' : 'node_unreachable', message: aborted ? 'The node did not answer in time.' : 'Could not reach that node.' } }),
+      { status: 502, headers: { 'content-type': 'application/json; charset=utf-8', ...XMR_PROXY_HEADERS } },
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * Forward a Bitcoin wallet's Esplora call to the chosen explorer, under the
+ * same rules as the Monero proxy: allowlisted paths only, no visitor headers
+ * forwarded, no redirects followed, everything validated in btcproxy.ts.
+ */
+async function proxyBtc(request: Request, path: string): Promise<Response> {
+  if (request.method !== 'POST' && request.method !== 'GET') {
+    return jsonError({ status: 405, code: 'method_not_allowed', message: 'Use GET or POST.' });
+  }
+
+  const segments = path.replace(/^\/api\/btc\//, '').split('/').filter(Boolean).map(decodeURIComponent);
+  const target = resolveBtcTarget(segments, request.method);
+  if (!target.ok || !target.url) {
+    return new Response(JSON.stringify({ error: { code: 'bad_server', message: target.problem ?? 'Cannot forward that.' } }), {
+      status: target.status ?? 400,
+      headers: { 'content-type': 'application/json; charset=utf-8', ...XMR_PROXY_HEADERS },
+    });
+  }
+
+  // The only POST is a raw transaction in hex; even a monster tx fits well
+  // under this, so anything bigger is not a transaction.
+  const body = request.method === 'POST' ? await request.text() : undefined;
+  if (body && body.length > 400_000) {
+    return jsonError({ status: 413, code: 'too_large', message: 'That request body is too large to forward.' });
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const upstream = await fetch(target.url, {
+      method: request.method,
+      // Esplora broadcasts take the raw hex as text. As with the Monero
+      // proxy, nothing of the visitor (cookies, UA, IP) is forwarded.
+      headers: body === undefined ? {} : { 'content-type': 'text/plain' },
+      body,
+      signal: controller.signal,
+      redirect: 'manual',
+    });
+
+    if (upstream.status >= 300 && upstream.status < 400) {
+      return new Response(
+        JSON.stringify({ error: { code: 'server_redirected', message: 'That server answered with a redirect, which this will not follow.' } }),
+        { status: 502, headers: { 'content-type': 'application/json; charset=utf-8', ...XMR_PROXY_HEADERS } },
+      );
+    }
+
+    return new Response(upstream.body, {
+      status: upstream.status,
+      headers: {
+        'content-type': upstream.headers.get('content-type') ?? 'text/plain; charset=utf-8',
+        ...XMR_PROXY_HEADERS,
+      },
+    });
+  } catch (err) {
+    const aborted = err instanceof Error && err.name === 'AbortError';
+    return new Response(
+      JSON.stringify({ error: { code: aborted ? 'server_timeout' : 'server_unreachable', message: aborted ? 'The explorer did not answer in time.' : 'Could not reach that explorer.' } }),
       { status: 502, headers: { 'content-type': 'application/json; charset=utf-8', ...XMR_PROXY_HEADERS } },
     );
   } finally {

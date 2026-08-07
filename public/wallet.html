@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Monero in Your Browser: a Wallet, and an Address Checker | 1999.LOC</title>
-<meta name="description" content="A Monero wallet that runs entirely in your browser tab: create or restore, receive and send, with keys that never leave the tab and node traffic proxied. Beside it: check an address, restore a seed phrase, or make a paper wallet verified against published test vectors. Read the warnings first.">
+<title>Monero and Bitcoin Wallets in Your Browser, and an Address Checker | 1999.LOC</title>
+<meta name="description" content="Monero and Bitcoin wallets that run entirely in your browser tab: create or restore, receive and send, with keys that never leave the tab and node traffic proxied. Beside it: check an address, restore a seed phrase, or make a paper wallet verified against published test vectors. Read the warnings first.">
 <link rel="canonical" href="https://1999loc.com/wallet.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Monero in Your Browser: a Wallet, and an Address Checker | 1999.LOC">
+<meta property="og:title" content="Monero and Bitcoin Wallets in Your Browser | 1999.LOC">
 <meta property="og:description" content="Create, restore, receive and send Monero in a browser tab. Keys stay in the tab; node traffic is proxied. For small amounts you can afford to lose.">
 <meta property="og:url" content="https://1999loc.com/wallet.html">
 <meta property="og:site_name" content="1999.LOC">
@@ -76,13 +76,14 @@
 
 <div class="desk-shell">
 <div class="app-window" id="app">
-<div class="client-title"><h2>Monero</h2><a class="win-min" href="#" aria-label="Minimise Monero">_</a></div>
+<div class="client-title"><h2>Wallets</h2><a class="win-min" href="#" aria-label="Minimise Wallets">_</a></div>
 <div class="app-body">
-<p class="tagline">A wallet that lives in this tab, and an address checker beside it. Keys never leave the browser.</p>
+<p class="tagline">Monero and Bitcoin wallets that live in this tab, and an address checker beside them. Keys never leave the browser.</p>
 
 <div data-tabs>
 <p class="tool-tabs" role="tablist" aria-label="Monero tools">
-<button type="button" class="sheet-tab is-active" data-tab="wallet" role="tab" aria-selected="true">Wallet</button>
+<button type="button" class="sheet-tab is-active" data-tab="wallet" role="tab" aria-selected="true">Monero</button>
+<button type="button" class="sheet-tab" data-tab="btc" role="tab" aria-selected="false">Bitcoin</button>
 <button type="button" class="sheet-tab" data-tab="addresses" role="tab" aria-selected="false">Check an address</button>
 </p>
 
@@ -289,6 +290,193 @@ not written it down, you have not made a wallet, you have made a countdown.
   <li><strong>A saved copy is safer than this one.</strong> As with the paper wallet, a copy of this page saved to disk cannot be changed after you have looked at it, which closes the supply-chain risk that a fresh load each time cannot. Everything the page needs is served from this domain and built from <a href="https://github.com/letsgettoworkbro/countlinesofcode">the repository</a>.</li>
   <li><strong>Sending is deliberate, not instant.</strong> A payment is built first, its fee shown, and nothing leaves until you confirm the exact amount and destination on a second screen. Check the address on that screen: malware that swaps an address on the clipboard swaps in one that looks just as valid.</li>
   <li><strong>Restoring is slow the first time.</strong> A wallet has to scan the chain from its restore height to catch up, and on a phone that can take a while. Setting the date it was made, when you know it, is what keeps that from being the whole chain.</li>
+</ul>
+</details>
+
+</div>
+
+<!-- ================================ BITCOIN ================================ -->
+<div data-panel="btc" class="hidden">
+
+<p class="tagline">A Bitcoin wallet in this tab: 12 words, bc1 addresses, nothing installed.</p>
+
+<details class="notice-box">
+<summary><strong>Read this before you put a single sat in it. The Monero warnings apply, plus one Bitcoin brings itself.</strong></summary>
+<p class="note">
+Everything the Monero tab's warning says about a wallet in a browser tab is
+true here too: keys made and held in this tab only, nothing stored, a reload
+erases everything but the seed words, and one poisoned script on one day
+could steal every key made that day. For anything you would be upset to lose,
+use a hardware wallet or <a href="https://sparrowwallet.com/">Sparrow</a>
+offline; use this like cash in a pocket.
+</p>
+<p class="note">
+The extra warning is privacy. Bitcoin's chain is public: every address, every
+amount, forever. This wallet asks the block explorer you pick about your
+addresses as a group, so that explorer can link them together as one wallet.
+The request goes through this site's server, so the explorer does not learn
+your IP, but linkability is what Bitcoin is. If that matters to you, it is
+the reason the rest of this page is about Monero.
+</p>
+</details>
+
+<div id="btc-setup">
+  <p>
+    <button type="button" id="btab-create" class="sheet-tab is-active">Create new</button>
+    <button type="button" id="btab-restore" class="sheet-tab">Restore from seed words</button>
+    <button type="button" id="btab-watch" class="sheet-tab">Watch a wallet</button>
+  </p>
+
+  <p id="btc-setup-error" class="error" role="alert"></p>
+  <p id="btc-setup-status" class="status" role="status" aria-live="polite"></p>
+
+  <div id="bmode-create">
+    <p class="note">
+      Makes a brand new wallet with a fresh 12 word seed (BIP84, the standard
+      every mainstream wallet restores from). The words are shown once, here,
+      and never sent anywhere. Write them down before you fund it.
+    </p>
+    <p><button type="button" id="btc-create">Create a new wallet</button></p>
+  </div>
+
+  <div id="bmode-restore" class="hidden">
+    <p><label for="btc-seed-in" class="inline">Seed words</label></p>
+    <p><textarea id="btc-seed-in" rows="3" spellcheck="false" placeholder="12 (or 24) words, in order"></textarea></p>
+    <p class="note">Restores a BIP84 (bc1...) wallet: the kind this page creates, and the default in most wallets since 2018. A wallet that used legacy or wrapped addresses will show empty here; restore it in its own software.</p>
+    <p><button type="button" id="btc-restore">Restore this wallet</button></p>
+  </div>
+
+  <div id="bmode-watch" class="hidden">
+    <p class="note">
+      Paste a zpub (or xpub) extended public key to watch a wallet: balance and
+      history, no spending, no secrets on this machine at all.
+    </p>
+    <p><textarea id="btc-zpub-in" rows="3" spellcheck="false" placeholder="zpub6..."></textarea></p>
+    <p><button type="button" id="btc-watch">Watch this wallet</button></p>
+  </div>
+
+  <p id="btc-server-swap" class="note"></p>
+
+  <details class="notice-box">
+    <summary><strong>Explorer:</strong> <span id="btc-server-summary">choosing&hellip;</span> <span class="note">(change)</span></summary>
+    <p class="note">
+      A light Bitcoin wallet asks a block explorer about its addresses and hands
+      it finished transactions to broadcast. Your browser is not allowed to reach
+      any other site from this page, so the traffic goes through this site's
+      server to the explorer you pick. The explorer sees the addresses it is
+      asked about, never your IP; it holds no keys and cannot spend anything. If
+      it stops answering, the wallet quietly tries the other and says so. Point
+      this at your own Esplora instance if you would rather trust nobody.
+    </p>
+    <p>
+      <label for="btc-server" class="inline">Explorer</label>
+      <select id="btc-server"></select>
+    </p>
+    <p id="btc-custom-row" class="hidden">
+      <label for="btc-custom" class="inline">Your server</label>
+      <input type="text" id="btc-custom" spellcheck="false" placeholder="https://your.esplora/api" size="34">
+      <span id="btc-server-note" class="note"></span>
+    </p>
+  </details>
+</div>
+
+<div id="btc-wallet" class="hidden">
+  <p>
+    <button type="button" id="btw-overview" class="sheet-tab is-active">Overview</button>
+    <button type="button" id="btw-receive" class="sheet-tab">Receive</button>
+    <button type="button" id="btw-send" class="sheet-tab">Send</button>
+    <button type="button" id="btw-history" class="sheet-tab">History</button>
+    <button type="button" id="btw-secrets" class="sheet-tab">Secrets</button>
+  </p>
+
+  <div id="btc-watch-banner" class="notice-box hidden">
+    <p><strong>Watch-only.</strong> This wallet was opened from a public key, so it can show the balance and history but cannot send. Restore with the seed words to spend.</p>
+  </div>
+
+  <div id="bsec-overview">
+    <h3>Balance</h3>
+    <p>
+      <strong id="btc-balance" class="xmr-balance">0</strong> BTC
+      <span class="note" id="btc-pending-line"></span>
+    </p>
+    <p class="note" id="btc-coins-line"></p>
+    <p><button type="button" id="btc-refresh" class="small">Refresh</button></p>
+  </div>
+
+  <div id="bsec-receive" class="hidden">
+    <h3>Receive</h3>
+    <p class="note">This is the wallet's next unused address. Once a payment lands on it and you refresh, the wallet moves to a fresh one; reusing addresses is legal but bad for privacy on a public chain.</p>
+    <p><code id="btc-address" class="xmr"></code></p>
+    <p>
+      <button type="button" id="btc-addr-copy">Copy</button>
+      <span id="btc-addr-note" class="note"></span>
+    </p>
+  </div>
+
+  <div id="bsec-send" class="hidden">
+    <h3>Send</h3>
+    <p id="btc-send-error" class="error" role="alert"></p>
+    <p><label for="btc-send-address" class="inline">To</label></p>
+    <p><textarea id="btc-send-address" rows="2" spellcheck="false" placeholder="bc1... or 1... or 3... address"></textarea></p>
+    <p>
+      <label for="btc-send-amount" class="inline">Amount</label>
+      <input type="text" id="btc-send-amount" spellcheck="false" placeholder="0.00" size="16"> BTC
+      <button type="button" id="btc-send-max" class="linkish">send max</button>
+    </p>
+    <p>
+      <label for="btc-fee" class="inline">Fee</label>
+      <select id="btc-fee">
+        <option value="1">Fast (next block or two)</option>
+        <option value="6" selected>Normal (about an hour)</option>
+        <option value="144">Slow (about a day)</option>
+      </select>
+    </p>
+    <p><button type="button" id="btc-review">Review payment</button></p>
+
+    <div id="btc-confirm" class="notice-box hidden">
+      <p><strong>Confirm this payment.</strong> Once broadcast, it cannot be reversed.</p>
+      <p class="note" id="btc-confirm-detail"></p>
+      <p>
+        <button type="button" id="btc-send-now">Send it</button>
+        <button type="button" id="btc-send-cancel" class="linkish">cancel</button>
+      </p>
+    </div>
+    <div id="btc-send-result"></div>
+  </div>
+
+  <div id="bsec-history" class="hidden">
+    <h3>History</h3>
+    <p id="btc-history-note" class="note">No transactions yet.</p>
+    <div id="btc-history"></div>
+  </div>
+
+  <div id="bsec-secrets" class="hidden">
+    <h3>Wallet secrets</h3>
+    <p class="note">The 12 words are the whole wallet. Anyone who reads them owns the coins. Reveal them only where nobody can see the screen, write them on paper, and do not save them to this machine.</p>
+    <p>
+      <button type="button" id="btc-reveal-seed">Reveal seed words</button>
+      <button type="button" id="btc-show-zpub" class="small">Show the watch-only key</button>
+      <button type="button" id="btc-close" class="linkish">close wallet</button>
+    </p>
+    <div id="btc-seed-out"></div>
+    <div id="btc-zpub-out"></div>
+  </div>
+
+  <div class="client-status">
+    <span id="btc-sync-line" class="status" role="status" aria-live="polite"></span>
+  </div>
+</div>
+
+<details class="notes">
+<summary>The honest notes</summary>
+<ul class="plain">
+  <li><strong>The keys never leave the tab.</strong> Seed words, derivation and transaction signing all happen in this page. What crosses the network is what any light wallet asks an explorer: address lookups, fee estimates, and a finished transaction to broadcast. The security policy forbids this page talking to anywhere but this site, which your browser enforces.</li>
+  <li><strong>The explorer talks to our server, not to you.</strong> Same trade as the Monero tab's node, with one honest difference: a Monero node cannot tell which payments are yours, but an Esplora explorer is asked about your addresses by name, so the one you pick can link them into a cluster. It still never sees your IP (this site's server forwards the ask), your keys, or your words.</li>
+  <li><strong>One standard, done properly.</strong> The wallet is BIP84 throughout: 12 words, m/84'/0'/0', bech32 bc1q addresses. Those words restore in Sparrow, Electrum, BlueWallet, Trezor, Ledger and everything else from this decade. Legacy address types are supported for sending to, not for holding.</li>
+  <li><strong>The cryptography is not ours.</strong> Keys and signatures come from the audited <a href="https://github.com/paulmillr/scure-btc-signer">scure/noble</a> libraries, bundled into one file served from this domain and rebuilt from the repository by a test on every change.</li>
+  <li><strong>Nothing is stored, on purpose.</strong> No wallet file, no browser storage; memory only, gone on reload. The seed words are the only way back in, which is why the page will not stop telling you to write them down.</li>
+  <li><strong>Sending is deliberate.</strong> A payment is built and signed locally, its real fee shown, and nothing is broadcast until you confirm the amount and address on a second screen. Change below Bitcoin's dust limit goes to the miner rather than becoming a coin the network would refuse.</li>
+  <li><strong>Fees are the network's, not ours.</strong> The fee options come from the explorer's live estimates in sats per vbyte. This site adds nothing on top, takes no cut, and would not know how to.</li>
 </ul>
 </details>
 
@@ -524,7 +712,7 @@ happen. If any of it fails, the generator stays switched off.
 </div>
 <div class="taskbar">
 <a class="start" href="/">Start</a>
-<a class="task-btn is-open" href="#app">Monero</a>
+<a class="task-btn is-open" href="#app">Wallets</a>
 <span class="task-clock">1999</span>
 </div>
 </div>
@@ -567,6 +755,7 @@ Monero, because a donation address should not also be a tracking pixel. You can
 </div>
 <script src="/wallet-page.js"></script>
 <script src="/monero-page.js"></script>
+<script src="/btc-page.js"></script>
 <script src="/tabs.js"></script>
 <script src="/desk.js"></script>
 <script src="/proof-panel.js"></script>

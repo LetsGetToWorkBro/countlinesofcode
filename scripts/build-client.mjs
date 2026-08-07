@@ -88,6 +88,11 @@ export const BUNDLES = [
     outfile: 'public/walletkit.js',
     banner: '/* 1999.LOC wallet helpers. Built from src/client/walletkit.ts. Do not edit. */',
   },
+  {
+    entry: 'src/client/btcwallet.ts',
+    outfile: 'public/btcwallet.js',
+    banner: '/* 1999.LOC Bitcoin wallet engine. Built from src/client/btcwallet.ts. Do not edit. Bundles @scure/bip39, @scure/bip32 and @scure/btc-signer (MIT). */',
+  },
 ];
 
 /**

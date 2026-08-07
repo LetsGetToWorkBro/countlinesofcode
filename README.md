@@ -109,7 +109,7 @@ so `/email.html#inbox` opens the right tab; the retired URLs 301 to it).
 
 | Tool | URL | What it does | Runs on |
 |---|---|---|---|
-| **Monero** | `/wallet.html` | *Wallet* tab: a full hot wallet in the tab — create, restore, receive, send; keys never leave the browser, node traffic proxied through `/api/xmr`. *Check an address* tab: validate an address, restore a seed, or generate a paper wallet offline, verified against published test vectors. | wallet: browser + **node proxy** · checker: browser |
+| **Wallets** | `/wallet.html` | *Monero* tab: a full hot wallet in the tab — create, restore, receive, send; keys never leave the browser, node traffic proxied through `/api/xmr`. *Bitcoin* tab: the same deal for BTC — BIP84 (12 words, bc1 addresses), created/restored/watch-only, signed in the tab, with balance and broadcast through `/api/btc` to an Esplora explorer (mempool.space or blockstream.info, or your own). *Check an address* tab: validate an address, restore a seed, or generate a paper wallet offline, verified against published test vectors. | wallets: browser + **node/explorer proxy** · checker: browser |
 | **Swap** | `/swap.html` | BTC or USDC (ERC-20) in, Monero out, through instant exchanges. Quotes from Exolix out of the box, plus ChangeNOW when a `CHANGENOW_API_KEY` secret is set; the Worker relays via `/api/swap` so the exchange sees Cloudflare, not the visitor, and stores nothing about the order. | **the server** (relay only, no custody, no storage) |
 
 ### Code
