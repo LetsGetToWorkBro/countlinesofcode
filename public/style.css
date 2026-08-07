@@ -110,6 +110,7 @@ input[type="text"] {
   font-size: 14px;
   width: 380px;
   max-width: 100%;
+  box-sizing: border-box;
   border: 1px solid #000000;
   padding: 2px;
   background: #ffffff;
@@ -1512,27 +1513,36 @@ body {
    inside a desktop; the desktop separates itself. */
 #page:has(.desktop) > hr, #page:has(.desk-shell) > hr { display: none; }
 
-/* The wordmark and the footer read as desktop text: white, with the
-   hard shadow the era put under everything on the wallpaper. */
-#page:has(.desktop) > h1, #page:has(.desk-shell) > h1,
-#page:has(.desktop) > h3, #page:has(.desk-shell) > h3 {
+/* The only loose text on the wallpaper is the wordmark and its tagline: a
+   slim title bar across the top of the screen, white on teal with the hard
+   shadow the era put under everything on a desktop. Everything a tool has to
+   say now lives inside its window, on white, where it can be read. */
+#page:has(.desktop) > h1, #page:has(.desk-shell) > h1 {
   color: #ffffff;
   text-shadow: 2px 2px 0 #004848;
+  font-size: 22px;
+  margin: 2px 0 0 0;
 }
 #page:has(.desktop) > h1 a, #page:has(.desk-shell) > h1 a { color: #ffffff; text-decoration: none; }
 #page:has(.desktop) > h1 a:hover, #page:has(.desk-shell) > h1 a:hover { text-decoration: underline; }
 #page:has(.desktop) > .tagline, #page:has(.desk-shell) > .tagline {
   color: #cbe7e7;
   text-shadow: 1px 1px 0 #004848;
+  font-size: 14px;
+  margin: 0 0 4px 0;
 }
-#page:has(.desktop) > .footer, #page:has(.desk-shell) > .footer {
+
+/* The landing page keeps its footer on the wallpaper (there is no single
+   window for it to live in); a tool page's footer moved inside the window,
+   onto white, so this only ever applies to the desktop. */
+#page:has(.desktop) > .footer {
   color: #b9dcdc;
   text-shadow: 1px 1px 0 #004040;
   margin-top: 14px;
 }
-#page:has(.desktop) > .footer a, #page:has(.desk-shell) > .footer a { color: #ffffff; }
-#page:has(.desktop) > .footer a:visited, #page:has(.desk-shell) > .footer a:visited { color: #e0d0ff; }
-#page:has(.desktop) > .footer code, #page:has(.desk-shell) > .footer code {
+#page:has(.desktop) > .footer a { color: #ffffff; }
+#page:has(.desktop) > .footer a:visited { color: #e0d0ff; }
+#page:has(.desktop) > .footer code {
   color: #ffffff;
   background: rgba(0, 0, 0, 0.22);
   padding: 1px 3px;
@@ -1635,24 +1645,14 @@ body {
    read. The window takes the width; the prose inside keeps its measure. */
 .app-body > p, .app-body > ul, .app-body > ol, .app-body > details, .app-body > table { max-width: 78ch; }
 
-/* The proof panel and the page's closing notes sit on the wallpaper
-   rather than on white paper. The panel and the notes are prose, so
-   they get a frame to sit on; the one line that introduces them is
-   desktop text like everything else out here. */
-#page:has(.desk-shell) > #proof,
-#page:has(.desk-shell) > details.notes {
-  background: #c0c0c0;
-  border: 2px outset #e0e0e0;
-  padding: 8px 10px;
-  margin: 8px 0;
-}
-#page:has(.desk-shell) > #proof:empty { display: none; }
-#page:has(.desk-shell) > .proof-toggle {
-  color: #cbe7e7;
-  text-shadow: 1px 1px 0 #004040;
-  margin: 6px 0;
-}
-#page:has(.desk-shell) > .proof-toggle .note { color: #cbe7e7; }
+/* The "is this private / prove it" panel and the closing footers now live
+   at the bottom of the app window, on white, where they read like the About
+   box of a program rather than loose text on the wallpaper. A tinted band
+   sets them off from the tool above without leaving the window. */
+.app-body > hr { border-top: 1px solid #c0c0c0; margin: 16px 0 10px 0; }
+.app-body > .footer { font-size: 12px; color: #555555; margin: 8px 0; max-width: 78ch; }
+.app-body > .footer.support { color: #444444; }
+.app-body > .footer code { word-break: break-all; }
 
 /* ---- moving between pages ------------------------------------------
    Every page here is a real page, and the machine around it is drawn
@@ -1671,16 +1671,61 @@ body {
 }
 
 /* ---- small screens -------------------------------------------------
-   A phone is not a desk. The case thins out, the stand goes away, and
-   the screen takes the whole width it can get. */
+   A phone is not a desk. The case thins to a rim, the stand and the
+   scanlines go, the screen takes the whole width, and everything a
+   finger has to hit gets bigger. */
 @media (max-width: 700px) {
-  body { padding: 8px 6px 16px 6px; }
+  body { padding: 6px 5px 12px 5px; }
   #page {
-    border-width: 7px;
-    border-radius: 10px / 12px;
-    padding: 10px 10px 14px 10px;
-    box-shadow: 0 0 0 2px #8e8878, 0 10px 24px rgba(0, 0, 0, 0.5);
+    border-width: 6px;
+    border-radius: 9px / 11px;
+    padding: 8px 8px 10px 8px;
+    box-shadow: 0 0 0 2px #8e8878, 0 8px 20px rgba(0, 0, 0, 0.5);
   }
   #page::after { display: none; }
-  #page::before { background-image: none; }
+  #page::before { background-image: none; }   /* scanlines vanish under a retina display anyway */
+
+  /* The header shrinks so the app gets the screen. */
+  #page:has(.desktop) > h1, #page:has(.desk-shell) > h1 { font-size: 19px; }
+  #page:has(.desktop) > .tagline, #page:has(.desk-shell) > .tagline { font-size: 12.5px; }
+
+  /* The window loses its inset margins so it uses the full width. */
+  .desk-shell .app-window { margin: 0; }
+  .app-body { padding: 8px 9px 10px 9px; }
+  .app-body > p, .app-body > ul, .app-body > ol, .app-body > details, .app-body > table { max-width: none; }
+
+  /* Every form control fills the line rather than sitting at a fixed 380px
+     that runs off the edge. Their labels stack above them instead of
+     reserving a 130px column that leaves no room for the field. */
+  input[type="text"], select, textarea { width: 100%; box-sizing: border-box; }
+  select { max-width: 100%; }
+  label { display: block; min-width: 0; margin-bottom: 2px; }
+  label.inline, label.wide { display: block; }
+  /* A label that is really a checkbox row stays on one line. */
+  label:has(> input[type="checkbox"]) { display: flex; align-items: baseline; gap: 6px; }
+
+  /* Bigger tap targets: buttons and the folder tabs a thumb has to land on. */
+  button { padding: 6px 12px; font-size: 15px; }
+  .sheet-tab { padding: 7px 12px; }
+
+  /* Tabs wrap instead of scrolling off the window. */
+  p.tool-tabs, #wallet > p:first-child, #setup > p:first-child,
+  #btc-setup > p:first-child, #btc-wallet > p:first-child { display: flex; flex-wrap: wrap; gap: 4px; }
+
+  /* Wide tables (the counter results, the golf boards) scroll inside their
+     own strip rather than stretching the window past the screen. */
+  .app-body table, table.tool-dir { display: block; overflow-x: auto; white-space: nowrap; }
+
+  /* The taskbar's app button can take the room it needs; the clock is small. */
+  .task-btn { max-width: 55%; }
+  .task-clock { padding: 1px 6px; }
+
+  /* The Start menu is nearly the width of the screen, so its flyouts open
+     over it rather than off the right edge into nowhere. */
+  .start-menu { left: 2px; right: 2px; }
+  .start-fly { position: static; left: auto; bottom: auto; margin: 0 0 2px 12px; max-height: 42vh; }
+
+  /* Desktop icons and shortcuts pack tighter. */
+  .desk-icon, .desk-shortcut { width: 72px; }
+  .desk-groups { gap: 4px 8px; }
 }
