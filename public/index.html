@@ -40,8 +40,10 @@
 
   This is the landing page. The counter that used to live here is at
   /code.html. Nothing on this page NEEDS JavaScript: without it the windows
-  are simply open and every button is a plain anchor. desk.js only adds the
-  desktop behaviour: windows boot minimised to the taskbar and open on click.
+  are simply open and every button is a plain anchor. Two scripts add the
+  desktop on top of that and nothing else: desk.js minimises the windows to
+  the taskbar, and start.js builds the Start menu, the Run box and the DOS
+  prompt out of the nav and the windows this page already has.
 -->
 <div id="page">
 
@@ -273,6 +275,16 @@ whole point. People put contracts, payslips and passports through PDF sites
 without thinking about where the file went. Here there is no endpoint to send one
 to: turn off your wifi after the page loads and the PDF tools still work.
 </p>
+
+<p>
+The wallets are that idea taken as far as it goes. A seed phrase is the most
+dangerous thing anyone can type into a website, so here it is made, held and used
+to sign inside the tab and nowhere else; what crosses the wire is only the
+questions any wallet has to ask a node. None of that is a promise you have to
+take our word for. Every page is served under a rule that forbids it talking to
+any other site, your browser is the one enforcing it, and every tool page has a
+button that tries to break the rule in front of you and fails.
+</p>
 </div>
 </div>
 
@@ -289,7 +301,10 @@ version:
   <li><strong>No numbers we cannot show our working for.</strong> The counter is <a href="/how.html">documented rule by rule</a>, pinned to a commit, and the same for everyone.</li>
   <li><strong>No accounts, so no data to lose.</strong> Connecting GitHub is optional and only exists for private repositories.</li>
   <li><strong>No ads and no tracking.</strong> There is no analytics script on any page here.</li>
-  <li><strong>The one exception is kept at arm&rsquo;s length.</strong> <a href="https://delete.1999loc.com/">Deleting your posts</a> genuinely needs a server and needs permission to talk to X and Meta, so it is a separate application on a separate domain. Everything on <code>1999loc.com</code> is served under a policy that forbids it contacting any other site at all, a rule your browser enforces rather than a promise from us, and that rule stays intact precisely because the tool that would need it loosened is not here. Any tool page will <a href="/inspect.html">show you the policy</a> and let you watch the browser refuse.</li>
+  <li><strong>No cut of your money.</strong> The <a href="/wallet.html">wallets</a> hold no keys and the <a href="/swap.html">swap</a> holds no coins. The swap quotes you the exchange&rsquo;s own rate and hands you its own deposit address, so there is nothing on top and nowhere for a fee to hide.</li>
+  <li><strong>The parts that do use a server are named, not buried.</strong> Counting a repository means fetching it. The <a href="/email.html">disposable inbox</a> has to receive mail, and keeps it for an hour. The <a href="/wallet.html">wallets</a> and the <a href="/swap.html">swap</a> pass their questions to a Monero node, a block explorer or an exchange, so those see this site asking rather than you. That is the whole list. No file, key or seed phrase is in it.</li>
+  <li><strong>And the rule holds regardless.</strong> Everything on <code>1999loc.com</code> is served under a policy that forbids the page contacting any other site at all, which is exactly why the server parts above go through this domain and nowhere else. It is a rule your browser enforces rather than a promise from us, and any tool page will <a href="/inspect.html">show you the policy</a> and let you watch the browser refuse.</li>
+  <li><strong>The one tool kept off this domain entirely.</strong> <a href="https://delete.1999loc.com/">Deleting your posts</a> genuinely needs a server and needs permission to talk to X and Meta, so it is a separate application on a separate domain. The rule above stays intact precisely because the tool that would need it loosened is not here.</li>
 </ul>
 
 <p>
@@ -339,5 +354,6 @@ Monero, because a donation address should not also be a tracking pixel. You can
 
 </div>
 <script src="/desk.js"></script>
+<script src="/start.js"></script>
 </body>
 </html>

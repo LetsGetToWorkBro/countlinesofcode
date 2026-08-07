@@ -135,13 +135,14 @@ describe('the toolkit bar', () => {
 
   it('needs no JavaScript to list the tools', () => {
     // A landing page that renders nothing without JS is the thing this site
-    // exists to be the opposite of. desk.js is progressive enhancement only —
-    // it minimises the info windows into the taskbar — so it is the one script
-    // allowed, and the markup must not pre-hide anything: with scripting off,
-    // every window and every tool listing is simply there.
+    // exists to be the opposite of. Both scripts are pure enhancement: desk.js
+    // minimises the info windows into the taskbar, start.js builds the Start
+    // menu and the DOS prompt out of what the page already says. Neither may
+    // pre-hide anything, so with scripting off every window and every tool
+    // listing is simply there.
     const landing = readFileSync('public/index.html', 'utf8');
     const scripts = [...landing.matchAll(/<script[^>]*src="([^"]+)"/g)].map((m) => m[1]);
-    expect(scripts).toEqual(['/desk.js']);
+    expect(scripts).toEqual(['/desk.js', '/start.js']);
     expect(landing).not.toMatch(/<script[^>]*>[^<]/);           // no inline code
     expect(landing).not.toMatch(/app-window[^"]*(hidden|is-open)/); // nothing pre-hidden
   });
@@ -156,6 +157,7 @@ describe('the toolkit bar', () => {
     for (const path of shellPages) {
       const html = readFileSync(path, 'utf8');
       expect(html, `${path} does not load desk.js`).toContain('<script src="/desk.js">');
+      expect(html, `${path} does not load start.js`).toContain('<script src="/start.js">');
       expect(html, `${path} has no window for the taskbar to restore`).toContain('<div class="app-window" id="app">');
       expect(html, `${path} has no taskbar toggle for its window`).toContain('href="#app"');
       expect(html, `${path} has no minimise control`).toContain('class="win-min"');

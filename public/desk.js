@@ -52,6 +52,10 @@
   // Taskbar buttons toggle their window; Start opens the tools window.
   Array.prototype.forEach.call(document.querySelectorAll('.taskbar .task-btn, .taskbar .start'), function (el) {
     el.addEventListener('click', function (event) {
+      // Once start.js has built the Start menu, Start belongs to it: this file
+      // steps aside rather than also opening a window behind the menu. The
+      // check is at click time, not load time, because that file runs second.
+      if (el.classList.contains('start') && document.querySelector('.start-menu')) return;
       var hash = el.getAttribute('href');
       if (!windowFor(hash)) return;   // a real link (Start on tool pages): let it navigate
       event.preventDefault();

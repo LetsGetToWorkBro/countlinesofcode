@@ -763,6 +763,151 @@ fieldset.tool-group table.tool-dir { margin: 0; }
 .desk-shell .app-window { margin: 12px; }
 .desk-shell .taskbar { border-top: 2px outset #e0e0e0; }
 
+/* The Start menu, the Run box and the MS-DOS Prompt. All three are built by
+   start.js and exist only when scripting runs, so none of this applies to a
+   page that never got the file. The desk is the positioning context. */
+.desktop, .desk-shell { position: relative; }
+
+.start-menu {
+  display: none;
+  position: absolute;
+  left: 4px;
+  bottom: 30px;
+  z-index: 20;
+  border: 2px outset #e0e0e0;
+  background: #c0c0c0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+}
+.start-menu.is-open { display: flex; }
+.start-spine {
+  width: 24px;
+  background: #808080;
+  position: relative;
+}
+/* The vertical wordmark down the left edge, exactly where the era put it. */
+.start-spine span {
+  position: absolute;
+  bottom: 8px;
+  left: 3px;
+  transform-origin: left bottom;
+  transform: rotate(-90deg);
+  white-space: nowrap;
+  color: #ffffff;
+  font-weight: bold;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+}
+.start-items { padding: 2px; min-width: 178px; position: relative; }
+/* Rows are not the anchor: a flyout hangs off the menu itself and is bottom
+   aligned, so a long Programs list grows up the desk instead of off the end
+   of it. Capped and scrollable in case the toolkit outgrows the screen. */
+.start-row { position: static; }
+.start-item {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  padding: 4px 20px 4px 8px;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: #000000;
+  text-decoration: none;
+  cursor: pointer;
+}
+.start-item:hover, .start-item:focus { background: #000080; color: #ffffff; outline: none; }
+.start-arrow { float: right; font-size: 9px; line-height: 16px; }
+.start-sep { border-top: 1px solid #808080; border-bottom: 1px solid #ffffff; margin: 3px 2px; }
+.start-fly {
+  display: none;
+  position: absolute;
+  left: 100%;
+  bottom: -2px;
+  min-width: 168px;
+  max-height: 70vh;
+  overflow-y: auto;
+  border: 2px outset #e0e0e0;
+  background: #c0c0c0;
+  padding: 2px;
+  z-index: 21;
+}
+.start-fly.is-open { display: block; }
+.taskbar .start.is-pressed { border-style: inset; }
+
+/* Run box: a little modal, centred on the desk. */
+.run-box {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  transform: translateX(-50%);
+  z-index: 22;
+  width: min(340px, 92%);
+  border: 2px outset #c0c0c0;
+  background: #c0c0c0;
+  padding: 2px;
+}
+.run-box.is-open { display: block; }
+.run-box .app-body { padding: 8px 10px 10px 10px; }
+
+/* The prompt. Amber on black, because that is what it looked like. */
+.dos-window .client-title { background: #000080; }
+.dos-body { background: #000000; border-color: #000000; padding: 6px 8px 8px 8px; }
+.dos-out {
+  margin: 0;
+  color: #c8c8c8;
+  background: none;
+  border: 0;
+  padding: 0;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.dos-line { display: flex; align-items: baseline; margin: 0; gap: 6px; }
+.dos-prompt {
+  color: #c8c8c8;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+  white-space: pre;
+}
+/* Outranks the global input[type="text"] rule on purpose: inside the prompt
+   the caret has to sit on the black, not in a white box floating on it. */
+.dos-body input.dos-in {
+  flex: 1;
+  min-width: 0;
+  background: #000000;
+  color: #c8c8c8;
+  border: 0;
+  outline: none;
+  padding: 0;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+}
+
+/* The shut-down screen, which is the whole joke. */
+.shutdown {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: #000000;
+  color: #ffa000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 24px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.shutdown .shutdown-note { font-size: 13px; color: #806000; margin-top: 28px; }
+
 /* With desk.js running the tools boot minimised too: an empty patch of desk
    with the app waiting on the taskbar. Flex pins the taskbar to the bottom
    edge so the teal above it still reads as a desktop. Without JavaScript
