@@ -761,18 +761,19 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   margin: 12px 0 16px 0;
 }
 .desk-shell .app-window { margin: 12px; }
-.desk-shell .taskbar { border-top: 2px outset #e0e0e0; }
 
 /* The Start menu, the Run box and the MS-DOS Prompt. All three are built by
    start.js and exist only when scripting runs, so none of this applies to a
    page that never got the file. The desk is the positioning context. */
 .desktop, .desk-shell { position: relative; }
 
+.taskbar { position: relative; }
 .start-menu {
   display: none;
   position: absolute;
-  left: 4px;
-  bottom: 30px;
+  left: 0;
+  bottom: 100%;
+  margin-bottom: 3px;
   z-index: 20;
   border: 2px outset #e0e0e0;
   background: #c0c0c0;
@@ -915,7 +916,6 @@ fieldset.tool-group table.tool-dir { margin: 0; }
 .desk-js.desk-shell { display: flex; flex-direction: column; min-height: 150px; }
 .desk-js.desk-shell > .app-window { display: none; }
 .desk-js.desk-shell > .app-window.is-open { display: block; }
-.desk-js.desk-shell .taskbar { margin-top: auto; }
 
 /* One window per page: the title bar belongs to the app window alone. */
 .client-title {
@@ -1453,7 +1453,20 @@ body {
   flex-direction: column;
 }
 #page > .desktop > .desk-windows { flex: 1 1 auto; }
-#page > .desktop > .taskbar, #page > .desk-shell > .taskbar { margin-top: auto; }
+
+/* The taskbar belongs to the screen rather than to whatever is running on
+   it, so it is the last thing in #page and it rides the bottom of the view
+   the way a taskbar does. Sticky, not fixed: it cannot leave the monitor. */
+#page > .taskbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 12;
+  margin: 8px -18px -20px -18px;
+  border-top: 2px outset #e0e0e0;
+}
+@media (max-width: 700px) {
+  #page > .taskbar { margin: 8px -10px -14px -10px; }
+}
 
 /* The glass: a dark edge, a vignette, and the faintest scanlines. Kept
    under the menus (z-index 20 and up) so nothing lands on top of them,
@@ -1551,6 +1564,12 @@ body {
   color: #333333;
 }
 
+/* The toolkit bar lists every tool, and so does Start -> Programs. With
+   scripting on, the menu is the one you want and the bar is a second copy
+   eating the top of the screen; with scripting off it is the only
+   navigation there is, so it stays in the markup and simply shows. */
+#page:has(.desk-js) > .nav { display: none; }
+
 /* The desktop is the screen now, so it stops drawing a frame of its
    own: no border, no teal patch inside teal. */
 .desktop, .desk-shell {
@@ -1575,7 +1594,42 @@ body {
 #page > .desk-shell > .app-window.is-open > .app-body,
 #page:not(:has(.desk-js)) > .desk-shell > .app-window > .app-body { flex: 1 1 auto; }
 .desk-js.desk-shell { min-height: 58vh; }
-.desk-shell .taskbar { margin-top: auto; }
+
+/* A tool page is one app on an otherwise empty desk. Minimise it and the
+   desk should have somewhere to go, so start.js lays the rest of the
+   toolkit out as shortcuts underneath; they hide again the moment a window
+   is open over them. Built from the page's own nav, so they cannot drift. */
+.desk-shortcuts { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 2px 10px; padding: 10px 4px; }
+.desk-shell:has(> .app-window.is-open) .desk-shortcuts { display: none; }
+.desk-shortcut {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 84px;
+  padding: 6px 2px 8px 2px;
+  text-decoration: none;
+}
+.desk-shortcut svg { width: 30px; height: 30px; }
+.desk-shortcut span {
+  color: #ffffff;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  text-align: center;
+  padding: 0 3px;
+  text-shadow: 1px 1px 0 #000000;
+}
+.desk-shortcut:hover span, .desk-shortcut:focus span { background: #000080; outline: 1px dotted #ffffff; }
+.desk-shortcut-label {
+  flex-basis: 100%;
+  color: #b8dcdc;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-shadow: 1px 1px 0 #004040;
+  margin: 6px 0 0 4px;
+}
 
 /* Wide windows are only an improvement until the lines get too long to
    read. The window takes the width; the prose inside keeps its measure. */

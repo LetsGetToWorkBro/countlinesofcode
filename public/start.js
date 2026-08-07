@@ -14,7 +14,9 @@
 
   var desk = document.querySelector('.desktop, .desk-shell');
   if (!desk) return;
-  var bar = desk.querySelector('.taskbar');
+  // The taskbar moved out of the desk and onto the screen, where a taskbar
+  // belongs: last thing in #page, riding the bottom of the view.
+  var bar = document.querySelector('#page > .taskbar') || document.querySelector('.taskbar');
   var startBtn = bar && bar.querySelector('.start');
   if (!bar || !startBtn) return;
 
@@ -68,6 +70,44 @@
   function dosName(tool) {
     var base = tool.label.toUpperCase().replace(/[^A-Z0-9]/g, '');
     return (base.slice(0, 8) + '        ').slice(0, 8);
+  }
+
+  /* ------------------------------------------------------------ shortcuts
+     A tool page is one app on an otherwise empty desk. Minimising it used to
+     leave nothing to look at and nowhere to go but Start, so the rest of the
+     toolkit is laid out underneath: minimise, click another, which is how
+     switching between programs has always worked. Read out of the page's own
+     nav like the Programs menu, so there is still one list. */
+
+  var APP_ICON =
+    '<svg viewBox="0 0 32 32" aria-hidden="true">' +
+    '<rect x="3" y="5" width="26" height="22" fill="#c0c0c0" stroke="#333333" stroke-width="2"/>' +
+    '<rect x="4" y="6" width="24" height="5" fill="#000080"/>' +
+    '<rect x="23" y="7" width="4" height="3" fill="#c0c0c0"/>' +
+    '<rect x="6" y="14" width="14" height="2" fill="#808080"/>' +
+    '<rect x="6" y="18" width="18" height="2" fill="#808080"/>' +
+    '<rect x="6" y="22" width="10" height="2" fill="#808080"/></svg>';
+
+  function layShortcuts() {
+    // Only where there is a single app on the desk: the landing page has its
+    // own icons, drawn properly, and does not need these.
+    if (!desk.classList.contains('desk-shell')) return;
+    var here = location.pathname;
+    var box = el('div', 'desk-shortcuts');
+    GROUPS.forEach(function (group) {
+      var others = group.items.filter(function (tool) { return tool.href !== here; });
+      if (!others.length) return;
+      box.appendChild(el('span', 'desk-shortcut-label', group.label));
+      others.forEach(function (tool) {
+        var link = el('a', 'desk-shortcut');
+        link.href = tool.href;
+        link.innerHTML = APP_ICON + '<span>' + esc(tool.label) + '</span>';
+        box.appendChild(link);
+      });
+    });
+    var window_ = desk.querySelector('.app-window');
+    if (window_ && window_.nextSibling) desk.insertBefore(box, window_.nextSibling);
+    else desk.appendChild(box);
   }
 
   // ----------------------------------------------------------------- menu
@@ -173,7 +213,9 @@
   items.appendChild(el('div', 'start-sep'));
   items.appendChild(action('Shut Down...', shutDown));
 
-  desk.appendChild(menu);
+  bar.appendChild(menu);
+
+  layShortcuts();
 
   function menuOpen() { return menu.classList.contains('is-open'); }
   function closeMenu() {
@@ -278,8 +320,8 @@
       '<input type="text" class="dos-in" autocomplete="off" autocapitalize="off" spellcheck="false" ' +
       'aria-label="MS-DOS command"></p></div>';
 
-    var host = desk.querySelector('.desk-windows');
-    if (host) host.appendChild(dos); else desk.insertBefore(dos, bar);
+    var host = desk.querySelector('.desk-windows') || desk;
+    host.appendChild(dos);
 
     out = dos.querySelector('.dos-out');
     input = dos.querySelector('.dos-in');
