@@ -153,6 +153,11 @@ fieldset {
   border: 1px solid #808080;
   margin: 8px 0;
   padding: 6px 8px;
+  /* A fieldset refuses to be narrower than its content unless it is told
+     it may. That default is why one long line in the tool directory could
+     push the box, and the window holding it, off the side of the screen. */
+  min-inline-size: 0;
+  min-width: 0;
 }
 
 legend {
@@ -753,6 +758,37 @@ fieldset.tool-group table.tool-dir { margin: 0; }
 .desk-js .desk-windows { padding-bottom: 2px; }
 .desk-js .desk-windows .app-window { display: none; }
 .desk-js .desk-windows .app-window.is-open { display: block; margin-bottom: 14px; }
+
+/* A window is a window: it is the size of the screen it is on, and if it
+   has more to say than fits, the window scrolls. It does not grow the
+   desktop underneath it until the whole machine is four screens tall,
+   which is what a long read-me was doing here.
+
+   The chain has to be unbroken for the height to reach the pane, and
+   every link needs min-height: 0 or a flex item quietly refuses to
+   shrink below its content and the overflow pops out at the bottom. */
+/* min-height alone is a floor, and a floor does not stop anything growing:
+   the window has to be given a ceiling before "scroll inside it" can mean
+   anything. So while a window is open the machine is exactly a screenful,
+   which is the same number its floor already uses. */
+#page:has(.desktop.desk-js .app-window.is-open) {
+  max-height: calc(100vh - 172px);
+}
+.desk-js.desktop { min-height: 0; }
+.desk-js .desk-windows { display: flex; flex-direction: column; min-height: 0; }
+.desk-js .desk-windows .app-window.is-open {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.desk-js .desk-windows .app-window.is-open > .app-body {
+  flex: 1 1 auto;
+  min-height: 140px;
+  overflow-y: auto;
+  /* The scrollbar is chrome too, and the era's was grey on grey. */
+  scrollbar-color: #c0c0c0 #efefef;
+}
 
 /* The _ minimise control in a desk window's title bar. Only shown when the
    window manager is running, because without it there is no taskbar to
@@ -1929,11 +1965,22 @@ body {
 
   /* Wide tables (the counter results, the golf boards) scroll inside their
      own strip rather than stretching the window past the screen. */
-  .app-body table, table.tool-dir { display: block; overflow-x: auto; white-space: nowrap; }
+  /* A results table is columns of numbers and scrolls sideways rather than
+     folding into a mess. The tool directory is a list of links and their
+     descriptions, which should wrap like the prose it is: kept on one line
+     it was two hundred pixels wider than the phone. */
+  .app-body table { display: block; overflow-x: auto; white-space: nowrap; }
+  .app-body table.tool-dir, table.tool-dir {
+    display: table;
+    white-space: normal;
+  }
 
-  /* The taskbar's app button can take the room it needs; the clock is small. */
-  .task-btn { max-width: 55%; }
-  .task-clock { padding: 1px 6px; }
+  /* Four buttons, a Start and a clock on a phone's width. The open one is
+     bold, which is what pushed the other three into ellipses, so the bar
+     buys the space back from its own padding rather than from the labels. */
+  .taskbar { gap: 5px; font-size: 12px; padding: 3px 4px; }
+  .task-btn { max-width: none; padding: 1px 6px; }
+  .task-clock { padding: 1px 5px; }
 
   /* The menu sizes to its contents, not to the screen: pinned to both edges
      it stretched the full width with the items huddled on the left. Capped
@@ -1958,4 +2005,18 @@ body {
      the size of the furniture, and the icons reach the bottom corner, so
      it goes rather than sits behind a label. */
   .desktop::after { display: none; }
+
+  /* An open window takes the phone's screen, the way a maximised window
+     takes any screen. The icons are still there underneath and come back
+     the moment it goes to the taskbar. On a desktop there is room for
+     both and this does not apply. */
+  .desktop.desk-js:has(.app-window.is-open) .desk-groups { display: none; }
+
+  /* A phone has no stand to leave room for and a much smaller screen to
+     spend, so the ceiling is the viewport less the case. dvh rather than
+     vh: with vh the bar at the bottom of a mobile browser is counted
+     twice and the taskbar sits under it. */
+  #page:has(.desktop.desk-js .app-window.is-open) {
+    max-height: calc(100dvh - 22px);
+  }
 }
