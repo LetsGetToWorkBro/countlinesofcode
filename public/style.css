@@ -14,10 +14,15 @@ body {
   max-width: 680px;
 }
 
+/* The wordmark, and only ever the wordmark: every page's h1 is the site's
+   name. It is the machine's badge rather than a line of the document, so
+   it is set in the machine's font on the prose pages too, where the body
+   underneath stays in the serif it is written in. */
 h1 {
-  font-size: 28px;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 26px;
   margin: 0 0 2px 0;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 /* A link that does not announce itself. Used on the "1999" in the wordmark,
@@ -615,7 +620,7 @@ fieldset.tool-group table.tool-dir { margin: 0; }
 .app-window .client-title h2 {
   margin: 0;
   font-size: 14px;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   color: #ffffff;
   letter-spacing: 0;
 }
@@ -636,22 +641,35 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   border: 2px inset #c0c0c0;
   margin: 12px 0 16px 0;
 }
+/* The icon field.
+   It used to be flex-wrap over groups of two, three and four icons, which
+   meant every group started wherever the previous one happened to end: a
+   one-icon group landing mid-row, holes down the right, nothing lining up
+   with anything. A desktop's icons sit on a grid, so this is a grid. Each
+   group is two icon-widths across and tiles as a block, which puts every
+   icon on the same column rhythm no matter how many its group has. */
 .desk-groups {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 6px 14px;
+  /* Columns rather than a grid of groups: a grid puts every group in the
+     same row band, so one group two icons deep leaves a hole under every
+     group that is one deep. Columns let each group take the height it
+     needs and flow into the next column, which is how icons actually
+     land on a desktop. */
+  columns: 184px auto;
+  column-gap: 18px;
   padding: 12px 12px 10px 12px;
 }
 .desk-group {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
+  break-inside: avoid;
+  display: grid;
+  grid-template-columns: repeat(2, 88px);
+  align-content: start;
+  gap: 2px 4px;
+  margin: 0 0 10px 0;
 }
 .desk-group-label {
-  flex-basis: 100%;
+  grid-column: 1 / -1;
   color: #b8dcdc;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -663,14 +681,15 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   flex-direction: column;
   align-items: center;
   gap: 5px;
-  width: 80px;
+  width: 88px;
+  box-sizing: border-box;
   padding: 6px 2px 8px 2px;
   text-decoration: none;
 }
 .desk-icon svg { width: 34px; height: 34px; }
 .desk-icon span {
   color: #ffffff;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 13px;
   padding: 0 3px;
   text-align: center;
@@ -687,7 +706,7 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   background: #c0c0c0;
   border-top: 2px outset #e0e0e0;
   padding: 3px 6px;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 13px;
 }
 .taskbar .start {
@@ -778,7 +797,7 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   z-index: 20;
   border: 2px outset #e0e0e0;
   background: #c0c0c0;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 13px;
 }
 .start-menu.is-open { display: flex; }
@@ -923,7 +942,7 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   background: #000080;
   color: #ffffff;
   font-weight: bold;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 14px;
   padding: 3px 8px;
 }
@@ -935,7 +954,7 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   margin: 10px 0 4px 0;
   padding: 2px 8px;
   font-size: 13px;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
 }
 .client-status .status { margin: 0; }
 
@@ -1053,7 +1072,7 @@ table.tools th:last-child { width: 21%; }
   margin: 0 auto;
 }
 
-/* Label, slider, timestamp, button — on one line where there is room, wrapping
+/* Label, slider, timestamp, button on one line where there is room, wrapping
    on a phone rather than overflowing. */
 .trim-row {
   display: flex;
@@ -1229,7 +1248,7 @@ img.zip-image { max-width: 100%; display: block; }
 /* ------------------------------------------------- the encryption tools */
 
 /* Strength verdicts. Colour alone would not be enough, and it is not the only
-   signal — the words say what the password actually resists. */
+   signal: the words say what the password actually resists. */
 .pw-terrible { color: #8a0000; }
 .pw-weak { color: #8a3b00; }
 
@@ -1397,7 +1416,7 @@ textarea {
    anyone who cannot tell the two apart. */
 .addr-check {
   font-size: 13px;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   white-space: nowrap;
 }
 .addr-check.is-ok { color: #0a7a28; font-weight: bold; }
@@ -1534,7 +1553,13 @@ body {
 #page:has(.desktop) > h1, #page:has(.desk-shell) > h1 {
   color: #ffffff;
   text-shadow: 2px 2px 0 #004848;
-  font-size: 22px;
+  /* The wordmark was Times, because the page had never been told otherwise.
+     Times on a Windows desktop is the one material that cannot be there: the
+     machine has a UI font and this is a piece of its chrome, not a document
+     set in it. */
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 21px;
+  letter-spacing: 0.5px;
   margin: 2px 0 0 0;
 }
 #page:has(.desktop) > h1 a, #page:has(.desk-shell) > h1 a { color: #ffffff; text-decoration: none; }
@@ -1542,8 +1567,9 @@ body {
 #page:has(.desktop) > .tagline, #page:has(.desk-shell) > .tagline {
   color: #cbe7e7;
   text-shadow: 1px 1px 0 #004848;
-  font-size: 14px;
-  margin: 0 0 4px 0;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 12.5px;
+  margin: 0 0 6px 0;
 }
 
 /* ---- the desk under the monitor -----------------------------------
@@ -1589,7 +1615,7 @@ body {
   border: 2px outset #e0e0e0;
   padding: 4px 8px 3px 8px;
   margin: 10px 0 12px 0;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 13px;
 }
 #page:has(.desktop) .nav-group, #page:has(.desk-shell) .nav-group {
@@ -1655,7 +1681,7 @@ body {
 .desk-shortcut svg { width: 30px; height: 30px; }
 .desk-shortcut span {
   color: #ffffff;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 12px;
   text-align: center;
   padding: 0 3px;
@@ -1665,7 +1691,7 @@ body {
 .desk-shortcut-label {
   flex-basis: 100%;
   color: #b8dcdc;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -1700,6 +1726,163 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-new(root), ::view-transition-old(root) { animation: none; }
+}
+
+/* ====================================================================
+   THE MACHINE, RUNNING
+
+   Three things below, all of them chrome rather than content, and all of
+   them the era's own answers rather than invented ones.
+   ==================================================================== */
+
+/* ---- the title bar -------------------------------------------------
+   A flat navy bar was the Windows 3 answer. The gradient that runs off
+   into a lighter blue is the one this desktop is actually dressed as,
+   and it is the single cheapest thing that makes a box read as a window
+   rather than as a div with a coloured strip on top. */
+.client-title {
+  background-image: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+}
+.dos-window .client-title {
+  /* The DOS box is a different program and keeps its flat bar. */
+  background-image: none;
+}
+
+/* The minimise control, drawn as the control it is: a silver button with
+   the era's bevel, the glyph sitting on the baseline where Windows put
+   it. Still only shown when the window manager is running, because
+   without it there is no taskbar for a window to go to. */
+.win-min {
+  box-sizing: border-box;
+  width: 18px;
+  height: 16px;
+  padding: 0;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 12px;
+  line-height: 9px;
+  text-align: center;
+  align-self: center;
+}
+.win-min:active { border-style: inset; }
+
+/* ---- the wallpaper -------------------------------------------------
+   A desktop is mostly empty, and that is correct: it is a surface, not a
+   page, and filling it would be the mistake. What it should not be is
+   blank, so the wallpaper carries the machine's name in the corner the
+   way an OEM desktop of the era carried its maker's. Low enough contrast
+   to be furniture, big enough to anchor the bottom of the screen. */
+.desktop { position: relative; }
+.desktop::after {
+  content: "1999.LOC";
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 40px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #0b8a8a;
+  text-shadow: 1px 1px 0 #007373;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+/* It is painted on the wallpaper, so anything running on the desktop is
+   in front of it. Without this the windows open underneath the paint. */
+.desk-groups, .desk-windows { position: relative; z-index: 1; }
+
+/* ---- the power-on --------------------------------------------------
+   A CRT does not fade in, it snaps: a hairline of light across the
+   middle, then the picture opening out of it, then the brightness
+   settling. Half a second, once, on the landing only. A tool page is
+   not a boot and should not pretend to be one. */
+@media (prefers-reduced-motion: no-preference) {
+  .desktop {
+    animation: crt-power-on 520ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+    transform-origin: center center;
+  }
+  @keyframes crt-power-on {
+    0%   { opacity: 0; transform: scaleY(0.006); filter: brightness(3.4) saturate(0.2); }
+    40%  { opacity: 1; transform: scaleY(0.02);  filter: brightness(2.6) saturate(0.4); }
+    70%  { transform: scaleY(1); filter: brightness(1.5) saturate(0.9); }
+    100% { transform: scaleY(1); filter: brightness(1) saturate(1); }
+  }
+}
+
+/* ---- a window arriving ---------------------------------------------
+   Windows of the era drew a wire rectangle zooming out of the taskbar
+   button, because a window that simply exists gives no clue where it
+   came from. This is that, done the way the box allows: a short scale
+   up from the bottom left, fast enough to read as mechanical rather
+   than as an easing curve. Feedback for a press, not decoration. */
+@media (prefers-reduced-motion: no-preference) {
+  .desk-js .app-window.is-open {
+    animation: window-open 130ms steps(4, end) both;
+    transform-origin: 0 100%;
+  }
+  @keyframes window-open {
+    from { transform: scale(0.86, 0.7); opacity: 0.4; }
+    to   { transform: scale(1, 1); opacity: 1; }
+  }
+}
+
+/* ---- click here to begin -------------------------------------------
+   Windows 95 shipped with a callout pointing at the Start button on
+   first boot, because a desktop with nothing open tells a first-time
+   visitor nothing about where to press. This one has the same problem
+   and takes the same answer. It fades out on its own after a few
+   seconds and disappears the moment the menu opens, so it is never
+   something to dismiss.
+
+   Landing only, and only while the menu is shut. */
+/* Anchored to the button, not to the bar: "left: 100%" has to mean the
+   right edge of Start, or the callout lands off the end of the taskbar. */
+#page:has(.desktop) .taskbar .start { position: relative; }
+#page:has(.desktop):not(:has(.start-menu.is-open)):not(:has(.app-window.is-open)) .taskbar .start::after {
+  content: "Click here to begin";
+  position: absolute;
+  /* Above the bar, over the wallpaper. Beside the button is where Windows
+     put it, but Windows had an empty taskbar to put it in and this one
+     has the open windows on it. */
+  left: 0;
+  bottom: calc(100% + 11px);
+  white-space: nowrap;
+  background: #ffffe1;              /* the era's tooltip yellow */
+  color: #000000;
+  border: 1px solid #000000;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 12px;
+  font-weight: normal;
+  padding: 3px 8px;
+  pointer-events: none;
+  z-index: 11;
+  animation: begin-hint 9s ease-out both;
+}
+/* The arrow, pointing back at the button it is talking about. */
+#page:has(.desktop):not(:has(.start-menu.is-open)):not(:has(.app-window.is-open)) .taskbar .start::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  bottom: calc(100% + 5px);
+  border: 6px solid transparent;
+  border-top-color: #000000;
+  border-bottom-width: 0;
+  pointer-events: none;
+  z-index: 12;
+  animation: begin-hint 9s ease-out both;
+}
+@keyframes begin-hint {
+  0%, 4%    { opacity: 0; }
+  10%, 82%  { opacity: 1; }
+  100%      { opacity: 0; visibility: hidden; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* No pulse and no timed fade: it is simply there, and the menu
+     opening still takes it away. */
+  #page:has(.desktop):not(:has(.start-menu.is-open)):not(:has(.app-window.is-open)) .taskbar .start::after,
+  #page:has(.desktop):not(:has(.start-menu.is-open)):not(:has(.app-window.is-open)) .taskbar .start::before {
+    animation: none;
+  }
 }
 
 /* ---- small screens -------------------------------------------------
@@ -1764,7 +1947,15 @@ body {
   .room-footer { margin-top: 18px; padding: 0 4px 4px 4px; }
   .room-footer .footer { line-height: 1.6; }
 
-  /* Desktop icons and shortcuts pack tighter. */
-  .desk-icon, .desk-shortcut { width: 72px; }
-  .desk-groups { gap: 4px 8px; }
+  /* Desktop icons and shortcuts pack tighter, and the group's two columns
+     narrow with them so the icons still fill their cells rather than
+     sitting inside 88px boxes with a hole down the right. */
+  .desk-icon, .desk-shortcut { width: 74px; }
+  .desk-groups { columns: 156px auto; column-gap: 8px; padding: 6px 2px 8px 2px; }
+  .desk-group { grid-template-columns: repeat(2, 74px); margin-bottom: 6px; }
+
+  /* The wallpaper mark is furniture for a big screen. A phone screen is
+     the size of the furniture, and the icons reach the bottom corner, so
+     it goes rather than sits behind a label. */
+  .desktop::after { display: none; }
 }
