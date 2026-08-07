@@ -822,20 +822,26 @@
 
     var cord = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     cord.setAttribute('class', 'kbd-cord');
-    cord.setAttribute('viewBox', '0 0 120 200');
-    cord.setAttribute('preserveAspectRatio', 'none');
+    cord.setAttribute('viewBox', '0 0 130 230');
     cord.setAttribute('aria-hidden', 'true');
-    /* Straight out of the keyboard, then eleven turns of coil, then up
-       into the back of the case. */
-    var d = 'M112 196 C104 188 96 180 92 168';
-    for (var turn = 0; turn < 11; turn++) {
-      var y = 162 - turn * 11;
-      d += ' C 62 ' + (y + 2) + ' 62 ' + (y - 9) + ' 92 ' + (y - 11);
+    /* Out from under the keyboard, twelve turns of coil, then away to the
+       right and behind the case. Both ends run under something on purpose:
+       the keyboard covers one and the monitor covers the other, so neither
+       has to be finished and neither can be caught dangling. */
+    var d = 'M 40 229 C 36 216 32 208 40 196';
+    for (var turn = 0; turn < 12; turn++) {
+      var y = 192 - turn * 13;
+      d += ' C 8 ' + (y - 2) + ' 8 ' + (y - 11) + ' 40 ' + (y - 13);
     }
-    d += ' C 104 30 96 14 88 0';
-    var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', d);
-    cord.appendChild(path);
+    d += ' C 66 26 94 16 124 6';
+    /* Drawn twice over the same path: a wide dark stroke for the shadow
+       side of the cable and a narrower pale one for its sleeve. */
+    ['shadow', 'sleeve'].forEach(function (part) {
+      var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('class', part);
+      cord.appendChild(path);
+    });
     document.body.appendChild(cord);
   }
 

@@ -1604,12 +1604,42 @@ body::before {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 300px;
+  height: 330px;
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(58% 150% at 50% 0%, rgba(0, 200, 205, 0.16) 0%, rgba(0, 80, 90, 0.05) 45%, rgba(0, 0, 0, 0) 72%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(8, 16, 20, 0.55) 34%, rgba(4, 8, 11, 0.92) 100%);
+    /* The back edge, catching the screen, and the shadow the machine
+       throws just in front of it. One bright line plus one dark band is
+       what turns a gradient into a surface with a far side and a thing
+       standing on it. */
+    linear-gradient(180deg,
+      rgba(152, 252, 252, 0.30) 0 2px,
+      rgba(0, 0, 0, 0.5) 2px 14px,
+      rgba(0, 0, 0, 0) 44px),
+    /* The screen's light pooling on the wood in front of the machine. */
+    radial-gradient(46% 108% at 50% 0%, rgba(0, 215, 220, 0.21) 0%, rgba(0, 95, 105, 0.08) 44%, rgba(0, 0, 0, 0) 76%),
+    /* Board seams, spaced wider as the surface comes toward the viewer.
+       Evenly spaced lines read as wallpaper; unevenly spaced ones read as
+       a plane going away from you, which is the whole job here. */
+    linear-gradient(180deg,
+      rgba(0, 0, 0, 0) 0 15px, rgba(0, 0, 0, 0.34) 15px 16px,
+      rgba(0, 0, 0, 0) 16px 33px, rgba(0, 0, 0, 0.34) 33px 34px,
+      rgba(0, 0, 0, 0) 34px 56px, rgba(0, 0, 0, 0.33) 56px 58px,
+      rgba(0, 0, 0, 0) 58px 88px, rgba(0, 0, 0, 0.32) 88px 90px,
+      rgba(0, 0, 0, 0) 90px 131px, rgba(0, 0, 0, 0.3) 131px 134px,
+      rgba(0, 0, 0, 0) 134px 189px, rgba(0, 0, 0, 0.26) 189px 193px,
+      rgba(0, 0, 0, 0) 193px),
+    /* The front of the desk is outside the screen's reach, so the grain
+       under this veil goes out with it rather than staying legible into
+       the dark. */
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 0 46%, rgba(0, 0, 0, 0.45) 76%, rgba(0, 0, 0, 0.78) 100%),
+    /* Grain: long streaks running the length of the boards, two periods
+       so it does not settle into corduroy, and a fraction off true so it
+       does not look printed on. */
+    repeating-linear-gradient(0.6deg, rgba(255, 212, 152, 0.075) 0 3px, rgba(0, 0, 0, 0) 3px 9px),
+    repeating-linear-gradient(-0.45deg, rgba(0, 0, 0, 0.15) 0 2px, rgba(0, 0, 0, 0) 2px 15px),
+    /* The wood itself, receding into the dark at the front edge. */
+    linear-gradient(180deg, #7c5429 0%, #5c3e1d 22%, #3d2913 52%, #211609 80%, #0b0806 100%);
 }
 
 /* ---- the keyboard --------------------------------------------------
@@ -2638,20 +2668,33 @@ body.is-typing::after { filter: brightness(1.5) contrast(1.04); }
 /* The cord: out of the keyboard, eleven turns of coil, up into the case. */
 .kbd-cord {
   position: fixed;
-  z-index: 2;
+  /* Under the case (z-index 1) and under the keyboard (3), over the desk.
+     That is what makes it a cord rather than a drawing of one: the top end
+     disappears behind the machine and the bottom end goes under the
+     keyboard, so neither end has to be finished. */
+  z-index: 0;
   left: 50%;
-  margin-left: -540px;
-  bottom: 58px;
-  width: 120px;
-  height: 200px;
+  /* The keyboard is 980 wide and centred, so its front edge is 490 from
+     the middle; the case's left edge is about 375. The cord's box spans
+     that gap, ending inside both. */
+  margin-left: -480px;
+  bottom: 8px;
+  width: 130px;
+  height: 230px;
   pointer-events: none;
 }
+/* Two strokes, not one: the dark one is the cable's own shadow side and
+   the pale one is the sleeve. A single dark stroke on a dark desk is a
+   cable you cannot see, which is what this was. */
 .kbd-cord path {
   fill: none;
-  stroke: #14171b;
-  stroke-width: 5;
+  stroke: #0d0f12;
+  stroke-width: 9;
   stroke-linecap: round;
-  filter: drop-shadow(1px 0 0 rgba(255, 255, 255, 0.09));
+}
+.kbd-cord path.sleeve {
+  stroke: #b3ab97;
+  stroke-width: 5.5;
 }
 
 @media (max-width: 700px) {
