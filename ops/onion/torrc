@@ -1,0 +1,38 @@
+# 1999.LOC onion service.
+#
+# Installed at /etc/tor/torrc.d/1999loc.conf by install.sh, which also makes
+# sure /etc/tor/torrc includes that directory.
+
+# This box is a server. It does not need a SOCKS port and should not offer
+# one: an open SOCKS port on a machine with a public IP is somebody else's
+# proxy. (Comment it back in only if you want to curl the onion from the box
+# itself, and comment it out again afterwards.)
+SocksPort 0
+
+HiddenServiceDir /var/lib/tor/1999loc/
+HiddenServicePort 80 127.0.0.1:8080
+
+# Onion services are v3 and have been for years; stated anyway so a future
+# default cannot quietly move underneath us.
+HiddenServiceVersion 3
+
+# Refuse to start rather than run with a directory Tor thinks is unsafe. The
+# secret key in there is the address.
+HiddenServiceDirGroupReadable 0
+
+# ---------------------------------------------------------------------------
+# Optional: single-hop mode.
+#
+# A visitor still gets their full three hops of anonymity. What this drops is
+# the three hops on the *service* side, which exist to hide where the service
+# is running. This site is already published under a domain name pointing at
+# Cloudflare, so the location of the mirror is not a secret being kept, and
+# turning these on roughly halves the latency.
+#
+# The cost is real: with these on, the box's IP is discoverable by anyone who
+# cares to look. Turn them on only if that was already true, and never on a
+# machine whose location is part of what you are protecting. Both lines are
+# required together, and Tor will refuse to start unless SocksPort is 0.
+#
+# HiddenServiceNonAnonymousMode 1
+# HiddenServiceSingleHopMode 1

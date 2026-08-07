@@ -7,3 +7,8 @@ dist/
 .DS_Store
 coverage/
 scratchpad/
+
+# Onion service key material must never end up in a commit.
+hs_ed25519_secret_key
+hs_ed25519_public_key
+onion-keys/

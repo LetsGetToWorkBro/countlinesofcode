@@ -7,7 +7,8 @@ service sees is a circuit; what the network sees is onion cells.
 
 This is the strongest privacy thing the site can offer a visitor, and it is
 also the one that needs a machine. The site's own half is done: `npm run
-onion:set` writes the advertisement. The rest is below.
+onion:set` writes the advertisement. Everything else is in `ops/onion/`, and
+this file is the runbook for it.
 
 **The honest caveat, first.** Whoever runs the onion box sees the traffic in
 the clear, because that box is where the TLS ends. Today that party is
@@ -20,98 +21,141 @@ on hardware or a VPS you control, or do not run it at all.
 ## What you need
 
 - A machine with a public IP that can reach `1999loc.com` outbound. It needs
-  no inbound ports: an onion service dials out to Tor. 1 vCPU and 1 GB is
-  plenty for a static site. Debian or Ubuntu below; adjust to taste.
+  no inbound ports at all: an onion service dials out to Tor and nothing dials
+  in. 1 vCPU and 1 GB is plenty. Debian or Ubuntu below; adjust to taste.
 - Root on it.
-- About twenty minutes, plus however long you let the vanity address grind.
+- About ten minutes, plus however long you let the vanity address grind.
 
 ---
 
-## 1. Install Tor and EOTK
+## 1. Pick an address
 
-[EOTK](https://github.com/alecmuffett/eotk), the Enterprise Onion Toolkit, is
-Alec Muffett's tool for exactly this: it stands up an onion service that
-mirrors an existing site, rewriting the clearnet hostname to the onion one in
-HTML, CSS and JavaScript as it passes through, so links inside the site stay
-inside the onion.
+A v3 onion address is 56 characters of base32 and it *is* the public key, so
+you cannot choose one: you generate keys until one happens to start with what
+you wanted. [mkp224o](https://github.com/cathugger/mkp224o) does that.
 
-```sh
-sudo apt update
-sudo apt install -y tor git nginx-extras libnginx-mod-http-subs-filter \
-                    build-essential libssl-dev
-git clone https://github.com/alecmuffett/eotk.git
-cd eotk
-./opt.d/000-install-debian.sh      # pulls the rest of what it needs
-```
-
-EOTK wants `nginx` built with the `subs_filter` module, which is what
-`nginx-extras` provides on Debian and Ubuntu. If `nginx -V` does not mention
-`ngx_http_subs_filter_module`, stop and fix that first: everything downstream
-depends on the rewriting.
-
-## 2. Pick an address
-
-A v3 onion address is 56 characters of base32, and it is the public key. You
-can take whatever Tor generates, or grind a readable prefix with
-[mkp224o](https://github.com/cathugger/mkp224o):
+**Base32 has no 0, 1, 8 or 9.** The alphabet is `a`-`z` and `2`-`7`, and that
+is the whole of it. So "1999" cannot appear in an onion address, and neither
+can any word containing those digits. The nearest thing available is
+`mcmxcix`, which is 1999 in Roman numerals, and after that it is words.
 
 ```sh
+sudo apt install -y build-essential autoconf libsodium-dev
 git clone https://github.com/cathugger/mkp224o
-cd mkp224o && ./autogen.sh && ./configure && make
-./mkp224o 1999loc -d ~/onion-keys -n 1 -v
+cd mkp224o
+./autogen.sh
+./configure --enable-amd64-51-30k --enable-intfilter --enable-binsearch
+make -j"$(nproc)"
+
+printf '%s\n' mcmxcix nothing notrack loccode codeloc loctool tinyloc locfree > filters.txt
+./mkp224o -f filters.txt -t "$(nproc)" -d ~/onion-keys -O found.txt -s
 ```
 
-A 7-character prefix is minutes on a laptop; 8 is hours; beyond that the
-maths turns unkind quickly. Grinding does not weaken the key: it is still a
-real Ed25519 keypair, you are simply discarding the ones that do not spell
-what you wanted.
+Those `configure` flags matter more than they look: they pick the fast
+assembly Ed25519 implementation and the integer filter, and they are worth
+roughly an order of magnitude over a bare `./configure`.
 
-**The key in `~/onion-keys/<address>/hs_ed25519_secret_key` is the address.**
-Back it up somewhere offline. Lose it and the address is gone forever; leak it
-and somebody else can be you.
+How long it takes is only a function of prefix length, because each character
+is one of 32:
 
-## 3. Configure the mirror
+| prefix | keys to expect | at 17 M/s (4 cores, 2.1 GHz Xeon) |
+|---|---|---|
+| 5 | 34 million | 2 seconds |
+| 6 | 1.1 billion | a minute |
+| 7 | 34 billion | ~30 minutes |
+| 8 | 1.1 trillion | ~18 hours |
+| 9 | 35 trillion | ~24 days |
 
-Create `1999loc.tconf` in the EOTK directory:
+Those are means, not deadlines: it is a memoryless search, so half the time
+you beat it and occasionally you wait three times as long. Feeding several
+filters at once does not slow any of them down, because every generated key is
+tested against all of them; it just means more ways to win. Seven characters
+is the sweet spot, and eight is the last one that is reasonable.
 
-```
-set project 1999loc
-hardmap %ONION_ADDRESS% 1999loc.com
-set nginx_resolver 1.1.1.1 9.9.9.9
-set nginx_timeout 30
-set force_https 0
-set suppress_header_hsts 1
-set suppress_header_hpkp 1
-set suppress_header_onion_location 1
-```
+Grinding does not weaken the key. It is a real Ed25519 keypair either way; you
+are only discarding the ones that do not spell what you wanted.
 
-Three of those matter:
+**The key in `~/onion-keys/<address>.onion/hs_ed25519_secret_key` is the
+address.** Back it up offline. Lose it and the address is gone forever; leak
+it and somebody else can be you. Generate it on a machine you trust, for the
+same reason.
 
-- `suppress_header_hsts` strips Strict-Transport-Security. The onion is
-  plain http, and an HSTS header from the mirror would tell the browser to
-  demand https from an address that has no certificate.
-- `suppress_header_onion_location` strips the header the clearnet site sends,
-  so the mirror does not advertise itself to itself.
-- `force_https 0` because, again, an onion is its own transport security. The
-  address *is* the public key; a certificate on top adds a warning and
-  nothing else.
-
-Then:
+## 2. Stand up the mirror
 
 ```sh
-./eotk config 1999loc.tconf
-./eotk maketorrc 1999loc
-# put your ground key in place, if you ground one:
-cp -r ~/onion-keys/<address>/ projects.d/1999loc/hs.d/<address>/
-./eotk start 1999loc
-./eotk status
+git clone https://github.com/letsgettoworkbro/countlinesofcode
+cd countlinesofcode/ops/onion
+sudo ./install.sh ~/onion-keys/<address>.onion
 ```
 
-`./eotk print-onions 1999loc` prints the address the mirror is serving.
+That installs tor and nginx, drops the key in with the permissions Tor
+insists on, enables both at boot, and prints the address. Run it again any
+time; it will not overwrite a key already in place unless you hand it a new
+one. Omit the key argument and Tor generates a random address instead.
+
+### Why this is a reverse proxy and not EOTK
+
+The usual tool for onion-mirroring an existing site is
+[EOTK](https://github.com/alecmuffett/eotk), which runs nginx with
+`subs_filter` and rewrites the clearnet hostname to the onion one in HTML,
+CSS and JavaScript as it passes through. It exists because most sites are full
+of absolute links to themselves, and on the mirror every one of those is a
+door back out to the clearnet.
+
+This site has none. Every link, stylesheet, script, image and API path is
+written relative; the only absolute self-references anywhere in the HTML are
+`<link rel="canonical">` and `og:url`, which are metadata for search engines
+and are *supposed* to point at the clearnet original. So there is nothing to
+rewrite, and `ops/onion/nginx-onion.conf` is forty lines of reverse proxy
+instead of a toolkit with a Perl driver.
+
+The Content-Security-Policy comes along for free, which is the part worth
+understanding. It is `connect-src 'self'`, `script-src 'self'`, and on the
+mirror "self" *is* the onion, because the browser resolves it against the
+origin it loaded the page from. The tools call `/api/xmr`, `/api/btc`,
+`/api/swap` and `/api/mail` relatively, those resolve to the onion, the proxy
+passes them to the origin, and the policy is satisfied without anybody
+configuring anything. A site that had hardcoded `https://1999loc.com/api/...`
+would fail its own CSP on the mirror and need EOTK to fix it.
+
+Two things the proxy does have to do, both in the config with comments:
+
+- **Strip `Strict-Transport-Security`.** The onion is plain http. An HSTS
+  header would tell the browser to demand https from an address that has no
+  certificate and cannot be issued one.
+- **Strip `Onion-Location`.** Otherwise the mirror advertises itself to
+  itself.
+
+And one it deliberately does not do: there is no `X-Forwarded-For`. A visitor
+arrives as a Tor circuit, `127.0.0.1` is the whole truth about where the
+request came from, and inventing a header would hand the origin a fact the
+onion exists to withhold.
+
+There is also no proxy cache, on purpose. A cache shared between visitors
+tells one of them, through response timing, which pages another fetched
+recently. The origin is a Worker with its assets on a CDN edge and answers in
+single-digit milliseconds, which is nothing against six Tor hops; there is no
+speed here worth that side channel.
+
+## 3. Check it before you advertise it
+
+Load the address in Tor Browser and click through the tools. `install.sh`
+already checks the proxy hop and the header stripping, so what is left is the
+part only a browser can answer:
+
+- the desktop, the icons, the taskbar and the Start menu all render and work
+  (stylesheet and scripts are resolving against the onion);
+- **the tools still work**, particularly the wallet, the swap and the
+  disposable inbox, because those are the ones that call `/api/`.
+
+The same check runs locally without Tor, which is how this config was
+verified: point nginx at the origin, load `http://127.0.0.1:8080/` in a
+browser, and every relative URL and CSP rule behaves exactly as it will on the
+onion, because in both cases "self" is an origin that is not `1999loc.com`.
 
 ## 4. Advertise it from the clearnet site
 
-From this repository, with the address EOTK printed:
+Last, once the service actually answers:
 
 ```sh
 npm run onion:set <address>.onion
@@ -127,26 +171,31 @@ That writes the address in the two places the site is served from:
   (`/golf`, `/board`, `/r/...`, the error pages).
 
 `npm run onion:clear` reverses it. `src/lib/onion.ts` holds the rules and
-`test/onion.test.ts` holds them to it: the header is only sent from HTTPS,
+`test/onion.test.ts` holds them to it: the header is only sent over HTTPS,
 never from the onion about itself, and never on `/api/` paths.
-
-## 5. Check it
 
 ```sh
 curl -sI https://1999loc.com/ | grep -i onion-location
 ```
 
-Then load the site in Tor Browser. It should show **".onion available"** in
-the address bar. Click it and confirm:
+Tor Browser will then show **".onion available"** in the address bar. Do this
+step last: until the service answers, the header points at a door that is not
+there.
 
-- the desktop, the icons and the taskbar all render (EOTK is rewriting the
-  stylesheet and script URLs correctly);
-- the Start menu and the DOS prompt work (same, for `start.js`);
-- **the tools still work.** This is the one to check properly. The site's
-  Content-Security-Policy is `connect-src 'self'`, and on the mirror "self"
-  is the onion, so `/api/xmr`, `/api/btc`, `/api/swap` and `/api/mail` all
-  resolve to the onion and pass. If a tool cannot reach its API on the
-  mirror, EOTK's rewriting missed something; check `nginx -T` on the box.
+## A thing to check on the Cloudflare side
+
+Cloudflare's Web Analytics injects `static.cloudflareinsights.com/beacon.min.js`
+into HTML responses at the edge, after the Worker has run, when the request
+looks like it came from a browser. It is off in the dashboard or it is not;
+there is no code in this repository that can prevent it.
+
+The site's CSP refuses to load it, which is verifiable in any browser console
+and is exactly the argument the site makes about itself: the rule is enforced
+by the browser rather than promised by us, and it holds even against the
+company serving the page. But a blocked script tag is still a script tag in
+the HTML, and the site says in plain words that there is no analytics script
+on any page. Turn it off at **the zone → Analytics → Web Analytics** rather
+than relying on the policy to keep catching it.
 
 ## What the mirror changes, and what it does not
 
@@ -168,13 +217,17 @@ the explorer specifically, see the Bitcoin wallet's own privacy modes in
 
 ## Keeping it alive
 
-- `./eotk stop 1999loc` and `./eotk start 1999loc` are the whole lifecycle.
-  Add a systemd unit or a cron `@reboot` so it comes back on its own.
-- Tor and nginx both want ordinary security updates. An onion box is a web
-  server with a nicer address, not a magic one.
-- If the site's CSP or hostnames ever change, re-run `./eotk config` so the
-  rewriting keeps up.
+- `systemctl status tor nginx` is the whole health check. Both are enabled at
+  boot by `install.sh`.
+- Tor and nginx want ordinary security updates. An onion box is a web server
+  with a nicer address, not a magic one.
+- The key is the only irreplaceable thing on the machine. Everything else in
+  `ops/onion/` rebuilds the box from scratch in ten minutes.
 - Publish the address somewhere signed. An onion address handed over an
   unauthenticated channel is an onion address somebody can substitute; the
   `Onion-Location` header is authenticated by the clearnet site's certificate,
   which is exactly why it is the right way to hand it out.
+- If the site ever grows an absolute link to itself, the mirror will start
+  leaking visitors back to the clearnet and this becomes an EOTK problem
+  again. `grep -rn 'https://1999loc.com' public/` should only ever turn up
+  `canonical` and `og:url`.
