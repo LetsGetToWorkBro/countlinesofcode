@@ -670,7 +670,18 @@ fieldset.tool-group table.tool-dir { margin: 0; }
      line of icons pushes a hole into the band opposite it. Columns are
      independent: bands stack tight down one and then tight down the
      other, and a hole cannot appear beside a band because there is no
-     row for it to appear in. */
+     row for it to appear in.
+
+     One stack across the full width was tried and does not fit, and the
+     arithmetic is not close. Six groups means six bands, and a band is a
+     heading plus at least one row of icons whatever its width: at a 116px
+     cell that is roughly 22 + 95 + 18, so six of them want about 810px.
+     The wallpaper at 1440x900 is about 474px tall. Widening the rows does
+     not help, because what costs the height is the six headings and the
+     six minimum rows, not how many icons sit in each. Two columns halves
+     the band count per stack and is the only arrangement that fits
+     without either shrinking the icons back down or dropping the
+     headings. */
   .desk-groups {
     columns: 2;
     column-gap: 36px;
@@ -679,20 +690,20 @@ fieldset.tool-group table.tool-dir { margin: 0; }
 .desk-group {
   break-inside: avoid;
   display: grid;
-  grid-template-columns: repeat(auto-fill, 88px);
+  grid-template-columns: repeat(auto-fill, 116px);
   justify-content: start;
   align-content: start;
-  gap: 0 4px;
-  margin: 0 0 14px 0;
+  gap: 10px 4px;
+  margin: 0 0 18px 0;
 }
 .desk-group-label {
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #a8d3d3;
+  color: #effdfd;
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.09em;
   text-shadow: 1px 1px 0 #004040;
@@ -713,7 +724,7 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   align-items: center;
   justify-content: flex-start;
   gap: 5px;
-  width: 88px;
+  width: 116px;
   /* No reserved height. A grid row is already as tall as its tallest
      cell and stretches the rest to match, so the row holding Inspect File
      stays square without every other row carrying a spare line's worth of
@@ -722,11 +733,11 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   padding: 6px 2px 8px 2px;
   text-decoration: none;
 }
-.desk-icon svg { width: 34px; height: 34px; }
+.desk-icon svg { width: 48px; height: 48px; }
 .desk-icon span {
   color: #ffffff;
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
-  font-size: 13px;
+  font-size: 15px;
   padding: 0 3px;
   text-align: center;
   text-shadow: 1px 1px 0 #000000;
@@ -803,7 +814,7 @@ fieldset.tool-group table.tool-dir { margin: 0; }
    anything. So while a window is open the machine is exactly a screenful,
    which is the same number its floor already uses. */
 #page:has(.desktop.desk-js .app-window.is-open) {
-  max-height: calc(100vh - 172px);
+  max-height: calc(100vh - 210px);
 }
 .desk-js.desktop { min-height: 0; }
 .desk-js .desk-windows {
@@ -1574,7 +1585,7 @@ body {
    becoming the larger half of the view. */
 #page:has(.desktop), #page:has(.desk-shell) {
   background: #008080;
-  min-height: calc(100vh - 172px);
+  min-height: calc(100vh - 210px);
   /* A tube is four by three. Everything else here was already 1999 and the
      shape was not: a screen running the full width of a modern window is a
      flat panel wearing a beige case, and no amount of moulding on the
@@ -1582,10 +1593,19 @@ body {
      that needs, which is why the machine is squarer than the window it is
      sitting in and why it stops growing on a wide screen.
 
-     The 290 is the 172 above plus the 118 of bezel and padding between the
+     The 328 is the 210 above plus the 118 of bezel and padding between the
      case edge and the glass; the 96 puts the bezel's own width back. Both
-     move if those do, and the test in test/style.test.ts says so. */
-  max-width: min(1120px, calc((100vh - 290px) * 4 / 3 + 96px));
+     move if those do, and the test in test/style.test.ts says so.
+
+     The 840 floor is not decoration. Hold 4:3 with no floor and a short
+     window feeds back on itself: less height means a narrower case, a
+     narrower case means fewer icons per row, fewer per row means a taller
+     icon field, and a taller field pushes the case taller still. At
+     1440x700 that loop settled on a case 1296px tall, which is not a
+     monitor. Below the floor the shape gives way rather than the layout:
+     the case keeps its width, stops being 4:3, and the page scrolls,
+     because a 4:3 box that narrow cannot hold a desktop. */
+  max-width: min(1120px, max(840px, calc((100vh - 328px) * 4 / 3 + 96px)));
   display: flex;
   flex-direction: column;
 }
@@ -1596,7 +1616,29 @@ body {
   display: flex;
   flex-direction: column;
 }
-#page > .desktop > .desk-windows { flex: 1 1 auto; }
+/* Who gets the spare height.
+   It used to be .desk-windows, unconditionally, and on a desktop with
+   nothing open that container's three children are all display:none. So
+   the empty teal below the icons was not left over, it was allocated: a
+   160px box holding nothing, handed every pixel the icons did not take.
+   The icons get it now, and the windows box shrinks to its content. */
+#page > .desktop > .desk-groups { flex: 1 1 auto; }
+#page > .desktop > .desk-windows { flex: 0 0 auto; }
+
+/* Until something is actually open, at which point the window takes the
+   screen the way a maximised window takes any screen, and the icons go
+   under it. Shrinking the icon field to its content instead was tried and
+   does not work now that the icons are full size: at sixteen icons it is
+   most of the glass, so the window it was making room for came out two
+   pixels tall. The icons are still there, and come back the moment the
+   window goes to the taskbar.
+
+   The #page prefix is load-bearing rather than tidy: the rule above it
+   carries an id, and without a matching one this loses on specificity,
+   .desk-windows keeps flex: 0 0 auto, and the open window sizes to its
+   content and hangs 100px out of the bottom of the case. */
+#page > .desktop.desk-js:has(.app-window.is-open) > .desk-groups { display: none; }
+#page > .desktop.desk-js:has(.app-window.is-open) > .desk-windows { flex: 1 1 auto; min-height: 0; }
 
 /* The taskbar belongs to the screen rather than to whatever is running on
    it, so it is the last thing in #page and it rides the bottom of the view
@@ -1679,18 +1721,18 @@ body {
      machine has a UI font and this is a piece of its chrome, not a document
      set in it. */
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
-  font-size: 21px;
+  font-size: 30px;
   letter-spacing: 0.5px;
-  margin: 2px 0 0 0;
+  margin: 2px 0 2px 0;
 }
 #page:has(.desktop) > h1 a, #page:has(.desk-shell) > h1 a { color: #ffffff; text-decoration: none; }
 #page:has(.desktop) > h1 a:hover, #page:has(.desk-shell) > h1 a:hover { text-decoration: underline; }
 #page:has(.desktop) > .tagline, #page:has(.desk-shell) > .tagline {
-  color: #cbe7e7;
+  color: #f2fdfd;
   text-shadow: 1px 1px 0 #004848;
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
-  font-size: 12.5px;
-  margin: 0 0 6px 0;
+  font-size: 15px;
+  margin: 0 0 10px 0;
 }
 
 /* ---- the desk under the monitor -----------------------------------
@@ -1706,8 +1748,9 @@ body {
   width: 100%;
   max-width: 1120px;
   /* The stand is drawn 56px below the case and takes up no space of its
-     own, so the gap has to be reserved here or the notes land on it. */
-  margin: 84px auto 0 auto;
+     own, so the gap has to clear it or the notes land on the neck. 64 is
+     the 56 plus a hair; it does not go lower while the stand is there. */
+  margin: 64px auto 0 auto;
   padding: 0 4px 8px 4px;
   display: flex;
   flex-wrap: wrap;
@@ -1944,67 +1987,13 @@ body {
 }
 .win-min:active { border-style: inset; }
 
-/* ---- the wallpaper -------------------------------------------------
-   A desktop is mostly empty, and that is correct: it is a surface, not a
-   page, and filling it would be the mistake. What it should not be is
-   blank, so the wallpaper carries the machine's name in the corner the
-   way an OEM desktop of the era carried its maker's. Low enough contrast
-   to be furniture, big enough to anchor the bottom of the screen. */
+/* The desktop is what it is: a surface. It carried a large 1999.LOC
+   watermark in the corner, put there when the icons filled a third of the
+   glass and the emptiness needed to look deliberate. The icons fill it
+   now, so the watermark's job is gone and what is left is two wordmarks
+   on one screen, each weakening the other. The h1 stays, because it is
+   the document's real heading; the painted one goes. */
 .desktop { position: relative; }
-.desktop::after {
-  content: "1999.LOC";
-  position: absolute;
-  right: 18px;
-  bottom: 14px;
-  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
-  font-size: 40px;
-  font-weight: bold;
-  letter-spacing: 2px;
-  color: #0b8a8a;
-  text-shadow: 1px 1px 0 #007373;
-  pointer-events: none;
-  user-select: none;
-  z-index: 0;
-}
-/* It is painted on the wallpaper, so anything running on the desktop is
-   in front of it. Without this the windows open underneath the paint. */
-.desk-groups, .desk-windows { position: relative; z-index: 1; }
-
-/* ---- the chin ------------------------------------------------------
-   The deep bottom bezel had two things on it and they are the two things
-   that say the machine is a machine rather than a picture of one: the
-   maker's name moulded into the plastic, and a power light. The light is
-   the whole point. A dark screen and a dead bezel is a monitor that is
-   off; the same screen with a green light under it is a monitor you are
-   using. It does not blink, because a power light that blinks means
-   something is wrong. */
-#page > .taskbar::before {
-  content: "1999.LOC";
-  position: absolute;
-  left: 14px;
-  bottom: -36px;
-  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
-  font-size: 11px;
-  font-weight: bold;
-  letter-spacing: 2.5px;
-  color: #b5ae9c;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
-  pointer-events: none;
-}
-#page > .taskbar::after {
-  content: "";
-  position: absolute;
-  right: 18px;
-  bottom: -33px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 34% 32%, #ccffcc 0%, #2ecc2e 52%, #0a6b0a 100%);
-  box-shadow:
-    0 0 8px 1px rgba(70, 235, 70, 0.5),
-    inset 0 0 2px rgba(0, 0, 0, 0.45);
-  pointer-events: none;
-}
 
 /* ---- the power-on --------------------------------------------------
    A CRT does not fade in, it snaps: a hairline of light across the
@@ -2196,17 +2185,6 @@ body {
   .desk-groups { padding: 8px 6px 8px 6px; }
   .desk-group { grid-template-columns: repeat(auto-fill, 76px); gap: 0 2px; margin-bottom: 10px; }
   .desk-group-label { font-size: 10.5px; gap: 8px; }
-
-  /* The wallpaper mark is furniture for a big screen. A phone screen is
-     the size of the furniture, and the icons reach the bottom corner, so
-     it goes rather than sits behind a label. */
-  .desktop::after { display: none; }
-
-  /* An open window takes the phone's screen, the way a maximised window
-     takes any screen. The icons are still there underneath and come back
-     the moment it goes to the taskbar. On a desktop there is room for
-     both and this does not apply. */
-  .desktop.desk-js:has(.app-window.is-open) .desk-groups { display: none; }
 
   /* A phone has no stand to leave room for and a much smaller screen to
      spend, so the ceiling is the viewport less the case. dvh rather than

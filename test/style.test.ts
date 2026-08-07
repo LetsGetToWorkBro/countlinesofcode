@@ -214,7 +214,7 @@ describe('the monitor is four by three', () => {
   }
 
   it('caps the width against the height with the right constants', () => {
-    const cap = /max-width:\s*min\(1120px,\s*calc\(\(100vh - (\d+)px\) \* 4 \/ 3 \+ (\d+)px\)\)/.exec(css);
+    const cap = /max-width:\s*min\(1120px,\s*max\(\d+px,\s*calc\(\(100vh - (\d+)px\) \* 4 \/ 3 \+ (\d+)px\)\)\)/.exec(css);
     expect(cap, 'the 4:3 cap is gone from #page').not.toBeNull();
     const [vertical, horizontal] = [Number(cap![1]), Number(cap![2])];
 
@@ -224,10 +224,135 @@ describe('the monitor is four by three', () => {
 
     // 172 is the room the page already reserves above and below the case:
     // the body's own padding plus the stand drawn under it.
-    const ROOM = 172;
+    const ROOM = 210;
     expect(vertical, 'vertical constant must be the room plus the case top and bottom')
       .toBe(ROOM + borderTop + borderBottom + padTop + padBottom);
     expect(horizontal, 'horizontal constant must be the case left and right')
       .toBe(borderLeft + borderRight + padLeft + padRight);
+  });
+});
+
+/**
+ * The desktop's scale, its contrast, and where its spare height goes.
+ *
+ * Seven defects were measured on the live layout and fixed together. Four of
+ * them can be guarded here, because their cause is a declaration: the icon
+ * scale, the contrast of the two labels that sit on the teal, which box is
+ * allowed to grow, and the clock agreeing with itself.
+ *
+ * Three of them cannot, because they are facts about a rendered page: the
+ * proportion of wallpaper the icons cover, the dead space below the lowest
+ * one, and whether the sticky notes clear the fold. Asserting those needs a
+ * real browser at a real viewport, and Playwright is not a dependency of this
+ * project. Putting one in the default test path would mean every checkout
+ * downloads Chromium to run unit tests, on a site whose entire argument is
+ * that it does not make you download things. They are measured instead by
+ * scripts/measure-desktop.mjs, which is run by hand against `wrangler dev`
+ * and prints all three. The declarations guarded below are what produce
+ * them; if these hold, those numbers cannot drift far without someone
+ * meaning it.
+ */
+describe('the desktop is drawn at 1999 scale', () => {
+  const css = readFileSync(new URL('../public/style.css', import.meta.url), 'utf8');
+
+  /** WCAG 2.1 relative luminance of a #rrggbb string. */
+  function luminance(hex: string): number {
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(1 + i, 3 + i), 16));
+    const channel = (v: number) => {
+      const s = v / 255;
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+  }
+  function contrast(a: string, b: string): number {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+  /** What every one of these labels is read against. */
+  const TEAL = '#008080';
+
+  function declaration(selector: string, property: string): string {
+    // Anchor at a line start and refuse a longer class name, or asking for
+    // .desk-group hands back the .desk-groups rule.
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rule = new RegExp(`(?:^|\\n)${escaped}(?![-\\w])[^{]*\\{([^}]*)\\}`).exec(css);
+    if (!rule) throw new Error(`no rule for ${selector}`);
+    const found = new RegExp(`\\b${property}:\\s*([^;]+);`).exec(rule[1]);
+    if (!found) throw new Error(`no ${property} in ${selector}`);
+    return found[1].trim();
+  }
+
+  it('draws the icons near the physical size a 1999 icon was', () => {
+    // A 32px icon on a 14 inch 640x480 CRT was about 1.3cm across. At 34px on
+    // a modern display it was about 0.7cm, which is why the desktop read as a
+    // scale model of itself.
+    const glyph = Number(/width:\s*(\d+)px/.exec(declaration('.desk-icon svg', 'width') + 'px')?.[1] ?? declaration('.desk-icon svg', 'width').replace('px', ''));
+    expect(glyph).toBeGreaterThanOrEqual(48);
+  });
+
+  it('keeps the cell and the grid track the same width', () => {
+    // A cell wider than its track overlaps its neighbour; narrower and the
+    // rows stop lining up. They are two numbers that must be one.
+    const cell = declaration('.desk-icon', 'width');
+    const track = /repeat\(auto-fill,\s*(\d+px)\)/.exec(declaration('.desk-group', 'grid-template-columns'));
+    expect(track, 'the icon grid should still be a fixed auto-fill track').not.toBeNull();
+    expect(cell).toBe(track![1]);
+  });
+
+  it('gives the spare height to the icons and not to an empty box', () => {
+    // .desk-windows holds three windows that are display:none until one is
+    // opened. Letting it grow was what reserved 160px of teal for nothing.
+    expect(css).toMatch(/#page > \.desktop > \.desk-groups \{ flex: 1 1 auto; \}/);
+    expect(css).toMatch(/#page > \.desktop > \.desk-windows \{ flex: 0 0 auto; \}/);
+    // ...and hands it back the moment a window is actually open, which is
+    // what gives that window its scroll box.
+    expect(css).toMatch(/:has\(\.app-window\.is-open\) > \.desk-windows \{ flex: 1 1 auto/);
+  });
+
+  it('keeps the labels on the teal above 4.5:1', () => {
+    // The ceiling here is 4.77:1, which is pure white on #008080. There is no
+    // room to dim anything: a label one step off white already fails. If a
+    // future palette wants a softer label it has to change the teal first.
+    for (const selector of ['.desk-group-label', '#page:has(.desktop) > .tagline']) {
+      const colour = declaration(selector, 'color');
+      expect(colour, `${selector} should be a hex colour`).toMatch(/^#[0-9a-f]{6}$/i);
+      const ratio = contrast(colour, TEAL);
+      expect(ratio, `${selector} is ${ratio.toFixed(2)}:1 on ${TEAL}`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('holds the two-column icon field, which is the only arrangement that fits', () => {
+    // Six groups means six headings and six minimum icon rows, about 810px of
+    // them at this cell size, against a wallpaper about 500px tall. One stack
+    // across the full width does not fit and widening the rows does not help,
+    // because the cost is the headings rather than the icons.
+    const wide = /@media \(min-width: 900px\) \{\s*\/\*[\s\S]*?\*\/\s*\.desk-groups \{([^}]*)\}/.exec(css);
+    expect(wide, 'the wide-screen .desk-groups rule is gone').not.toBeNull();
+    expect(wide![1]).toMatch(/columns:\s*2/);
+  });
+
+  it('gives the case a width floor so a short window cannot collapse it', () => {
+    // Without it: less height means a narrower case, a narrower case means
+    // fewer icons per row, fewer per row means a taller field, and a taller
+    // field means a taller case. At 1440x700 that settled at 1296px.
+    expect(css).toMatch(/max-width:\s*min\(1120px,\s*max\(\d+px,\s*calc\(/);
+  });
+});
+
+describe('the clock says the same thing with and without scripting', () => {
+  const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+  const start = readFileSync(new URL('../public/start.js', import.meta.url), 'utf8');
+
+  it('ships 1999 in the markup', () => {
+    expect(html).toMatch(/<span class="task-clock">1999<\/span>/);
+  });
+
+  it('does not let start.js rewrite it', () => {
+    // A machine whose premise is that it is 1999 cannot show 2026 the moment
+    // scripting runs, and the two renders must not disagree about the year.
+    const clockBlock = /var clock = bar\.querySelector\('\.task-clock'\);([\s\S]{0,400})/.exec(start);
+    expect(clockBlock, 'the clock handling in start.js has moved').not.toBeNull();
+    expect(clockBlock![1]).not.toMatch(/\.textContent\s*=/);
+    expect(clockBlock![1]).not.toMatch(/setInterval/);
   });
 });
