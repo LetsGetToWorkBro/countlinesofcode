@@ -12,7 +12,7 @@
   var $ = function (id) { return document.getElementById(id); };
   if (!$('get-quotes')) return;
 
-  var COIN_LABELS = { btc: 'BTC', usdc: 'USDC' };
+  var COIN_LABELS = { btc: 'BTC', usdc: 'USDC', usdcsol: 'USDC' };
   var PROVIDER_LABELS = { exolix: 'Exolix', changenow: 'ChangeNOW' };
   var PROVIDER_SITES = {
     exolix: 'https://exolix.com/transaction/',

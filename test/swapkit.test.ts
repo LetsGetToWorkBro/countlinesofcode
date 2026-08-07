@@ -51,8 +51,12 @@ const request = (over: Partial<CreateRequest> = {}): CreateRequest => ({
 });
 
 describe('the coins on offer', () => {
-  it('swaps exactly BTC and ERC-20 USDC into Monero', () => {
-    expect(FROM_COINS.map((c) => c.id)).toEqual(['btc', 'usdc']);
+  it('swaps exactly BTC and USDC (ERC-20 or Solana) into Monero', () => {
+    expect(FROM_COINS.map((c) => c.id)).toEqual(['btc', 'usdc', 'usdcsol']);
+    // Both USDC entries are the same currency to a provider; the network is
+    // the whole difference.
+    expect(fromCoin('usdcsol')!.ticker).toBe('usdc');
+    expect(fromCoin('usdcsol')!.network).toBe('SOL');
     expect(fromCoin('doge')).toBeNull();
   });
 
@@ -85,9 +89,15 @@ describe('what the visitor typed', () => {
     expect(plausibleRefund('btc', '0x52908400098527886E0F7030069857D2E4169EE7')).toBe(false);
   });
 
-  it('takes an 0x address for a USDC refund and nothing else', () => {
+  it('takes an 0x address for an ERC-20 USDC refund and nothing else', () => {
     expect(plausibleRefund('usdc', '0x52908400098527886E0F7030069857D2E4169EE7')).toBe(true);
     expect(plausibleRefund('usdc', 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq')).toBe(false);
+  });
+
+  it('takes a base58 address for a Solana USDC refund and nothing else', () => {
+    expect(plausibleRefund('usdcsol', '4Nd1mYQx8kbXVWjR8oVGwGJp1FkVbqYYriDbBxkD6ZcV')).toBe(true);
+    expect(plausibleRefund('usdcsol', '0x52908400098527886E0F7030069857D2E4169EE7')).toBe(false);
+    expect(plausibleRefund('usdcsol', 'tooshort')).toBe(false);
   });
 
   it('keeps amount nonsense off the wire', () => {
@@ -133,6 +143,12 @@ describe('Exolix', () => {
     expect(url.searchParams.get('networkFrom')).toBe('ETH');
     expect(url.searchParams.get('coinTo')).toBe('XMR');
     expect(url.searchParams.get('rateType')).toBe('float');
+  });
+
+  it('asks for Solana USDC as the same currency on its own network', () => {
+    const url = new URL(exolixRateUrl(fromCoin('usdcsol')!, 500));
+    expect(url.searchParams.get('coinFrom')).toBe('USDC');
+    expect(url.searchParams.get('networkFrom')).toBe('SOL');
   });
 
   it('reads a live rate reply', () => {
@@ -232,6 +248,9 @@ describe('ChangeNOW', () => {
     expect(est.searchParams.get('fromAmount')).toBe('0.05');
     const min = new URL(changeNowMinUrl(usdc));
     expect(min.searchParams.get('fromNetwork')).toBe('eth');
+    const sol = new URL(changeNowMinUrl(fromCoin('usdcsol')!));
+    expect(sol.searchParams.get('fromCurrency')).toBe('usdc');
+    expect(sol.searchParams.get('fromNetwork')).toBe('sol');
   });
 
   it('reads an estimate plus the separate minimum', () => {

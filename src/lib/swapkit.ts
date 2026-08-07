@@ -21,10 +21,13 @@
  * src/worker/swap.ts is the thin shell that moves the bytes.
  */
 
-/** What the page may swap from. Short on purpose; XMR is always the target. */
+/** What the page may swap from. Short on purpose; XMR is always the target.
+ *  `id` names the choice in our API; `ticker` is the currency the providers
+ *  know it by, which USDC shares across its networks. */
 export const FROM_COINS = [
-  { id: 'btc', label: 'Bitcoin', network: 'BTC', cnNetwork: 'btc', decimals: 8 },
-  { id: 'usdc', label: 'USDC (ERC-20)', network: 'ETH', cnNetwork: 'eth', decimals: 6 },
+  { id: 'btc', ticker: 'btc', label: 'Bitcoin', network: 'BTC', cnNetwork: 'btc', decimals: 8 },
+  { id: 'usdc', ticker: 'usdc', label: 'USDC (ERC-20)', network: 'ETH', cnNetwork: 'eth', decimals: 6 },
+  { id: 'usdcsol', ticker: 'usdc', label: 'USDC (Solana)', network: 'SOL', cnNetwork: 'sol', decimals: 6 },
 ] as const;
 
 export type FromCoinId = (typeof FROM_COINS)[number]['id'];
@@ -106,6 +109,7 @@ export function plausibleRefund(coin: FromCoinId, text: string): boolean {
   const addr = String(text ?? '').trim();
   if (!addr) return true;
   if (coin === 'btc') return /^(bc1[a-z0-9]{8,87}|[13][1-9A-HJ-NP-Za-km-z]{25,34})$/.test(addr);
+  if (coin === 'usdcsol') return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr);
   return /^0x[0-9a-fA-F]{40}$/.test(addr);
 }
 
@@ -158,7 +162,7 @@ const EXOLIX = 'https://exolix.com/api/v2';
 
 export function exolixRateUrl(coin: (typeof FROM_COINS)[number], amount: number): string {
   const q = new URLSearchParams({
-    coinFrom: coin.id.toUpperCase(),
+    coinFrom: coin.ticker.toUpperCase(),
     networkFrom: coin.network,
     coinTo: 'XMR',
     networkTo: 'XMR',
@@ -189,7 +193,7 @@ export function parseExolixRate(json: unknown): SwapQuote {
 
 export function exolixCreateBody(req: CreateRequest): { url: string; body: Record<string, unknown> } {
   const body: Record<string, unknown> = {
-    coinFrom: req.coin.id.toUpperCase(),
+    coinFrom: req.coin.ticker.toUpperCase(),
     networkFrom: req.coin.network,
     coinTo: 'XMR',
     networkTo: 'XMR',
@@ -253,7 +257,7 @@ const CHANGENOW = 'https://api.changenow.io/v2';
 
 export function changeNowMinUrl(coin: (typeof FROM_COINS)[number]): string {
   const q = new URLSearchParams({
-    fromCurrency: coin.id,
+    fromCurrency: coin.ticker,
     fromNetwork: coin.cnNetwork,
     toCurrency: 'xmr',
     toNetwork: 'xmr',
@@ -264,7 +268,7 @@ export function changeNowMinUrl(coin: (typeof FROM_COINS)[number]): string {
 
 export function changeNowEstimateUrl(coin: (typeof FROM_COINS)[number], amount: number): string {
   const q = new URLSearchParams({
-    fromCurrency: coin.id,
+    fromCurrency: coin.ticker,
     fromNetwork: coin.cnNetwork,
     toCurrency: 'xmr',
     toNetwork: 'xmr',
@@ -292,7 +296,7 @@ export function parseChangeNowEstimate(json: unknown, minJson: unknown): SwapQuo
 
 export function changeNowCreateBody(req: CreateRequest): { url: string; body: Record<string, unknown> } {
   const body: Record<string, unknown> = {
-    fromCurrency: req.coin.id,
+    fromCurrency: req.coin.ticker,
     fromNetwork: req.coin.cnNetwork,
     toCurrency: 'xmr',
     toNetwork: 'xmr',
