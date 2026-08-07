@@ -656,4 +656,203 @@
       print('');
     }
   });
+
+  /* =====================================================================
+     THE CHIN, AND THE THINGS ON IT
+
+     The controls under the screen were painted on: pseudo-elements, which
+     look like buttons and cannot be pressed. These are the same controls
+     as real ones, built here rather than written into seventeen pages,
+     and the painted versions are hidden the moment these exist. With
+     scripting off you still get the painted chin, which is the right
+     fallback: a machine with buttons you cannot press is a photograph of
+     a machine, and that is what this page is without JavaScript anyway.
+     ===================================================================== */
+
+  var page = document.getElementById('page');
+
+  if (page) {
+    var chin = el('div', 'chin');
+    chin.setAttribute('role', 'group');
+    chin.setAttribute('aria-label', 'Machine controls');
+
+    /* --- the power button, on both machines --------------------------
+     * It turns the screen off, the way the button on the front of a
+     * monitor does: the picture collapses to a line and goes, the light
+     * under it drops to amber, and pressing it again brings it back. */
+    var power = el('button', 'chin-power');
+    power.type = 'button';
+    power.setAttribute('aria-label', 'Power');
+    power.setAttribute('aria-pressed', 'true');
+    var led = el('span', 'chin-led');
+    led.setAttribute('aria-hidden', 'true');
+
+    function setPower(on) {
+      page.classList.toggle('is-off', !on);
+      power.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    power.addEventListener('click', function () {
+      setPower(page.classList.contains('is-off'));
+    });
+
+    /* --- the four application buttons --------------------------------
+     * A palmtop of this age had a row of them under the screen, each
+     * hard-wired to one program. These are wired to what this machine
+     * actually runs: the menu, and the windows the taskbar carries. */
+    var pad = el('div', 'chin-keys');
+    var targets = [{ label: 'Menu', start: true }];
+    Array.prototype.forEach.call(bar.querySelectorAll('.task-btn'), function (btn) {
+      if (targets.length < 4) targets.push({ label: btn.textContent.trim(), el: btn });
+    });
+    while (targets.length < 4) targets.push({ label: '', dead: true });
+
+    targets.forEach(function (target) {
+      var key = el('button', 'chin-key');
+      key.type = 'button';
+      key.setAttribute('aria-label', target.label || 'Unassigned');
+      if (target.dead) key.disabled = true;
+      key.addEventListener('click', function () {
+        if (page.classList.contains('is-off')) return;   // nothing runs with the screen off
+        if (target.start) startBtn.click();
+        else if (target.el) target.el.click();
+      });
+      pad.appendChild(key);
+    });
+
+    /* --- the d-pad ---------------------------------------------------
+     * Moves the selection around the icon field and opens what is under
+     * it, which is what a d-pad on a device with a desktop was for. */
+    var dpad = el('div', 'chin-dpad');
+    var DIRS = [['up', 'Up'], ['right', 'Right'], ['down', 'Down'], ['left', 'Left']];
+    var pressed = [];
+
+    function icons() {
+      return Array.prototype.slice.call(desk.querySelectorAll('.desk-icon'));
+    }
+
+    /* The pad keeps its own cursor rather than reading document.activeElement,
+     * because pressing a button on the pad *is* a focus change: the button
+     * takes focus, the icon loses it, and every press would read as "nothing
+     * is selected" and jump back to the first icon. Which is exactly what it
+     * did. The cursor is the selection; focus and the ring follow it. */
+    var cursor = -1;
+
+    function pick(next) {
+      var all = icons();
+      if (!all.length) return;
+      cursor = Math.max(0, Math.min(all.length - 1, next));
+      all.forEach(function (node, i) { node.classList.toggle('is-picked', i === cursor); });
+      all[cursor].focus({ preventScroll: true });
+      all[cursor].scrollIntoView({ block: 'nearest' });
+    }
+
+    /* Left and right walk the list; up and down jump by a row, worked out
+     * from where the icons actually are rather than from a column count,
+     * because the column count changes with the width. */
+    function move(dir) {
+      var all = icons();
+      if (!all.length) return;
+      if (cursor < 0) { pick(0); return; }
+      if (dir === 'left') { pick(cursor - 1); return; }
+      if (dir === 'right') { pick(cursor + 1); return; }
+      var top = all[cursor].getBoundingClientRect().top;
+      var perRow = all.filter(function (node) {
+        return Math.abs(node.getBoundingClientRect().top - top) < 4;
+      }).length || 1;
+      pick(dir === 'down' ? cursor + perRow : cursor - perRow);
+    }
+
+    /* The cheat code, on the pad this time. Up up down down left right
+     * left right, then any two of the application buttons. */
+    var CODE = 'up,up,down,down,left,right,left,right';
+    function note(name) {
+      pressed.push(name);
+      if (pressed.length > 8) pressed.shift();
+      if (pressed.join(',') === CODE) {
+        pressed = [];
+        chin.classList.add('is-cheating');
+        setTimeout(function () { chin.classList.remove('is-cheating'); }, 1400);
+        openDos(true);
+        print('30 lives granted. There was never anything to lose: no account, no');
+        print('upload, no subscription. Play on.');
+        print('');
+      }
+    }
+
+    DIRS.forEach(function (pair) {
+      var arrow = el('button', 'chin-dir is-' + pair[0]);
+      arrow.type = 'button';
+      arrow.setAttribute('aria-label', pair[1]);
+      arrow.addEventListener('click', function () {
+        if (page.classList.contains('is-off')) return;
+        note(pair[0]);
+        move(pair[0]);
+      });
+      dpad.appendChild(arrow);
+    });
+    var enter = el('button', 'chin-dir is-enter');
+    enter.type = 'button';
+    enter.setAttribute('aria-label', 'Open');
+    enter.addEventListener('click', function () {
+      if (page.classList.contains('is-off')) return;
+      var all = icons();
+      if (cursor >= 0 && all[cursor]) all[cursor].click();
+      else pick(0);
+    });
+    dpad.appendChild(enter);
+
+    chin.appendChild(dpad);
+    chin.appendChild(pad);
+    chin.appendChild(power);
+    chin.appendChild(led);
+    page.appendChild(chin);
+    page.classList.add('has-chin');
+  }
+
+  /* --- what is on the desk in front of the monitor --------------------
+   * The keyboard is painted by the stylesheet, but its lock lamp has to
+   * be a real element to be lit, and its cord has to be an SVG because a
+   * coiled cable is thirty ellipses along a curve and CSS has no way to
+   * say that. Both are decorative and both are hidden on a phone, where
+   * the machine is a palmtop and has neither. */
+  if (document.body && document.querySelector('.desktop, .desk-shell')) {
+    var lamp = el('span', 'kbd-lamp');
+    lamp.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(lamp);
+
+    var cord = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    cord.setAttribute('class', 'kbd-cord');
+    cord.setAttribute('viewBox', '0 0 120 200');
+    cord.setAttribute('preserveAspectRatio', 'none');
+    cord.setAttribute('aria-hidden', 'true');
+    /* Straight out of the keyboard, then eleven turns of coil, then up
+       into the back of the case. */
+    var d = 'M112 196 C104 188 96 180 92 168';
+    for (var turn = 0; turn < 11; turn++) {
+      var y = 162 - turn * 11;
+      d += ' C 62 ' + (y + 2) + ' 62 ' + (y - 9) + ' 92 ' + (y - 11);
+    }
+    d += ' C 104 30 96 14 88 0';
+    var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    cord.appendChild(path);
+    document.body.appendChild(cord);
+  }
+
+  /* --- the keyboard reacts to the keyboard ----------------------------
+   * The drawn keyboard at the bottom of a desktop window is a picture,
+   * and a picture of a keyboard that does nothing while you type on a
+   * real one is a missed trick. It lights on every keypress, and its
+   * lock light follows the actual Caps Lock. */
+  if (document.body) {
+    var lit = null;
+    document.addEventListener('keydown', function (event) {
+      document.body.classList.add('is-typing');
+      clearTimeout(lit);
+      lit = setTimeout(function () { document.body.classList.remove('is-typing'); }, 110);
+      if (event.getModifierState) {
+        document.body.classList.toggle('is-caps', event.getModifierState('CapsLock'));
+      }
+    });
+  }
 })();

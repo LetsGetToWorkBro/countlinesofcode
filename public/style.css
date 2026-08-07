@@ -1897,7 +1897,10 @@ body::after {
      which is where somebody actually sticks a note, and the two go to
      opposite corners so the stand comes down between them. */
   margin: -30px auto 0 auto;
-  max-width: 980px;
+  /* Narrower than the case on purpose: the notes are stuck across the
+     chin, and if they run its full width they cover the power button and
+     the light as well. This leaves both ends of the chin showing. */
+  max-width: 748px;
   justify-content: space-between;
   padding: 0 4px 8px 4px;
   display: flex;
@@ -1914,8 +1917,8 @@ body::after {
    somebody might actually want to copy off a note. */
 .desk-note {
   position: relative;
-  flex: 0 1 388px;
-  max-width: 388px;
+  flex: 0 1 340px;
+  max-width: 340px;
   box-sizing: border-box;
   background: #fbee5d;
   background-image: linear-gradient(160deg, #fdf47f 0%, #f7e64c 62%, #eeda42 100%);
@@ -2486,3 +2489,217 @@ body::after {
     max-height: calc(100dvh - 22px);
   }
 }
+
+/* ====================================================================
+   THE CONTROLS
+
+   Everything below is a real button. The painted versions on the chin
+   were pseudo-elements, which look like controls and cannot be pressed,
+   so start.js replaces them with these and the stylesheet hides the
+   paintings the moment it does. Without scripting the paintings stay,
+   which is the honest fallback: a machine you cannot press is a
+   photograph of a machine, and that is what this page is without
+   JavaScript anyway.
+   ==================================================================== */
+
+#page.has-chin > .taskbar::before,
+#page.has-chin > .taskbar::after,
+#page.has-chin .desktop::before { display: none; }
+
+/* The chin is the bottom border of the case, which is outside the box an
+   absolutely positioned child is measured against, so it hangs off the
+   bottom by exactly the border's width. */
+.chin {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -54px;
+  height: 54px;
+  z-index: 4;
+}
+
+/* ---- the power button ---------------------------------------------- */
+.chin-power {
+  position: absolute;
+  right: 18px;
+  bottom: 15px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background: radial-gradient(circle at 36% 30%, #e4ded0 0%, #c3bca9 46%, #9b9482 100%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.6),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.3),
+    0 2px 3px rgba(0, 0, 0, 0.45);
+}
+.chin-power:active {
+  /* Pressed in, and the shadow under it goes with it. A button that
+     changes colour but does not move has not been pressed. */
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.45),
+    0 1px 1px rgba(0, 0, 0, 0.4);
+}
+.chin-power:focus-visible { outline: 2px solid #7fd3ff; outline-offset: 2px; }
+
+.chin-led {
+  position: absolute;
+  right: 48px;
+  bottom: 20px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 32%, #ccffcc 0%, #2ecc2e 52%, #0a6b0a 100%);
+  box-shadow: 0 0 8px 1px rgba(70, 235, 70, 0.5), inset 0 0 2px rgba(0, 0, 0, 0.45);
+  transition: background 180ms ease, box-shadow 180ms ease;
+}
+/* Amber and dim, which is what a monitor's light does when the picture
+   is off and the machine is still plugged in. */
+#page.is-off .chin-led {
+  background: radial-gradient(circle at 34% 32%, #ffe6a8 0%, #d69a1e 52%, #6b4a08 100%);
+  box-shadow: 0 0 6px 1px rgba(230, 170, 40, 0.4), inset 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+/* ---- the screen going off ------------------------------------------
+   A tube does not fade out. It collapses to a bright line and then that
+   goes too. The glass overlay is already there and already on top of
+   everything, so it is what turns black. */
+#page::before { background-color: rgba(0, 0, 0, 0); transition: background-color 220ms ease 120ms; }
+#page.is-off::before { background-color: #06090b; }
+#page.is-off > h1,
+#page.is-off > .tagline,
+#page.is-off > .desktop,
+#page.is-off > .desk-shell,
+#page.is-off > .taskbar { animation: crt-power-off 300ms ease-in both; }
+@keyframes crt-power-off {
+  0%   { opacity: 1; transform: scaleY(1); filter: brightness(1); }
+  58%  { opacity: 1; transform: scaleY(0.016); filter: brightness(2.8) saturate(0.3); }
+  100% { opacity: 0; transform: scaleY(0.003); filter: brightness(0.3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #page.is-off > h1, #page.is-off > .tagline, #page.is-off > .desktop,
+  #page.is-off > .desk-shell, #page.is-off > .taskbar { animation: none; opacity: 0; }
+}
+
+/* ---- the d-pad and the application buttons -------------------------
+   Both are palmtop furniture and appear only on the phone, where the
+   machine is a handheld with a chin deep enough to hold them. */
+.chin-dpad, .chin-keys { display: none; }
+
+.chin-dir, .chin-key {
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(180deg, #cbc4b1 0%, #a19a88 100%);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.chin-dir:active, .chin-key:active {
+  background: linear-gradient(180deg, #9a9381 0%, #837c6b 100%);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  transform: translateY(1px);
+}
+.chin-key:disabled { opacity: 0.5; cursor: default; }
+.chin-dir:focus-visible, .chin-key:focus-visible { outline: 2px solid #7fd3ff; outline-offset: 1px; }
+
+/* The cheat code landing: the whole cluster flashes once. */
+.chin.is-cheating .chin-dir, .chin.is-cheating .chin-key {
+  background: linear-gradient(180deg, #d8f5d8 0%, #7ec87e 100%);
+}
+
+/* ---- the desk, and what is on it ----------------------------------- */
+
+/* The lock lamp, sitting on the keyboard's top right. */
+.kbd-lamp {
+  position: fixed;
+  z-index: 4;
+  left: 50%;
+  bottom: 74px;
+  margin-left: 300px;
+  width: 7px;
+  height: 5px;
+  border-radius: 2px;
+  background: #2b2a24;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6);
+  transition: background 120ms ease, box-shadow 120ms ease;
+  pointer-events: none;
+}
+body.is-caps .kbd-lamp {
+  background: #4cf04c;
+  box-shadow: 0 0 7px 2px rgba(70, 240, 70, 0.55);
+}
+
+/* Every keypress on the real keyboard lights the drawn one. */
+body::after { transition: filter 90ms ease; }
+body.is-typing::after { filter: brightness(1.5) contrast(1.04); }
+
+/* The cord: out of the keyboard, eleven turns of coil, up into the case. */
+.kbd-cord {
+  position: fixed;
+  z-index: 2;
+  left: 50%;
+  margin-left: -540px;
+  bottom: 58px;
+  width: 120px;
+  height: 200px;
+  pointer-events: none;
+}
+.kbd-cord path {
+  fill: none;
+  stroke: #14171b;
+  stroke-width: 5;
+  stroke-linecap: round;
+  filter: drop-shadow(1px 0 0 rgba(255, 255, 255, 0.09));
+}
+
+@media (max-width: 700px) {
+  /* A palmtop has no desk cable and no lock lamp. */
+  .kbd-lamp, .kbd-cord { display: none; }
+
+  /* The chin is deeper here and carries the whole cluster. */
+  .chin { bottom: -76px; height: 76px; }
+
+  .chin-dpad {
+    display: block;
+    position: absolute;
+    left: 12px;
+    bottom: 8px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 36%, #7f7867 0%, #6d6757 62%, #565042 100%);
+    box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.3), inset 0 -3px 5px rgba(0, 0, 0, 0.45);
+  }
+  /* Four arms and a centre, cut out of the dish. */
+  .chin-dir { position: absolute; border-radius: 2px; }
+  .chin-dir.is-up    { left: 16px; top: 3px;    width: 16px; height: 15px; }
+  .chin-dir.is-down  { left: 16px; bottom: 3px; width: 16px; height: 15px; }
+  .chin-dir.is-left  { top: 16px; left: 3px;    width: 15px; height: 16px; }
+  .chin-dir.is-right { top: 16px; right: 3px;   width: 15px; height: 16px; }
+  .chin-dir.is-enter { top: 16px; left: 16px;   width: 16px; height: 16px; border-radius: 3px; }
+
+  .chin-keys {
+    display: flex;
+    gap: 5px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 20px;
+  }
+  .chin-key { width: 29px; height: 17px; border-radius: 9px; }
+
+  .chin-power { right: 12px; bottom: 12px; width: 27px; height: 27px; }
+  .chin-led { right: 20px; bottom: 44px; width: 7px; height: 7px; }
+}
+
+/* What the d-pad has selected. The focus ring cannot show it: pressing a
+   pad button takes the focus, so the selection has to be drawn. This is
+   the highlight the era put under a picked icon. */
+.desk-icon.is-picked span {
+  background: #000080;
+  outline: 1px dotted #ffffff;
+  outline-offset: -1px;
+}
+.desk-icon.is-picked svg { filter: drop-shadow(0 0 4px rgba(120, 200, 255, 0.9)); }
