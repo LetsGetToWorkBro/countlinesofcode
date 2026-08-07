@@ -183,3 +183,51 @@ describe('no emoji anywhere on the site', () => {
     }
   });
 });
+
+/**
+ * The tube's proportions.
+ *
+ * A 1999 monitor is four by three, and the screen is held to that by capping
+ * the case's width against the viewport height. The cap carries two magic
+ * numbers, and both are sums of things declared elsewhere in the same file:
+ * one is everything between the top of the viewport and the top of the glass
+ * doubled up for the bottom, the other is the same across. Change the bezel
+ * or the padding without changing them and the screen quietly stops being
+ * 4:3, which is the kind of drift nobody sees and everybody feels.
+ */
+describe('the monitor is four by three', () => {
+  const css = readFileSync(new URL('../public/style.css', import.meta.url), 'utf8');
+
+  /* Both declarations live in the #page rule that draws the case, and
+     both names appear all over the file. There is more than one #page
+     rule (an early one sets a width and nothing else), so take the block
+     that actually carries the border. */
+  const blocks = [...css.matchAll(/\n#page \{([^}]*)\}/g)].map((m) => m[1]);
+  const caseRule = blocks.find((b) => b.includes('border-width'));
+  if (!caseRule) throw new Error('no #page rule with a border-width in style.css');
+
+  /** The px values of a shorthand like "28px 30px 54px 30px". */
+  function shorthand(declaration: string): number[] {
+    const match = new RegExp(`\\b${declaration}:\\s*([^;]+);`).exec(caseRule);
+    if (!match) throw new Error(`no ${declaration} in the #page rule`);
+    return match[1].trim().split(/\s+/).map((v) => Number(v.replace('px', '')));
+  }
+
+  it('caps the width against the height with the right constants', () => {
+    const cap = /max-width:\s*min\(1120px,\s*calc\(\(100vh - (\d+)px\) \* 4 \/ 3 \+ (\d+)px\)\)/.exec(css);
+    expect(cap, 'the 4:3 cap is gone from #page').not.toBeNull();
+    const [vertical, horizontal] = [Number(cap![1]), Number(cap![2])];
+
+    // The case: border-width is top/right/bottom/left, padding likewise.
+    const [borderTop, borderRight, borderBottom, borderLeft] = shorthand('border-width');
+    const [padTop, padRight, padBottom, padLeft] = shorthand('padding');
+
+    // 172 is the room the page already reserves above and below the case:
+    // the body's own padding plus the stand drawn under it.
+    const ROOM = 172;
+    expect(vertical, 'vertical constant must be the room plus the case top and bottom')
+      .toBe(ROOM + borderTop + borderBottom + padTop + padBottom);
+    expect(horizontal, 'horizontal constant must be the case left and right')
+      .toBe(borderLeft + borderRight + padLeft + padRight);
+  });
+});

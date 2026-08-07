@@ -1575,6 +1575,17 @@ body {
 #page:has(.desktop), #page:has(.desk-shell) {
   background: #008080;
   min-height: calc(100vh - 172px);
+  /* A tube is four by three. Everything else here was already 1999 and the
+     shape was not: a screen running the full width of a modern window is a
+     flat panel wearing a beige case, and no amount of moulding on the
+     bezel fixes that. So the glass is held to 4:3 and the case is whatever
+     that needs, which is why the machine is squarer than the window it is
+     sitting in and why it stops growing on a wide screen.
+
+     The 290 is the 172 above plus the 118 of bezel and padding between the
+     case edge and the glass; the 96 puts the bezel's own width back. Both
+     move if those do, and the test in test/style.test.ts says so. */
+  max-width: min(1120px, calc((100vh - 290px) * 4 / 3 + 96px));
   display: flex;
   flex-direction: column;
 }
@@ -1614,13 +1625,24 @@ body {
   box-shadow:
     inset 0 0 0 2px rgba(0, 0, 0, 0.55),
     inset 0 0 70px rgba(0, 0, 0, 0.35);
-  background-image: repeating-linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.05) 0px,
-    rgba(0, 0, 0, 0.05) 1px,
-    rgba(255, 255, 255, 0) 1px,
-    rgba(255, 255, 255, 0) 3px
-  );
+  background-image:
+    /* The room, caught in the glass. A CRT's face is curved and it is the
+       only reason a dark screen still shows you the window behind you.
+       One soft band across the top left, nothing else: any more and it
+       stops being glass and starts being a gradient. */
+    linear-gradient(
+      122deg,
+      rgba(255, 255, 255, 0.09) 0%,
+      rgba(255, 255, 255, 0.035) 20%,
+      rgba(255, 255, 255, 0) 44%
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.05) 0px,
+      rgba(0, 0, 0, 0.05) 1px,
+      rgba(255, 255, 255, 0) 1px,
+      rgba(255, 255, 255, 0) 3px
+    );
 }
 
 /* The neck and the foot, drawn in one shape below the case. */
@@ -1948,6 +1970,42 @@ body {
    in front of it. Without this the windows open underneath the paint. */
 .desk-groups, .desk-windows { position: relative; z-index: 1; }
 
+/* ---- the chin ------------------------------------------------------
+   The deep bottom bezel had two things on it and they are the two things
+   that say the machine is a machine rather than a picture of one: the
+   maker's name moulded into the plastic, and a power light. The light is
+   the whole point. A dark screen and a dead bezel is a monitor that is
+   off; the same screen with a green light under it is a monitor you are
+   using. It does not blink, because a power light that blinks means
+   something is wrong. */
+#page > .taskbar::before {
+  content: "1999.LOC";
+  position: absolute;
+  left: 14px;
+  bottom: -36px;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 2.5px;
+  color: #b5ae9c;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+}
+#page > .taskbar::after {
+  content: "";
+  position: absolute;
+  right: 18px;
+  bottom: -33px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 32%, #ccffcc 0%, #2ecc2e 52%, #0a6b0a 100%);
+  box-shadow:
+    0 0 8px 1px rgba(70, 235, 70, 0.5),
+    inset 0 0 2px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
 /* ---- the power-on --------------------------------------------------
    A CRT does not fade in, it snaps: a hairline of light across the
    middle, then the picture opening out of it, then the brightness
@@ -2116,6 +2174,10 @@ body {
   .start-menu { left: 2px; max-width: calc(100vw - 28px); }
   /* Its flyouts open underneath rather than off the right edge into nowhere. */
   .start-fly { position: static; left: auto; bottom: auto; margin: 0 0 2px 12px; max-height: 42vh; }
+
+  /* A 20px chin has room for the light and not for the name beside it. */
+  #page > .taskbar::before { display: none; }
+  #page > .taskbar::after { right: 8px; bottom: -14px; width: 6px; height: 6px; }
 
   /* There is no stand on a phone, so the desk starts right under the rim
      rather than 84px down where the neck would have been. The notes go

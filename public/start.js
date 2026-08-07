@@ -627,6 +627,36 @@
     print('');
   }
 
+  /* The clock.
+   *
+   * It read "1999" until now, which is the joke, but a taskbar clock that
+   * does not tell the time is the one thing on the whole desktop that
+   * reads as broken rather than as period. A running clock is also the
+   * cheapest signal there is that the machine is on and this is software
+   * rather than a picture of software.
+   *
+   * So it tells the time, in the format the era's taskbar used, and the
+   * joke moves to the tooltip where it can stay for good. Without this
+   * file the markup still says 1999, which is a fine thing to fall back
+   * to. Twenty seconds between ticks: the minute is never wrong by more
+   * than that and the page is not doing work once a second forever.
+   */
+  var clock = bar.querySelector('.task-clock');
+  if (clock) {
+    var tick = function () {
+      var now = new Date();
+      var hour = now.getHours();
+      var half = hour < 12 ? 'AM' : 'PM';
+      var shown = hour % 12;
+      if (shown === 0) shown = 12;
+      var minute = now.getMinutes();
+      clock.textContent = shown + ':' + (minute < 10 ? '0' : '') + minute + ' ' + half;
+    };
+    clock.title = 'Friday, 31 December 1999';
+    tick();
+    setInterval(tick, 20000);
+  }
+
   // The old cheat code, for the people who will try it.
   var KONAMI = 'ArrowUp,ArrowUp,ArrowDown,ArrowDown,ArrowLeft,ArrowRight,ArrowLeft,ArrowRight,b,a';
   var typed = [];
