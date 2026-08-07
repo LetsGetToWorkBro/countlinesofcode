@@ -585,6 +585,26 @@
 
   // The open wallet is a little client: Overview / Receive / Send / History /
   // Secrets are its tabs. Plain show-hide, same pattern as the setup modes.
+  /* A tick beside the To field the moment an address is complete.
+     checkSend still has the last word when the payment is built; this only
+     moves the discovery of a mistyped address to where it is cheapest, which
+     is before the amount has even been typed. The tick means the checksum
+     passed, not that the address is the one you were given: clipboard
+     malware substitutes addresses that checksum perfectly. */
+  function markAddress(fieldId, markerId, check) {
+    var field = $(fieldId);
+    var marker = $(markerId);
+    if (!field || !marker) return;
+    var update = function () {
+      var verdict = check(field.value);
+      marker.className = 'addr-check' + (verdict.state === 'empty' ? '' : ' is-' + verdict.state);
+      marker.textContent = verdict.state === 'empty' ? ''
+        : (verdict.state === 'ok' ? '\u2713 ' : '\u26A0 ') + verdict.note;
+    };
+    field.addEventListener('input', update);
+    field.addEventListener('change', update);
+  }
+
   var WSECTIONS = ['overview', 'receive', 'send', 'history', 'secrets'];
   function showSection(which) {
     WSECTIONS.forEach(function (name) {
@@ -605,6 +625,9 @@
   loadScript('/walletkit.js').then(function () {
     kit = window.LOC1999_WALLET;
     fillNodes();
+    markAddress('send-address', 'send-addr-check', function (value) {
+      return kit.checkAddress(value, walletNetwork);
+    });
   }).catch(function () {
     $('setup-error').textContent = 'The wallet helpers did not load. Reload the page.';
   });

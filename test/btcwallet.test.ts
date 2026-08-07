@@ -17,6 +17,8 @@ import {
   checkMnemonic,
   formatBtc,
   isBtcAddress,
+  checkBtcAddress,
+  checkExtendedKey,
   newMnemonic,
   openFromMnemonic,
   openWatch,
@@ -370,5 +372,31 @@ describe('errors in words', () => {
   it('turns transport failures into advice', () => {
     expect(prettyBtcError(new Error('fetch failed'))).toMatch(/explorer/);
     expect(prettyBtcError(new Error('Invalid checksum in bech32 string'))).toMatch(/address/i);
+  });
+});
+
+describe('the tick beside the Bitcoin address field', () => {
+  it('says nothing about an empty field, ticks a real address, names the type', () => {
+    expect(checkBtcAddress('')).toEqual({ state: 'empty', note: '' });
+    expect(checkBtcAddress('bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu')).toMatchObject({
+      state: 'ok', note: expect.stringMatching(/bech32/),
+    });
+    expect(checkBtcAddress('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')).toMatchObject({
+      state: 'ok', note: expect.stringMatching(/legacy/),
+    });
+  });
+
+  it('fails a one-character typo and a testnet address', () => {
+    expect(checkBtcAddress('bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyv').state).toBe('bad');
+    expect(checkBtcAddress('tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx').state).toBe('bad');
+    expect(checkBtcAddress('bc1qcr8te4kr609').state).toBe('bad');
+  });
+
+  it('ticks an extended key only when it really decodes', () => {
+    const zpub = openFromMnemonic(VECTOR_WORDS).zpub;
+    expect(checkExtendedKey('')).toEqual({ state: 'empty', note: '' });
+    expect(checkExtendedKey(zpub)).toMatchObject({ state: 'ok', note: 'valid zpub' });
+    expect(checkExtendedKey(zpub.slice(0, 40)).state).toBe('bad');
+    expect(checkExtendedKey('bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu').state).toBe('bad');
   });
 });

@@ -239,7 +239,7 @@ not written it down, you have not made a wallet, you have made a countdown.
       <div id="send-section">
         <h3>Send</h3>
         <p id="send-error" class="error" role="alert"></p>
-        <p><label for="send-address" class="inline">To</label></p>
+        <p><label for="send-address" class="inline">To</label> <span id="send-addr-check" class="addr-check" role="status" aria-live="polite"></span></p>
         <p><textarea id="send-address" rows="2" spellcheck="false" placeholder="4... or 8... address"></textarea></p>
         <p>
           <label for="send-amount" class="inline">Amount</label>
@@ -352,6 +352,7 @@ the reason the rest of this page is about Monero.
       history, no spending, no secrets on this machine at all.
     </p>
     <p><textarea id="btc-zpub-in" rows="3" spellcheck="false" placeholder="zpub6..."></textarea></p>
+    <p><span id="btc-zpub-check" class="addr-check" role="status" aria-live="polite"></span></p>
     <p><button type="button" id="btc-watch">Watch this wallet</button></p>
   </div>
 
@@ -425,7 +426,7 @@ the reason the rest of this page is about Monero.
   <div id="bsec-send" class="hidden">
     <h3>Send</h3>
     <p id="btc-send-error" class="error" role="alert"></p>
-    <p><label for="btc-send-address" class="inline">To</label></p>
+    <p><label for="btc-send-address" class="inline">To</label> <span id="btc-addr-check" class="addr-check" role="status" aria-live="polite"></span></p>
     <p><textarea id="btc-send-address" rows="2" spellcheck="false" placeholder="bc1... or 1... or 3... address"></textarea></p>
     <p>
       <label for="btc-send-amount" class="inline">Amount</label>

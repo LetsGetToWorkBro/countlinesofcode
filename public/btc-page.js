@@ -376,6 +376,22 @@
     }
   });
 
+  /* The same tick the Monero tab shows, for the Bitcoin fields. Decoding is
+     the check: one wrong character fails the bech32 or base58 checksum. */
+  function markAddress(fieldId, markerId, check) {
+    var field = $(fieldId);
+    var marker = $(markerId);
+    if (!field || !marker) return;
+    var update = function () {
+      var verdict = check(field.value);
+      marker.className = 'addr-check' + (verdict.state === 'empty' ? '' : ' is-' + verdict.state);
+      marker.textContent = verdict.state === 'empty' ? ''
+        : (verdict.state === 'ok' ? '\u2713 ' : '\u26A0 ') + verdict.note;
+    };
+    field.addEventListener('input', update);
+    field.addEventListener('change', update);
+  }
+
   // ---------------------------------------------------- tabs and sections
 
   var MODES = ['create', 'restore', 'watch'];
@@ -419,7 +435,12 @@
   function boot() {
     if (booted) return;
     booted = true;
-    loadKit().then(function () { fillServers(); syncPrivacyNote(); }, function () {
+    loadKit().then(function () {
+      fillServers();
+      syncPrivacyNote();
+      markAddress('btc-send-address', 'btc-addr-check', kit.checkBtcAddress);
+      markAddress('btc-zpub-in', 'btc-zpub-check', kit.checkExtendedKey);
+    }, function () {
       setupFail('The wallet engine did not load. Reload the page.');
     });
   }

@@ -1390,6 +1390,20 @@ textarea {
   break-inside: avoid;
 }
 
+/* The tick beside an address field.
+   Green when the checksum passes, amber (not red) when it does not, because
+   a half-typed address is not an error yet, it is a person mid-paste. The
+   glyph carries the meaning as well as the colour, so it still reads for
+   anyone who cannot tell the two apart. */
+.addr-check {
+  font-size: 13px;
+  font-family: Arial, Helvetica, sans-serif;
+  white-space: nowrap;
+}
+.addr-check.is-ok { color: #0a7a28; font-weight: bold; }
+.addr-check.is-bad { color: #9a5b00; }
+.addr-check.is-wrong-network { color: #9a5b00; font-weight: bold; }
+
 /* ======================= THE MACHINE ==================================
    Everything above this line draws a 1999 web page. This last section
    puts that page inside the computer it always belonged in: a room, a

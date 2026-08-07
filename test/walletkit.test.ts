@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ATOMIC_PER_XMR,
   checkSend,
+  checkAddress,
   formatXmr,
   nodes,
   parseXmr,
@@ -135,5 +136,49 @@ describe('prettyError', () => {
 
   it('passes an unknown message through rather than swallowing it', () => {
     expect(prettyError(new Error('some novel failure'))).toBe('some novel failure');
+  });
+});
+
+describe('the tick beside the address field', () => {
+  // The reference mainnet address the rest of the site donates to.
+  const MAINNET = '83TQcTwusSQ4WKbPQE5osrF3cR4GWe2zmcNWeozK6BSqHSaeLvjUVe476ouVwLKn1uVwEFcbJQvnme7W6dTV5SB93x45DEy';
+
+  it('says nothing at all about an empty field', () => {
+    // A person who has not typed yet has not made a mistake.
+    expect(checkAddress('')).toEqual({ state: 'empty', note: '' });
+    expect(checkAddress('   ')).toEqual({ state: 'empty', note: '' });
+  });
+
+  it('ticks a real mainnet address, and names what it is', () => {
+    const verdict = checkAddress(MAINNET);
+    expect(verdict.state).toBe('ok');
+    expect(verdict.note).toMatch(/valid Monero/);
+  });
+
+  it('refuses one with a single character changed, which is the whole point', () => {
+    // The tick has to mean the checksum passed, not that it looks about
+    // right, or it is worse than no tick at all.
+    const typo = MAINNET.slice(0, -1) + (MAINNET.endsWith('y') ? 'z' : 'y');
+    expect(checkAddress(typo).state).toBe('bad');
+    expect(checkAddress('not an address').state).toBe('bad');
+    expect(checkAddress(MAINNET.slice(0, 40)).state).toBe('bad');
+  });
+
+  it('does not tick a half-pasted address', () => {
+    for (let cut = 10; cut < 90; cut += 20) {
+      expect(checkAddress(MAINNET.slice(0, cut)).state, `${cut} chars`).not.toBe('ok');
+    }
+  });
+
+  it('calls out a valid address on the wrong network rather than ticking it', () => {
+    // Paying a stagenet address out of a mainnet wallet builds a payment
+    // that can never arrive, and it checksums perfectly.
+    const verdict = checkAddress(MAINNET, 'stagenet');
+    expect(verdict.state).toBe('wrong-network');
+    expect(verdict.note).toMatch(/mainnet/);
+  });
+
+  it('ignores the whitespace a paste brings with it', () => {
+    expect(checkAddress(`  ${MAINNET}\n`).state).toBe('ok');
   });
 });

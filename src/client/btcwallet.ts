@@ -493,6 +493,48 @@ export function buildSend(req: SendRequest): SendPlan {
   return { ok: true, hex: tx.hex, txid: tx.id, fee, amount, change };
 }
 
+/**
+ * A live verdict on a Bitcoin address, for the tick beside the field.
+ *
+ * Decoding is the check: @scure/btc-signer verifies the bech32 or base58
+ * checksum, so one wrong character fails. It also names the type, which is
+ * worth showing, because "legacy" and "bech32" both being valid is exactly
+ * the thing a person pasting an address wants confirmed.
+ */
+export interface BtcAddressVerdict {
+  state: 'empty' | 'ok' | 'bad';
+  note: string;
+}
+
+const ADDRESS_KINDS: Record<string, string> = {
+  wpkh: 'bech32 address',
+  wsh: 'bech32 script address',
+  tr: 'taproot address',
+  pkh: 'legacy address',
+  sh: 'script address',
+};
+
+export function checkBtcAddress(text: string): BtcAddressVerdict {
+  const raw = String(text ?? '').trim();
+  if (!raw) return { state: 'empty', note: '' };
+  try {
+    const decoded = btc.Address().decode(raw) as { type?: string } | undefined;
+    const kind = (decoded && ADDRESS_KINDS[decoded.type ?? '']) ?? 'address';
+    return { state: 'ok', note: `valid Bitcoin ${kind}` };
+  } catch {
+    return { state: 'bad', note: 'not a valid Bitcoin address' };
+  }
+}
+
+/** The same, for the extended public key the watch-only tab takes. */
+export function checkExtendedKey(text: string): BtcAddressVerdict {
+  const raw = String(text ?? '').trim();
+  if (!raw) return { state: 'empty', note: '' };
+  const opened = openWatch(raw);
+  if (!opened.ok) return { state: 'bad', note: 'not a valid extended key' };
+  return { state: 'ok', note: raw.startsWith('zpub') ? 'valid zpub' : 'valid xpub' };
+}
+
 // ----------------------------------------------------------- the servers
 
 /** The curated Esplora servers, for the page's picker. */
@@ -543,6 +585,8 @@ globalScope.LOC1999_BTC = {
   openWatch,
   addressAt,
   isBtcAddress,
+  checkBtcAddress,
+  checkExtendedKey,
   scanWallet,
   emptyView,
   drawDecoys,

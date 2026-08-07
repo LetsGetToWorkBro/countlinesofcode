@@ -140,6 +140,47 @@ export function checkSend(address: string, amountText: string, unlockedAtomic: b
  * surfaces daemon and validation errors as terse strings; the ones a wallet
  * user actually hits are worth translating.
  */
+/**
+ * A live verdict on an address as somebody types or pastes it.
+ *
+ * This is the field-side check, not the send-side one: checkSend still has
+ * the last word before a payment is built. What this adds is a tick the
+ * moment the address is complete, which is the point at which a mistyped or
+ * half-pasted address is cheapest to notice.
+ *
+ * The tick means more than "looks about right": parseAddress verifies the
+ * base58 and the four-byte checksum, so a single wrong character fails it.
+ * What it cannot tell you, and the page says so, is whether this is the
+ * address you were actually given: clipboard malware substitutes addresses
+ * that checksum perfectly.
+ */
+export type AddressState = 'empty' | 'ok' | 'wrong-network' | 'bad';
+
+export interface AddressVerdict {
+  state: AddressState;
+  /** A few words for the marker beside the field. */
+  note: string;
+}
+
+export function checkAddress(text: string, walletNetwork: Network = 'mainnet'): AddressVerdict {
+  const raw = String(text ?? '').trim();
+  if (!raw) return { state: 'empty', note: '' };
+
+  const parsed = parseAddress(raw);
+  if (!parsed.valid) return { state: 'bad', note: 'not a valid Monero address' };
+
+  if (parsed.network !== walletNetwork) {
+    // Valid, and useless here: paying a stagenet address from a mainnet
+    // wallet is a transaction that cannot go anywhere.
+    return { state: 'wrong-network', note: `that is a ${parsed.network} address` };
+  }
+
+  const kind = parsed.kind === 'integrated' ? 'integrated address'
+    : parsed.kind === 'subaddress' ? 'subaddress'
+    : 'address';
+  return { state: 'ok', note: `valid Monero ${kind}` };
+}
+
 export function prettyError(err: unknown): string {
   const message = (err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message) : String(err)) || 'Something went wrong.';
   if (/not enough (unlocked )?money|not enough unlocked|subtract.*fee/i.test(message)) {
@@ -169,5 +210,6 @@ globalScope.LOC1999_WALLET = {
   nodes,
   restoreHeightForDate,
   checkSend,
+  checkAddress,
   prettyError,
 };
