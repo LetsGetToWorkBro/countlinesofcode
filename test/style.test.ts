@@ -17,6 +17,7 @@
  */
 
 import { readFileSync, readdirSync } from 'node:fs';
+import { BUNDLES, MONERO_LIB } from '../scripts/build-client.mjs';
 import { describe, expect, it } from 'vitest';
 
 const EM_DASH = /—|&mdash;/;
@@ -85,6 +86,100 @@ describe('page copy has no em dashes', () => {
     // either they stopped handling it or the list above is now stale.
     for (const path of HANDLES_THE_CHARACTER) {
       expect(EM_DASH.test(readFileSync(path, 'utf8')), `${path} no longer handles an em dash`).toBe(true);
+    }
+  });
+});
+
+/**
+ * No emoji, anywhere a visitor can see one.
+ *
+ * The site draws its own pictures: sixteen inline SVGs for the desktop, the
+ * window chrome in CSS. A colour cartoon among them is an immediate tell that
+ * something was not drawn here, and it is not a choice the page gets to make
+ * anyway, because the platform picks the glyph. Two got in this way and
+ * neither was meant as an emoji: U+25B6, the arrow beside a submenu, is the
+ * play-button emoji on iOS, and U+26A0, beside a bad address, is the warning
+ * sign. Both were line art on a desktop and colour cartoons on a phone.
+ *
+ * Rather than enumerate the emoji, which grows every year, this is the other
+ * way round: the handful of characters above U+2000 the site is allowed to
+ * draw with. Every one is text presentation on every platform. Anything else
+ * has to be added here deliberately, which is the moment to ask whether a
+ * phone is going to colour it in.
+ *
+ * The built bundles are exempt for the same reason the em dash rule exempts
+ * them: they carry Unicode tables as data, not as page copy.
+ */
+describe('no emoji anywhere on the site', () => {
+  /** Text-presentation characters the site draws with, and why. */
+  const ALLOWED = new Map<number, string>([
+    [0x2013, 'en dash'],
+    [0x2014, 'em dash (comments only; the rule above governs copy)'],
+    [0x2018, 'left single quote'],
+    [0x2019, 'right single quote'],
+    [0x201c, 'left double quote'],
+    [0x201d, 'right double quote'],
+    [0x2022, 'bullet'],
+    [0x2026, 'ellipsis'],
+    [0x2192, 'rightwards arrow'],
+    [0x2194, 'left right arrow, the convert and sheet titles'],
+    [0x21c6, 'the swap page direction button'],
+    [0x2212, 'minus sign, the mail client collapse marker'],
+    [0x25ba, 'the Start menu submenu arrow, and NOT U+25B6 which is an emoji'],
+    [0x2713, 'the tick beside a valid address, and NOT U+2714 which is an emoji'],
+    [0x2717, 'the cross beside a bad one, and NOT U+2716 which is an emoji'],
+    [0xfeff, 'byte order mark, handled as data by the spreadsheet tool'],
+  ]);
+
+  /** Files the build writes; they hold Unicode tables, not page copy. */
+  const GENERATED = new Set<string>([
+    ...BUNDLES.map((b: { outfile: string }) => b.outfile.replace('public/', '')),
+    MONERO_LIB.outfile.replace('public/', ''),
+  ]);
+
+  /** Every codepoint a file serves: literal, &#1234; and \uXXXX alike. */
+  function suspicious(source: string): { cp: number; how: string }[] {
+    const found: { cp: number; how: string }[] = [];
+    for (const ch of source) {
+      const cp = ch.codePointAt(0)!;
+      if (cp > 0x2000) found.push({ cp, how: `the character ${JSON.stringify(ch)}` });
+    }
+    for (const m of source.matchAll(/&#(\d+);/g)) {
+      if (Number(m[1]) > 0x2000) found.push({ cp: Number(m[1]), how: m[0]! });
+    }
+    for (const m of source.matchAll(/\\u([0-9a-fA-F]{4})/g)) {
+      const cp = parseInt(m[1]!, 16);
+      if (cp > 0x2000) found.push({ cp, how: m[0]! });
+    }
+    return found;
+  }
+
+  const handWritten = [
+    ...readdirSync('public').filter((n) => n.endsWith('.html')),
+    ...readdirSync('public').filter((n) => n.endsWith('.js') && !GENERATED.has(n)),
+  ].map((n) => `public/${n}`);
+
+  it('in any page or hand-written script', () => {
+    expect(handWritten.length).toBeGreaterThan(20);
+    for (const path of handWritten) {
+      for (const { cp, how } of suspicious(readFileSync(path, 'utf8'))) {
+        expect(
+          ALLOWED.has(cp),
+          `${path} uses U+${cp.toString(16).toUpperCase().padStart(4, '0')} (${how}), which is not on the ` +
+            'allowed list. If it is a picture, draw it as SVG; if it is punctuation, add it to ALLOWED in ' +
+            'this test after checking a phone does not render it as a colour emoji.',
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('uses the tick and cross that are line art, not the ones that are emoji', () => {
+    // One codepoint along from each is a colour emoji on a phone.
+    for (const path of ['public/wallet-page.js', 'public/btc-page.js']) {
+      const marker = readFileSync(path, 'utf8');
+      expect(marker, path).toContain('\\u2713');
+      expect(marker, path).not.toContain('\\u2714');
+      expect(marker, path).not.toContain('\\u26A0');
     }
   });
 });

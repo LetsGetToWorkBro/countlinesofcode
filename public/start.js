@@ -138,6 +138,7 @@
   menu.appendChild(items);
 
   var openFlyout = null;
+  var CAN_HOVER = !window.matchMedia || window.matchMedia('(hover: hover)').matches;
 
   function closeFlyouts() {
     if (openFlyout) openFlyout.classList.remove('is-open');
@@ -147,7 +148,7 @@
   function menuItem(label, arrow) {
     var row = el('button', 'start-item');
     row.type = 'button';
-    row.innerHTML = esc(label) + (arrow ? '<span class="start-arrow">&#9654;</span>' : '');
+    row.innerHTML = esc(label) + (arrow ? '<span class="start-arrow">&#9658;</span>' : '');
     return row;
   }
 
@@ -171,11 +172,17 @@
       closeFlyouts();
       if (!wasOpen) { fly.classList.add('is-open'); openFlyout = fly; }
     });
-    row.addEventListener('mouseenter', function () {
-      closeFlyouts();
-      fly.classList.add('is-open');
-      openFlyout = fly;
-    });
+    /* Hover opens a submenu on a mouse, and must not be bound on a touch
+       screen: a tap there fires mouseenter and then click, so the pointer
+       would open the flyout and the tap would immediately toggle it shut
+       again, which is exactly what it did on a phone. */
+    if (CAN_HOVER) {
+      row.addEventListener('mouseenter', function () {
+        closeFlyouts();
+        fly.classList.add('is-open');
+        openFlyout = fly;
+      });
+    }
     wrap.appendChild(row);
     wrap.appendChild(fly);
     return wrap;

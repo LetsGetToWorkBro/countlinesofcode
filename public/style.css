@@ -1734,9 +1734,11 @@ body {
   .task-btn { max-width: 55%; }
   .task-clock { padding: 1px 6px; }
 
-  /* The Start menu is nearly the width of the screen, so its flyouts open
-     over it rather than off the right edge into nowhere. */
-  .start-menu { left: 2px; right: 2px; }
+  /* The menu sizes to its contents, not to the screen: pinned to both edges
+     it stretched the full width with the items huddled on the left. Capped
+     so a long tool name still cannot push it off the side. */
+  .start-menu { left: 2px; max-width: calc(100vw - 28px); }
+  /* Its flyouts open underneath rather than off the right edge into nowhere. */
   .start-fly { position: static; left: auto; bottom: auto; margin: 0 0 2px 12px; max-height: 42vh; }
 
   /* Desktop icons and shortcuts pack tighter. */

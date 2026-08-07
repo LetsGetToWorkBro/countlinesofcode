@@ -599,7 +599,7 @@
       var verdict = check(field.value);
       marker.className = 'addr-check' + (verdict.state === 'empty' ? '' : ' is-' + verdict.state);
       marker.textContent = verdict.state === 'empty' ? ''
-        : (verdict.state === 'ok' ? '\u2713 ' : '\u26A0 ') + verdict.note;
+        : (verdict.state === 'ok' ? '\u2713 ' : '\u2717 ') + verdict.note;
     };
     field.addEventListener('input', update);
     field.addEventListener('change', update);
