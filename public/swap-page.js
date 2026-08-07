@@ -12,7 +12,18 @@
   var $ = function (id) { return document.getElementById(id); };
   if (!$('get-quotes')) return;
 
-  var COIN_LABELS = { btc: 'BTC', usdc: 'USDC', usdcsol: 'USDC' };
+  // Ticker and address hint per coin id. The server owns the real coin table
+  // (src/lib/swapkit.ts) and validates against it; this is only what the page
+  // needs to label a field and place a placeholder.
+  var COINS = {
+    xmr:     { ticker: 'XMR',  name: 'Monero',           hint: '4... or 8..., a mainnet Monero address' },
+    btc:     { ticker: 'BTC',  name: 'Bitcoin',          hint: 'bc1..., or a 1... or 3... address' },
+    usdttrc: { ticker: 'USDT', name: 'USDT (Tron)',      hint: 'T..., a Tron address' },
+    usdteth: { ticker: 'USDT', name: 'USDT (Ethereum)',  hint: '0x..., an Ethereum address' },
+    eth:     { ticker: 'ETH',  name: 'Ethereum',         hint: '0x..., an Ethereum address' },
+    usdc:    { ticker: 'USDC', name: 'USDC (Ethereum)',  hint: '0x..., an Ethereum address' },
+    usdcsol: { ticker: 'USDC', name: 'USDC (Solana)',    hint: 'a Solana address' },
+  };
   var PROVIDER_LABELS = { exolix: 'Exolix', changenow: 'ChangeNOW' };
   var PROVIDER_SITES = {
     exolix: 'https://exolix.com/transaction/',
@@ -38,13 +49,47 @@
     });
   }
 
+  /* Six decimals is plenty for XMR or BTC and far too many for USDT; trim
+     the trailing zeros rather than printing "731.422302000000". */
+  function trim(n) {
+    return String(Number(n).toFixed(8)).replace(/\.?0+$/, '');
+  }
+
   function fail(m) { $('swap-error').textContent = m; }
   function note(m) { $('swap-status').textContent = m; }
   function clearMessages() { fail(''); note(''); }
 
   // --------------------------------------------------------------- quotes
 
-  function coin() { return $('from-coin').value; }
+  function fromId() { return $('from-coin').value; }
+  function toId() { return $('to-coin').value; }
+  function coinOf(id) { return COINS[id] || { ticker: id.toUpperCase(), name: id, hint: 'an address' }; }
+
+  /* Every swap has Monero on one side. Rather than police the two pickers
+     with an error, the other one follows: choose Monero to send and the
+     destination stops being Monero, and the same the other way round. */
+  function syncPair(changed) {
+    var from = fromId();
+    var to = toId();
+    if (from === to || (from !== 'xmr' && to !== 'xmr')) {
+      if (changed === 'to') {
+        $('from-coin').value = to === 'xmr' ? 'btc' : 'xmr';
+      } else {
+        $('to-coin').value = from === 'xmr' ? 'btc' : 'xmr';
+      }
+    }
+    var target = coinOf(toId());
+    var source = coinOf(fromId());
+    $('amount-unit').textContent = source.ticker;
+    $('dest-heading').textContent = 'Where should the ' + target.name + ' go?';
+    $('xmr-address').placeholder = target.hint;
+    $('refund').placeholder = source.hint + ' (the coin you are sending)';
+    // A pair change invalidates whatever was quoted for the old one.
+    quotes = [];
+    chosen = null;
+    $('quotes-block').classList.add('hidden');
+    clearMessages();
+  }
 
   function amountTyped() {
     var n = parseFloat(String($('amount').value).replace(',', '.'));
@@ -57,7 +102,8 @@
     if (amt === null) { fail('Enter the amount you are sending, as a number.'); return; }
     note('Asking for quotes...');
     $('quotes-block').classList.add('hidden');
-    api('quote?from=' + encodeURIComponent(coin()) + '&amount=' + encodeURIComponent(amt))
+    api('quote?from=' + encodeURIComponent(fromId()) + '&to=' + encodeURIComponent(toId()) +
+        '&amount=' + encodeURIComponent(amt))
       .then(function (data) {
         quotes = data.quotes || [];
         note('');
@@ -78,12 +124,12 @@
       if (q.ok) {
         html += '<p><label><input type="radio" name="quote" value="' + esc(q.provider) + '"' +
           (q.provider === chosen ? ' checked' : '') + '> ' +
-          '<strong>' + esc(label) + '</strong>: about ' + esc(q.toAmount.toFixed(6)) + ' XMR' +
+          '<strong>' + esc(label) + '</strong>: about ' + esc(trim(q.toAmount)) + ' ' + esc(coinOf(toId()).ticker) +
           (q === best && live.length > 1 ? ' <span class="note">(best)</span>' : '') +
           '</label></p>';
       } else {
         var why = q.reason || 'no quote';
-        if (q.minAmount) why += ' (minimum ' + q.minAmount + ' ' + (COIN_LABELS[coin()] || '') + ')';
+        if (q.minAmount) why += ' (minimum ' + trim(q.minAmount) + ' ' + coinOf(fromId()).ticker + ')';
         html += '<p class="note">' + esc(label) + ': ' + esc(why) + '</p>';
       }
     });
@@ -97,6 +143,15 @@
 
   $('quotes').addEventListener('change', function (event) {
     if (event.target && event.target.name === 'quote') chosen = event.target.value;
+  });
+
+  $('from-coin').addEventListener('change', function () { syncPair('from'); });
+  $('to-coin').addEventListener('change', function () { syncPair('to'); });
+  $('flip').addEventListener('click', function () {
+    var from = fromId();
+    $('from-coin').value = toId();
+    $('to-coin').value = from;
+    syncPair('from');
   });
 
   $('get-quotes').addEventListener('click', getQuotes);
@@ -118,7 +173,7 @@
     var amt = amountTyped();
     var address = String($('xmr-address').value).trim();
     if (amt === null) { fail('Enter the amount first.'); return; }
-    if (!address) { fail('Enter the Monero address the swap should pay.'); return; }
+    if (!address) { fail('Enter the ' + coinOf(toId()).name + ' address the swap should pay.'); return; }
     if (!chosen) { fail('Pick a quote first.'); return; }
     var button = $('start-swap');
     button.disabled = true;
@@ -128,7 +183,8 @@
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         provider: chosen,
-        from: coin(),
+        from: fromId(),
+        to: toId(),
         amount: amt,
         address: address,
         refund: String($('refund').value).trim(),
@@ -136,7 +192,7 @@
     })
       .then(function (data) {
         note('');
-        order = { o: data, coin: coin() };
+        order = { o: data, from: fromId(), to: toId() };
         remember();
         renderOrder();
         checkStatus();
@@ -148,14 +204,15 @@
   function renderOrder() {
     if (!order) return;
     var o = order.o;
-    var coinLabel = COIN_LABELS[order.coin] || order.coin;
+    var sent = coinOf(order.from).ticker;
+    var got = coinOf(order.to).ticker;
     $('quotes-block').classList.add('hidden');
-    $('pay-line').innerHTML = 'Send exactly <strong>' + esc(o.payinAmount) + ' ' + esc(coinLabel) +
+    $('pay-line').innerHTML = 'Send exactly <strong>' + esc(o.payinAmount) + ' ' + esc(sent) +
       '</strong> to this address, in one payment:';
     $('pay-address').textContent = o.payinAddress;
     $('order-meta').innerHTML =
       'Order <code>' + esc(o.id) + '</code> at ' + esc(PROVIDER_LABELS[o.provider] || o.provider) +
-      ' &middot; about ' + esc(o.toAmount) + ' XMR to <code>' + esc(shorten(o.payoutAddress)) + '</code>' +
+      ' &middot; about ' + esc(o.toAmount) + ' ' + esc(got) + ' to <code>' + esc(shorten(o.payoutAddress)) + '</code>' +
       ' &middot; <a href="' + esc((PROVIDER_SITES[o.provider] || '#') + o.id) + '" rel="noreferrer">view it on their site</a>.' +
       ' Keep the order id; it is the only handle on this swap.';
     $('order-block').classList.remove('hidden');
@@ -251,6 +308,8 @@
   $('pay-address').addEventListener('click', function () { if (order) selectPayAddress(); });
 
   // ---------------------------------------------------------------- boot
+
+  syncPair('from');
 
   // A refresh mid-swap lands here: the order comes back and polling resumes.
   var kept = recall();

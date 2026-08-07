@@ -11,7 +11,8 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  FROM_COINS,
+  COINS,
+  COUNTER_COINS,
   PROVIDERS,
   STAGE_LINES,
   changeNowCreateBody,
@@ -20,9 +21,10 @@ import {
   exolixCreateBody,
   exolixRateUrl,
   exolixStatusUrl,
-  fromCoin,
+  addressHint,
+  addressLooksRight,
+  coin,
   isPlausibleOrderId,
-  looksLikeXmrAddress,
   parseAmount,
   parseChangeNowCreate,
   parseChangeNowEstimate,
@@ -31,19 +33,27 @@ import {
   parseExolixCreate,
   parseExolixRate,
   parseExolixStatus,
-  plausibleRefund,
+  parsePair,
   type CreateRequest,
 } from '../src/lib/swapkit';
 
 const XMR_ADDR =
   '83TQcTwusSQ4WKbPQE5osrF3cR4GWe2zmcNWeozK6BSqHSaeLvjUVe476ouVwLKn1uVwEFcbJQvnme7W6dTV5SB93x45DEy';
 
-const btc = fromCoin('btc')!;
-const usdc = fromCoin('usdc')!;
+const btc = coin('btc')!;
+const usdc = coin('usdc')!;
+const xmr = coin('xmr')!;
+const usdtTrc = coin('usdttrc')!;
+
+const BTC_ADDR = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
+const EVM_ADDR = '0x52908400098527886E0F7030069857D2E4169EE7';
+const SOL_ADDR = '4Nd1mYQx8kbXVWjR8oVGwGJp1FkVbqYYriDbBxkD6ZcV';
+const TRON_ADDR = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 
 const request = (over: Partial<CreateRequest> = {}): CreateRequest => ({
   provider: 'exolix',
-  coin: btc,
+  from: btc,
+  to: xmr,
   amount: 0.05,
   address: XMR_ADDR,
   refund: '',
@@ -51,13 +61,21 @@ const request = (over: Partial<CreateRequest> = {}): CreateRequest => ({
 });
 
 describe('the coins on offer', () => {
-  it('swaps exactly BTC and USDC (ERC-20 or Solana) into Monero', () => {
-    expect(FROM_COINS.map((c) => c.id)).toEqual(['btc', 'usdc', 'usdcsol']);
-    // Both USDC entries are the same currency to a provider; the network is
-    // the whole difference.
-    expect(fromCoin('usdcsol')!.ticker).toBe('usdc');
-    expect(fromCoin('usdcsol')!.network).toBe('SOL');
-    expect(fromCoin('doge')).toBeNull();
+  it('trades Monero against BTC, USDT, ETH and USDC', () => {
+    expect(COINS.map((c) => c.id)).toEqual(['xmr', 'btc', 'usdttrc', 'usdteth', 'eth', 'usdc', 'usdcsol']);
+    expect(COUNTER_COINS.some((c) => c.id === 'xmr')).toBe(false);
+    expect(coin('doge')).toBeNull();
+  });
+
+  it('keeps a coin\u2019s networks apart while naming the same currency', () => {
+    // A provider knows one USDT; the network is the whole difference, and
+    // sending TRC-20 to an ERC-20 deposit address loses the money.
+    expect(coin('usdttrc')!.ticker).toBe('usdt');
+    expect(coin('usdteth')!.ticker).toBe('usdt');
+    expect(coin('usdttrc')!.network).toBe('TRX');
+    expect(coin('usdteth')!.network).toBe('ETH');
+    expect(coin('usdttrc')!.family).toBe('tron');
+    expect(coin('usdteth')!.family).toBe('evm');
   });
 
   it('knows which provider needs a key', () => {
@@ -66,39 +84,61 @@ describe('the coins on offer', () => {
   });
 });
 
+describe('the pair', () => {
+  it('accepts Monero on either side', () => {
+    expect(parsePair('btc', 'xmr')).toMatchObject({ ok: true });
+    expect(parsePair('xmr', 'usdttrc')).toMatchObject({ ok: true });
+  });
+
+  it('refuses a trade with no Monero in it, which is not what this page is', () => {
+    expect(parsePair('btc', 'usdttrc')).toMatchObject({ ok: false, problem: /Monero on one side/ as unknown as string });
+  });
+
+  it('refuses a coin traded for itself, and an unknown coin', () => {
+    expect(parsePair('xmr', 'xmr').ok).toBe(false);
+    expect(parsePair('btc', 'doge').ok).toBe(false);
+    expect(parsePair('', '').ok).toBe(false);
+  });
+});
+
+describe('addresses, per chain', () => {
+  it('knows the shape of every chain it can pay', () => {
+    expect(addressLooksRight('xmr', XMR_ADDR)).toBe(true);
+    expect(addressLooksRight('xmr', ` ${XMR_ADDR} `)).toBe(true);
+    expect(addressLooksRight('btc', BTC_ADDR)).toBe(true);
+    expect(addressLooksRight('btc', '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')).toBe(true);
+    expect(addressLooksRight('evm', EVM_ADDR)).toBe(true);
+    expect(addressLooksRight('sol', SOL_ADDR)).toBe(true);
+    expect(addressLooksRight('tron', TRON_ADDR)).toBe(true);
+  });
+
+  it('rejects the right address on the wrong chain, which is the mistake that costs money', () => {
+    expect(addressLooksRight('xmr', BTC_ADDR)).toBe(false);
+    expect(addressLooksRight('btc', XMR_ADDR)).toBe(false);
+    expect(addressLooksRight('evm', TRON_ADDR)).toBe(false);
+    expect(addressLooksRight('tron', EVM_ADDR)).toBe(false);
+    expect(addressLooksRight('sol', EVM_ADDR)).toBe(false);
+    // A Tron address is base58 of a length Solana would take, so the T prefix
+    // is doing real work here.
+    expect(addressLooksRight('tron', SOL_ADDR)).toBe(false);
+  });
+
+  it('rejects malformed Monero addresses specifically', () => {
+    expect(addressLooksRight('xmr', '')).toBe(false);
+    expect(addressLooksRight('xmr', XMR_ADDR.slice(0, 90))).toBe(false);
+    expect(addressLooksRight('xmr', '9' + XMR_ADDR.slice(1))).toBe(false); // stagenet
+    expect(addressLooksRight('xmr', XMR_ADDR.replace('8', 'l'))).toBe(false); // not base58
+  });
+
+  it('describes what it wanted, per chain, for the error message', () => {
+    expect(addressHint(xmr)).toMatch(/Monero/);
+    expect(addressHint(btc)).toMatch(/bc1/);
+    expect(addressHint(usdtTrc)).toMatch(/Tron/);
+    expect(addressHint(usdc)).toMatch(/0x/);
+  });
+});
+
 describe('what the visitor typed', () => {
-  it('accepts a real mainnet Monero address', () => {
-    expect(looksLikeXmrAddress(XMR_ADDR)).toBe(true);
-    expect(looksLikeXmrAddress(` ${XMR_ADDR} `)).toBe(true);
-  });
-
-  it('rejects everything that is not one', () => {
-    // The wrong way to be wrong here is accepting: this address is where the
-    // exchange will send the Monero.
-    expect(looksLikeXmrAddress('')).toBe(false);
-    expect(looksLikeXmrAddress(XMR_ADDR.slice(0, 90))).toBe(false);
-    expect(looksLikeXmrAddress('9' + XMR_ADDR.slice(1))).toBe(false); // stagenet prefix
-    expect(looksLikeXmrAddress(XMR_ADDR.replace('8', 'l'))).toBe(false); // not base58
-    expect(looksLikeXmrAddress('bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq')).toBe(false);
-  });
-
-  it('takes a bech32 or legacy BTC refund address, or none at all', () => {
-    expect(plausibleRefund('btc', '')).toBe(true);
-    expect(plausibleRefund('btc', 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq')).toBe(true);
-    expect(plausibleRefund('btc', '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')).toBe(true);
-    expect(plausibleRefund('btc', '0x52908400098527886E0F7030069857D2E4169EE7')).toBe(false);
-  });
-
-  it('takes an 0x address for an ERC-20 USDC refund and nothing else', () => {
-    expect(plausibleRefund('usdc', '0x52908400098527886E0F7030069857D2E4169EE7')).toBe(true);
-    expect(plausibleRefund('usdc', 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq')).toBe(false);
-  });
-
-  it('takes a base58 address for a Solana USDC refund and nothing else', () => {
-    expect(plausibleRefund('usdcsol', '4Nd1mYQx8kbXVWjR8oVGwGJp1FkVbqYYriDbBxkD6ZcV')).toBe(true);
-    expect(plausibleRefund('usdcsol', '0x52908400098527886E0F7030069857D2E4169EE7')).toBe(false);
-    expect(plausibleRefund('usdcsol', 'tooshort')).toBe(false);
-  });
 
   it('keeps amount nonsense off the wire', () => {
     expect(parseAmount('0.05')).toBe(0.05);
@@ -109,21 +149,44 @@ describe('what the visitor typed', () => {
   });
 
   it('validates a whole create request and says what is wrong in words', () => {
-    const good = parseCreateRequest({ provider: 'exolix', from: 'btc', amount: '0.05', address: XMR_ADDR });
+    const good = parseCreateRequest({ provider: 'exolix', from: 'btc', to: 'xmr', amount: '0.05', address: XMR_ADDR });
     expect(good.ok).toBe(true);
-    if (good.ok) expect(good.req.coin.id).toBe('btc');
+    if (good.ok) {
+      expect(good.req.from.id).toBe('btc');
+      expect(good.req.to.id).toBe('xmr');
+    }
 
-    expect(parseCreateRequest({ provider: 'kraken', from: 'btc', amount: 1, address: XMR_ADDR })).toMatchObject({
+    expect(parseCreateRequest({ provider: 'kraken', from: 'btc', to: 'xmr', amount: 1, address: XMR_ADDR })).toMatchObject({
       ok: false,
       problem: expect.stringMatching(/provider/i),
     });
-    expect(parseCreateRequest({ provider: 'exolix', from: 'btc', amount: 1, address: 'nope' })).toMatchObject({
+    expect(parseCreateRequest({ provider: 'exolix', from: 'btc', to: 'xmr', amount: 1, address: 'nope' })).toMatchObject({
       ok: false,
       problem: expect.stringMatching(/Monero address/),
     });
     expect(
-      parseCreateRequest({ provider: 'exolix', from: 'usdc', amount: 500, address: XMR_ADDR, refund: 'not-hex' }),
+      parseCreateRequest({ provider: 'exolix', from: 'usdc', to: 'xmr', amount: 500, address: XMR_ADDR, refund: 'not-hex' }),
     ).toMatchObject({ ok: false, problem: expect.stringMatching(/refund/i) });
+  });
+
+  it('checks the payout address against the coin going out, not against Monero', () => {
+    // Leaving Monero: the address has to be a Bitcoin one, and a perfectly
+    // good XMR address is now the wrong answer.
+    const out = parseCreateRequest({ provider: 'exolix', from: 'xmr', to: 'btc', amount: 2, address: BTC_ADDR });
+    expect(out.ok).toBe(true);
+    expect(parseCreateRequest({ provider: 'exolix', from: 'xmr', to: 'btc', amount: 2, address: XMR_ADDR })).toMatchObject({
+      ok: false,
+      problem: expect.stringMatching(/Bitcoin address/),
+    });
+    // And out to Tron, the refund has to be a Monero address.
+    expect(parseCreateRequest({
+      provider: 'exolix', from: 'xmr', to: 'usdttrc', amount: 2, address: TRON_ADDR, refund: BTC_ADDR,
+    })).toMatchObject({ ok: false, problem: expect.stringMatching(/refund/i) });
+  });
+
+  it('refuses a pair with no Monero in it before anything is built', () => {
+    expect(parseCreateRequest({ provider: 'exolix', from: 'btc', to: 'usdttrc', amount: 1, address: TRON_ADDR }))
+      .toMatchObject({ ok: false, problem: expect.stringMatching(/Monero on one side/) });
   });
 
   it('accepts the order-id shapes providers use and nothing weirder', () => {
@@ -137,7 +200,7 @@ describe('what the visitor typed', () => {
 
 describe('Exolix', () => {
   it('asks for a float-rate XMR quote on the right pair', () => {
-    const url = new URL(exolixRateUrl(usdc, 500));
+    const url = new URL(exolixRateUrl({ from: usdc, to: xmr }, 500));
     expect(url.origin + url.pathname).toBe('https://exolix.com/api/v2/rate');
     expect(url.searchParams.get('coinFrom')).toBe('USDC');
     expect(url.searchParams.get('networkFrom')).toBe('ETH');
@@ -146,9 +209,17 @@ describe('Exolix', () => {
   });
 
   it('asks for Solana USDC as the same currency on its own network', () => {
-    const url = new URL(exolixRateUrl(fromCoin('usdcsol')!, 500));
+    const url = new URL(exolixRateUrl({ from: coin('usdcsol')!, to: xmr }, 500));
     expect(url.searchParams.get('coinFrom')).toBe('USDC');
     expect(url.searchParams.get('networkFrom')).toBe('SOL');
+  });
+
+  it('asks the other way round when the swap leaves Monero', () => {
+    const url = new URL(exolixRateUrl({ from: xmr, to: usdtTrc }, 2));
+    expect(url.searchParams.get('coinFrom')).toBe('XMR');
+    expect(url.searchParams.get('networkFrom')).toBe('XMR');
+    expect(url.searchParams.get('coinTo')).toBe('USDT');
+    expect(url.searchParams.get('networkTo')).toBe('TRX');
   });
 
   it('reads a live rate reply', () => {
@@ -173,15 +244,26 @@ describe('Exolix', () => {
   });
 
   it('builds a create body with the visitor exactly as typed', () => {
-    const { url, body } = exolixCreateBody(request({ refund: 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq' }));
+    const { url, body } = exolixCreateBody(request({ refund: BTC_ADDR }));
     expect(url).toBe('https://exolix.com/api/v2/transactions');
     expect(body).toMatchObject({
       coinFrom: 'BTC',
       networkFrom: 'BTC',
       coinTo: 'XMR',
       withdrawalAddress: XMR_ADDR,
-      refundAddress: 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq',
+      refundAddress: BTC_ADDR,
       rateType: 'float',
+    });
+  });
+
+  it('builds the reverse create body when the swap leaves Monero', () => {
+    const { body } = exolixCreateBody(request({ from: xmr, to: usdtTrc, amount: 2, address: TRON_ADDR }));
+    expect(body).toMatchObject({
+      coinFrom: 'XMR',
+      networkFrom: 'XMR',
+      coinTo: 'USDT',
+      networkTo: 'TRX',
+      withdrawalAddress: TRON_ADDR,
     });
   });
 
@@ -242,15 +324,23 @@ describe('Exolix', () => {
 
 describe('ChangeNOW', () => {
   it('asks for standard-flow estimates on the right pair', () => {
-    const est = new URL(changeNowEstimateUrl(btc, 0.05));
+    const est = new URL(changeNowEstimateUrl({ from: btc, to: xmr }, 0.05));
     expect(est.searchParams.get('fromCurrency')).toBe('btc');
     expect(est.searchParams.get('toCurrency')).toBe('xmr');
     expect(est.searchParams.get('fromAmount')).toBe('0.05');
-    const min = new URL(changeNowMinUrl(usdc));
+    const min = new URL(changeNowMinUrl({ from: usdc, to: xmr }));
     expect(min.searchParams.get('fromNetwork')).toBe('eth');
-    const sol = new URL(changeNowMinUrl(fromCoin('usdcsol')!));
+    const sol = new URL(changeNowMinUrl({ from: coin('usdcsol')!, to: xmr }));
     expect(sol.searchParams.get('fromCurrency')).toBe('usdc');
     expect(sol.searchParams.get('fromNetwork')).toBe('sol');
+  });
+
+  it('names both networks when the swap leaves Monero', () => {
+    const est = new URL(changeNowEstimateUrl({ from: xmr, to: usdtTrc }, 2));
+    expect(est.searchParams.get('fromCurrency')).toBe('xmr');
+    expect(est.searchParams.get('fromNetwork')).toBe('xmr');
+    expect(est.searchParams.get('toCurrency')).toBe('usdt');
+    expect(est.searchParams.get('toNetwork')).toBe('trx');
   });
 
   it('reads an estimate plus the separate minimum', () => {
@@ -268,7 +358,7 @@ describe('ChangeNOW', () => {
   });
 
   it('builds a create body for their v2 exchange call', () => {
-    const { url, body } = changeNowCreateBody(request({ provider: 'changenow', coin: usdc, amount: 500 }));
+    const { url, body } = changeNowCreateBody(request({ provider: 'changenow', from: usdc, amount: 500 }));
     expect(url).toBe('https://api.changenow.io/v2/exchange');
     expect(body).toMatchObject({
       fromCurrency: 'usdc',

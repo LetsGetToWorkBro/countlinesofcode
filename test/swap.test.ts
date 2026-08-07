@@ -66,7 +66,7 @@ afterEach(() => {
 describe('GET /api/swap/quote', () => {
   it('quotes Exolix alone when no ChangeNOW key is configured', async () => {
     responses['https://exolix.com/api/v2/rate'] = () => json({ toAmount: 8.7, minAmount: 0.0008, maxAmount: 10 });
-    const response = await call('/api/swap/quote?from=btc&amount=0.05');
+    const response = await call('/api/swap/quote?from=btc&to=xmr&amount=0.05');
     expect(response.status).toBe(200);
     const body = (await response.json()) as { quotes: unknown[] };
     expect(body.quotes).toEqual([{ provider: 'exolix', ok: true, toAmount: 8.7, minAmount: 0.0008, maxAmount: 10 }]);
@@ -78,7 +78,7 @@ describe('GET /api/swap/quote', () => {
     responses['https://exolix.com/api/v2/rate'] = () => json({ toAmount: 8.7, minAmount: 0.0008 });
     responses['https://api.changenow.io/v2/exchange/estimated-amount'] = () => json({ toAmount: 8.75 });
     responses['https://api.changenow.io/v2/exchange/min-amount'] = () => json({ minAmount: 0.00013 });
-    const response = await call('/api/swap/quote?from=btc&amount=0.05', {}, makeEnv({ CHANGENOW_API_KEY: 'k-123' }));
+    const response = await call('/api/swap/quote?from=btc&to=xmr&amount=0.05', {}, makeEnv({ CHANGENOW_API_KEY: 'k-123' }));
     const body = (await response.json()) as { quotes: { provider: string; toAmount?: number }[] };
     expect(body.quotes.map((q) => q.provider).sort()).toEqual(['changenow', 'exolix']);
     const cnCalls = fetched.filter((f) => f.url.includes('changenow.io'));
@@ -94,7 +94,7 @@ describe('GET /api/swap/quote', () => {
     };
     responses['https://api.changenow.io/v2/exchange/estimated-amount'] = () => json({ toAmount: 8.75 });
     responses['https://api.changenow.io/v2/exchange/min-amount'] = () => json({ minAmount: 0.00013 });
-    const response = await call('/api/swap/quote?from=btc&amount=0.05', {}, makeEnv({ CHANGENOW_API_KEY: 'k' }));
+    const response = await call('/api/swap/quote?from=btc&to=xmr&amount=0.05', {}, makeEnv({ CHANGENOW_API_KEY: 'k' }));
     expect(response.status).toBe(200);
     const body = (await response.json()) as { quotes: { provider: string; ok: boolean }[] };
     expect(body.quotes.find((q) => q.provider === 'exolix')!.ok).toBe(false);
@@ -102,7 +102,8 @@ describe('GET /api/swap/quote', () => {
   });
 
   it('rejects a coin or amount it does not serve before anything is fetched', async () => {
-    for (const path of ['/api/swap/quote?from=doge&amount=1', '/api/swap/quote?from=btc&amount=-5']) {
+    for (const path of ['/api/swap/quote?from=doge&to=xmr&amount=1', '/api/swap/quote?from=btc&to=xmr&amount=-5',
+                        '/api/swap/quote?from=btc&to=usdttrc&amount=1']) {
       const response = await call(path);
       expect(response.status, path).toBe(400);
     }
@@ -111,13 +112,13 @@ describe('GET /api/swap/quote', () => {
 
   it('never caches a quote', async () => {
     responses['https://exolix.com/api/v2/rate'] = () => json({ toAmount: 8.7 });
-    const response = await call('/api/swap/quote?from=btc&amount=0.05');
+    const response = await call('/api/swap/quote?from=btc&to=xmr&amount=0.05');
     expect(response.headers.get('cache-control')).toBe('no-store');
   });
 });
 
 describe('POST /api/swap/create', () => {
-  const good = { provider: 'exolix', from: 'btc', amount: 0.05, address: XMR_ADDR };
+  const good = { provider: 'exolix', from: 'btc', to: 'xmr', amount: 0.05, address: XMR_ADDR };
 
   it('creates an Exolix order and hands back the normalised deposit slip', async () => {
     responses['https://exolix.com/api/v2/transactions'] = () =>
@@ -172,7 +173,7 @@ describe('GET /api/swap/status', () => {
       stage: 'sending',
       raw: 'sending',
       txId: 'deadbeef',
-      line: expect.stringMatching(/on its way/i),
+      line: expect.stringMatching(/on their way/i),
     });
   });
 

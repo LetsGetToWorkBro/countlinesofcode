@@ -4,9 +4,13 @@
  * The page cannot call Exolix or ChangeNOW itself (connect-src 'self', on
  * purpose), so it calls these three endpoints and the Worker forwards:
  *
- *   GET  /api/swap/quote?from=btc&amount=0.05    ask every available provider
- *   POST /api/swap/create                        { provider, from, amount, address, refund? }
- *   GET  /api/swap/status?provider=..&id=..      where an order stands
+ *   GET  /api/swap/quote?from=btc&to=xmr&amount=0.05   ask every provider
+ *   POST /api/swap/create      { provider, from, to, amount, address, refund? }
+ *   GET  /api/swap/status?provider=..&id=..            where an order stands
+ *
+ * Either direction: one side of the pair has to be Monero, and swapkit is
+ * what enforces that along with checking the payout address belongs on the
+ * chain it is being paid to.
  *
  * This is deliberately not the Monero-node proxy's "forward whatever": the
  * only URLs ever fetched are the handful swapkit builds against the two
@@ -27,7 +31,6 @@ import {
   exolixCreateBody,
   exolixRateUrl,
   exolixStatusUrl,
-  fromCoin,
   isPlausibleOrderId,
   parseAmount,
   parseChangeNowCreate,
@@ -37,6 +40,7 @@ import {
   parseExolixCreate,
   parseExolixRate,
   parseExolixStatus,
+  parsePair,
   STAGE_LINES,
   type SwapQuote,
   type SwapStatus,
@@ -96,13 +100,14 @@ export async function swapApi(request: Request, env: Env, path: string): Promise
  *  never a failed page. */
 async function quote(request: Request, env: Env): Promise<SwapReply> {
   const url = new URL(request.url);
-  const coin = fromCoin(url.searchParams.get('from') ?? '');
-  if (!coin) return bad(400, 'Unknown coin. This swaps BTC or USDC.');
+  const parsed = parsePair(url.searchParams.get('from'), url.searchParams.get('to'));
+  if (!parsed.ok) return bad(400, parsed.problem);
+  const pair = parsed.pair;
   const amount = parseAmount(url.searchParams.get('amount'));
   if (amount === null) return bad(400, 'That amount is not a number this can send.');
 
   const asks: Promise<SwapQuote>[] = [
-    upstream(exolixRateUrl(coin, amount))
+    upstream(exolixRateUrl(pair, amount))
       .then((r) => parseExolixRate(r.json))
       .catch(() => ({ provider: 'exolix', ok: false, reason: 'Exolix did not answer.' }) as SwapQuote),
   ];
@@ -111,8 +116,8 @@ async function quote(request: Request, env: Env): Promise<SwapReply> {
   if (key) {
     asks.push(
       Promise.all([
-        upstream(changeNowEstimateUrl(coin, amount), { headers: cnHeaders(key) }),
-        upstream(changeNowMinUrl(coin), { headers: cnHeaders(key) }),
+        upstream(changeNowEstimateUrl(pair, amount), { headers: cnHeaders(key) }),
+        upstream(changeNowMinUrl(pair), { headers: cnHeaders(key) }),
       ])
         .then(([est, min]) => parseChangeNowEstimate(est.json, min.json))
         .catch(() => ({ provider: 'changenow', ok: false, reason: 'ChangeNOW did not answer.' }) as SwapQuote),
@@ -120,7 +125,7 @@ async function quote(request: Request, env: Env): Promise<SwapReply> {
   }
 
   const quotes = await Promise.all(asks);
-  return { status: 200, body: { from: coin.id, amount, quotes } };
+  return { status: 200, body: { from: pair.from.id, to: pair.to.id, amount, quotes } };
 }
 
 async function create(request: Request, env: Env): Promise<SwapReply> {

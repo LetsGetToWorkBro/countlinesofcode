@@ -2,7 +2,7 @@
  * The swap page's brains: everything about talking to exchange services that
  * can be pure and unit-tested.
  *
- * The page swaps BTC or USDC into Monero through third-party instant
+ * The page swaps into Monero and back out of it through third-party instant
  * exchanges. The browser never talks to them: the site's Content-Security-
  * Policy is `connect-src 'self'`, so the page calls `/api/swap/...` on this
  * origin and the Worker forwards to the exchange. The exchange sees
@@ -16,24 +16,59 @@
  *     key is present the Worker asks both and the page shows both quotes;
  *     when it is absent ChangeNOW simply does not appear.
  *
+ * Every swap has Monero on exactly one side. That is not a limitation of the
+ * providers, which will trade anything for anything; it is what this page is
+ * for, and it keeps the address checking down to one question with a right
+ * answer: does this address belong on the chain the money is going to.
+ *
  * Nothing here fetches. This module builds requests, parses replies into one
  * common shape, and validates what the visitor typed; the Worker in
  * src/worker/swap.ts is the thin shell that moves the bytes.
  */
 
-/** What the page may swap from. Short on purpose; XMR is always the target.
- *  `id` names the choice in our API; `ticker` is the currency the providers
- *  know it by, which USDC shares across its networks. */
-export const FROM_COINS = [
-  { id: 'btc', ticker: 'btc', label: 'Bitcoin', network: 'BTC', cnNetwork: 'btc', decimals: 8 },
-  { id: 'usdc', ticker: 'usdc', label: 'USDC (ERC-20)', network: 'ETH', cnNetwork: 'eth', decimals: 6 },
-  { id: 'usdcsol', ticker: 'usdc', label: 'USDC (Solana)', network: 'SOL', cnNetwork: 'sol', decimals: 6 },
-] as const;
+/** Which chain an address belongs to, which is all we need to check one. */
+export type AddressFamily = 'xmr' | 'btc' | 'evm' | 'sol' | 'tron';
 
-export type FromCoinId = (typeof FROM_COINS)[number]['id'];
+export interface Coin {
+  /** Our id, unique per coin AND network: USDT on Tron is not USDT on Ethereum. */
+  id: string;
+  /** The currency as the providers name it; shared across a coin's networks. */
+  ticker: string;
+  label: string;
+  /** Network as Exolix names it. */
+  network: string;
+  /** Network as ChangeNOW names it. */
+  cnNetwork: string;
+  family: AddressFamily;
+}
 
-export function fromCoin(id: string): (typeof FROM_COINS)[number] | null {
-  return FROM_COINS.find((c) => c.id === id) ?? null;
+/**
+ * Everything swappable here, Monero first because it is on every trade.
+ *
+ * The rest are ordered by how much XMR volume actually moves against them:
+ * USDT is the overwhelming majority of it and Tron is where most USDT lives
+ * (the transfer costs cents rather than dollars), then BTC, then ETH, then
+ * USDC. Bitcoin leads the picker anyway, because this site has a Bitcoin
+ * wallet built into the page next door and that is the pairing people arrive
+ * wanting.
+ */
+export const COINS: Coin[] = [
+  { id: 'xmr', ticker: 'xmr', label: 'Monero', network: 'XMR', cnNetwork: 'xmr', family: 'xmr' },
+  { id: 'btc', ticker: 'btc', label: 'Bitcoin', network: 'BTC', cnNetwork: 'btc', family: 'btc' },
+  { id: 'usdttrc', ticker: 'usdt', label: 'USDT (Tron)', network: 'TRX', cnNetwork: 'trx', family: 'tron' },
+  { id: 'usdteth', ticker: 'usdt', label: 'USDT (Ethereum)', network: 'ETH', cnNetwork: 'eth', family: 'evm' },
+  { id: 'eth', ticker: 'eth', label: 'Ethereum', network: 'ETH', cnNetwork: 'eth', family: 'evm' },
+  { id: 'usdc', ticker: 'usdc', label: 'USDC (Ethereum)', network: 'ETH', cnNetwork: 'eth', family: 'evm' },
+  { id: 'usdcsol', ticker: 'usdc', label: 'USDC (Solana)', network: 'SOL', cnNetwork: 'sol', family: 'sol' },
+];
+
+export const XMR: Coin = COINS[0]!;
+
+/** Everything Monero can be traded against here, in picker order. */
+export const COUNTER_COINS: Coin[] = COINS.filter((c) => c.id !== 'xmr');
+
+export function coin(id: string): Coin | null {
+  return COINS.find((c) => c.id === id) ?? null;
 }
 
 export type ProviderId = 'exolix' | 'changenow';
@@ -43,11 +78,11 @@ export const PROVIDERS: { id: ProviderId; label: string; note: string; needsKey:
   { id: 'changenow', label: 'ChangeNOW', note: 'changenow.io', needsKey: true },
 ];
 
-/** One provider's answer to "how much XMR for this much X". */
+/** One provider's answer to "how much of that for this much of this". */
 export interface SwapQuote {
   provider: ProviderId;
   ok: boolean;
-  /** Estimated XMR received, when ok. */
+  /** Estimated amount received, when ok. */
   toAmount?: number;
   /** The provider's minimum for this pair, when it told us. */
   minAmount?: number;
@@ -60,15 +95,15 @@ export interface SwapQuote {
 export interface SwapOrder {
   provider: ProviderId;
   id: string;
-  /** Where the visitor sends their BTC or USDC. */
+  /** Where the visitor sends the coin they are spending. */
   payinAddress: string;
-  /** An extra id/memo some coins need. Null for BTC and USDC, but carried
-   *  through so a future coin cannot silently lose it. */
+  /** An extra id/memo some chains need. Null for everything here today, but
+   *  carried through so adding one cannot silently lose it. */
   payinExtra: string | null;
   payinAmount: number;
-  /** Estimated XMR out, as quoted at creation. */
+  /** Estimated amount out, as quoted at creation. */
   toAmount: number;
-  /** The XMR address the exchange will pay. Echoed so the page can show the
+  /** The address the exchange will pay. Echoed so the page can show the
    *  visitor exactly what the provider recorded. */
   payoutAddress: string;
 }
@@ -78,7 +113,7 @@ export type SwapStage =
   | 'waiting' // nothing received yet
   | 'confirming' // deposit seen, waiting for confirmations
   | 'exchanging' // provider is trading
-  | 'sending' // XMR on its way out
+  | 'sending' // coins on their way out
   | 'done'
   | 'refunded'
   | 'expired' // deposit window closed with nothing received
@@ -88,29 +123,45 @@ export interface SwapStatus {
   stage: SwapStage;
   /** The provider's own word for it, for the curious. */
   raw: string;
-  /** Outgoing XMR transaction hash, once there is one. */
+  /** Outgoing transaction hash, once there is one. */
   txId?: string;
 }
 
 // ---------------------------------------------------------------------------
-// Validation of what the visitor sent.
+// Addresses.
 
-/** A standard or subaddress (95 chars starting 4/8) or integrated (106)
- *  mainnet Monero address. The wallet page validates properly in the browser;
- *  this is the server's plausibility gate, and the provider checks again. */
-export function looksLikeXmrAddress(text: string): boolean {
+/**
+ * Does this address belong on that chain?
+ *
+ * Deliberately shape-only: the provider validates properly and will refuse a
+ * bad one, and the wallet page does real checksum work in the browser. What
+ * this catches is the mistake that actually happens, which is pasting the
+ * right address for the wrong chain, and it catches it before an order exists
+ * rather than after the money has moved.
+ */
+const ADDRESS_SHAPES: Record<AddressFamily, RegExp[]> = {
+  // Standard/subaddress (95 chars, 4 or 8) and integrated (106).
+  xmr: [/^[48][1-9A-HJ-NP-Za-km-z]{94}$/, /^4[1-9A-HJ-NP-Za-km-z]{105}$/],
+  btc: [/^bc1[a-z0-9]{8,87}$/, /^[13][1-9A-HJ-NP-Za-km-z]{25,34}$/],
+  evm: [/^0x[0-9a-fA-F]{40}$/],
+  sol: [/^[1-9A-HJ-NP-Za-km-z]{32,44}$/],
+  tron: [/^T[1-9A-HJ-NP-Za-km-z]{33}$/],
+};
+
+export function addressLooksRight(family: AddressFamily, text: string): boolean {
   const addr = String(text ?? '').trim();
-  return /^[48][1-9A-HJ-NP-Za-km-z]{94}$/.test(addr) || /^4[1-9A-HJ-NP-Za-km-z]{105}$/.test(addr);
+  return ADDRESS_SHAPES[family].some((shape) => shape.test(addr));
 }
 
-/** A plausible refund address for the coin being sent, or empty. Loose by
- *  design: the provider is the authority, this only rejects obvious noise. */
-export function plausibleRefund(coin: FromCoinId, text: string): boolean {
-  const addr = String(text ?? '').trim();
-  if (!addr) return true;
-  if (coin === 'btc') return /^(bc1[a-z0-9]{8,87}|[13][1-9A-HJ-NP-Za-km-z]{25,34})$/.test(addr);
-  if (coin === 'usdcsol') return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr);
-  return /^0x[0-9a-fA-F]{40}$/.test(addr);
+/** What to tell someone whose address is the wrong shape for the chain. */
+export function addressHint(target: Coin): string {
+  switch (target.family) {
+    case 'xmr': return 'a mainnet Monero address, starting 4 or 8';
+    case 'btc': return 'a Bitcoin address, starting bc1, 1 or 3';
+    case 'evm': return 'an Ethereum address, starting 0x';
+    case 'sol': return 'a Solana address';
+    case 'tron': return 'a Tron address, starting T';
+  }
 }
 
 /** Amounts must be a plain positive number. The pair's real minimum and
@@ -121,9 +172,27 @@ export function parseAmount(value: unknown): number | null {
   return n;
 }
 
+/** The two coins of a swap, once we know both are real and one is Monero. */
+export interface Pair {
+  from: Coin;
+  to: Coin;
+}
+
+export function parsePair(fromId: unknown, toId: unknown): { ok: true; pair: Pair } | { ok: false; problem: string } {
+  const from = coin(String(fromId ?? ''));
+  const to = coin(String(toId ?? ''));
+  if (!from || !to) return { ok: false, problem: 'Unknown coin.' };
+  if (from.id === to.id) return { ok: false, problem: 'Those are the same coin.' };
+  if (from.id !== 'xmr' && to.id !== 'xmr') {
+    return { ok: false, problem: 'Every swap here has Monero on one side.' };
+  }
+  return { ok: true, pair: { from, to } };
+}
+
 export interface CreateRequest {
   provider: ProviderId;
-  coin: (typeof FROM_COINS)[number];
+  from: Coin;
+  to: Coin;
   amount: number;
   address: string;
   refund: string;
@@ -134,19 +203,22 @@ export function parseCreateRequest(body: unknown): { ok: true; req: CreateReques
   const b = (body ?? {}) as Record<string, unknown>;
   const provider = PROVIDERS.find((p) => p.id === b['provider']);
   if (!provider) return { ok: false, problem: 'Unknown provider.' };
-  const coin = fromCoin(String(b['from'] ?? ''));
-  if (!coin) return { ok: false, problem: 'Unknown coin. This swaps BTC or USDC.' };
+  const pair = parsePair(b['from'], b['to']);
+  if (!pair.ok) return { ok: false, problem: pair.problem };
+  const { from, to } = pair.pair;
+
   const amount = parseAmount(b['amount']);
   if (amount === null) return { ok: false, problem: 'That amount is not a number this can send.' };
+
   const address = String(b['address'] ?? '').trim();
-  if (!looksLikeXmrAddress(address)) {
-    return { ok: false, problem: 'That does not look like a mainnet Monero address.' };
+  if (!addressLooksRight(to.family, address)) {
+    return { ok: false, problem: `That does not look like ${addressHint(to)}.` };
   }
   const refund = String(b['refund'] ?? '').trim();
-  if (!plausibleRefund(coin.id, refund)) {
-    return { ok: false, problem: `That refund address does not look like a ${coin.label} address.` };
+  if (refund && !addressLooksRight(from.family, refund)) {
+    return { ok: false, problem: `That refund address does not look like ${addressHint(from)}.` };
   }
-  return { ok: true, req: { provider: provider.id, coin, amount, address, refund } };
+  return { ok: true, req: { provider: provider.id, from, to, amount, address, refund } };
 }
 
 /** Order ids appear in URLs we build; keep them to the shapes providers use. */
@@ -160,12 +232,12 @@ export function isPlausibleOrderId(id: string): boolean {
 
 const EXOLIX = 'https://exolix.com/api/v2';
 
-export function exolixRateUrl(coin: (typeof FROM_COINS)[number], amount: number): string {
+export function exolixRateUrl(pair: Pair, amount: number): string {
   const q = new URLSearchParams({
-    coinFrom: coin.ticker.toUpperCase(),
-    networkFrom: coin.network,
-    coinTo: 'XMR',
-    networkTo: 'XMR',
+    coinFrom: pair.from.ticker.toUpperCase(),
+    networkFrom: pair.from.network,
+    coinTo: pair.to.ticker.toUpperCase(),
+    networkTo: pair.to.network,
     amount: String(amount),
     rateType: 'float',
   });
@@ -193,10 +265,10 @@ export function parseExolixRate(json: unknown): SwapQuote {
 
 export function exolixCreateBody(req: CreateRequest): { url: string; body: Record<string, unknown> } {
   const body: Record<string, unknown> = {
-    coinFrom: req.coin.ticker.toUpperCase(),
-    networkFrom: req.coin.network,
-    coinTo: 'XMR',
-    networkTo: 'XMR',
+    coinFrom: req.from.ticker.toUpperCase(),
+    networkFrom: req.from.network,
+    coinTo: req.to.ticker.toUpperCase(),
+    networkTo: req.to.network,
     amount: req.amount,
     withdrawalAddress: req.address,
     rateType: 'float',
@@ -255,26 +327,22 @@ export function parseExolixStatus(json: unknown): SwapStatus {
 
 const CHANGENOW = 'https://api.changenow.io/v2';
 
-export function changeNowMinUrl(coin: (typeof FROM_COINS)[number]): string {
-  const q = new URLSearchParams({
-    fromCurrency: coin.ticker,
-    fromNetwork: coin.cnNetwork,
-    toCurrency: 'xmr',
-    toNetwork: 'xmr',
-    flow: 'standard',
-  });
+function cnPair(pair: Pair): Record<string, string> {
+  return {
+    fromCurrency: pair.from.ticker,
+    fromNetwork: pair.from.cnNetwork,
+    toCurrency: pair.to.ticker,
+    toNetwork: pair.to.cnNetwork,
+  };
+}
+
+export function changeNowMinUrl(pair: Pair): string {
+  const q = new URLSearchParams({ ...cnPair(pair), flow: 'standard' });
   return `${CHANGENOW}/exchange/min-amount?${q}`;
 }
 
-export function changeNowEstimateUrl(coin: (typeof FROM_COINS)[number], amount: number): string {
-  const q = new URLSearchParams({
-    fromCurrency: coin.ticker,
-    fromNetwork: coin.cnNetwork,
-    toCurrency: 'xmr',
-    toNetwork: 'xmr',
-    fromAmount: String(amount),
-    flow: 'standard',
-  });
+export function changeNowEstimateUrl(pair: Pair, amount: number): string {
+  const q = new URLSearchParams({ ...cnPair(pair), fromAmount: String(amount), flow: 'standard' });
   return `${CHANGENOW}/exchange/estimated-amount?${q}`;
 }
 
@@ -296,10 +364,7 @@ export function parseChangeNowEstimate(json: unknown, minJson: unknown): SwapQuo
 
 export function changeNowCreateBody(req: CreateRequest): { url: string; body: Record<string, unknown> } {
   const body: Record<string, unknown> = {
-    fromCurrency: req.coin.ticker,
-    fromNetwork: req.coin.cnNetwork,
-    toCurrency: 'xmr',
-    toNetwork: 'xmr',
+    ...cnPair({ from: req.from, to: req.to }),
     fromAmount: String(req.amount),
     address: req.address,
     flow: 'standard',
@@ -358,9 +423,9 @@ export function parseChangeNowStatus(json: unknown): SwapStatus {
 export const STAGE_LINES: Record<SwapStage, string> = {
   waiting: 'Waiting for your deposit. Send the exact amount to the address above.',
   confirming: 'Deposit seen. Waiting for network confirmations.',
-  exchanging: 'Confirmed. The exchange is trading it for Monero.',
-  sending: 'The Monero is on its way to your address.',
-  done: 'Done. The Monero has been sent to your address.',
+  exchanging: 'Confirmed. The exchange is trading it now.',
+  sending: 'The coins are on their way to your address.',
+  done: 'Done. The exchange has sent the coins to your address.',
   refunded: 'The exchange refunded the deposit instead of completing the swap.',
   expired: 'The deposit window closed with nothing received. Start a new swap; do not send to the old address.',
   failed: 'The exchange reports a problem. Check the swap on their site with the id above.',

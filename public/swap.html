@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Swap BTC or USDC to Monero, No Account | 1999.LOC</title>
-<meta name="description" content="Swap Bitcoin or USDC into Monero through instant exchanges, straight from one page: no account here, no wallet connection, nothing installed. Quotes from more than one provider, and honest words about what a swap service can see.">
+<title>Swap BTC, USDT, ETH or USDC to Monero and Back | 1999.LOC</title>
+<meta name="description" content="Swap Bitcoin, USDT, Ethereum or USDC into Monero and back out again through instant exchanges, from one page: no account here, no wallet connection, nothing installed. Quotes from more than one provider, and honest words about what a swap service can see.">
 <link rel="canonical" href="https://1999loc.com/swap.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Swap BTC or USDC to Monero | 1999.LOC">
-<meta property="og:description" content="Instant-exchange swaps into Monero from one page: compare quotes, send the deposit, watch the status. No account here.">
+<meta property="og:title" content="Swap BTC, USDT, ETH or USDC to Monero and Back | 1999.LOC">
+<meta property="og:description" content="Instant-exchange swaps into Monero and back out from one page: compare quotes, send the deposit, watch the status. No account here.">
 <meta property="og:url" content="https://1999loc.com/swap.html">
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
@@ -24,9 +24,10 @@
     ------------------------------------------------------------
     monero  wallet | swap        ...rest of the nav
     ------------------------------------------------------------
-    [ Swap to Monero ]                                     [_]
-    From: ( Bitcoin v )   Amount: [ 0.05      ] [Get quotes]
-    Your Monero address: [ 4... / 8...                    ]
+    [ Swap ]                                               [_]
+    From: ( Bitcoin v )  <->  To: ( Monero v )
+    Amount: [ 0.05      ] BTC   [Get quotes]
+    Where should the Monero go: [ 4... / 8...             ]
     Refund address (optional): [                          ]
     ------------------------------------------------------------
     ( ) Exolix      8.70 XMR
@@ -77,9 +78,9 @@
 
 <div class="desk-shell">
 <div class="app-window" id="app">
-<div class="client-title"><h2>Swap to Monero</h2><a class="win-min" href="#" aria-label="Minimise Swap to Monero">_</a></div>
+<div class="client-title"><h2>Swap</h2><a class="win-min" href="#" aria-label="Minimise Swap">_</a></div>
 <div class="app-body">
-<p class="tagline">Bitcoin or USDC in, Monero out, through instant exchanges. No account here, none there.</p>
+<p class="tagline">Into Monero, or back out of it, through instant exchanges. No account here, none there.</p>
 
 <details class="notice-box">
 <summary><strong>This is other people's exchange. Read this before you send anything.</strong></summary>
@@ -101,30 +102,50 @@ if anything is refunded, it has to have somewhere sensible to go back to.
 </p>
 </details>
 
-<h3>What are you sending?</h3>
+<h3>What are you swapping?</h3>
 <p>
   <label>From
     <select id="from-coin">
       <option value="btc" selected>Bitcoin</option>
-      <option value="usdc">USDC (ERC-20)</option>
+      <option value="usdttrc">USDT (Tron)</option>
+      <option value="usdteth">USDT (Ethereum)</option>
+      <option value="eth">Ethereum</option>
+      <option value="usdc">USDC (Ethereum)</option>
+      <option value="usdcsol">USDC (Solana)</option>
+      <option value="xmr">Monero</option>
+    </select>
+  </label>
+  <button type="button" id="flip" title="Swap the direction">&#8646;</button>
+  <label>To
+    <select id="to-coin">
+      <option value="xmr" selected>Monero</option>
+      <option value="btc">Bitcoin</option>
+      <option value="usdttrc">USDT (Tron)</option>
+      <option value="usdteth">USDT (Ethereum)</option>
+      <option value="eth">Ethereum</option>
+      <option value="usdc">USDC (Ethereum)</option>
       <option value="usdcsol">USDC (Solana)</option>
     </select>
   </label>
+</p>
+<p class="note" id="pair-note">Every swap here has Monero on one side. Picking Monero on both is the one thing it will not do.</p>
+<p>
   <label>Amount
     <input id="amount" type="text" inputmode="decimal" size="12" placeholder="0.05" autocomplete="off">
+    <span class="note" id="amount-unit">BTC</span>
   </label>
   <button type="button" id="get-quotes">Get quotes</button>
 </p>
 
-<h3>Where should the Monero go?</h3>
+<h3 id="dest-heading">Where should the Monero go?</h3>
 <p>
   <input id="xmr-address" type="text" spellcheck="false" autocomplete="off" placeholder="4... or 8..., a mainnet Monero address">
 </p>
-<p class="note">
-Paste an address from your own wallet. The <a href="/wallet.html">wallet on this
-site</a> can make you one that never leaves your browser, and the
-<a href="/wallet.html#addresses">address checker</a> will confirm what you
-pasted is really an address before anything moves.
+<p class="note" id="dest-note">
+Paste an address from your own wallet. The <a href="/wallet.html">wallets on
+this site</a> can make you a Monero or a Bitcoin address that never leaves your
+browser, and the <a href="/wallet.html#addresses">address checker</a> will
+confirm what you pasted is really an address before anything moves.
 </p>
 <p>
   <label>Refund address <span class="note">(optional, but wise: where the deposit goes back to if the swap fails)</span>
@@ -169,6 +190,8 @@ which it will refuse.
 <summary>The honest notes</summary>
 <ul class="plain">
   <li><strong>Who does what.</strong> The exchange service does the swap and holds the coins while it runs. This site's server relays your quote and order requests so the exchange sees Cloudflare instead of your address, and stores nothing: no order table, no logs of amounts or addresses. The order id is kept in this tab and shown to you; lose both and only the exchange's own support can find your swap.</li>
+  <li><strong>Both directions, one rule.</strong> Every swap here has Monero on one side, in or out. That is not a limit of the exchanges, which will trade anything for anything; it is what this page is for, and it keeps the checking down to one question with a right answer: does the address you pasted belong on the chain the money is going to. Paste a Monero address for a Tron payout and it refuses before an order exists.</li>
+  <li><strong>The network matters more than the ticker.</strong> USDT on Tron and USDT on Ethereum are the same three letters and two different chains. They are listed separately for that reason, and sending one to the other's deposit address loses the money in a way nobody can undo.</li>
   <li><strong>Two providers, on purpose.</strong> Exolix answers without any server-side key, so swapping works out of the box. ChangeNOW appears alongside when this server has been given a key, and then the page simply shows you both numbers. Neither is an endorsement; both are established instant exchanges with the same trade-offs.</li>
   <li><strong>The estimate is an estimate.</strong> These are floating-rate swaps: what arrives is priced when your deposit confirms, not when you clicked. The difference is normally small. A fixed-rate mode exists at both services; it pays for the certainty with a worse rate, and this page does not use it.</li>
   <li><strong>Custody is real while it lasts.</strong> From the moment your deposit lands until the Monero leaves, the exchange controls the funds. Their risk systems occasionally hold a swap and ask the sender for identification, exactly the conversation Monero exists to avoid, which is why the warning above tells you not to send more than you can leave on the table.</li>
@@ -182,7 +205,7 @@ which it will refuse.
 </div>
 <div class="taskbar">
 <a class="start" href="/">Start</a>
-<a class="task-btn is-open" href="#app">Swap to Monero</a>
+<a class="task-btn is-open" href="#app">Swap</a>
 <span class="task-clock">1999</span>
 </div>
 </div>
