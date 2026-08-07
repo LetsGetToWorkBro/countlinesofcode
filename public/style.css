@@ -665,27 +665,51 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   padding: 14px 16px 10px 16px;
 }
 @media (min-width: 900px) {
-  /* Two columns, and column flow rather than a grid of rows. A grid ties
-     the two stacks together at every row, so Documents needing a second
-     line of icons pushes a hole into the band opposite it. Columns are
-     independent: bands stack tight down one and then tight down the
-     other, and a hole cannot appear beside a band because there is no
-     row for it to appear in.
+  /* On a wide screen the groups stop being blocks and the desktop
+     becomes one field of icons.
 
-     One stack across the full width was tried and does not fit, and the
-     arithmetic is not close. Six groups means six bands, and a band is a
-     heading plus at least one row of icons whatever its width: at a 116px
-     cell that is roughly 22 + 95 + 18, so six of them want about 810px.
-     The wallpaper at 1440x900 is about 474px tall. Widening the rows does
-     not help, because what costs the height is the six headings and the
-     six minimum rows, not how many icons sit in each. Two columns halves
-     the band count per stack and is the only arrangement that fits
-     without either shrinking the icons back down or dropping the
-     headings. */
+     Bands were tried twice and the arithmetic is what killed them. A band
+     is a heading plus at least one row of icons whatever its width, so
+     six groups cost roughly 22 + 95 + 18 six times over, about 810px,
+     against a wallpaper about 500px tall. Splitting them into two columns
+     fits, but the groups hold 2, 3, 1, 6, 2 and 2, and no split of those
+     ends level: one column always runs out early and leaves a patch of
+     teal beside a column that is still going.
+
+     So the headings go instead, on a wide screen only. The phone keeps
+     its bands, where a single column of them is the right shape anyway
+     and the heading is the only thing telling you where one group ends. */
   .desk-groups {
-    columns: 2;
-    column-gap: 36px;
+    /* One field, not six blocks. display:contents dissolves the group
+       wrappers so every icon becomes a child of this grid directly, which
+       is the only way sixteen icons in groups of 2, 3, 1, 6, 2 and 2 can
+       share a single column rhythm. The rows are 1fr, so they divide the
+       glass between them and the icons sit centred in their share: that
+       is what spreads them down the screen instead of stacking them at
+       the top and leaving the bottom third empty.
+
+       The cost is the headings, which cannot survive this. A heading has
+       to span the full width to sit above its group, and a full-width
+       band is exactly what stops the icons flowing into one grid. The
+       grouping is still in the Start menu and in the nav; on the glass it
+       is gone, which is also what a real desktop looked like. */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(116px, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
+    align-items: center;
+    justify-items: center;
+    gap: 4px;
   }
+  /* Specificity, not order: these sit above the base .desk-group rules in
+     the file, so a bare class name loses to them and the headings come
+     back full-width and shatter the grid. */
+  .desk-groups .desk-group { display: contents; }
+  .desk-groups .desk-group-label { display: none; }
+
+  /* Three rows spread down the glass leave room for the icons to be the
+     size they actually were on a desktop of this age. */
+  .desk-groups .desk-icon svg { width: 64px; height: 64px; }
+  .desk-groups .desk-icon span { font-size: 15px; }
 }
 .desk-group {
   break-inside: avoid;

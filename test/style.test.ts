@@ -321,14 +321,27 @@ describe('the desktop is drawn at 1999 scale', () => {
     }
   });
 
-  it('holds the two-column icon field, which is the only arrangement that fits', () => {
-    // Six groups means six headings and six minimum icon rows, about 810px of
-    // them at this cell size, against a wallpaper about 500px tall. One stack
-    // across the full width does not fit and widening the rows does not help,
-    // because the cost is the headings rather than the icons.
-    const wide = /@media \(min-width: 900px\) \{\s*\/\*[\s\S]*?\*\/\s*\.desk-groups \{([^}]*)\}/.exec(css);
-    expect(wide, 'the wide-screen .desk-groups rule is gone').not.toBeNull();
-    expect(wide![1]).toMatch(/columns:\s*2/);
+  it('dissolves the groups into one icon field on a wide screen', () => {
+    // Bands cost a heading plus a minimum row six times over, about 810px
+    // against a wallpaper about 500px tall, and no two-column split of
+    // groups sized 2, 3, 1, 6, 2 and 2 ends level. On a wide screen the
+    // wrappers dissolve so every icon shares one grid, and the headings go
+    // with them. Guarded because display:contents looks like a typo and is
+    // the whole mechanism.
+    const wide = /@media \(min-width: 900px\) \{([\s\S]*?)\n\}/.exec(css);
+    expect(wide, 'the wide-screen block is gone').not.toBeNull();
+    expect(wide![1]).toMatch(/\.desk-groups \.desk-group \{ display: contents; \}/);
+    expect(wide![1]).toMatch(/\.desk-groups \.desk-group-label \{ display: none; \}/);
+    expect(wide![1]).toMatch(/grid-template-columns:\s*repeat\(auto-fit/);
+  });
+
+  it('keeps the headings on a phone, where the bands are the right shape', () => {
+    // The dissolve is inside a min-width query on purpose: a single column
+    // of bands is correct on a narrow screen, and there the heading is the
+    // only thing marking where one group ends and the next starts.
+    const narrow = /@media \(max-width: 700px\) \{([\s\S]*?)\n\}/.exec(css);
+    expect(narrow, 'the phone block is gone').not.toBeNull();
+    expect(narrow![1]).not.toMatch(/\.desk-group-label \{ display: none/);
   });
 
   it('gives the case a width floor so a short window cannot collapse it', () => {
