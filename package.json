@@ -19,7 +19,8 @@
     "sync:nav": "npx vite-node scripts/sync-nav.ts -- --write",
     "hash:vendor": "node scripts/hash-vendor.mjs",
     "onion:set": "node scripts/onion.mjs set",
-    "onion:clear": "node scripts/onion.mjs clear"
+    "onion:clear": "node scripts/onion.mjs clear",
+    "build:icons": "node scripts/build-icons.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260801.1",

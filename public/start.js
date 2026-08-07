@@ -79,6 +79,11 @@
      switching between programs has always worked. Read out of the page's own
      nav like the Programs menu, so there is still one list. */
 
+  /* The real desktop icons, lifted out of the landing page into icons.js by
+     `npm run build:icons` so there is one drawing of each and not two. The
+     plain window below is only the fallback for a tool that has no icon yet,
+     or for a page that did not load the file. */
+  var ICONS = window.LOC1999_ICONS || {};
   var APP_ICON =
     '<svg viewBox="0 0 32 32" aria-hidden="true">' +
     '<rect x="3" y="5" width="26" height="22" fill="#c0c0c0" stroke="#333333" stroke-width="2"/>' +
@@ -87,6 +92,18 @@
     '<rect x="6" y="14" width="14" height="2" fill="#808080"/>' +
     '<rect x="6" y="18" width="18" height="2" fill="#808080"/>' +
     '<rect x="6" y="22" width="10" height="2" fill="#808080"/></svg>';
+
+  function iconFor(href) {
+    var icon = ICONS[href];
+    return icon && icon.svg ? icon.svg : APP_ICON;
+  }
+
+  /** The icon's own name for the tool ("Inspect File"), which is what the
+   *  desktop calls it, falling back to the nav's lower-case label. */
+  function iconLabel(tool) {
+    var icon = ICONS[tool.href];
+    return icon && icon.label ? icon.label : tool.label;
+  }
 
   function layShortcuts() {
     // Only where there is a single app on the desk: the landing page has its
@@ -101,7 +118,7 @@
       others.forEach(function (tool) {
         var link = el('a', 'desk-shortcut');
         link.href = tool.href;
-        link.innerHTML = APP_ICON + '<span>' + esc(tool.label) + '</span>';
+        link.innerHTML = iconFor(tool.href) + '<span>' + esc(iconLabel(tool)) + '</span>';
         box.appendChild(link);
       });
     });
