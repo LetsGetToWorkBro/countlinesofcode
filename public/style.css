@@ -1546,20 +1546,38 @@ body {
   margin: 0 0 4px 0;
 }
 
-/* The landing page keeps its footer on the wallpaper (there is no single
-   window for it to live in); a tool page's footer moved inside the window,
-   onto white, so this only ever applies to the desktop. */
-#page:has(.desktop) > .footer {
-  color: #b9dcdc;
-  text-shadow: 1px 1px 0 #004040;
-  margin-top: 14px;
+/* ---- the desk under the monitor -----------------------------------
+   The credits, the tool list and the donation address spent a while on
+   the wallpaper: pale text over teal, under the icons, competing with
+   the desktop for the same square of glass and losing. None of it is
+   something the machine is showing, so it is not on the screen any
+   more. It sits below the case, on the desk, where the background is
+   dark, nothing else is happening, and the screen ends cleanly at its
+   own taskbar the way a screen should. */
+.room-footer {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1120px;
+  /* The stand is drawn 56px below the case and takes up no space of its
+     own, so the gap has to be reserved here or the text lands on it. */
+  margin: 78px auto 0 auto;
+  padding: 0 4px;
+  color: #93a1b1;
 }
-#page:has(.desktop) > .footer a { color: #ffffff; }
-#page:has(.desktop) > .footer a:visited { color: #e0d0ff; }
-#page:has(.desktop) > .footer code {
-  color: #ffffff;
-  background: rgba(0, 0, 0, 0.22);
-  padding: 1px 3px;
+.room-footer .footer {
+  color: inherit;
+  margin: 0;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+}
+.room-footer .footer.support { margin-top: 16px; }
+.room-footer a { color: #d7e2ec; }
+.room-footer a:visited { color: #c2b4dd; }
+.room-footer a:hover { color: #ffffff; }
+.room-footer code {
+  color: #e6edf4;
+  background: rgba(0, 0, 0, 0.32);
+  padding: 2px 5px;
+  border-radius: 2px;
 }
 
 /* The toolkit bar was a table of contents six lines deep, which on a
@@ -1740,6 +1758,11 @@ body {
   .start-menu { left: 2px; max-width: calc(100vw - 28px); }
   /* Its flyouts open underneath rather than off the right edge into nowhere. */
   .start-fly { position: static; left: auto; bottom: auto; margin: 0 0 2px 12px; max-height: 42vh; }
+
+  /* There is no stand on a phone, so the desk starts right under the rim
+     rather than 78px down where the neck would have been. */
+  .room-footer { margin-top: 18px; padding: 0 4px 4px 4px; }
+  .room-footer .footer { line-height: 1.6; }
 
   /* Desktop icons and shortcuts pack tighter. */
   .desk-icon, .desk-shortcut { width: 72px; }
