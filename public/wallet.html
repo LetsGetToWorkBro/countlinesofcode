@@ -377,6 +377,15 @@ the reason the rest of this page is about Monero.
       <input type="text" id="btc-custom" spellcheck="false" placeholder="https://your.esplora/api" size="34">
       <span id="btc-server-note" class="note"></span>
     </p>
+    <hr>
+    <p>
+      <label for="btc-privacy" class="inline">Lookups</label>
+      <select id="btc-privacy">
+        <option value="direct" selected>Direct: ask about my addresses only</option>
+        <option value="padded">Padded: hide them in a crowd (slower)</option>
+      </select>
+    </p>
+    <p class="note" id="btc-privacy-note"></p>
   </details>
 </div>
 
@@ -472,6 +481,7 @@ the reason the rest of this page is about Monero.
 <ul class="plain">
   <li><strong>The keys never leave the tab.</strong> Seed words, derivation and transaction signing all happen in this page. What crosses the network is what any light wallet asks an explorer: address lookups, fee estimates, and a finished transaction to broadcast. The security policy forbids this page talking to anywhere but this site, which your browser enforces.</li>
   <li><strong>The explorer talks to our server, not to you.</strong> Same trade as the Monero tab's node, with one honest difference: a Monero node cannot tell which payments are yours, but an Esplora explorer is asked about your addresses by name, so the one you pick can link them into a cluster. It still never sees your IP (this site's server forwards the ask), your keys, or your words.</li>
+  <li><strong>Which means our own server sees them too, and we say so.</strong> The questions pass through this site to get to the explorer, so the request log could be read as a wallet. <em>Padded</em> lookups, under Explorer above, mix every batch with real decoy addresses in a shuffled order, so the log holds a set your wallet is merely somewhere inside; the follow-up calls are padded too, or they would hand back exactly what the shuffle hid. It costs two or three times the requests, public explorers rate-limit, and it does not defeat someone willing to cluster the addresses on the chain itself. <strong>Pointing this at your own Esplora beats it outright</strong>, and so does reaching the site over its Tor mirror, where there is no Cloudflare in the path at all.</li>
   <li><strong>One standard, done properly.</strong> The wallet is BIP84 throughout: 12 words, m/84'/0'/0', bech32 bc1q addresses. Those words restore in Sparrow, Electrum, BlueWallet, Trezor, Ledger and everything else from this decade. Legacy address types are supported for sending to, not for holding.</li>
   <li><strong>The cryptography is not ours.</strong> Keys and signatures come from the audited <a href="https://github.com/paulmillr/scure-btc-signer">scure/noble</a> libraries, bundled into one file served from this domain and rebuilt from the repository by a test on every change.</li>
   <li><strong>Nothing is stored, on purpose.</strong> No wallet file, no browser storage; memory only, gone on reload. The seed words are the only way back in, which is why the page will not stop telling you to write them down.</li>

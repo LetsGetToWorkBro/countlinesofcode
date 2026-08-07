@@ -27,6 +27,10 @@ export interface Env {
   GITHUB_CLIENT_SECRET?: string;
   /** See scopesFor() in auth.ts. Unset = read:user. Empty string = GitHub App. */
   GITHUB_OAUTH_SCOPES?: string;
+  /** The site's Tor onion mirror, advertised with Onion-Location. Set with
+   *  `npm run onion:set <host>.onion`; unset means no mirror is announced. */
+  ONION_HOST?: string;
+
   /** Commit the running build came from, for verifiability. */
   SOURCE_COMMIT?: string;
 }

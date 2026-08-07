@@ -23,6 +23,7 @@ import { checkRateLimit, clientIp } from '../lib/ratelimit';
 import { CountOptionsSchema, CountRequestSchema, ShaSchema, type CountOptions, type CountResult } from '../lib/schema';
 import { resolveTarget as resolveXmrTarget } from '../lib/xmrproxy';
 import { resolveBtcTarget } from '../lib/btcproxy';
+import { withOnionLocation } from '../lib/onion';
 import { handleIncomingEmail, mailApi, purgeExpired } from './mail';
 import { swapApi } from './swap';
 import { COUNTER_VERSION } from '../lib/version';
@@ -128,7 +129,7 @@ interface ApiError {
   details?: Record<string, number>;
 }
 
-export default {
+const routes = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
@@ -978,6 +979,23 @@ const RETIRED_PAGES: Record<string, string> = {
   '/pages.html': '/sign.html#pages',
   // The address checker / paper wallet is now a tab on the wallet page.
   '/monero.html': '/wallet.html#addresses',
+};
+
+/**
+ * Everything the Worker answers, plus the onion advertisement.
+ *
+ * Onion-Location tells Tor Browser this site has a mirror it can reach
+ * without an exit node and without Cloudflare. It is set here for the pages
+ * the Worker renders; the static pages never reach this code (the asset
+ * router serves them at the edge), so their copy lives in public/_headers.
+ * Both are written by `npm run onion:set`, so the two cannot drift.
+ */
+export default {
+  ...routes,
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const response = await routes.fetch(request, env, ctx);
+    return withOnionLocation(response, new URL(request.url), env.ONION_HOST);
+  },
 };
 
 export function redirectRetiredPage(url: URL): Response | null {

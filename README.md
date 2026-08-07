@@ -119,6 +119,25 @@ so `/email.html#inbox` opens the right tab; the retired URLs 301 to it).
 | **Count code** | `/code.html` | The line counter — the rest of this README. | server, or your browser for big repos |
 | **Code golf** | `/golf` | The fewest-lines leaderboard, one stated problem per board. | server |
 
+### Privacy beyond the tools themselves
+
+Two things go further than "the file never leaves your browser", and both are
+documented rather than assumed:
+
+* **A Tor onion mirror.** [`docs/onion.md`](docs/onion.md) is the full runbook
+  (EOTK, `mkp224o`, the config that matters). The clearnet site's half is done:
+  `npm run onion:set <address>.onion` writes the `Onion-Location`
+  advertisement into `public/_headers` (static pages, served at the edge) and
+  the `ONION_HOST` var (pages the Worker renders), so the two cannot drift.
+  `src/lib/onion.ts` holds the rules: HTTPS only, never onion-to-itself, never
+  on `/api/`.
+* **The Bitcoin wallet's address lookups.** A light BTC wallet has to name its
+  addresses out loud, so this site's own server could read a wallet off the
+  request log. [`docs/wallet-privacy.md`](docs/wallet-privacy.md) says so
+  plainly and offers three answers: padded lookups (decoys shuffled into every
+  batch, including the follow-up calls), your own Esplora, or the onion. It
+  also explains why BIP157/158 compact filters are not on the menu.
+
 The tools' client engines live in `src/client/` (`pdfedit.ts`, `email.ts`,
 `pgpkit.ts`, `monero.ts`, `zipkit.ts`, `convert.ts`, …), built to committed
 bundles in `public/` by `npm run build:client`. The two server-backed newcomers

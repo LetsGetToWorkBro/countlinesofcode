@@ -66,6 +66,20 @@
     syncServerSummary();
   }
 
+  var PRIVACY_NOTES = {
+    direct: 'Fastest. This site\u2019s server, and Cloudflare behind it, can read your addresses out of the request log.',
+    padded: 'Each batch is mixed with real decoy addresses and shuffled, so the log holds a set your wallet is somewhere inside. Two to three times the requests, and public explorers rate-limit; your own server above is better still.',
+  };
+
+  function privacyMode() {
+    var select = $('btc-privacy');
+    return select && select.value === 'padded' ? 'padded' : 'direct';
+  }
+
+  function syncPrivacyNote() {
+    $('btc-privacy-note').textContent = PRIVACY_NOTES[privacyMode()];
+  }
+
   function serverChoice() {
     var select = $('btc-server');
     return { id: select.value || 'mempool', custom: $('btc-custom').value };
@@ -191,7 +205,7 @@
     if (!wallet || scanning) return;
     scanning = true;
     syncLine('Scanning the wallet’s addresses...');
-    kit.scanWallet(getJson, wallet).then(function (result) {
+    kit.scanWallet(getJson, wallet, { privacy: privacyMode() }).then(function (result) {
       view = result;
       scanning = false;
       renderView();
@@ -386,6 +400,8 @@
     $('btw-' + name).addEventListener('click', function () { showSection(name); });
   });
 
+  $('btc-privacy').addEventListener('change', syncPrivacyNote);
+
   $('btc-server').addEventListener('change', function () {
     $('btc-custom-row').classList.toggle('hidden', $('btc-server').value !== 'custom');
     syncServerSummary();
@@ -403,7 +419,7 @@
   function boot() {
     if (booted) return;
     booted = true;
-    loadKit().then(fillServers, function () {
+    loadKit().then(function () { fillServers(); syncPrivacyNote(); }, function () {
       setupFail('The wallet engine did not load. Reload the page.');
     });
   }

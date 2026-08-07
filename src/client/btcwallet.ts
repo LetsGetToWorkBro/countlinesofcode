@@ -20,6 +20,7 @@ import { HDKey } from '@scure/bip32';
 import * as btc from '@scure/btc-signer';
 import { BTC_SERVERS, validateCustomEsplora, type BtcServer } from '../lib/btcproxy';
 import { encodeBase64Url } from '../lib/xmrproxy';
+import { DECOY_ADDRESSES } from './btcdecoys';
 
 export const SATS_PER_BTC = 100_000_000n;
 const DECIMALS = 8;
@@ -184,6 +185,47 @@ export function emptyView(wallet: BtcWallet): WalletView {
   };
 }
 
+/**
+ * How much of a haystack to hide the wallet's lookups in.
+ *
+ * 'direct' asks only about the wallet's own addresses: fastest, and the
+ * server carrying the questions can read the wallet straight off the log.
+ * 'padded' mixes each batch with real, already-used decoy addresses in a
+ * shuffled order, so the log holds a set the wallet is merely somewhere
+ * inside. It costs (1 + ratio) times the requests, which public explorers
+ * rate-limit, and it does not defeat an adversary willing to cluster the
+ * addresses on chain. Pointing the wallet at your own server beats both and
+ * is a field away.
+ */
+export type ScanPrivacy = 'direct' | 'padded';
+
+export interface ScanOptions {
+  privacy?: ScanPrivacy;
+  /** Decoys per real address in padded mode. */
+  ratio?: number;
+  concurrency?: number;
+  /** Injectable for tests; the shipped pool otherwise. */
+  decoys?: string[];
+  /** Injectable for tests; Math.random otherwise. */
+  random?: () => number;
+}
+
+/** Fisher-Yates, so the wallet's addresses are not simply the first ones. */
+function shuffle<T>(items: T[], random: () => number): T[] {
+  const out = items.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [out[i], out[j]] = [out[j]!, out[i]!];
+  }
+  return out;
+}
+
+/** Distinct decoys for one batch, drawn from the pool without repeats. */
+export function drawDecoys(count: number, pool: string[], random: () => number): string[] {
+  if (count <= 0 || pool.length === 0) return [];
+  return shuffle(pool, random).slice(0, Math.min(count, pool.length));
+}
+
 /** A tiny worker pool: explorers rate-limit, so the scan asks a few at a
  *  time rather than everything at once or one long crawl. */
 async function pool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -210,7 +252,15 @@ async function pool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>
  * chosen explorer sees the addresses as a cluster (through the proxy,
  * without the visitor's IP).
  */
-export async function scanWallet(get: EsploraFetch, wallet: BtcWallet, concurrency = 3): Promise<WalletView> {
+export async function scanWallet(get: EsploraFetch, wallet: BtcWallet, options: ScanOptions = {}): Promise<WalletView> {
+  const concurrency = options.concurrency ?? 3;
+  const random = options.random ?? Math.random;
+  const padding = options.privacy === 'padded' ? Math.max(1, Math.round(options.ratio ?? 2)) : 0;
+  const decoyPool = options.decoys ?? DECOY_ADDRESSES;
+  /** Every address the scan has asked a decoy question about, so the follow
+   *  up calls cover them too and the second round does not undo the first. */
+  const decoysAsked: string[] = [];
+
   let balance = 0n;
   let pending = 0n;
   const used: { address: string; change: 0 | 1; index: number }[] = [];
@@ -221,14 +271,20 @@ export async function scanWallet(get: EsploraFetch, wallet: BtcWallet, concurren
     let highestUsed = -1;
     for (let start = 0; start < CAP; start += GAP) {
       const indexes = Array.from({ length: GAP }, (_, i) => start + i);
-      const window = await pool(indexes, concurrency, async (index) => {
-        const { address } = addressAt(wallet, change, index);
-        const stats = (await get(`address/${address}`)) as {
+      const mine = indexes.map((index) => ({ index, address: addressAt(wallet, change, index).address }));
+      const decoys = drawDecoys(padding * mine.length, decoyPool, random).map((address) => ({ index: -1, address }));
+      decoysAsked.push(...decoys.map((d) => d.address));
+      const asked = padding ? shuffle([...mine, ...decoys], random) : mine;
+
+      const answers = await pool(asked, concurrency, async (target) => {
+        const stats = (await get(`address/${target.address}`)) as {
           chain_stats: { funded_txo_sum: number; spent_txo_sum: number; tx_count: number };
           mempool_stats: { funded_txo_sum: number; spent_txo_sum: number; tx_count: number };
         };
-        return { index, address, stats };
+        return { index: target.index, address: target.address, stats };
       });
+      // A decoy's answer is read and thrown away; only ours count.
+      const window = answers.filter((a) => a.index >= 0).sort((a, b) => a.index - b.index);
       let anyUsed = false;
       for (const { index, address, stats } of window) {
         if (stats.chain_stats.tx_count + stats.mempool_stats.tx_count === 0) continue;
@@ -249,12 +305,28 @@ export async function scanWallet(get: EsploraFetch, wallet: BtcWallet, concurren
   const ours = new Set(used.map((u) => u.address));
   const historyByTx = new Map<string, HistoryEntry>();
   const utxos: Utxo[] = [];
-  const details = await pool(used, concurrency, async (slot) => ({
+  /* The follow up calls are the second half of the leak: asking only about
+     the addresses that turned out to be used would hand back exactly what
+     the shuffle just hid. So the decoys that have history are followed up
+     too, and their answers discarded. */
+  const followUps: { slot: { address: string; change: 0 | 1; index: number } | null; address: string }[] =
+    used.map((slot) => ({ slot, address: slot.address }));
+  if (padding) {
+    const decoyFollowUps = await pool(
+      shuffle(decoysAsked, random).slice(0, used.length * padding),
+      concurrency,
+      async (address) => address,
+    );
+    for (const address of decoyFollowUps) followUps.push({ slot: null, address });
+  }
+
+  const details = await pool(padding ? shuffle(followUps, random) : followUps, concurrency, async ({ slot, address }) => ({
     slot,
-    coins: (await get(`address/${slot.address}/utxo`)) as {
+    address,
+    coins: (await get(`address/${address}/utxo`)) as {
       txid: string; vout: number; value: number; status: { confirmed: boolean };
     }[],
-    txs: (await get(`address/${slot.address}/txs`)) as {
+    txs: (await get(`address/${address}/txs`)) as {
       txid: string;
       status: { confirmed: boolean; block_time?: number };
       vin: { prevout?: { scriptpubkey_address?: string; value: number } }[];
@@ -262,6 +334,7 @@ export async function scanWallet(get: EsploraFetch, wallet: BtcWallet, concurren
     }[],
   }));
   for (const { slot, coins, txs } of details) {
+    if (!slot) continue;  // a decoy's answer, read and dropped
     for (const coin of coins) {
       utxos.push({
         txid: coin.txid,
@@ -472,6 +545,7 @@ globalScope.LOC1999_BTC = {
   isBtcAddress,
   scanWallet,
   emptyView,
+  drawDecoys,
   pickFeeRate,
   buildSend,
   btcServers,

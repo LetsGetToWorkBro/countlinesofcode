@@ -22,6 +22,7 @@ import {
   openWatch,
   parseBtc,
   pickFeeRate,
+  drawDecoys,
   prettyBtcError,
   scanWallet,
   type Utxo,
@@ -174,6 +175,95 @@ describe('scanning through a fake explorer', () => {
     // A wallet that never received cannot have change, so the change chain
     // is never asked about: one gap window, twenty lookups, done.
     expect(asked).toHaveLength(20);
+  });
+
+  it('pads the lookups with real decoys so the log is a haystack', async () => {
+    // The leak this closes: whoever carries the questions (our Worker, and
+    // Cloudflare behind it) could read the wallet straight off the request
+    // log. Padded mode asks about decoys too, shuffled in, so the log holds
+    // a set the wallet is merely somewhere inside.
+    const pool = Array.from({ length: 80 }, (_, i) => `bc1qdecoy${String(i).padStart(34, '0')}`);
+    const asked: string[] = [];
+    let seed = 7;
+    const random = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+
+    await scanWallet(
+      async (path) => { asked.push(path); return empty; },
+      wallet,
+      { privacy: 'padded', ratio: 2, decoys: pool, random },
+    );
+
+    const addresses = asked.map((p) => p.split('/')[1]!);
+    const ours = addresses.filter((a) => !a.startsWith('bc1qdecoy'));
+    const theirs = addresses.filter((a) => a.startsWith('bc1qdecoy'));
+    // Twenty real ones (one gap window, no change chain on an unused wallet)
+    // and twice as many decoys.
+    expect(ours).toHaveLength(20);
+    expect(theirs).toHaveLength(40);
+    // And they are not in a block at the front: the order is shuffled, so
+    // position does not give the wallet away either.
+    const firstDecoy = addresses.findIndex((a) => a.startsWith('bc1qdecoy'));
+    expect(firstDecoy).toBeLessThan(20);
+  });
+
+  it('still reports the right balance while padded', async () => {
+    const addr0 = VECTOR.receive0;
+    const answers: Record<string, unknown> = {
+      [`address/${addr0}`]: {
+        chain_stats: { funded_txo_sum: 90_000, spent_txo_sum: 0, tx_count: 1 },
+        mempool_stats: zeroStats(),
+      },
+      [`address/${addr0}/utxo`]: [{ txid: 'b'.repeat(64), vout: 0, value: 90_000, status: { confirmed: true } }],
+      [`address/${addr0}/txs`]: [],
+    };
+    // Every decoy answers as used, so the follow-up round is padded too.
+    const usedDecoy = {
+      chain_stats: { funded_txo_sum: 5, spent_txo_sum: 0, tx_count: 3 },
+      mempool_stats: zeroStats(),
+    };
+    const pool = Array.from({ length: 40 }, (_, i) => `bc1qdecoy${String(i).padStart(34, '0')}`);
+    const followUps: string[] = [];
+    const view = await scanWallet(
+      async (path) => {
+        const address = path.split('/')[1]!;
+        if (/\/(utxo|txs)$/.test(path)) followUps.push(address);
+        if (answers[path] !== undefined) return answers[path];
+        if (path.endsWith('/utxo') || path.endsWith('/txs')) return [];
+        // Every decoy looks used; the wallet's other addresses are empty.
+        return address.startsWith('bc1qdecoy') ? usedDecoy : empty;
+      },
+      wallet,
+      { privacy: 'padded', ratio: 1, decoys: pool },
+    );
+
+    // A decoy's answer is read and dropped: it never reaches the balance.
+    expect(view.balance).toBe(90_000n);
+    expect(view.utxos).toHaveLength(1);
+    // And the follow-up round is padded too, or it would hand back exactly
+    // the set the shuffle just hid: the used addresses.
+    expect(followUps.some((a) => a.startsWith('bc1qdecoy'))).toBe(true);
+  });
+
+  it('draws distinct decoys and never more than the pool holds', () => {
+    const pool = ['a', 'b', 'c'];
+    const drawn = drawDecoys(2, pool, Math.random);
+    expect(drawn).toHaveLength(2);
+    expect(new Set(drawn).size).toBe(2);
+    expect(drawDecoys(99, pool, Math.random)).toHaveLength(3);
+    expect(drawDecoys(0, pool, Math.random)).toEqual([]);
+    expect(drawDecoys(5, [], Math.random)).toEqual([]);
+  });
+
+  it('ships a pool that looks exactly like what the wallet derives', async () => {
+    // A haystack of the wrong shape is not a haystack. These are real
+    // mainnet P2WPKH addresses, the same form as m/84'/0'/0' produces.
+    const { DECOY_ADDRESSES } = await import('../src/client/btcdecoys');
+    expect(DECOY_ADDRESSES.length).toBeGreaterThan(200);
+    expect(new Set(DECOY_ADDRESSES).size).toBe(DECOY_ADDRESSES.length);
+    for (const address of DECOY_ADDRESSES) {
+      expect(address, address).toMatch(/^bc1q[ac-hj-np-z02-9]{38}$/);
+      expect(isBtcAddress(address), address).toBe(true);
+    }
   });
 
   it('describes a freshly created wallet without any network at all', async () => {

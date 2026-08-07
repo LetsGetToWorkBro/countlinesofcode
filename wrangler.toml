@@ -134,6 +134,7 @@ migrations_dir = "migrations"
 crons = ["*/15 * * * *"]
 
 [vars]
+# ONION_HOST = "set by `npm run onion:set`"
 # APP_BASE_URL is deliberately not set: the Worker derives the OAuth
 # redirect_uri from the origin of the incoming request, so it is correct on
 # localhost, on *.workers.dev and on a custom domain without any edit. Set it

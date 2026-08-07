@@ -2,7 +2,7 @@
   "name": "loc1999",
   "version": "1.0.0",
   "private": true,
-  "description": "1999.LOC — count the lines of code in any GitHub repository. Ugly on purpose.",
+  "description": "1999.LOC \u2014 count the lines of code in any GitHub repository. Ugly on purpose.",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -17,7 +17,9 @@
     "build:client": "node scripts/build-client.mjs",
     "vendor:pdfjs": "node scripts/vendor-pdfjs.mjs",
     "sync:nav": "npx vite-node scripts/sync-nav.ts -- --write",
-    "hash:vendor": "node scripts/hash-vendor.mjs"
+    "hash:vendor": "node scripts/hash-vendor.mjs",
+    "onion:set": "node scripts/onion.mjs set",
+    "onion:clear": "node scripts/onion.mjs clear"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260801.1",
