@@ -224,7 +224,7 @@ describe('the monitor is four by three', () => {
 
     // 172 is the room the page already reserves above and below the case:
     // the body's own padding plus the stand drawn under it.
-    const ROOM = 210;
+    const ROOM = 290;
     expect(vertical, 'vertical constant must be the room plus the case top and bottom')
       .toBe(ROOM + borderTop + borderBottom + padTop + padBottom);
     expect(horizontal, 'horizontal constant must be the case left and right')

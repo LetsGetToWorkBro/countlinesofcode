@@ -840,7 +840,7 @@ fieldset.tool-group table.tool-dir { margin: 0; }
    anything. So while a window is open the machine is exactly a screenful,
    which is the same number its floor already uses. */
 #page:has(.desktop.desk-js .app-window.is-open) {
-  max-height: calc(100vh - 210px);
+  max-height: calc(100vh - 290px);
 }
 .desk-js.desktop { min-height: 0; }
 .desk-js .desk-windows {
@@ -1589,7 +1589,69 @@ body {
   background-attachment: fixed;
   min-height: 100vh;
   box-sizing: border-box;
+  position: relative;
+  padding-bottom: 190px;      /* nothing hides permanently under the keyboard */
+  overflow-x: hidden;         /* the keyboard is wider than the window on purpose */
 }
+
+/* ---- the desk ------------------------------------------------------
+   The surface the machine is standing on, taking the screen's light on
+   its near edge and going black at the front. It is the difference
+   between a monitor floating in a void and a monitor on a desk. */
+body::before {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 300px;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(58% 150% at 50% 0%, rgba(0, 200, 205, 0.16) 0%, rgba(0, 80, 90, 0.05) 45%, rgba(0, 0, 0, 0) 72%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(8, 16, 20, 0.55) 34%, rgba(4, 8, 11, 0.92) 100%);
+}
+
+/* ---- the keyboard --------------------------------------------------
+   Laid flat with a perspective rotation rather than drawn in perspective,
+   so the key grid is two repeating gradients and the transform does the
+   foreshortening. Cropped by the bottom of the window the way it is
+   cropped by the bottom of the photograph. */
+body::after {
+  content: "";
+  position: fixed;
+  z-index: 3;
+  left: 50%;
+  /* rotateX foreshortens the slab to about a third of its height, so the
+     360 here shows as roughly 110px of keyboard above the sill. */
+  bottom: 4px;
+  width: min(980px, 78vw);
+  height: 360px;
+  transform: translateX(-50%) perspective(720px) rotateX(72deg);
+  transform-origin: 50% 100%;
+  border-radius: 12px 12px 5px 5px;
+  pointer-events: none;
+  background:
+    /* the screen is the only light in the room, so the row nearest it is
+       the only row that catches anything */
+    linear-gradient(180deg, rgba(150, 255, 255, 0.16) 0%, rgba(150, 255, 255, 0.04) 16%, rgba(0, 0, 0, 0) 34%),
+    /* keys: gaps across, then gaps down */
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.42) 0 3px, rgba(0, 0, 0, 0) 3px 42px),
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0 4px, rgba(0, 0, 0, 0) 4px 40px),
+    /* the slab, which is beige plastic sitting in its own shadow */
+    linear-gradient(180deg, #8f8877 0%, #6f6959 40%, #4c473c 72%, #2e2b24 100%);
+  box-shadow:
+    0 -18px 44px rgba(0, 0, 0, 0.6),
+    inset 0 3px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* The machine and the notes are objects in the room, not paint on the
+   floor of it, so they sit above the desk wash. */
+#page, .room-footer { position: relative; z-index: 1; }
+
+/* The taskbar sticks to the bottom of the glass, and the glass now has a
+   desk in front of it, so it stops where the desk starts. */
+#page > .taskbar { z-index: 12; }
 
 #page {
   position: relative;
@@ -1600,15 +1662,33 @@ body {
      capped by measure rather than by the width of the window. */
   max-width: 1120px;
   margin: 0 auto;
-  background: #ffffff;
   padding: 22px 24px 24px 24px;
+
+  /* THE CASE.
+     A border cannot be painted, only coloured, which is why the plastic
+     was flat. So the border is transparent and the background does the
+     work: CSS lets each background layer choose its own box, so the
+     screen is painted to the padding box and the case to the border box,
+     one element, two materials.
+
+     Bottom layer up: the plastic, top-lit the way a case under a ceiling
+     light is; an age wash, cooler at the top and warmer low down where
+     hands went; the light the screen itself throws back onto the inside
+     of the bezel, which is the only reason the inner edge is brighter
+     than the outer one; and the mould texture over all of it. */
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='c'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23c)' opacity='0.06'/%3E%3C/svg%3E") border-box,
+    radial-gradient(115% 68% at 50% 52%, rgba(255, 253, 240, 0.55) 0%, rgba(255, 253, 240, 0.16) 42%, rgba(255, 253, 240, 0) 62%) border-box,
+    linear-gradient(177deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 34%, rgba(126, 101, 52, 0.13) 100%) border-box,
+    linear-gradient(180deg, #e6e0cf 0%, #dad3c0 22%, #cdc6b2 58%, #bfb8a4 88%, #b4ad99 100%) border-box;
   /* A 1999 monitor is mostly plastic. The bezel is thick, the chin below
      the glass is thicker still because that is where the tube's neck and
      the controls went, and the corners are generous because the glass
      itself was curved. Fifteen even pixels read as a picture frame; this
      reads as a case with a tube in it. */
   border-style: solid;
-  border-color: #cec7b4;
+  border-color: transparent;
   border-width: 28px 30px 54px 30px;
   border-radius: 30px / 36px;
   box-shadow:
@@ -1631,8 +1711,14 @@ body {
    page has to say, so the room around it stays a frame rather than
    becoming the larger half of the view. */
 #page:has(.desktop), #page:has(.desk-shell) {
-  background: #008080;
-  min-height: calc(100vh - 210px);
+  /* Same case, different picture: only the padding-box layer changes. */
+  background:
+    linear-gradient(#008080, #008080) padding-box,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='c'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23c)' opacity='0.06'/%3E%3C/svg%3E") border-box,
+    radial-gradient(115% 68% at 50% 52%, rgba(255, 253, 240, 0.55) 0%, rgba(255, 253, 240, 0.16) 42%, rgba(255, 253, 240, 0) 62%) border-box,
+    linear-gradient(177deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 34%, rgba(126, 101, 52, 0.13) 100%) border-box,
+    linear-gradient(180deg, #e6e0cf 0%, #dad3c0 22%, #cdc6b2 58%, #bfb8a4 88%, #b4ad99 100%) border-box;
+  min-height: calc(100vh - 290px);
   /* A tube is four by three. Everything else here was already 1999 and the
      shape was not: a screen running the full width of a modern window is a
      flat panel wearing a beige case, and no amount of moulding on the
@@ -1640,11 +1726,11 @@ body {
      that needs, which is why the machine is squarer than the window it is
      sitting in and why it stops growing on a wide screen.
 
-     The 338 is the 210 above plus the 128 of bezel and padding between the
+     The 418 is the 290 above plus the 128 of bezel and padding between the
      case edge and the glass; the 108 puts the bezel's own width back. Both
      move if those do, and the test in test/style.test.ts says so.
 
-     The 840 floor is not decoration. Hold 4:3 with no floor and a short
+     The 700 floor is not decoration. Hold 4:3 with no floor and a short
      window feeds back on itself: less height means a narrower case, a
      narrower case means fewer icons per row, fewer per row means a taller
      icon field, and a taller field pushes the case taller still. At
@@ -1652,7 +1738,7 @@ body {
      monitor. Below the floor the shape gives way rather than the layout:
      the case keeps its width, stops being 4:3, and the page scrolls,
      because a 4:3 box that narrow cannot hold a desktop. */
-  max-width: min(1120px, max(840px, calc((100vh - 338px) * 4 / 3 + 108px)));
+  max-width: min(1120px, max(700px, calc((100vh - 418px) * 4 / 3 + 108px)));
   display: flex;
   flex-direction: column;
 }
@@ -2156,6 +2242,12 @@ body {
    finger has to hit gets bigger. */
 @media (max-width: 700px) {
   body { padding: 6px 5px 12px 5px; }
+
+  /* No desk and no keyboard on a phone. The room is the frame around a
+     machine you are looking at; a phone is a machine you are holding,
+     and a hundred pixels of somebody else's keyboard across the bottom
+     of it is screen spent on a joke that does not land at this size. */
+  body::before, body::after { display: none; }
   #page {
     /* Still a fat case, but a phone cannot spend thirty pixels a side on
        plastic. The chin stays proportionally deeper than the rest. */
