@@ -40,12 +40,30 @@
     if (button) button.classList.toggle('is-open', open);
   }
 
+  /* Bring a window into view.
+   *
+   * The windows sit in a pane that scrolls once more than one of them is
+   * open, and a window can be taller than that pane. scrollIntoView is the
+   * wrong tool for both: it scrolls every scrollable ancestor including the
+   * document, so it drags the whole monitor off the top of the screen to
+   * show a window that was already inside it. Scroll the pane and nothing
+   * else, and align the window's title bar rather than any part of it,
+   * because a window you arrive at halfway down reads as a broken one. */
+  function reveal(win) {
+    var pane = win.parentNode;
+    if (pane && pane.scrollHeight > pane.clientHeight + 1) {
+      pane.scrollTop += win.getBoundingClientRect().top - pane.getBoundingClientRect().top;
+    } else {
+      win.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
   function toggleFrom(hash, scroll) {
     var win = windowFor(hash);
     if (!win) return false;
     var opening = !win.classList.contains('is-open');
     setOpen(win, opening);
-    if (opening && scroll) win.scrollIntoView({ block: 'nearest' });
+    if (opening && scroll) reveal(win);
     return true;
   }
 
@@ -62,7 +80,7 @@
       if (el.classList.contains('start')) {
         var win = windowFor(hash);
         setOpen(win, true);
-        win.scrollIntoView({ block: 'nearest' });
+        reveal(win);
       } else {
         toggleFrom(hash, true);
       }
@@ -92,6 +110,6 @@
   // Following an in-page anchor later (e.g. a link elsewhere) opens it too.
   window.addEventListener('hashchange', function () {
     var win = windowFor(location.hash);
-    if (win) { setOpen(win, true); win.scrollIntoView({ block: 'nearest' }); }
+    if (win) { setOpen(win, true); reveal(win); }
   });
 })();

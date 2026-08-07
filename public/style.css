@@ -226,7 +226,7 @@ pre {
   font-weight: bold;
 }
 
-.note {
+.desk-note {
   font-size: 14px;
   color: #333333;
 }
@@ -775,7 +775,16 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   max-height: calc(100vh - 172px);
 }
 .desk-js.desktop { min-height: 0; }
-.desk-js .desk-windows { display: flex; flex-direction: column; min-height: 0; }
+.desk-js .desk-windows {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* Open three at once and they are taller than the screen between them.
+     The desk is what scrolls then, the way a desk with three windows
+     tiled down it scrolls. Each window keeps its own height. */
+  overflow-y: auto;
+}
+/* One window open: it takes the pane and scrolls inside itself. */
 .desk-js .desk-windows .app-window.is-open {
   display: flex;
   flex-direction: column;
@@ -783,11 +792,26 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   min-height: 0;
 }
 .desk-js .desk-windows .app-window.is-open > .app-body {
-  flex: 1 1 auto;
-  min-height: 140px;
+  flex: 0 1 auto;
+  min-height: 0;
   overflow-y: auto;
   /* The scrollbar is chrome too, and the era's was grey on grey. */
   scrollbar-color: #c0c0c0 #efefef;
+}
+/* With a second window open, no single one may take the whole desk, or a
+   stack is a thing you can only ever see one of. Capped, you get a window
+   and the top of the next, which is what tells you the other is there at
+   all, and the pane scrolls between them. The selector is "an open window
+   with an open window after it", which is CSS for more than one.
+
+   The cap is in vh, not per cent. The pane's height comes from a
+   max-height further up, which leaves it indefinite as far as percentage
+   resolution is concerned, so a percentage here is not clamped to
+   something smaller: it is thrown away, and the window keeps its full
+   content height. That is exactly how three of them ended up overlapping. */
+.desk-js .desk-windows:has(.app-window.is-open ~ .app-window.is-open) .app-window.is-open {
+  flex: 0 0 auto;
+  max-height: 46vh;
 }
 
 /* The _ minimise control in a desk window's title bar. Only shown when the
@@ -1496,13 +1520,21 @@ body {
   margin: 0 auto;
   background: #ffffff;
   padding: 16px 18px 20px 18px;
-  border: 15px solid #cdc7b6;
-  border-radius: 20px / 26px;
+  /* A 1999 monitor is mostly plastic. The bezel is thick, the chin below
+     the glass is thicker still because that is where the tube's neck and
+     the controls went, and the corners are generous because the glass
+     itself was curved. Fifteen even pixels read as a picture frame; this
+     reads as a case with a tube in it. */
+  border-style: solid;
+  border-color: #d3ccba;
+  border-width: 28px 30px 54px 30px;
+  border-radius: 30px / 36px;
   box-shadow:
-    0 0 0 2px #8e8878,                 /* the seam around the plastic */
-    0 3px 0 4px #b3ad9d,               /* the lip catching the light */
-    0 28px 60px rgba(0, 0, 0, 0.55),   /* the monitor on the desk */
-    0 0 90px rgba(0, 128, 128, 0.18);  /* what the screen throws back */
+    inset 0 0 0 3px #9d9684,           /* the lip where plastic meets glass */
+    0 0 0 2px #8b8574,                 /* the seam around the case */
+    0 4px 0 5px #b3ad9d,               /* the moulding catching the light */
+    0 34px 70px rgba(0, 0, 0, 0.6),    /* the monitor on the desk */
+    0 0 110px rgba(0, 128, 128, 0.16); /* what the screen throws back */
 }
 
 /* A desktop page fills the glass with the desktop itself, and fills the
@@ -1621,25 +1653,83 @@ body {
   width: 100%;
   max-width: 1120px;
   /* The stand is drawn 56px below the case and takes up no space of its
-     own, so the gap has to be reserved here or the text lands on it. */
-  margin: 78px auto 0 auto;
-  padding: 0 4px;
-  color: #93a1b1;
+     own, so the gap has to be reserved here or the notes land on it. */
+  margin: 84px auto 0 auto;
+  padding: 0 4px 8px 4px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 26px 30px;
 }
-.room-footer .footer {
-  color: inherit;
+
+/* Nobody sets their credits in pale grey on a desk. They write the thing
+   down and stick it to the desk, and it stays there going slightly curled
+   until the machine is thrown out. Two notes: what this is and who it is
+   not affiliated with, and the address, which is the one thing here
+   somebody might actually want to copy off a note. */
+.desk-note {
+  position: relative;
+  flex: 1 1 320px;
+  max-width: 470px;
+  box-sizing: border-box;
+  background: #fbee5d;
+  background-image: linear-gradient(160deg, #fdf47f 0%, #f7e64c 62%, #eeda42 100%);
+  color: #2a2712;
+  padding: 20px 20px 18px 20px;
+  transform: rotate(-1.3deg);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 14px 22px rgba(0, 0, 0, 0.42);
+}
+.desk-note-tip {
+  background: #b8e6f6;
+  background-image: linear-gradient(160deg, #cdeffb 0%, #ade1f4 62%, #9ed6ec 100%);
+  transform: rotate(1.1deg);
+}
+/* The strip of tape holding it down. */
+.desk-note::before {
+  content: "";
+  position: absolute;
+  /* Mostly on the paper, a little over the edge. Translucent tape hanging
+     further than that over a near-black desk stops reading as tape and
+     starts reading as a grey tab someone bolted on. */
+  top: -7px;
+  left: 50%;
+  width: 86px;
+  height: 21px;
+  transform: translateX(-50%) rotate(-1.8deg);
+  background: rgba(255, 255, 255, 0.5);
+  border-left: 1px solid rgba(255, 255, 255, 0.6);
+  border-right: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+}
+.desk-note-tip::before { transform: translateX(-50%) rotate(2.2deg); }
+
+.desk-note .footer {
+  color: #2a2712;
+  font-size: 13.5px;
+  line-height: 1.5;
   margin: 0;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
 }
-.room-footer .footer.support { margin-top: 16px; }
-.room-footer a { color: #d7e2ec; }
-.room-footer a:visited { color: #c2b4dd; }
-.room-footer a:hover { color: #ffffff; }
-.room-footer code {
-  color: #e6edf4;
-  background: rgba(0, 0, 0, 0.32);
-  padding: 2px 5px;
-  border-radius: 2px;
+.desk-note .footer.support { margin: 0; }
+.desk-note a { color: #14149c; }
+.desk-note a:visited { color: #5a2a8a; }
+.desk-note code {
+  display: inline-block;
+  max-width: 100%;
+  color: #1c1a0c;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  padding: 3px 5px;
+  margin: 3px 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* A note lying perfectly straight is a nicer read for anyone who has
+     asked the machine to stop tilting things at them. */
+  .note, .desk-note-tip { transform: none; }
+  .desk-note::before { transform: translateX(-50%); }
 }
 
 /* The toolkit bar was a table of contents six lines deep, which on a
@@ -1928,10 +2018,12 @@ body {
 @media (max-width: 700px) {
   body { padding: 6px 5px 12px 5px; }
   #page {
-    border-width: 6px;
-    border-radius: 9px / 11px;
+    /* Still a fat case, but a phone cannot spend thirty pixels a side on
+       plastic. The chin stays proportionally deeper than the rest. */
+    border-width: 10px 11px 20px 11px;
+    border-radius: 14px / 17px;
     padding: 8px 8px 10px 8px;
-    box-shadow: 0 0 0 2px #8e8878, 0 8px 20px rgba(0, 0, 0, 0.5);
+    box-shadow: inset 0 0 0 2px #9d9684, 0 0 0 2px #8b8574, 0 8px 20px rgba(0, 0, 0, 0.5);
   }
   #page::after { display: none; }
   #page::before { background-image: none; }   /* scanlines vanish under a retina display anyway */
@@ -1990,9 +2082,13 @@ body {
   .start-fly { position: static; left: auto; bottom: auto; margin: 0 0 2px 12px; max-height: 42vh; }
 
   /* There is no stand on a phone, so the desk starts right under the rim
-     rather than 78px down where the neck would have been. */
-  .room-footer { margin-top: 18px; padding: 0 4px 4px 4px; }
-  .room-footer .footer { line-height: 1.6; }
+     rather than 84px down where the neck would have been. The notes go
+     one above the other and lie almost flat: a note tilted 1.3 degrees
+     across a full-width phone column throws its bottom corner further
+     than it is worth. */
+  .room-footer { margin-top: 20px; padding: 0 2px 4px 2px; gap: 22px; }
+  .desk-note { flex: 1 1 100%; max-width: none; transform: rotate(-0.5deg); padding: 16px 15px 15px 15px; }
+  .desk-note-tip { transform: rotate(0.5deg); }
 
   /* Desktop icons and shortcuts pack tighter, and the group's two columns
      narrow with them so the icons still fill their cells rather than

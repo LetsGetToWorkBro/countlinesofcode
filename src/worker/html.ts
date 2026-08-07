@@ -203,7 +203,7 @@ Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spit
 Nothing here is for sale, nothing is tracked, and there is no account to make.
 If something saved you an hour:<br>
 <code class="xmr">${DONATION_ADDRESS}</code><br>
-Monero, because a donation address should not also be a tracking pixel. You can
+You can
 <a href="/monero.html">check that address here</a> before sending anything.
 </p>`;
 }
