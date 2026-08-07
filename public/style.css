@@ -2626,6 +2626,20 @@ body::after {
   background: linear-gradient(180deg, #cbc4b1 0%, #a19a88 100%);
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 1px 2px rgba(0, 0, 0, 0.5);
 }
+
+/* These are the one part of the page you are meant to tap repeatedly, and
+   a browser reads two quick taps in the same place as "zoom in on this".
+   Stepping through a d-pad therefore zoomed the page instead of moving the
+   cursor. `manipulation` gives up double-tap-to-zoom on the controls only:
+   pinch zoom still works, here and everywhere else. The selection rules
+   stop a held press from offering to select the button as if it were
+   text. */
+.chin-dir, .chin-key, .chin-power {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
 .chin-dir:active, .chin-key:active {
   background: linear-gradient(180deg, #9a9381 0%, #837c6b 100%);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
@@ -2734,7 +2748,18 @@ body.is-typing::after { filter: brightness(1.5) contrast(1.04); }
   .chin-key { width: 29px; height: 17px; border-radius: 9px; }
 
   .chin-power { right: 12px; bottom: 12px; width: 27px; height: 27px; }
-  .chin-led { right: 20px; bottom: 44px; width: 7px; height: 7px; }
+  /* Directly over the button, not beside it: on the desktop machine the
+     lamp is a separate indicator sitting next to the switch, but here it
+     sits above it and reads as that button's light, so it has to line up
+     with it. Written as the arithmetic rather than the answer so it stays
+     centred if either size changes: the button's own inset, plus half the
+     difference between the two widths. */
+  .chin-led {
+    right: calc(12px + (27px - 7px) / 2);
+    bottom: 44px;
+    width: 7px;
+    height: 7px;
+  }
 }
 
 /* What the d-pad has selected. The focus ring cannot show it: pressing a

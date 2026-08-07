@@ -469,7 +469,7 @@
     echo: function (args) { print(args || ''); },
     date: function () {
       print('Current date is ' + new Date().toDateString());
-      print('The taskbar clock says 1999. The taskbar clock is lying, and it knows.');
+      print('The taskbar clock declines to comment on the year.');
     },
     time: function () { print('Current time is ' + new Date().toLocaleTimeString()); },
     whoami: function () {
@@ -627,19 +627,33 @@
     print('');
   }
 
-  /* The clock says 1999 and keeps saying it.
+  /* The clock tells the time.
    *
-   * It briefly told the real time, on the argument that a taskbar clock
-   * which does not tell the time reads as broken. That argument loses to
-   * a simpler one: a machine whose whole premise is that it is 1999
-   * cannot display 2026 the moment scripting runs, and the no-JavaScript
-   * render and the JavaScript one must not disagree about what year it
-   * is. The markup ships "1999" and this file leaves it alone.
+   * It used to say "1999" and keep saying it, on the argument that a
+   * machine whose whole premise is 1999 cannot display this year the
+   * moment scripting runs. That argument only ever applied to the year.
+   * A clock showing the time of day names no year at all, so the render
+   * without scripting and this one cannot contradict each other about
+   * one, and the taskbar stops advertising a clock that does not work.
+   * The markup still ships "1999" for the no-JavaScript render, where a
+   * stopped clock beats an empty box. The date it is 1999 on stays in
+   * the tooltip, which costs nothing and disagrees with nobody.
    *
-   * The date it is 1999 on is the tooltip's business, which costs nothing
-   * and disagrees with nobody. */
+   * Ticked on the minute boundary rather than once every sixty seconds,
+   * so it changes when the minute does instead of drifting off it. */
   var clock = bar.querySelector('.task-clock');
-  if (clock) clock.title = 'Friday, 31 December 1999';
+  if (clock) {
+    clock.title = 'Friday, 31 December 1999';
+    var tick = function () {
+      var now = new Date();
+      var hour = now.getHours();
+      var minute = now.getMinutes();
+      clock.textContent = ((hour % 12) || 12) + ':' + (minute < 10 ? '0' : '') + minute +
+        ' ' + (hour < 12 ? 'AM' : 'PM');
+      setTimeout(tick, 60000 - (now.getSeconds() * 1000 + now.getMilliseconds()));
+    };
+    tick();
+  }
 
   // The old cheat code, for the people who will try it.
   var KONAMI = 'ArrowUp,ArrowUp,ArrowDown,ArrowDown,ArrowLeft,ArrowRight,ArrowLeft,ArrowRight,b,a';

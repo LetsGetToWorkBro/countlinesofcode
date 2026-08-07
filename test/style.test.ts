@@ -352,20 +352,81 @@ describe('the desktop is drawn at 1999 scale', () => {
   });
 });
 
-describe('the clock says the same thing with and without scripting', () => {
+describe('the clock tells the time and never the year', () => {
   const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
   const start = readFileSync(new URL('../public/start.js', import.meta.url), 'utf8');
+  const clockBlock = () => {
+    const found = /var clock = bar\.querySelector\('\.task-clock'\);([\s\S]{0,900})/.exec(start);
+    expect(found, 'the clock handling in start.js has moved').not.toBeNull();
+    return found![1];
+  };
 
-  it('ships 1999 in the markup', () => {
+  it('ships 1999 in the markup for the render without scripting', () => {
+    // A stopped clock beats an empty box where there is no script to fill it.
     expect(html).toMatch(/<span class="task-clock">1999<\/span>/);
   });
 
-  it('does not let start.js rewrite it', () => {
-    // A machine whose premise is that it is 1999 cannot show 2026 the moment
-    // scripting runs, and the two renders must not disagree about the year.
-    const clockBlock = /var clock = bar\.querySelector\('\.task-clock'\);([\s\S]{0,400})/.exec(start);
-    expect(clockBlock, 'the clock handling in start.js has moved').not.toBeNull();
-    expect(clockBlock![1]).not.toMatch(/\.textContent\s*=/);
-    expect(clockBlock![1]).not.toMatch(/setInterval/);
+  it('replaces it with the time of day once scripting runs', () => {
+    expect(clockBlock()).toMatch(/clock\.textContent\s*=/);
+    expect(clockBlock()).toMatch(/getHours\(\)/);
+    expect(clockBlock()).toMatch(/getMinutes\(\)/);
+  });
+
+  it('never prints a year or a date', () => {
+    // This is what lets the two renders coexist. The markup says 1999 and the
+    // script says half past ten; they only contradict each other if the script
+    // names a year, so it must not be able to.
+    expect(clockBlock()).not.toMatch(/getFullYear|getDate\(\)|getMonth/);
+  });
+});
+
+describe('the controls you tap repeatedly do not zoom the page', () => {
+  const css = readFileSync(new URL('../public/style.css', import.meta.url), 'utf8');
+
+  it('gives up double-tap zoom on the d-pad, the buttons and the power switch', () => {
+    // Two quick taps in one place is a zoom gesture, so stepping through the
+    // d-pad zoomed the page instead of moving the cursor.
+    const rule = /\.chin-dir,\s*\.chin-key,\s*\.chin-power\s*\{([^}]*)\}/.exec(css);
+    expect(rule, 'the touch-action rule for the chin controls has moved').not.toBeNull();
+    expect(rule![1]).toMatch(/touch-action:\s*manipulation/);
+  });
+
+  it('does not take pinch zoom away from the page', () => {
+    // `manipulation` gives up double-tap and keeps pinch. `none` would give up
+    // both, and is right in exactly one place: the signature pad, which you
+    // draw on with a finger and which must not pan under you.
+    const strict = [...css.matchAll(/([.#][\w-]+)[^{}]*\{[^}]*touch-action:\s*none/g)];
+    expect(strict.map((m) => m[1])).toEqual(['#sig-pad']);
+
+    // A locked viewport would take pinch zoom off the whole site instead.
+    for (const page of ['index', 'wallet', 'email']) {
+      const html = readFileSync(new URL(`../public/${page}.html`, import.meta.url), 'utf8');
+      expect(html, `${page}.html locks the viewport`).not.toMatch(/user-scalable|maximum-scale/);
+    }
+  });
+});
+
+describe('the palmtop power lamp sits on its button', () => {
+  const css = readFileSync(new URL('../public/style.css', import.meta.url), 'utf8');
+  // Anchored to the phone block that actually holds the lamp, not to the first
+  // phone block in the file: the stylesheet has several, and slicing from the
+  // first one picks up the desktop machine's power switch instead.
+  const ledAt = css.indexOf('.chin-led {\n    right: calc(');
+  const phone = ledAt < 0 ? '' : css.slice(css.lastIndexOf('@media (max-width: 700px)', ledAt));
+
+  it('centres the lamp over the switch', () => {
+    expect(ledAt, 'the phone .chin-led rule has moved').toBeGreaterThan(-1);
+    const power = /\.chin-power\s*\{[^}]*right:\s*(\d+)px[^}]*width:\s*(\d+)px/.exec(phone);
+    const led = /\.chin-led\s*\{[^}]*right:\s*calc\((\d+)px \+ \((\d+)px - (\d+)px\) \/ 2\)[^}]*width:\s*(\d+)px/.exec(phone);
+    expect(power, 'the phone .chin-power rule has moved').not.toBeNull();
+    expect(led, 'the phone .chin-led rule is no longer written as the arithmetic').not.toBeNull();
+
+    const [, powerRight, powerWidth] = power!.map(Number);
+    const [, base, outer, inner, ledWidth] = led!.map(Number);
+    // The calc has to be made of the button's real numbers, or it is centred
+    // on a button that no longer exists.
+    expect([base, outer, inner]).toEqual([powerRight, powerWidth, ledWidth]);
+    // Same centre line, measured from the right edge of the chin.
+    expect(base + (outer - inner) / 2 + ledWidth / 2).toBe(powerRight + powerWidth / 2);
   });
 });
