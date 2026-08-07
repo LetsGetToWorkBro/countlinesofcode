@@ -1388,3 +1388,245 @@ textarea {
   margin: 1px 0;
   break-inside: avoid;
 }
+
+/* ======================= THE MACHINE ==================================
+   Everything above this line draws a 1999 web page. This last section
+   puts that page inside the computer it always belonged in: a room, a
+   monitor, and the glass. Not one byte of markup changed for it. #page
+   was already the wrapper around every document on the site, so #page
+   simply becomes the screen, its border becomes the bezel, and the two
+   pseudo elements it had spare become the scanlines and the stand.
+
+   The pages that are a desktop (a .desktop or a .desk-shell inside)
+   get the teal; the two prose pages, how and security, keep white
+   paper behind their text, because black type on teal is unreadable
+   and a monitor is perfectly happy showing a document. :has() picks
+   between them, and a browser without :has() shows white everywhere,
+   which is exactly the old site inside a nicer frame.
+   ==================================================================== */
+
+body {
+  margin: 0;
+  padding: 26px 16px 64px 16px;
+  background: #14181e;
+  background-image: radial-gradient(125% 95% at 50% 6%, #3d4757 0%, #232a33 52%, #12161b 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+#page {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  /* Wide screens were showing 680px of page and a screenful of nothing.
+     The machine takes the room it is given, and the text inside it is
+     capped by measure rather than by the width of the window. */
+  max-width: 1120px;
+  margin: 0 auto;
+  background: #ffffff;
+  padding: 16px 18px 20px 18px;
+  border: 15px solid #cdc7b6;
+  border-radius: 20px / 26px;
+  box-shadow:
+    0 0 0 2px #8e8878,                 /* the seam around the plastic */
+    0 3px 0 4px #b3ad9d,               /* the lip catching the light */
+    0 28px 60px rgba(0, 0, 0, 0.55),   /* the monitor on the desk */
+    0 0 90px rgba(0, 128, 128, 0.18);  /* what the screen throws back */
+}
+
+/* A desktop page fills the glass with the desktop itself, and fills the
+   screen with it: the machine takes a screenful of height whatever the
+   page has to say, so the room around it stays a frame rather than
+   becoming the larger half of the view. */
+#page:has(.desktop), #page:has(.desk-shell) {
+  background: #008080;
+  min-height: calc(100vh - 172px);
+  display: flex;
+  flex-direction: column;
+}
+
+/* The desktop is what grows, and its taskbar rides the bottom of it. */
+#page > .desktop, #page > .desk-shell {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+#page > .desktop > .desk-windows { flex: 1 1 auto; }
+#page > .desktop > .taskbar, #page > .desk-shell > .taskbar { margin-top: auto; }
+
+/* The glass: a dark edge, a vignette, and the faintest scanlines. Kept
+   under the menus (z-index 20 and up) so nothing lands on top of them,
+   and out of the way of the pointer entirely. */
+#page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: 6px / 8px;
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.55),
+    inset 0 0 70px rgba(0, 0, 0, 0.35);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.05) 0px,
+    rgba(0, 0, 0, 0.05) 1px,
+    rgba(255, 255, 255, 0) 1px,
+    rgba(255, 255, 255, 0) 3px
+  );
+}
+
+/* The neck and the foot, drawn in one shape below the case. */
+#page::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 300px;
+  height: 52px;
+  margin-top: 4px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #c4beac 0%, #a8a292 58%, #8e8878 100%);
+  clip-path: polygon(39% 0, 61% 0, 65% 52%, 100% 52%, 100% 100%, 0 100%, 0 52%, 35% 52%);
+  border-radius: 0 0 6px 6px;
+  box-shadow: 0 16px 26px rgba(0, 0, 0, 0.45);
+}
+
+/* ---- what the screen shows ---------------------------------------- */
+
+/* The rules that separated a document's sections are the wrong idea
+   inside a desktop; the desktop separates itself. */
+#page:has(.desktop) > hr, #page:has(.desk-shell) > hr { display: none; }
+
+/* The wordmark and the footer read as desktop text: white, with the
+   hard shadow the era put under everything on the wallpaper. */
+#page:has(.desktop) > h1, #page:has(.desk-shell) > h1,
+#page:has(.desktop) > h3, #page:has(.desk-shell) > h3 {
+  color: #ffffff;
+  text-shadow: 2px 2px 0 #004848;
+}
+#page:has(.desktop) > h1 a, #page:has(.desk-shell) > h1 a { color: #ffffff; text-decoration: none; }
+#page:has(.desktop) > h1 a:hover, #page:has(.desk-shell) > h1 a:hover { text-decoration: underline; }
+#page:has(.desktop) > .tagline, #page:has(.desk-shell) > .tagline {
+  color: #cbe7e7;
+  text-shadow: 1px 1px 0 #004848;
+}
+#page:has(.desktop) > .footer, #page:has(.desk-shell) > .footer {
+  color: #b9dcdc;
+  text-shadow: 1px 1px 0 #004040;
+  margin-top: 14px;
+}
+#page:has(.desktop) > .footer a, #page:has(.desk-shell) > .footer a { color: #ffffff; }
+#page:has(.desktop) > .footer a:visited, #page:has(.desk-shell) > .footer a:visited { color: #e0d0ff; }
+#page:has(.desktop) > .footer code, #page:has(.desk-shell) > .footer code {
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.22);
+  padding: 1px 3px;
+}
+
+/* The toolkit bar was a table of contents six lines deep, which on a
+   wide screen is a lot of height spent on a list the Start menu also
+   carries. It is a toolbar now: groups flow across the width and it
+   costs one or two lines. */
+#page:has(.desktop) > .nav, #page:has(.desk-shell) > .nav {
+  background: #c0c0c0;
+  border: 2px outset #e0e0e0;
+  padding: 4px 8px 3px 8px;
+  margin: 10px 0 12px 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+}
+#page:has(.desktop) .nav-group, #page:has(.desk-shell) .nav-group {
+  display: inline-block;
+  vertical-align: top;
+  padding: 0;
+  margin: 0 18px 2px 0;
+}
+#page:has(.desktop) .nav-label, #page:has(.desk-shell) .nav-label {
+  display: inline;
+  width: auto;
+  text-align: left;
+  margin-right: 5px;
+  color: #333333;
+}
+
+/* The desktop is the screen now, so it stops drawing a frame of its
+   own: no border, no teal patch inside teal. */
+.desktop, .desk-shell {
+  background: transparent;
+  border: 0;
+  margin: 0;
+}
+.desk-groups { padding: 6px 2px 8px 2px; }
+.desk-windows { padding: 2px 0 10px 0; }
+
+/* An app opens maximised, the way a program on a machine this old
+   always did: edge to edge and floor to ceiling, with the taskbar
+   under it. The window takes the leftover height so the desk does not
+   show through below a short tool. */
+.desk-shell .app-window { margin: 0; }
+#page > .desk-shell > .app-window.is-open,
+#page:not(:has(.desk-js)) > .desk-shell > .app-window {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+#page > .desk-shell > .app-window.is-open > .app-body,
+#page:not(:has(.desk-js)) > .desk-shell > .app-window > .app-body { flex: 1 1 auto; }
+.desk-js.desk-shell { min-height: 58vh; }
+.desk-shell .taskbar { margin-top: auto; }
+
+/* Wide windows are only an improvement until the lines get too long to
+   read. The window takes the width; the prose inside keeps its measure. */
+.app-body > p, .app-body > ul, .app-body > ol, .app-body > details, .app-body > table { max-width: 78ch; }
+
+/* The proof panel and the page's closing notes sit on the wallpaper
+   rather than on white paper. The panel and the notes are prose, so
+   they get a frame to sit on; the one line that introduces them is
+   desktop text like everything else out here. */
+#page:has(.desk-shell) > #proof,
+#page:has(.desk-shell) > details.notes {
+  background: #c0c0c0;
+  border: 2px outset #e0e0e0;
+  padding: 8px 10px;
+  margin: 8px 0;
+}
+#page:has(.desk-shell) > #proof:empty { display: none; }
+#page:has(.desk-shell) > .proof-toggle {
+  color: #cbe7e7;
+  text-shadow: 1px 1px 0 #004040;
+  margin: 6px 0;
+}
+#page:has(.desk-shell) > .proof-toggle .note { color: #cbe7e7; }
+
+/* ---- moving between pages ------------------------------------------
+   Every page here is a real page, and the machine around it is drawn
+   identically on all of them, so a cross document view transition
+   makes the screen change what it is showing without the site blinking
+   out of existence first. Browsers without it simply navigate, which
+   is what they did before. */
+@view-transition { navigation: auto; }
+
+@keyframes screen-fade { from { opacity: 0; } to { opacity: 1; } }
+::view-transition-new(root) { animation: screen-fade 200ms ease-out; }
+::view-transition-old(root) { animation: screen-fade 160ms ease-in reverse; }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-new(root), ::view-transition-old(root) { animation: none; }
+}
+
+/* ---- small screens -------------------------------------------------
+   A phone is not a desk. The case thins out, the stand goes away, and
+   the screen takes the whole width it can get. */
+@media (max-width: 700px) {
+  body { padding: 8px 6px 16px 6px; }
+  #page {
+    border-width: 7px;
+    border-radius: 10px / 12px;
+    padding: 10px 10px 14px 10px;
+    box-shadow: 0 0 0 2px #8e8878, 0 10px 24px rgba(0, 0, 0, 0.5);
+  }
+  #page::after { display: none; }
+  #page::before { background-image: none; }
+}
