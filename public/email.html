@@ -13,10 +13,13 @@
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
+<!-- This tool's own face. One stylesheet per app, scoped under
+     [data-app], loaded only by the page it belongs to. -->
+<link rel="stylesheet" href="/app-email.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
-<body>
+<body data-app="email">
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
@@ -77,6 +80,28 @@
 <div class="desk-shell">
 <div class="app-window" id="app">
 <div class="client-title"><h2>Email</h2><a class="win-min" href="#" aria-label="Minimise Email">_</a></div>
+<p class="ol-menu" aria-hidden="true">
+<span>File</span><span>Edit</span><span>View</span><span>Tools</span><span>Message</span><span>Help</span>
+</p>
+<div class="ol-bar" role="toolbar" aria-label="Mail">
+  <button type="button" class="olbtn" id="new">
+    <svg width="24" height="22" viewBox="0 0 24 22" aria-hidden="true"><rect x="1.5" y="3.5" width="17" height="13" fill="#fff" stroke="#4a4a4a" stroke-width="1.4"/><path d="M1.5 3.5L10 11l8.5-7.5" fill="none" stroke="#4a4a4a" stroke-width="1.4"/><path d="M18 14v7M14.5 17.5h7" stroke="#c07000" stroke-width="2.6"/></svg>
+    <span>New address</span>
+  </button>
+  <button type="button" class="olbtn" id="refresh">
+    <svg width="24" height="22" viewBox="0 0 24 22" aria-hidden="true"><path d="M4 6h10l3 3v9H4z" fill="#f5d074" stroke="#7a5a12" stroke-width="1.3"/><path d="M19 4v8M15.5 8.5L19 12l3.5-3.5" fill="none" stroke="#1a5aaa" stroke-width="2.2"/></svg>
+    <span>Send/Recv</span>
+  </button>
+  <span class="olbar-sep"></span>
+  <button type="button" class="olbtn" id="copy">
+    <svg width="24" height="22" viewBox="0 0 24 22" aria-hidden="true"><rect x="2" y="2" width="13" height="15" fill="#fff" stroke="#4a4a4a" stroke-width="1.3"/><rect x="7" y="6" width="13" height="15" fill="#fff" stroke="#4a4a4a" stroke-width="1.3"/></svg>
+    <span>Copy</span>
+  </button>
+  <button type="button" class="olbtn" id="burn">
+    <svg width="24" height="22" viewBox="0 0 24 22" aria-hidden="true"><path d="M5 6h14l-1.5 15h-11z" fill="#d8d8d8" stroke="#4a4a4a" stroke-width="1.3"/><path d="M3 5h18M9 3h6v2H9z" fill="#b8b8b8" stroke="#4a4a4a" stroke-width="1.3"/><path d="M10 9v9M14 9v9" stroke="#8a8a8a" stroke-width="1.3"/></svg>
+    <span>Delete</span>
+  </button>
+</div>
 <div class="app-body">
 <p class="tagline">A disposable address for the forms that do not deserve your real one, and a checker for the mail you already got.</p>
 
@@ -115,34 +140,37 @@ near it.
 </p>
 </details>
 
-<h3>Your address</h3>
-<p id="address-line">
-  <code id="address" class="xmr">open this tab to get one</code>
-</p>
-<p>
-  <button type="button" id="copy">Copy</button>
-  <button type="button" id="new">New address</button>
-  <button type="button" id="burn" class="linkish">burn this inbox</button>
-  <span id="address-note" class="note"></span>
-</p>
-<p class="note" id="model-note">
-This address belongs to this tab and survives a refresh, so a code that is
-mid-flight is not lost to a reload. Only &ldquo;New address&rdquo;,
-&ldquo;burn&rdquo;, or closing the tab hands you a different one. Anything sent
-to it appears below within a few seconds, and each message deletes itself an
-hour after it arrives.
-</p>
+<!-- =================== THE MAIL CLIENT ===================
+     Two panes and a status bar, which is the shape Outlook Express had
+     and the shape every mail program has had since: the folders you can
+     be in on the left, what is in the one you are in on the right. -->
+<div class="ol-client">
+  <div class="ol-folders" aria-label="Folders">
+    <p class="ol-store">Local Folders</p>
+    <ul class="plain">
+      <li class="is-current"><span class="ol-ico ol-ico-in"></span>Inbox <span id="ol-count"></span></li>
+      <li><span class="ol-ico ol-ico-out"></span>Outbox</li>
+      <li><span class="ol-ico ol-ico-sent"></span>Sent Items</li>
+      <li><span class="ol-ico ol-ico-del"></span>Deleted Items</li>
+      <li><span class="ol-ico ol-ico-draft"></span>Drafts</li>
+    </ul>
+  </div>
 
-<hr>
+  <div class="ol-pane">
+    <p class="ol-addr">
+      <label for="address">Your address</label>
+      <code id="address" class="xmr">open this tab to get one</code>
+      <span id="address-note" class="note"></span>
+    </p>
+    <p id="mail-error" class="error" role="alert"></p>
+    <p id="inbox-status" class="status" role="status" aria-live="polite">Waiting for mail...</p>
+    <div id="inbox" class="mail-client"></div>
+  </div>
+</div>
 
-<h3>Inbox</h3>
-<p>
-  <button type="button" id="refresh" class="small">Check for mail now</button>
-  <span class="note">It also checks itself every few seconds while this tab is open.</span>
+<p class="ol-status">
+  <span id="model-note">This address belongs to this tab and survives a refresh. Only New address, Delete, or closing the tab hands you a different one. Each message deletes itself an hour after it arrives.</span>
 </p>
-<p id="mail-error" class="error" role="alert"></p>
-<p id="inbox-status" class="status" role="status" aria-live="polite">Waiting for mail...</p>
-<div id="inbox" class="mail-client"></div>
 
 <details class="notes">
 <summary>The honest notes</summary>

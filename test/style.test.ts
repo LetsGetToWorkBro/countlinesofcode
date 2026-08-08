@@ -432,56 +432,82 @@ describe('the palmtop power lamp sits on its button', () => {
 });
 
 describe('an app may have its own face, and it must stay in its own lane', () => {
-  const css = readFileSync(new URL('../public/app-pdf.css', import.meta.url), 'utf8');
-  const html = readFileSync(new URL('../public/sign.html', import.meta.url), 'utf8');
-  /** Selector lists, ignoring at-rule headers, comments and declarations. */
-  const selectors = css
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .split('}')
-    .map((block) => block.slice(block.lastIndexOf('{') === -1 ? 0 : 0).split('{')[0])
-    .flatMap((head) => head.split(','))
-    .map((s) => s.trim())
-    .filter((s) => s && !s.startsWith('@'));
+  /* The convention: one stylesheet per tool, named app-<tool>.css, loaded only
+   * by that tool's page, and scoped entirely under [data-app="<tool>"].
+   * style.css owns the desktop, the window frame and the taskbar; an app owns
+   * its client area and nothing else. These run over every app stylesheet
+   * there is, so a fifth one is covered the moment it is added. */
+  const FACES = readdirSync('public')
+    .filter((n) => /^app-[a-z]+\.css$/.test(n))
+    .map((n) => ({ file: n, app: n.slice(4, -4) }));
 
-  it('is loaded by its own page and by no other', () => {
-    expect(html).toContain('href="/app-pdf.css"');
-    for (const page of ['index', 'wallet', 'email', 'convert', 'zip']) {
-      const other = readFileSync(new URL(`../public/${page}.html`, import.meta.url), 'utf8');
-      expect(other, `${page}.html loads another app's stylesheet`).not.toContain('app-pdf.css');
-    }
+  /** Which pages carry which marker, read out of the pages themselves. */
+  const PAGES = readdirSync('public')
+    .filter((n) => n.endsWith('.html'))
+    .map((n) => ({ name: n, html: readFileSync(`public/${n}`, 'utf8') }));
+
+  it('has at least the four faces the site has drawn', () => {
+    expect(FACES.map((f) => f.app).sort()).toEqual(['email', 'pdf', 'wallet', 'zip']);
   });
 
-  it('marks the page it belongs to', () => {
-    expect(html).toMatch(/<body[^>]*data-app="pdf"/);
-  });
+  for (const face of FACES) {
+    describe(face.file, () => {
+      const css = readFileSync(`public/${face.file}`, 'utf8');
+      const selectors = css
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .split('}')
+        .flatMap((block) => block.split('{')[0]!.split(','))
+        .map((s2) => s2.trim())
+        .filter((s2) => s2 && !s2.startsWith('@'));
 
-  it('scopes every rule under that marker', () => {
-    // The whole point of a per-app stylesheet is that it cannot reach the
-    // desktop, the window frame or the other fifteen tools. One unscoped
-    // selector and it is just more global CSS with a different filename.
-    const leaks = selectors.filter((s) => !s.startsWith('[data-app="pdf"]'));
-    expect(leaks, 'these selectors escape the app').toEqual([]);
-  });
+      it('is loaded by exactly one page, and that page claims it', () => {
+        const wearing = PAGES.filter((p) => p.html.includes(`href="/${face.file}"`));
+        expect(wearing.map((p) => p.name)).toHaveLength(1);
+        expect(wearing[0]!.html).toMatch(new RegExp(`<body[^>]*data-app="${face.app}"`));
+      });
 
-  it('says how each band hides, since it outranks .hidden', () => {
-    // `.hidden` is one class; every rule here is an attribute plus a class and
-    // beats it. A band given a display without a matching hidden rule cannot
-    // be hidden at all, which is how the drop target once stayed on screen
-    // underneath the document it had just opened.
-    const shown = new Set(
-      [...css.matchAll(/\[data-app="pdf"\]\s+\.([\w-]+)\s*\{[^}]*display:\s*(flex|block|inline-flex)/g)]
-        .map((m) => m[1]),
-    );
-    const hideRule = /\[data-app="pdf"\][^{]*\.hidden[^{]*\{\s*display:\s*none/.exec(css);
-    expect(hideRule, 'no hidden guard in app-pdf.css').not.toBeNull();
-    const guarded = new Set(
-      [...css.matchAll(/\[data-app="pdf"\]\s+\.([\w-]+)\.hidden/g)].map((m) => m[1]),
-    );
-    for (const band of shown) {
-      // Only the ones the markup actually hides need it.
-      const hidden = new RegExp(`class="[^"]*\\b${band}\\b[^"]*hidden|class="[^"]*hidden[^"]*\\b${band}\\b`);
-      if (hidden.test(html)) {
-        expect(guarded.has(band), `.${band} can be given .hidden but has no rule that honours it`).toBe(true);
+      it('scopes every rule under its own marker', () => {
+        // One unscoped selector and this is just global CSS with a longer
+        // filename, free to reach the desktop and the other fifteen tools.
+        const leaks = selectors.filter((s2) => !s2.startsWith(`[data-app="${face.app}"]`));
+        expect(leaks, 'these selectors escape the app').toEqual([]);
+      });
+
+      it('says how each band hides, since it outranks .hidden', () => {
+        // `.hidden` is one class; every rule here is an attribute plus a class
+        // and beats it. A band given a display without a matching hidden rule
+        // cannot be hidden at all, which is how the PDF app's drop target once
+        // stayed on screen underneath the document it had just opened.
+        const html = PAGES.find((p) => p.html.includes(`href="/${face.file}"`))!.html;
+        const shown = new Set(
+          [...css.matchAll(
+            new RegExp(`\\[data-app="${face.app}"\\]\\s+\\.([\\w-]+)\\s*\\{[^}]*display:\\s*(flex|block|inline-flex)`, 'g'),
+          )].map((m) => m[1]!),
+        );
+        const guarded = new Set(
+          [...css.matchAll(
+            new RegExp(`\\[data-app="${face.app}"\\]\\s+\\.([\\w-]+)\\.hidden`, 'g'),
+          )].map((m) => m[1]!),
+        );
+        for (const band of shown) {
+          const canHide = new RegExp(
+            `class="[^"]*\\b${band}\\b[^"]*hidden|class="[^"]*hidden[^"]*\\b${band}\\b`,
+          );
+          if (canHide.test(html)) {
+            expect(guarded.has(band), `.${band} can be given .hidden but no rule honours it`).toBe(true);
+          }
+        }
+      });
+    });
+  }
+
+  it('never lets one app wear the face of another', () => {
+    for (const page of PAGES) {
+      const worn = FACES.filter((f) => page.html.includes(`href="/${f.file}"`));
+      expect(worn.length, `${page.name} loads ${worn.length} app stylesheets`).toBeLessThanOrEqual(1);
+      const marker = /<body[^>]*data-app="([a-z]+)"/.exec(page.html);
+      if (marker && worn.length) {
+        expect(worn[0]!.app, `${page.name} is marked ${marker[1]} but wears ${worn[0]!.app}`).toBe(marker[1]);
       }
     }
   });

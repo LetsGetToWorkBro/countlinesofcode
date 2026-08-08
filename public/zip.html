@@ -13,10 +13,13 @@
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
+<!-- This tool's own face. One stylesheet per app, scoped under
+     [data-app], loaded only by the page it belongs to. -->
+<link rel="stylesheet" href="/app-zip.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
-<body>
+<body data-app="zip">
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
@@ -76,24 +79,49 @@
 <div class="desk-shell">
 <div class="app-window" id="app">
 <div class="client-title"><h2>Open a ZIP, or make one</h2><a class="win-min" href="#" aria-label="Minimise Open a ZIP, or make one">_</a></div>
+<p class="zip-menu" aria-hidden="true">
+<span>File</span><span>Actions</span><span>Options</span><span>Help</span>
+</p>
 <div class="app-body">
-<p class="tagline">In this tab. The archive is never uploaded.</p>
 
-<p class="note">
-Every &ldquo;unzip online&rdquo; site opens your archive on their server. This
-one reads it where it already is, on your machine.
-</p>
-
-<p>
-<button type="button" id="tab-open" class="sheet-tab is-active">Open an archive</button>
-<button type="button" id="tab-make" class="sheet-tab">Make one</button>
-</p>
-
-<hr>
+<!-- =================== THE APPLICATION ===================
+     The big labelled buttons are the whole point: WinZip's toolbar was
+     icons with their names underneath, and it is the thing anyone who
+     used it will recognise before they read a word. -->
+<div class="zipper" id="zipper">
+  <div class="zip-bar" role="toolbar" aria-label="Archive">
+    <button type="button" id="tab-make" class="zbtn">
+      <svg width="26" height="24" viewBox="0 0 26 24" aria-hidden="true"><path d="M2 3h9l2 3h11v15H2z" fill="#f5d074" stroke="#7a5a12"/><path d="M19 9v8M15 13h8" stroke="#1a6a1a" stroke-width="3"/></svg>
+      <span>New</span>
+    </button>
+    <button type="button" id="tab-open" class="zbtn is-active">
+      <svg width="26" height="24" viewBox="0 0 26 24" aria-hidden="true"><path d="M2 3h9l2 3h11v15H2z" fill="#f5d074" stroke="#7a5a12"/><path d="M2 21l4-10h20l-4 10z" fill="#ffe6a8" stroke="#7a5a12"/></svg>
+      <span>Open</span>
+    </button>
+    <span class="zbar-sep"></span>
+    <button type="button" id="extract" class="zbtn">
+      <svg width="26" height="24" viewBox="0 0 26 24" aria-hidden="true"><rect x="3" y="2" width="13" height="17" fill="#fff" stroke="#4a4a4a" stroke-width="1.5"/><path d="M6 6h7M6 9h7M6 12h5" stroke="#8a8a8a" stroke-width="1.4"/><path d="M17 12h6M20 9l3 3-3 3" fill="none" stroke="#1a5aaa" stroke-width="2.2"/></svg>
+      <span>Extract</span>
+    </button>
+    <button type="button" id="extract-all" class="zbtn">
+      <svg width="26" height="24" viewBox="0 0 26 24" aria-hidden="true"><rect x="2" y="3" width="12" height="16" fill="#fff" stroke="#4a4a4a" stroke-width="1.5"/><rect x="6" y="6" width="12" height="16" fill="#fff" stroke="#4a4a4a" stroke-width="1.5"/><path d="M19 13h6M22 10l3 3-3 3" fill="none" stroke="#1a5aaa" stroke-width="2.2"/></svg>
+      <span>Extract All</span>
+    </button>
+    <span class="zbar-sep"></span>
+    <button type="button" id="select-all" class="zbtn">
+      <svg width="26" height="24" viewBox="0 0 26 24" aria-hidden="true"><rect x="3" y="3" width="20" height="18" fill="#fff" stroke="#4a4a4a" stroke-width="1.5"/><path d="M7 12l4 4 8-8" fill="none" stroke="#1a6a1a" stroke-width="3"/></svg>
+      <span>Select All</span>
+    </button>
+    <button type="button" id="select-none" class="zbtn">
+      <svg width="26" height="24" viewBox="0 0 26 24" aria-hidden="true"><rect x="3" y="3" width="20" height="18" fill="#fff" stroke="#4a4a4a" stroke-width="1.5"/></svg>
+      <span>Select None</span>
+    </button>
+    <span class="zbar-gap"></span>
+    <span class="zip-find"><label for="filter">Find</label>
+    <input type="text" id="filter" size="14" placeholder="name or extension"></span>
+  </div>
 
 <div id="mode-open">
-  <h3>1. Open an archive</h3>
-
   <div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open a ZIP archive">
     <strong>Drop a .zip here, or click to choose</strong>
     <span>Nothing is uploaded; it is read inside this tab</span>
@@ -104,25 +132,15 @@ one reads it where it already is, on your machine.
   <p id="error" class="error" role="alert"></p>
 
   <div id="archive" class="hidden">
-    <p id="summary" class="note"></p>
     <div id="problems"></div>
 
-    <hr>
-    <h3>2. Take what you want</h3>
-    <p class="note">
-      <button type="button" id="select-all" class="small">Select all</button>
-      <button type="button" id="select-none" class="small">Select none</button>
-      <label for="filter" class="inline">Filter</label>
-      <input type="text" id="filter" size="18" placeholder="name or extension">
-      <span id="selection"></span>
-    </p>
-
+    <!-- A list view with column headings, which is what an archive is:
+         a table of contents that costs nothing to read, because a ZIP
+         keeps its index at the end of the file. -->
+    <div class="zip-head" aria-hidden="true">
+      <span class="zip-head-pick"></span><span>Name</span><span>Type</span><span>Size</span><span></span>
+    </div>
     <div id="listing" class="zip-listing"></div>
-
-    <p>
-      <button type="button" id="extract">Extract selected</button>
-      <button type="button" id="extract-all">Extract everything as one ZIP</button>
-    </p>
     <p id="progress" class="note"></p>
     <div id="output"></div>
 
@@ -136,8 +154,6 @@ one reads it where it already is, on your machine.
 </div>
 
 <div id="mode-make" class="hidden">
-  <h3>1. Choose the files</h3>
-
   <div id="make-drop" class="dropzone" tabindex="0" role="button" aria-label="Choose files to put in an archive">
     <strong>Drop files here, or click to choose</strong>
     <span>They are packed in this tab; nothing is uploaded</span>
@@ -157,6 +173,19 @@ one reads it where it already is, on your machine.
     <div id="make-output"></div>
   </div>
 </div>
+
+  <p class="zip-status">
+    <span id="selection">No archive open</span>
+    <span id="summary"></span>
+  </p>
+</div>
+
+<p class="tagline">In this tab. The archive is never uploaded.</p>
+
+<p class="note">
+Every &ldquo;unzip online&rdquo; site opens your archive on their server. This
+one reads it where it already is, on your machine.
+</p>
 
 <hr>
 <h3>Is this actually private?</h3>

@@ -1,0 +1,245 @@
+/* 1999.LOC — the wallets' own faces.
+ *
+ * Fourth of the per-app identities, and the odd one: this window holds two
+ * wallets, and they never looked remotely alike, so this file carries two
+ * skins rather than one. Both are scoped under [data-app="wallet"] like
+ * every other app stylesheet here; inside that, .skin-btc and .skin-xmr
+ * take one panel each.
+ *
+ * BITCOIN CORE, as it shipped. Satoshi's original client was a wxWidgets
+ * program that looked like Windows because wxWidgets drew native controls:
+ * grey face, a strip of tabs across the top reading All Transactions /
+ * Sent/Received / Sent / Received, the balance in bold on the right, and
+ * the transaction list as a plain report with Status, Date, Description,
+ * Debit, Credit. The green is the one from the original coin icon.
+ *
+ * MONERO GUI, as it shipped. The other direction entirely: near-black
+ * panels, orange (#ff6600) as the only accent, a left rail of destinations
+ * rather than tabs across the top, and everything set light-on-dark. It is
+ * the first wallet most people met that did not try to look like the
+ * operating system.
+ *
+ * Neither skin touches the window frame or the taskbar; those stay the
+ * desktop's, which is the point. The machine is 1999 and the programs
+ * running on it are whatever they are.
+ */
+
+/* ---- the menu bar, pinned to the window --------------------------- */
+[data-app="wallet"] .app-window > .wl-menu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 2px 4px;
+  background: #d4d0c8;
+  border-bottom: 1px solid #808080;
+  /* Stated, not inherited: outside the panels, so it would otherwise come
+     out in the page's serif. */
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #000000;
+}
+[data-app="wallet"] .app-window > .wl-menu span {
+  padding: 2px 7px;
+  border: 1px solid transparent;
+}
+
+/* ==================================================================
+   BITCOIN CORE
+   ================================================================== */
+
+[data-app="wallet"] .skin-btc {
+  background: #d4d0c8;
+  border: 2px inset #d4d0c8;
+  padding: 8px;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 12px;
+  color: #000000;
+}
+[data-app="wallet"] .skin-btc h3 {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 13px;
+  color: #000000;
+}
+[data-app="wallet"] .skin-btc p,
+[data-app="wallet"] .skin-btc label,
+[data-app="wallet"] .skin-btc li {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+}
+
+/* The tab strip across the top of the window, which is where the client
+   kept All Transactions / Sent/Received / Sent / Received. */
+[data-app="wallet"] .skin-btc .sheet-tab {
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  background: #d4d0c8;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 3px 10px;
+}
+[data-app="wallet"] .skin-btc .sheet-tab.is-active {
+  border-color: #808080 #ffffff #ffffff #808080;
+  background: #ece9d8;
+  font-weight: bold;
+}
+
+/* The balance. Bold, large, and the one green thing in the window. */
+[data-app="wallet"] .skin-btc .xmr-balance {
+  display: inline-block;
+  padding: 3px 10px;
+  background: #ffffff;
+  border: 2px inset #d4d0c8;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 20px;
+  font-weight: bold;
+  color: #1a7a3a;
+}
+
+[data-app="wallet"] .skin-btc code,
+[data-app="wallet"] .skin-btc input[type="text"],
+[data-app="wallet"] .skin-btc textarea {
+  font-family: "Courier New", Courier, monospace;
+  border: 2px inset #d4d0c8;
+  background: #ffffff;
+}
+[data-app="wallet"] .skin-btc button {
+  border: 2px outset #d4d0c8;
+  background: #d4d0c8;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 3px 10px;
+}
+[data-app="wallet"] .skin-btc button:active { border-style: inset; }
+
+/* ==================================================================
+   MONERO GUI
+   ================================================================== */
+
+[data-app="wallet"] .skin-xmr {
+  background: #1e1e1e;
+  border: 2px inset #4a4a4a;
+  padding: 10px;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 12px;
+  color: #d8d8d8;
+}
+[data-app="wallet"] .skin-xmr h3 {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 13px;
+  color: #ff6600;
+  border-bottom: 1px solid #3a3a3a;
+  padding-bottom: 3px;
+}
+[data-app="wallet"] .skin-xmr p,
+[data-app="wallet"] .skin-xmr label,
+[data-app="wallet"] .skin-xmr li,
+[data-app="wallet"] .skin-xmr td,
+[data-app="wallet"] .skin-xmr th {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  color: #d8d8d8;
+}
+[data-app="wallet"] .skin-xmr .note { color: #9a9a9a; }
+[data-app="wallet"] .skin-xmr strong { color: #f0f0f0; }
+[data-app="wallet"] .skin-xmr a { color: #ff9a4d; }
+
+/* The rail. The GUI put its destinations down the left in a column, not
+   across the top, which is most of why it did not look like anything
+   else on the machine. The existing buttons are the destinations, so
+   they are turned on their side rather than replaced. */
+[data-app="wallet"] .skin-xmr > .tool-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin: 0 0 10px 0;
+  padding: 0 0 8px 0;
+  border-bottom: 1px solid #3a3a3a;
+}
+[data-app="wallet"] .skin-xmr .sheet-tab {
+  border: 1px solid #3a3a3a;
+  background: #2a2a2a;
+  color: #c8c8c8;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 4px 12px;
+}
+[data-app="wallet"] .skin-xmr .sheet-tab:hover { background: #333333; color: #ffffff; }
+[data-app="wallet"] .skin-xmr .sheet-tab.is-active {
+  background: #ff6600;
+  border-color: #ff6600;
+  color: #1a1a1a;
+  font-weight: bold;
+}
+
+/* The balance, in the orange, which is the one thing the GUI shouted. */
+[data-app="wallet"] .skin-xmr .xmr-balance {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #141414;
+  border: 1px solid #3a3a3a;
+  border-left: 3px solid #ff6600;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 22px;
+  font-weight: bold;
+  color: #ff6600;
+}
+
+[data-app="wallet"] .skin-xmr code,
+[data-app="wallet"] .skin-xmr input[type="text"],
+[data-app="wallet"] .skin-xmr input[type="number"],
+[data-app="wallet"] .skin-xmr input[type="password"],
+[data-app="wallet"] .skin-xmr textarea,
+[data-app="wallet"] .skin-xmr select {
+  font-family: "Courier New", Courier, monospace;
+  border: 1px solid #3a3a3a;
+  background: #141414;
+  color: #e8e8e8;
+}
+[data-app="wallet"] .skin-xmr button {
+  border: 1px solid #4a4a4a;
+  background: #333333;
+  color: #e8e8e8;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+[data-app="wallet"] .skin-xmr button:hover:not(:disabled) { background: #3d3d3d; }
+[data-app="wallet"] .skin-xmr button:active:not(:disabled) { background: #ff6600; color: #1a1a1a; }
+[data-app="wallet"] .skin-xmr button:disabled { opacity: 0.45; cursor: default; }
+
+/* The boxes the tool draws into. Left dark rather than inheriting the
+   page's white, or a warning in the middle of the wallet is a white
+   rectangle with a hole punched in the window. */
+[data-app="wallet"] .skin-xmr .notice-box,
+[data-app="wallet"] .skin-xmr details,
+[data-app="wallet"] .skin-xmr table {
+  background: #242424;
+  border-color: #3a3a3a;
+  color: #d8d8d8;
+}
+[data-app="wallet"] .skin-xmr .notice-box strong { color: #ffb066; }
+/* A disclosure heading inherits its colour from the page, which on a dark
+   panel means black text on near-black. Every one of these opens something
+   worth reading, so they are the last thing that should be invisible. */
+[data-app="wallet"] .skin-xmr summary,
+[data-app="wallet"] .skin-xmr details > summary strong { color: #e8e8e8; }
+[data-app="wallet"] .skin-xmr .notice-box > summary,
+[data-app="wallet"] .skin-xmr .notice-box > summary strong { color: #ffb066; }
+[data-app="wallet"] .skin-xmr hr { border-color: #3a3a3a; }
+[data-app="wallet"] .skin-xmr .status { color: #8fd08f; }
+[data-app="wallet"] .skin-xmr .error { color: #ff8a8a; }
+
+/* ==================================================================
+   RESPONSIVE
+   ================================================================== */
+
+@media (max-width: 700px) {
+  [data-app="wallet"] .skin-btc,
+  [data-app="wallet"] .skin-xmr { padding: 6px; }
+  [data-app="wallet"] .skin-xmr .xmr-balance { font-size: 18px; }
+  [data-app="wallet"] .skin-btc .xmr-balance { font-size: 17px; }
+  [data-app="wallet"] .app-window > .wl-menu span { padding: 2px 5px; }
+}

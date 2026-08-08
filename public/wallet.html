@@ -13,10 +13,14 @@
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
+<!-- This tool's own face. One stylesheet per app, scoped under
+     [data-app]; this one carries two skins, because the window holds
+     two wallets and they never looked alike. -->
+<link rel="stylesheet" href="/app-wallet.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
-<body>
+<body data-app="wallet">
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
@@ -77,6 +81,9 @@
 <div class="desk-shell">
 <div class="app-window" id="app">
 <div class="client-title"><h2>Wallets</h2><a class="win-min" href="#" aria-label="Minimise Wallets">_</a></div>
+<p class="wl-menu" aria-hidden="true">
+<span>File</span><span>Settings</span><span>Help</span>
+</p>
 <div class="app-body">
 <p class="tagline">Monero and Bitcoin wallets that live in this tab, and an address checker beside them. Keys never leave the browser.</p>
 
@@ -88,7 +95,7 @@
 </p>
 
 <!-- ================================ WALLET ================================ -->
-<div data-panel="wallet">
+<div data-panel="wallet" class="skin-xmr">
 
 <p class="tagline">A real wallet, in this tab. Create it, watch it, spend from it.</p>
 
@@ -296,7 +303,7 @@ not written it down, you have not made a wallet, you have made a countdown.
 </div>
 
 <!-- ================================ BITCOIN ================================ -->
-<div data-panel="btc" class="hidden">
+<div data-panel="btc" class="skin-btc hidden">
 
 <p class="tagline">A Bitcoin wallet in this tab: 12 words, bc1 addresses, nothing installed.</p>
 

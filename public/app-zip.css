@@ -1,0 +1,243 @@
+/* 1999.LOC — the archive tool's own face: WinZip.
+ *
+ * Second of the per-app identities, same convention as app-pdf.css: one
+ * stylesheet per tool, loaded only by that tool's page, scoped entirely
+ * under [data-app="zip"] so it can never reach the desktop, the window
+ * frame or the other fifteen tools.
+ *
+ * What made WinZip WinZip, in order of how quickly you would name it:
+ *
+ *   1. The toolbar. Big square buttons with a picture on top and the
+ *      command's name underneath, in a row across the whole window. No
+ *      other program of the era did it at quite that size, and it is
+ *      what anyone who used it will recognise before reading a word.
+ *   2. The list view. Name, Type, Size, Ratio, Packed, Path, with
+ *      sortable headings and alternating rows.
+ *   3. The status bar. "Selected 0 files, 0 bytes" on the left and the
+ *      archive's totals on the right, always both, always that phrasing.
+ *
+ * Windows grey here, not Acrobat grey: #c0c0c0 and #ece9d8 are different
+ * colours and the two applications never looked alike because of it.
+ */
+
+/* ==================================================================
+   THE FRAME
+   ================================================================== */
+
+[data-app="zip"] .zipper {
+  border: 2px inset #c0c0c0;
+  background: #c0c0c0;
+  margin: 0 0 10px 0;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  color: #000000;
+}
+
+/* ---- the menu bar, pinned to the window ---------------------------
+   Under the title bar and outside the tool's body, same as the PDF
+   app: a menu belongs to the window. */
+[data-app="zip"] .app-window > .zip-menu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 2px 4px;
+  background: #c0c0c0;
+  border-bottom: 1px solid #808080;
+  /* Stated, not inherited: this sits outside .zipper, so it would
+     otherwise come out in the page's serif. */
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #000000;
+}
+[data-app="zip"] .app-window > .zip-menu span {
+  padding: 2px 7px;
+  border: 1px solid transparent;
+}
+
+/* ---- the toolbar --------------------------------------------------- */
+[data-app="zip"] .zip-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 3px 4px;
+  background: #c0c0c0;
+  border-bottom: 1px solid #808080;
+}
+
+[data-app="zip"] .zbar-sep {
+  width: 0;
+  height: 42px;
+  margin: 0 5px;
+  border-left: 1px solid #808080;
+  border-right: 1px solid #ffffff;
+}
+[data-app="zip"] .zbar-gap { flex: 1; }
+
+/* The button. Picture above, name below, and flat until you point at
+   it, which is the shape the whole application is remembered by. */
+[data-app="zip"] .zbtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  min-width: 52px;
+  padding: 3px 4px 2px 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  color: #000000;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+[data-app="zip"] .zbtn:hover:not(:disabled) {
+  border-color: #ffffff #808080 #808080 #ffffff;
+}
+[data-app="zip"] .zbtn:active:not(:disabled),
+[data-app="zip"] .zbtn.is-active {
+  border-color: #808080 #ffffff #ffffff #808080;
+  background: #b4b4b4;
+}
+[data-app="zip"] .zbtn:disabled { opacity: 0.4; cursor: default; }
+[data-app="zip"] .zbtn:focus-visible { outline: 1px dotted #000000; outline-offset: -3px; }
+[data-app="zip"] .zbtn svg { display: block; }
+
+/* Kept together and kept off the wrap: a Find box that drops onto its own
+   line reads as a second toolbar rather than the end of the first. */
+[data-app="zip"] .zip-find {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  align-self: center;
+  padding-right: 4px;
+}
+[data-app="zip"] .zip-bar input[type="text"] {
+  align-self: center;
+  flex: 0 0 auto;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 2px 3px;
+  border: 1px solid;
+  border-color: #808080 #ffffff #ffffff #808080;
+  background: #ffffff;
+}
+
+/* ==================================================================
+   THE LIST VIEW
+   ================================================================== */
+
+/* Column headings, sized to match the row grid in style.css exactly:
+   auto 1fr 70px 80px 52px. A heading a column wide off is worse than
+   no heading, so these two live or die together. */
+[data-app="zip"] .zip-head {
+  display: grid;
+  grid-template-columns: auto 1fr 70px 80px 52px;
+  gap: 8px;
+  padding: 2px 6px;
+  background: #c0c0c0;
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  border-bottom: 1px solid #808080;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+}
+[data-app="zip"] .zip-head span {
+  padding: 1px 3px;
+  border-right: 1px solid #808080;
+}
+[data-app="zip"] .zip-head span:last-child { border-right: none; }
+/* The first cell sits over the row's tick box and names nothing. */
+[data-app="zip"] .zip-head-pick { min-width: 13px; }
+
+[data-app="zip"] .zip-listing {
+  border: 1px solid;
+  border-color: #808080 #ffffff #ffffff #808080;
+  background: #ffffff;
+  max-height: 42vh;
+}
+
+/* ---- the status bar ------------------------------------------------
+   Two cells, always both, because that is how it read: what you have
+   picked on the left and what the archive holds on the right. */
+[data-app="zip"] .zip-status {
+  display: flex;
+  margin: 0;
+  background: #c0c0c0;
+  border-top: 1px solid #ffffff;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  color: #1a1a1a;
+}
+[data-app="zip"] .zip-status > span {
+  flex: 1;
+  padding: 3px 8px;
+  border: 1px solid;
+  border-color: #808080 #ffffff #ffffff #808080;
+  margin: 2px;
+  min-height: 1.3em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- the drop target ----------------------------------------------
+   Inside the frame rather than floating above the page, so an empty
+   archive window still looks like the application. */
+[data-app="zip"] #drop,
+[data-app="zip"] #make-drop {
+  margin: 0;
+  border: 1px dashed #808080;
+  background: #ffffff;
+}
+
+/* ---- everything else the tool draws --------------------------------
+   Kept in the application's type rather than the page's serif, or the
+   window reads as a document with buttons on it. */
+[data-app="zip"] .zipper #status,
+[data-app="zip"] .zipper #error,
+[data-app="zip"] .zipper #progress,
+[data-app="zip"] .zipper #problems,
+[data-app="zip"] .zipper #output,
+[data-app="zip"] .zipper #make-output,
+[data-app="zip"] .zipper #basket-summary,
+[data-app="zip"] .zipper #build-note,
+[data-app="zip"] .zipper button,
+[data-app="zip"] .zipper label {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+}
+[data-app="zip"] .zipper #mode-open,
+[data-app="zip"] .zipper #mode-make { padding: 6px; }
+[data-app="zip"] .zipper #preview-box { padding: 0 6px 6px 6px; }
+
+/* ==================================================================
+   RESPONSIVE
+   ================================================================== */
+
+@media (max-width: 700px) {
+  /* Six labelled buttons will not sit in a row on a phone, and the
+     labels are the half worth keeping: an unlabelled toolbar icon is a
+     guess. So the row scrolls sideways rather than wrapping into a
+     block that pushes the archive off the screen. */
+  [data-app="zip"] .zip-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  [data-app="zip"] .zbtn { flex: 0 0 auto; }
+  [data-app="zip"] .zbar-gap { display: none; }
+  [data-app="zip"] .zip-find { display: none; }
+  [data-app="zip"] .zip-status { flex-direction: column; }
+  /* Type is the column to lose: it is a guess from the extension, which
+     is already the end of the name in the column beside it. */
+  [data-app="zip"] .zip-head,
+  [data-app="zip"] .zip-listing .zip-row { grid-template-columns: auto 1fr 70px 52px; }
+  [data-app="zip"] .zip-head span:nth-child(3),
+  [data-app="zip"] .zip-listing .zip-row .zip-kind { display: none; }
+}
