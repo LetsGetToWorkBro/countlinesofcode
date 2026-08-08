@@ -1110,13 +1110,49 @@ describe('the wallets get out of their own way', () => {
 
   it('folds the evidence instead of leading with it', () => {
     // The nine checks are the reason to trust the generator, not the first
-    // thing to read on the way to the box you paste an address into.
-    const checker = panel('addresses');
-    const proof = checker.indexOf('id="proof-checks"');
-    const box = checker.indexOf('id="check-text"');
+    // thing to read on the way to the tool.
+    const paper = panel('addresses');
+    const proof = paper.indexOf('id="proof-checks"');
     expect(proof, 'the proof panel is gone').toBeGreaterThan(-1);
-    expect(checker.slice(0, proof), 'the proof table is not folded').toContain('<details');
-    expect(box, 'the address box is gone').toBeGreaterThan(-1);
+    expect(paper.slice(0, proof), 'the proof table is not folded').toContain('<details');
+    expect(paper.indexOf('id="mode-make"'), 'the generator is gone').toBeGreaterThan(-1);
+  });
+
+  it('builds the checker into each wallet instead of giving it a tab', () => {
+    /* Checking an address is something you want while you are looking at a
+     * wallet, and as a third tab it meant leaving the one you were in. It
+     * handles no secrets and makes no request, so it can simply sit in the
+     * corner of both, and both had most of a display of nothing beside
+     * them. */
+    for (const [name, prefix] of [['wallet', 'xmr-'], ['btc', 'btc-']] as const) {
+      const body = panel(name);
+      expect(body, `${name} has no checker`).toContain(`id="${prefix}check-text"`);
+      expect(body, `${name}'s checker has no button`).toContain(`id="${prefix}check"`);
+      expect(body, `${name}'s checker has nowhere to answer`).toContain(`id="${prefix}check-result"`);
+      expect(body, `${name} does not lay one out beside the wallet`).toContain('class="wl-side"');
+    }
+    // And it is no longer a destination of its own.
+    expect(html, 'the old single-instance checker is still here').not.toContain('id="check-text"');
+    expect(html, 'the checker still has a tab').not.toContain('id="tab-check"');
+    expect(html, 'the tab is still named for the checker')
+      .not.toMatch(/data-tab="addresses"[^>]*>Check an address</);
+  });
+
+  it('lays the wallet and the checker side by side once there is room', () => {
+    expect(css).toMatch(/@media \(min-width: 900px\) \{\s*\[data-app="wallet"\] \.wl-split \{[^}]*grid-template-columns/);
+    // One column on a phone: the wallet first, the checker under it.
+    expect(css).toMatch(/\[data-app="wallet"\] \.wl-split \{ display: block; \}/);
+  });
+
+  it('states both ends of a colour on the dark panel', () => {
+    /* A table's row headings carry a #f0f0f0 background from the base
+     * stylesheet. That was invisible while this table only ever appeared on
+     * white paper; on the Monero panel it is a light heading colour over a
+     * light background, which is a row nobody can read. */
+    const rule = /\[data-app="wallet"\] \.skin-xmr th\[scope="row"\] \{([^}]*)\}/.exec(css);
+    expect(rule, 'the dark panel does not restate the row heading').not.toBeNull();
+    expect(rule![1]).toMatch(/background:\s*#/);
+    expect(rule![1]).toMatch(/color:\s*#/);
   });
 
   it('keeps the controls to a measure the window no longer sets', () => {

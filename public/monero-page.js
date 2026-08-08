@@ -88,11 +88,52 @@
       '</table>' + (extra || '');
   }
 
-  function check() {
-    clearError();
-    ready().then(function () {
-      showParsed($('check-result'), xmr.parseAddress($('check-text').value));
-    }).catch(function (err) { fail(err.message); });
+  /* The checker, bound wherever it is put.
+   *
+   * It used to be one instance with fixed ids, because it was one tab. It
+   * lives inside each wallet now, beside the wallet it belongs to, so the
+   * binding takes a prefix and quietly does nothing when that copy is not
+   * on the page. Checking handles no secrets and makes no request, which is
+   * exactly why it can sit in the corner of a wallet: the worst it can do
+   * is tell you an address is fine when you mistyped it into the box. */
+  function bindChecker(prefix) {
+    var box = $(prefix + 'check-text');
+    var button = $(prefix + 'check');
+    var result = $(prefix + 'check-result');
+    if (!box || !button || !result) return;
+
+    /* Its own status and its own failures. ready() and fail() report into
+       the paper wallet's status line, which is in a panel that is not on
+       screen when you are looking at a wallet: an engine that failed to
+       load would have said so somewhere nobody was looking, and the box
+       would just sit there. */
+    function run() {
+      clearError();
+      if (!box.value.trim()) { result.innerHTML = ''; return; }
+      result.innerHTML = '<p class="note">Checking...</p>';
+      ready().then(function () {
+        showParsed(result, xmr.parseAddress(box.value));
+      }).catch(function (err) {
+        fail(err.message);
+        result.innerHTML = '<p class="error"><strong>Could not check it.</strong> ' +
+          esc(err.message) + '</p>';
+      });
+    }
+
+    button.addEventListener('click', run);
+    // Run on paste rather than making people find the button. The button
+    // stays for input that was typed.
+    box.addEventListener('paste', function () { setTimeout(run, 0); });
+
+    var ours = $(prefix + 'check-ours');
+    if (ours) {
+      ours.addEventListener('click', function () {
+        ready().then(function () {
+          box.value = xmr.KNOWN_ADDRESS;
+          run();
+        }).catch(function (err) { fail(err.message); });
+      });
+    }
   }
 
   // ---------------------------------------------------------- generating
@@ -221,7 +262,10 @@
 
   // -------------------------------------------------------------- wiring
 
-  var TABS = ['check', 'make', 'seed', 'watch'];
+  /* The paper wallet's own modes. 'check' was the first of them and is
+     gone from here: the checker is in each wallet now, where an address you
+     want checked actually turns up. */
+  var TABS = ['make', 'seed', 'watch'];
   TABS.forEach(function (name) {
     $('tab-' + name).addEventListener('click', function () {
       clearError();
@@ -232,19 +276,7 @@
     });
   });
 
-  $('check').addEventListener('click', check);
-  // Checking an address handles no secrets and makes no request, so run it on
-  // paste rather than making people find the button. The button stays for typed
-  // input.
-  $('check-text').addEventListener('paste', function () {
-    setTimeout(check, 0);
-  });
-  $('check-ours').addEventListener('click', function () {
-    ready().then(function () {
-      $('check-text').value = xmr.KNOWN_ADDRESS;
-      check();
-    }).catch(function (err) { fail(err.message); });
-  });
+  bindChecker('xmr-');
   $('generate').addEventListener('click', generate);
   $('mx-restore').addEventListener('click', restore);
   $('watch').addEventListener('click', watch);

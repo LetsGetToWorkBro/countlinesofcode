@@ -205,6 +205,42 @@
    inside its own box rather than pushing the window sideways. */
 [data-app="wallet"] .wl-proof #proof-checks { overflow-x: auto; }
 
+/* ---- the wallet, and the checker beside it -------------------------
+   The address checker was a third tab, which put it beside the wallets
+   rather than in them: checking an address is something you want to do
+   while you are looking at a wallet, and it meant leaving the one you
+   were in. It handles no secrets and makes no request, so it costs
+   nothing to leave sitting open, and both wallets had most of a display
+   of nothing to the right of them.
+
+   One column on a phone, where the wallet comes first and the checker is
+   under it. Two side by side once there is room, which on a case that
+   fills the display is nearly always. */
+[data-app="wallet"] .wl-split { display: block; }
+@media (min-width: 900px) {
+  [data-app="wallet"] .wl-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 20px;
+    align-items: start;
+  }
+}
+[data-app="wallet"] .wl-main { min-width: 0; }
+[data-app="wallet"] .wl-side { min-width: 0; }
+[data-app="wallet"] .wl-side h3 { margin-top: 0; }
+/* The panel has its own width, so the shared 620px measure would be a
+   second cap inside a narrower box and leave the text short of the edge. */
+[data-app="wallet"] .wl-side p,
+[data-app="wallet"] .wl-side details,
+[data-app="wallet"] .wl-side .notice-box { max-width: none; }
+[data-app="wallet"] .wl-side textarea { max-width: none; }
+@media (min-width: 900px) {
+  /* Boxed on a wide screen, where it reads as a panel of the window. On a
+     phone it is simply the next thing down the page and a border round it
+     is one more line to look at. */
+  [data-app="wallet"] .wl-side { padding: 10px; }
+}
+
 /* The skin is the program, so it takes the whole window rather than
    stopping at its last paragraph and leaving the desktop showing under
    it. */
@@ -263,6 +299,18 @@
   color: #000000;
 }
 [data-app="wallet"] .skin-btc .wl-hint-mark { background: #000080; color: #ffffff; }
+
+/* The checker beside the wallet, as a groupbox: the sunken panel a
+   wxWidgets program put a related set of controls in. */
+@media (min-width: 900px) {
+  [data-app="wallet"] .skin-btc .wl-side {
+    background: #ece9d8;
+    border: 2px groove #ffffff;
+  }
+}
+[data-app="wallet"] .skin-btc .wl-side h3 { color: #000080; }
+[data-app="wallet"] .skin-btc .btc-verdict.is-ok strong { color: #1a7a3a; }
+[data-app="wallet"] .skin-btc .btc-verdict.is-bad strong { color: #a01010; }
 
 /* The balance. Bold, large, and the one green thing in the window. */
 [data-app="wallet"] .skin-btc .xmr-balance {
@@ -363,6 +411,18 @@
 }
 [data-app="wallet"] .skin-xmr .wl-hint-mark { background: #ff6600; color: #1a1a1a; }
 
+/* The checker beside the wallet, in the GUI's grammar: a slightly lifted
+   panel with the orange marking its edge, the same way the hint strip and
+   the balance are marked. */
+@media (min-width: 900px) {
+  [data-app="wallet"] .skin-xmr .wl-side {
+    background: #242424;
+    border: 1px solid #3a3a3a;
+    border-top: 2px solid #ff6600;
+  }
+}
+[data-app="wallet"] .skin-xmr .wl-side h3 { border-bottom-color: #3a3a3a; }
+
 /* The balance, in the orange, which is the one thing the GUI shouted. */
 [data-app="wallet"] .skin-xmr .xmr-balance {
   display: inline-block;
@@ -411,6 +471,18 @@
   color: #d8d8d8;
 }
 [data-app="wallet"] .skin-xmr .notice-box strong { color: #ffb066; }
+/* A table's row headings come with a #f0f0f0 background from the base
+   stylesheet, which was invisible while this table only ever appeared on
+   white paper. The checker moved into the wallet, and on a near-black
+   panel a light heading colour over a light background is a row you
+   cannot read at all. Both ends stated. */
+[data-app="wallet"] .skin-xmr th[scope="row"] {
+  background: #1a1a1a;
+  color: #c8c8c8;
+}
+[data-app="wallet"] .skin-xmr td { background: #242424; }
+[data-app="wallet"] .skin-xmr th,
+[data-app="wallet"] .skin-xmr td { border-color: #3a3a3a; }
 /* A disclosure heading inherits its colour from the page, which on a dark
    panel means black text on near-black. Every one of these opens something
    worth reading, so they are the last thing that should be invisible. */

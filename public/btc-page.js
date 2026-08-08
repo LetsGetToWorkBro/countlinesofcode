@@ -397,6 +397,46 @@
     field.addEventListener('change', update);
   }
 
+  /* The checker, in the corner of the wallet.
+   *
+   * The Monero side had one as a tab of its own and this side had none, so
+   * an address you wanted to look at before sending to it meant leaving the
+   * wallet you were in. It handles no secrets and makes no request, which
+   * is why it can sit here: decoding is the whole check, and a wrong
+   * character fails the bech32 or base58 checksum. */
+  function bindChecker() {
+    var box = $('btc-check-text');
+    var button = $('btc-check');
+    var result = $('btc-check-result');
+    if (!box || !button || !result) return;
+
+    function run() {
+      if (!box.value.trim()) { result.innerHTML = ''; return; }
+      if (!kit) {
+        result.innerHTML = '<p class="error"><strong>Could not check it.</strong> ' +
+          'The wallet engine has not loaded.</p>';
+        return;
+      }
+      var verdict = kit.checkBtcAddress(box.value);
+      if (verdict.state === 'ok') {
+        result.innerHTML = '<p class="btc-verdict is-ok"><strong>That is a ' + esc(verdict.note) +
+          '.</strong> The checksum matches, so it has not been corrupted in transit.</p>' +
+          '<p class="note">It does not tell you it is the address you meant to pay. ' +
+          'Compare the first and last few characters against wherever you got it.</p>';
+      } else {
+        /* The verdict's own note for a bad address is "not a valid Bitcoin
+           address", which is what the heading already says, so printing
+           both gave the same sentence twice. */
+        result.innerHTML = '<p class="btc-verdict is-bad"><strong>Not a valid Bitcoin address.</strong> ' +
+          'Nothing decodes it: bech32 and base58 both reject it, which usually means a ' +
+          'dropped or mistyped character. Copy it again from the source.</p>';
+      }
+    }
+
+    button.addEventListener('click', run);
+    box.addEventListener('paste', function () { setTimeout(run, 0); });
+  }
+
   // ---------------------------------------------------- tabs and sections
 
   var MODES = ['create', 'restore', 'watch'];
@@ -445,6 +485,7 @@
       syncPrivacyNote();
       markAddress('btc-send-address', 'btc-addr-check', kit.checkBtcAddress);
       markAddress('btc-zpub-in', 'btc-zpub-check', kit.checkExtendedKey);
+      bindChecker();
     }, function () {
       setupFail('The wallet engine did not load. Reload the page.');
     });

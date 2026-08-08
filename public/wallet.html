@@ -89,7 +89,7 @@
     <button type="button" data-pick=".wl-switch [data-tab=&quot;wallet&quot;]">Open the Monero wallet</button>
     <button type="button" data-pick=".wl-switch [data-tab=&quot;btc&quot;]">Open the Bitcoin wallet</button>
     <span class="menu-rule"></span>
-    <button type="button" data-pick=".wl-switch [data-tab=&quot;addresses&quot;]">Check an address</button>
+    <button type="button" data-pick=".wl-switch [data-tab=&quot;addresses&quot;]">Open the paper wallet tools</button>
   </span></span>
 <span class="menu"><button type="button" class="menu-title">Help</button>
   <span class="menu-drop">
@@ -108,7 +108,7 @@
 <button type="button" class="sheet-tab" data-tab="btc" role="tab" aria-selected="false">Bitcoin</button>
 <span class="wl-switch-sep"></span>
 <span class="wl-switch-label">Tools</span>
-<button type="button" class="sheet-tab" data-tab="addresses" role="tab" aria-selected="false">Check an address</button>
+<button type="button" class="sheet-tab" data-tab="addresses" role="tab" aria-selected="false">Paper wallet</button>
 
 <!-- The connection, right here, next to the tools.
      It used to be a folded box near the bottom of each wallet: the one
@@ -157,6 +157,9 @@ Make a new wallet or open one you already have. Write the seed phrase down:
 nothing is stored here, so it is the only way back in.</p>
 
 
+
+<div class="wl-split">
+<div class="wl-main">
 
 <div id="setup">
   <p>
@@ -292,6 +295,37 @@ nothing is stored here, so it is the only way back in.</p>
   </div>
 </div>
 
+
+</div><!-- /.wl-main -->
+
+<!-- The checker, in the corner of the wallet rather than a tab of its own.
+     It handles no secrets and makes no request, so it costs nothing to leave
+     it open beside the wallet, and an address you want checked turns up
+     while you are in a wallet rather than while you are hunting for a
+     tool. -->
+<aside class="wl-side">
+  <h3>Check an address</h3>
+  <p class="note">Paste one to see whether its checksum holds. Handles no secrets.</p>
+  <p><textarea id="xmr-check-text" rows="3" spellcheck="false" placeholder="4... or 8..."></textarea></p>
+  <p>
+    <button type="button" id="xmr-check">Check it</button>
+    <button type="button" id="xmr-check-ours" class="small">Use the donation address</button>
+  </p>
+  <div id="xmr-check-result"></div>
+  <details class="notice-box">
+    <summary><strong>What a valid checksum does and does not tell you.</strong></summary>
+    <p class="note">
+      It tells you the address was not corrupted between where it was written and
+      where you pasted it: no dropped character, no transcription slip. It does
+      <em>not</em> tell you it is the address you were meant to send to. Malware
+      that swaps addresses on the clipboard swaps in one that checksums perfectly.
+      The defence against that is comparing the first and last several characters
+      against the source, out loud or on a different device.
+    </p>
+    </details>
+</aside>
+</div><!-- /.wl-split -->
+
 <details class="notes">
 <summary>The honest notes</summary>
 <ul class="plain">
@@ -315,6 +349,9 @@ Make a new wallet or restore one from its 12 words. Bitcoin's chain is public,
 so the explorer above can group your addresses together.</p>
 
 
+
+<div class="wl-split">
+<div class="wl-main">
 
 <div id="btc-setup">
   <p>
@@ -441,6 +478,36 @@ so the explorer above can group your addresses together.</p>
   </div>
 </div>
 
+
+</div><!-- /.wl-main -->
+
+<!-- The checker, in the corner of the wallet rather than a tab of its own.
+     It handles no secrets and makes no request, so it costs nothing to leave
+     it open beside the wallet, and an address you want checked turns up
+     while you are in a wallet rather than while you are hunting for a
+     tool. -->
+<aside class="wl-side">
+  <h3>Check an address</h3>
+  <p class="note">Paste one to see whether its checksum holds. Handles no secrets.</p>
+  <p><textarea id="btc-check-text" rows="3" spellcheck="false" placeholder="bc1... or 1... or 3..."></textarea></p>
+  <p>
+    <button type="button" id="btc-check">Check it</button>
+  </p>
+  <div id="btc-check-result"></div>
+  <details class="notice-box">
+    <summary><strong>What a valid checksum does and does not tell you.</strong></summary>
+    <p class="note">
+      It tells you the address was not corrupted between where it was written and
+      where you pasted it: no dropped character, no transcription slip. It does
+      <em>not</em> tell you it is the address you were meant to send to. Malware
+      that swaps addresses on the clipboard swaps in one that checksums perfectly.
+      The defence against that is comparing the first and last several characters
+      against the source, out loud or on a different device.
+    </p>
+    </details>
+</aside>
+</div><!-- /.wl-split -->
+
 <details class="notes">
 <summary>The honest notes</summary>
 <ul class="plain">
@@ -461,14 +528,14 @@ so the explorer above can group your addresses together.</p>
 <div data-panel="addresses" class="hidden">
 
 <p class="wl-hint"><span class="wl-hint-mark">i</span>
-Paste an address to check it. Checking and restoring handle no secrets and are
-safe for anything; making a wallet here is the part that needs care.</p>
+Make a paper wallet, or read one back from its phrase or its view key. Checking
+an address moved into the wallets, where an address turns up. Restoring and
+watching handle no secrets; making a wallet here is the part that needs care.</p>
 
 
 
 <p>
-<button type="button" id="tab-check" class="sheet-tab is-active">Check an address</button>
-<button type="button" id="tab-make" class="sheet-tab">Make a wallet</button>
+<button type="button" id="tab-make" class="sheet-tab is-active">Make a wallet</button>
 <button type="button" id="tab-seed" class="sheet-tab">Restore a phrase</button>
 <button type="button" id="tab-watch" class="sheet-tab">Watch a wallet</button>
 </p>
@@ -488,33 +555,8 @@ to be opened when you want it, not read before you can reach the tool.
 </details>
 
 <!-- ---------------------------------------------------------- check -->
-<div id="mode-check">
-  <h3>Check an address</h3>
-  <p class="note">
-    Handles no secrets, so this part is safe whatever you think of the rest.
-  </p>
-  <p><textarea id="check-text" rows="3" spellcheck="false" placeholder="4... or 8..."></textarea></p>
-  <p>
-    <button type="button" id="check">Check it</button>
-    <button type="button" id="check-ours" class="small">Use the donation address</button>
-  </p>
-  <div id="check-result"></div>
-
-  <details class="notice-box">
-  <summary><strong>What a valid checksum does and does not tell you.</strong></summary>
-  <p class="note">
-    It tells you the address was not corrupted between where it was written and
-    where you pasted it: no dropped character, no transcription slip. It does
-    <em>not</em> tell you it is the address you were meant to send to. Malware
-    that swaps addresses on the clipboard swaps in one that checksums perfectly.
-    The defence against that is comparing the first and last several characters
-    against the source, out loud or on a different device.
-  </p>
-  </details>
-</div>
-
 <!-- ----------------------------------------------------------- make -->
-<div id="mode-make" class="hidden">
+<div id="mode-make">
   <h3>Make a paper wallet</h3>
 
   <details class="notice-box">
