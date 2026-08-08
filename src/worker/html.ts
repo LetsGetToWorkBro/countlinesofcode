@@ -108,8 +108,8 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
   // and page operations (merge, split, reorder, rotate), on tabs. /pages.html
   // redirects to /sign.html.
   { href: '/sign.html', label: 'pdf', id: 'pdf', group: 'documents' },
-  { href: '/convert.html', label: 'convert', id: 'convert', group: 'documents' },
-  { href: '/sheet.html', label: 'sheets', id: 'sheets', group: 'documents' },
+  { href: '/convert.html', label: 'pdf \u2194 word', id: 'convert', group: 'documents' },
+  { href: '/sheet.html', label: 'excel \u2194 csv', id: 'sheets', group: 'documents' },
   // The archive tool sits with the documents because on this site it usually is
   // one: a .docx, .xlsx and .epub are all ZIPs, and it opens them.
   { href: '/zip.html', label: 'zip', id: 'zip', group: 'documents' },

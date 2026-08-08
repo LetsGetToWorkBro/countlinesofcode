@@ -2338,7 +2338,8 @@ body {
 }
 
 /* ---- the power button ---------------------------------------------- */
-.chin-power {
+/* Same boundary for the power button, and for the same reason. */
+#page .chin-power {
   position: absolute;
   right: 18px;
   bottom: 15px;
@@ -2354,7 +2355,7 @@ body {
     inset 0 -2px 3px rgba(0, 0, 0, 0.3),
     0 2px 3px rgba(0, 0, 0, 0.45);
 }
-.chin-power:active {
+#page .chin-power:active {
   /* Pressed in, and the shadow under it goes with it. A button that
      changes colour but does not move has not been pressed. */
   transform: translateY(1px);
@@ -2362,7 +2363,7 @@ body {
     inset 0 2px 4px rgba(0, 0, 0, 0.45),
     0 1px 1px rgba(0, 0, 0, 0.4);
 }
-.chin-power:focus-visible { outline: 2px solid #7fd3ff; outline-offset: 2px; }
+#page .chin-power:focus-visible { outline: 2px solid #7fd3ff; outline-offset: 2px; }
 
 .chin-led {
   position: absolute;
@@ -2408,12 +2409,28 @@ body {
    machine is a handheld with a chin deep enough to hold them. */
 .chin-dpad, .chin-keys { display: none; }
 
-.chin-dir, .chin-key {
+/* THE CHIN BELONGS TO THE MACHINE, NOT TO THE PROGRAM.
+ *
+ * Written with #page in the selector, which is not tidiness. An app face
+ * styles its controls with `[data-app="x"] button`, an attribute plus an
+ * element, and the chin is inside #page and therefore inside [data-app]:
+ * every one of those rules was reaching the d-pad and giving it a beige
+ * 2px outset border and 3px 12px of padding. The directions came out as
+ * little raised rectangles instead of a moulded pad, and on the terminal
+ * face they came out black.
+ *
+ * An id outranks anything an app stylesheet is allowed to use, so this is
+ * the one place the boundary can be stated once and hold for every face
+ * that gets written later. */
+#page .chin-dir, #page .chin-key {
   padding: 0;
   border: none;
   cursor: pointer;
   background: linear-gradient(180deg, #cbc4b1 0%, #a19a88 100%);
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 1px 2px rgba(0, 0, 0, 0.5);
+  font: inherit;
+  color: inherit;
+  min-height: 0;
 }
 
 /* These are the one part of the page you are meant to tap repeatedly, and
@@ -2429,13 +2446,13 @@ body {
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
-.chin-dir:active, .chin-key:active {
+#page .chin-dir:active, #page .chin-key:active {
   background: linear-gradient(180deg, #9a9381 0%, #837c6b 100%);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
   transform: translateY(1px);
 }
-.chin-key:disabled { opacity: 0.5; cursor: default; }
-.chin-dir:focus-visible, .chin-key:focus-visible { outline: 2px solid #7fd3ff; outline-offset: 1px; }
+#page .chin-key:disabled { opacity: 0.5; cursor: default; }
+#page .chin-dir:focus-visible, #page .chin-key:focus-visible { outline: 2px solid #7fd3ff; outline-offset: 1px; }
 
 /* The cheat code landing: the whole cluster flashes once. */
 .chin.is-cheating .chin-dir, .chin.is-cheating .chin-key {

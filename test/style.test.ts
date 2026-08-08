@@ -500,6 +500,31 @@ describe('an app may have its own face, and it must stay in its own lane', () =>
     .filter((n) => n.endsWith('.html'))
     .map((n) => ({ name: n, html: readFileSync(`public/${n}`, 'utf8') }));
 
+  it('never lets an app face reach the machine it is running on', () => {
+    /* The chin is part of the device: the d-pad, the four keys, the power
+     * button. It lives inside #page, which is inside body[data-app], so
+     * every `[data-app="x"] button` rule an app face writes was matching it.
+     * Two of the new faces gave the d-pad a beige 2px outset border and
+     * 3px 12px of padding, and the terminal one turned it black: the moulded
+     * cross came out as a row of little raised rectangles.
+     *
+     * style.css states the chin with #page in the selector, and an id
+     * outranks anything an app stylesheet is allowed to use, so the boundary
+     * holds for faces that have not been written yet. */
+    const chrome = readFileSync('public/style.css', 'utf8');
+    for (const part of ['chin-dir', 'chin-key', 'chin-power']) {
+      const rule = new RegExp(`#page \\.${part}[^{]*\\{`);
+      expect(chrome, `${part} is stated below the weight an app face can reach`)
+        .toMatch(rule);
+    }
+
+    // And no face may name the chin at all: it is not theirs to style.
+    for (const face of FACES) {
+      const css = readFileSync(`public/${face.file}`, 'utf8');
+      expect(css, `${face.file} styles the machine's own controls`).not.toMatch(/\.chin-/);
+    }
+  });
+
   it('never paints a hint strip in the chrome ink', () => {
     /* Every face draws the same pale-yellow line at the top of its screen,
      * and every face also sets an ink for its own chrome. On the dark ones
