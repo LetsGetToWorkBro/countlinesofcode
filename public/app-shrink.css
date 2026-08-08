@@ -1,0 +1,174 @@
+/* 1999.LOC - the PDF squeezer's face.
+ *
+ * ACROBAT DISTILLER, which is the program that did this job: you gave it a
+ * heavy file and a job setting, and it wrote you a smaller one while a log
+ * scrolled underneath. Acrobat's red, the era's grey chrome, and the job
+ * options drawn as the boxed group Distiller used, because "how hard to
+ * squeeze" was exactly its Job Options dialog.
+ */
+
+/* ---- the menu bar, pinned to the window --------------------------- */
+[data-app="shrink"] .app-window > .dl-menu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 2px 4px;
+  background: #d4d0c8;
+  border-bottom: 1px solid #808080;
+  /* Stated rather than inherited: this sits outside the panels, so it would
+     otherwise come out in the page's serif. */
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #000000;
+}
+[data-app="shrink"] .app-window > .dl-menu .menu-title {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  /* A thumb needs a target. */
+  min-height: 26px;
+}
+[data-app="shrink"] .client-title { background: linear-gradient(90deg,#5a1414 0%,#8a2626 60%,#c06060 100%); color: #ffffff; }
+
+/* ---- the body ------------------------------------------------------ */
+[data-app="shrink"] .app-body {
+  background: #d4d0c8;
+  color: #000000;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 8px;
+}
+[data-app="shrink"] .app-body h3 {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 12px;
+  color: #7a2020;
+  margin: 12px 0 6px 0;
+}
+[data-app="shrink"] .app-body p,
+[data-app="shrink"] .app-body label,
+[data-app="shrink"] .app-body li,
+[data-app="shrink"] .app-body legend {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  color: #000000;
+}
+[data-app="shrink"] .app-body .note { color: #4a4a4a; }
+[data-app="shrink"] .app-body > p,
+[data-app="shrink"] .app-body > div > p { max-width: 620px; }
+
+/* What to do on this screen. */
+[data-app="shrink"] .app-body .dl-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0 0 10px 0;
+  padding: 6px 9px;
+  background: #ffffe1;
+  border: 1px solid #808080;
+  color: #000000;
+  font-size: 11.5px;
+  line-height: 1.45;
+  max-width: 820px;
+}
+[data-app="shrink"] .app-body .dl-hint,
+[data-app="shrink"] .app-body .dl-hint * { color: #000000; }
+[data-app="shrink"] .app-body .dl-hint > .dl-hint-mark {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #7a2020;
+  color: #ffffff;
+  font-weight: bold;
+  font-style: italic;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* ---- controls ------------------------------------------------------ */
+[data-app="shrink"] button:not(.notice-x):not(.menu-title):not(.win-min) {
+  border: 2px outset #d4d0c8;
+  background: #d4d0c8;
+  color: #000000;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 3px 12px;
+  cursor: pointer;
+}
+[data-app="shrink"] button:not(.notice-x):active { border-style: inset; }
+[data-app="shrink"] select,
+[data-app="shrink"] input[type="text"],
+[data-app="shrink"] input[type="number"],
+[data-app="shrink"] textarea {
+  border: 2px inset #d4d0c8;
+  background: #ffffff;
+  color: #000000;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+}
+[data-app="shrink"] .dropzone {
+  background: #ffffff;
+  border: 2px inset #d4d0c8;
+  color: #000000;
+}
+[data-app="shrink"] fieldset {
+  border: 2px groove #ffffff;
+  background: #d4d0c8;
+  color: #000000;
+  margin: 0 0 10px 0;
+  padding: 8px 10px;
+  max-width: 620px;
+}
+/* A fieldset is a light tray, even in a program whose chrome is dark, so
+   everything inside it goes back to black. Said with .app-body in the
+   selector on purpose: the body rule above sets a light ink for the dark
+   chrome and is an attribute plus a class plus an element, so a plainer
+   `fieldset label` loses to it and the tray comes out grey on grey. */
+[data-app="shrink"] .app-body fieldset p,
+[data-app="shrink"] .app-body fieldset label,
+[data-app="shrink"] .app-body fieldset legend,
+[data-app="shrink"] .app-body fieldset span,
+[data-app="shrink"] .app-body fieldset li,
+[data-app="shrink"] .app-body fieldset .note { color: #000000; }
+
+/* The boxes the tool draws into. */
+[data-app="shrink"] .notice-box,
+[data-app="shrink"] .app-body details {
+  background: #ffffe1;
+  border: 1px solid #808080;
+  max-width: 820px;
+}
+[data-app="shrink"] .notice-box *,
+[data-app="shrink"] .app-body details * { color: #000000; }
+
+/* ---- JOB OPTIONS ---------------------------------------------------
+   Distiller's dialog: the settings in a boxed group, and a log of what
+   the job did underneath. The strengths are the job setting, so they get
+   the group. */
+[data-app="shrink"] #controls,
+[data-app="shrink"] #strengths {
+  background: #d4d0c8;
+  border: 2px groove #ffffff;
+  padding: 10px;
+  max-width: 620px;
+}
+[data-app="shrink"] #output,
+[data-app="shrink"] #result {
+  background: #ffffff;
+  border: 2px inset #d4d0c8;
+  padding: 8px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  max-width: 820px;
+}
+[data-app="shrink"] .status { color: #7a2020; }
+[data-app="shrink"] .error { color: #a01010; }
+
+/* ---- responsive ---------------------------------------------------- */
+@media (max-width: 700px) {
+  [data-app="shrink"] .app-body { padding: 6px; }
+  [data-app="shrink"] .app-window > .dl-menu span { padding: 2px 5px; }
+}
+

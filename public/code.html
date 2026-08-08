@@ -13,10 +13,11 @@
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/app-code.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
-<body>
+<body data-app="code">
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
@@ -88,8 +89,26 @@
 <div class="desk-shell">
 <div class="app-window" id="app">
 <div class="client-title"><h2>Count lines of code</h2><a class="win-min" href="#" aria-label="Minimise Count lines of code">_</a></div>
+<p class="dos menubar" role="menubar">
+<span class="menu"><button type="button" class="menu-title">Repository</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="count-form">Count it</button>
+    <button type="button" data-cmd="cancel-button">Cancel</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Options</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="opt-vendored">Skip vendored code</button>
+    <button type="button" data-cmd="opt-lockfiles">Skip lockfiles</button>
+    <button type="button" data-cmd="opt-fresh">Ignore the cache</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Help</button>
+  <span class="menu-drop">
+    <button type="button" data-help>What this program does</button>
+  </span></span>
+</p>
 <div class="app-body">
-<p class="tagline">Enter a repository. We will count the lines. That is all.</p>
+<p class="dos-hint"><span class="dos-hint-mark">i</span>
+Give it a GitHub repository and it counts the lines, pinned to one commit, with the rules on the screen rather than in a footnote.</p>
 
 <form id="count-form">
   <p>
@@ -162,8 +181,6 @@
 <div id="quickpick" class="quickpick"></div>
 
 <hr>
-<h3>Is this actually private?</h3>
-<div id="proof"></div>
 <p class="footer">
 Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spite for bloat<br>
 <a href="/golf">code golf</a> |
@@ -174,6 +191,43 @@ Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spit
 <a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
 </p>
 
+
+<!-- What this program has to say for itself. Hidden here and shown by
+     firstrun.js as a dialog on the first visit, and from Help after that. -->
+<div id="first-run" hidden>
+
+<section data-step="Counting lines, honestly">
+<p><strong>A repository in, a number out, and the rules it used beside it.</strong></p>
+</section>
+
+<section data-step="What it counts, and what it skips">
+<p class="note">
+The rules are the whole point of this tool, so they are here rather than a link
+away. A file is skipped when it is <strong>vendored or build output</strong> (any
+path with a segment like <code>node_modules</code>, <code>vendor</code>,
+<code>dist</code>, <code>build</code>, <code>target</code>, <code>.next</code>,
+<code>venv</code>), when it is <strong>generated</strong> (minified bundles,
+source maps, protobuf output, snapshots, lockfiles), or when it is
+<strong>binary</strong>, judged first by extension and then by content: a NUL
+byte or a high proportion of control bytes in the first 8 KiB.
+</p>
+<p class="note">
+What is left is counted as actual lines of actual files, read at one commit. Not
+GitHub's language bar, which reports <em>bytes</em> per language computed by
+Linguist with Linguist's exclusions rather than ours. Two people counting the
+same commit get the same numbers, forever, which is what the
+<code>counter_version</code> field is for: it changes when the algorithm does, so
+a cached result can never quietly mean something different.
+</p>
+<p class="note">The long version, with every rule spelled out, is on <a href="/how.html">how we count</a>.</p>
+</section>
+
+<section data-step="Is this actually private?">
+<h3>Is this actually private?</h3>
+<div id="proof"></div>
+</section>
+
+<section data-step="The rest of the site">
 <p class="footer support">
 Nothing here is for sale, nothing is tracked, and there is no account to make.
 If something saved you an hour:<br>
@@ -181,7 +235,9 @@ If something saved you an hour:<br>
 You can
 <a href="/wallet.html#addresses">check that address here</a> before sending anything.
 </p>
+</section>
 
+</div>
 </div>
 </div>
 </div>
@@ -197,6 +253,9 @@ You can
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
 <script src="/start.js"></script>
+<script src="/menubar.js"></script>
 <script src="/proof-panel.js"></script>
+<script src="/firstrun.js"></script>
+<script src="/dismiss.js"></script>
 </body>
 </html>

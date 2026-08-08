@@ -13,10 +13,11 @@
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/app-video.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
-<body>
+<body data-app="video">
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
@@ -82,29 +83,32 @@
 <div class="desk-shell">
 <div class="app-window" id="app">
 <div class="client-title"><h2>Trim, convert, and make GIFs</h2><a class="win-min" href="#" aria-label="Minimise Trim, convert, and make GIFs">_</a></div>
+<p class="mp menubar" role="menubar">
+<span class="menu"><button type="button" class="menu-title">File</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="drop">Open...</button>
+    <button type="button" data-cmd="run">Save</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Clip</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="start-here">Start here</button>
+    <button type="button" data-cmd="end-here">End here</button>
+    <button type="button" data-cmd="format">Format...</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Help</button>
+  <span class="menu-drop">
+    <button type="button" data-help>What this program does</button>
+  </span></span>
+</p>
 <div class="app-body">
-<p class="tagline">In this tab. A two gigabyte holiday video never leaves your laptop.</p>
+<p class="mp-hint"><span class="mp-hint-mark">i</span>
+Open a video, trim it, change its format or turn a piece of it into a GIF. A two gigabyte holiday video never leaves your laptop.</p>
 
 <p class="note">
 Every online video converter uploads your file to somebody's server. This one
 has no endpoint; turn off your wifi after it loads and it still works.
 </p>
 
-<details class="notice-box">
-<summary><strong>It tells you whether it is copying or re-encoding.</strong></summary>
-<p class="note">
-Cutting a video does not have to re-encode it. If the output can hold the codec
-the file already uses, the compressed video is copied across untouched, so
-the result is <em>bit for bit</em> your original, just shorter, and it takes
-seconds rather than minutes. Change the size, the rotation or the quality and it
-has to be decoded and encoded again, which is slower and costs a generation of
-quality.
-</p>
-<p class="note">
-Every other converter re-encodes everything and says nothing. This one works out
-which one your settings mean and tells you before you press the button.
-</p>
-</details>
 
 <hr>
 
@@ -224,11 +228,36 @@ which one your settings mean and tells you before you press the button.
 </div>
 
 <hr>
+
+
+
+
+<!-- What this program has to say for itself. Hidden here and shown by
+     firstrun.js as a dialog on the first visit, and from Help after that. -->
+<div id="first-run" hidden>
+
+<section data-step="Trim, convert, and make GIFs">
+<p><strong>A video in, a shorter or smaller or looping one out.</strong></p>
+<p class="note">
+Cutting a video does not have to re-encode it. If the output can hold the codec
+the file already uses, the compressed video is copied across untouched, so
+the result is <em>bit for bit</em> your original, just shorter, and it takes
+seconds rather than minutes. Change the size, the rotation or the quality and it
+has to be decoded and encoded again, which is slower and costs a generation of
+quality.
+</p>
+<p class="note">
+Every other converter re-encodes everything and says nothing. This one works out
+which one your settings mean and tells you before you press the button.
+</p>
+</section>
+
+<section data-step="Is this actually private?">
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
+</section>
 
-<details class="notes">
-<summary>The honest notes</summary>
+<section data-step="The honest notes">
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The file is read from disk into this tab and the result is written back out of it.</li>
   <li><strong>Copying is not re-encoding, and the difference is the whole point.</strong> When the output container can hold the codec your file already uses and nothing about the picture changes, the compressed video is copied across untouched: identical quality, and roughly ten times faster. The panel above says which of the two your settings mean before you start.</li>
@@ -247,10 +276,9 @@ which one your settings mean and tells you before you press the button.
   <li><strong>What it does not do:</strong> subtitles, chapters, multiple audio tracks, joining two videos, or anything creative. It cuts, converts, resizes, rotates, mutes, extracts and animates.</li>
   <li><strong>It downloads about 620&nbsp;KB</strong> the first time, once you open a file: <a href="https://github.com/Vanilagy/mediabunny">mediabunny</a>, which reads and writes the container formats. The codecs themselves are the browser's own <a href="https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API">WebCodecs</a>. There is no ffmpeg here and no WebAssembly, which is why it is quick.</li>
 </ul>
-</details>
+</section>
 
-<hr>
-
+<section data-step="The rest of the site">
 <p class="footer">
 Hosted on Cloudflare &middot; Made with spite for bloat<br>
 <a href="/image.html">image tools</a> |
@@ -267,7 +295,9 @@ If something saved you an hour:<br>
 You can
 <a href="/wallet.html#addresses">check that address here</a> before sending anything.
 </p>
+</section>
 
+</div>
 </div>
 </div>
 </div>
@@ -283,7 +313,9 @@ You can
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
 <script src="/start.js"></script>
+<script src="/menubar.js"></script>
 <script src="/proof-panel.js"></script>
+<script src="/firstrun.js"></script>
 <script src="/dismiss.js"></script>
 </body>
 </html>

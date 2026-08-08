@@ -67,7 +67,7 @@
 [data-app="pgp"] .app-body > div > p { max-width: 620px; }
 
 /* What to do on this screen. */
-[data-app="pgp"] .pgp-hint {
+[data-app="pgp"] .app-body .pgp-hint {
   display: flex;
   align-items: flex-start;
   gap: 7px;
@@ -79,7 +79,11 @@
   line-height: 1.45;
   max-width: 820px;
 }
-[data-app="pgp"] .pgp-hint-mark {
+/* Past .app-body p, which is an attribute plus a class plus an element
+   and would otherwise paint this strip in the chrome ink. */
+[data-app="pgp"] .app-body .pgp-hint,
+[data-app="pgp"] .app-body .pgp-hint * { color: #000000; }
+[data-app="pgp"] .app-body .pgp-hint > .pgp-hint-mark {
   flex: 0 0 auto;
   width: 16px;
   height: 16px;

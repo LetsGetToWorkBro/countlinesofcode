@@ -203,7 +203,7 @@
    panels used to open on a tagline in the page's serif, which read as a
    sentence about the program rather than an instruction to the person
    using it. Each skin colours it; the shape is shared. */
-[data-app="wallet"] .wl-hint {
+[data-app="wallet"] .app-body .wl-hint {
   display: flex;
   align-items: flex-start;
   gap: 7px;
@@ -213,7 +213,11 @@
   font-size: 11.5px;
   line-height: 1.45;
 }
-[data-app="wallet"] .wl-hint-mark {
+/* Past .app-body p, which is an attribute plus a class plus an element
+   and would otherwise paint this strip in the chrome ink. */
+[data-app="wallet"] .app-body .wl-hint,
+[data-app="wallet"] .app-body .wl-hint * { color: #000000; }
+[data-app="wallet"] .app-body .wl-hint-mark {
   flex: 0 0 auto;
   width: 16px;
   height: 16px;

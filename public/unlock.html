@@ -13,10 +13,11 @@
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/app-unlock.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
-<body>
+<body data-app="unlock">
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
@@ -72,24 +73,21 @@
 <div class="desk-shell">
 <div class="app-window" id="app">
 <div class="client-title"><h2>Unlock a PDF</h2><a class="win-min" href="#" aria-label="Minimise Unlock a PDF">_</a></div>
+<p class="sec menubar" role="menubar">
+<span class="menu"><button type="button" class="menu-title">File</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="drop">Open...</button>
+    <button type="button" data-cmd="result">Save the unlocked copy</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Help</button>
+  <span class="menu-drop">
+    <button type="button" data-help>What this program does</button>
+  </span></span>
+</p>
 <div class="app-body">
-<p class="tagline">Remove the &ldquo;you may not print or copy this&rdquo; lock. Your file never leaves this tab.</p>
+<p class="sec-hint"><span class="sec-hint-mark">i</span>
+Open a PDF that refuses to print or copy, and get one that does not. It removes a restriction, not a password you do not have.</p>
 
-<details class="notice-box">
-<summary><strong>Read this first, because the word &ldquo;unlock&rdquo; is used for two different things.</strong></summary>
-<p class="note">
-Some PDFs open fine but refuse to let you print, copy the text, or edit them.
-That is an <em>owner</em> password, and it is a request the reader is trusting you
-to honour, not real protection. This removes it: the file opens the same, minus
-the restriction.
-</p>
-<p class="note">
-Some PDFs will not open at all without a password. That is a <em>user</em>
-password, and the file is genuinely encrypted. This is <strong>not a
-cracker</strong>: it cannot guess a password you do not have. If your file
-needs one to open, you will be asked for it, and you must know it.
-</p>
-</details>
 
 <hr>
 
@@ -110,11 +108,36 @@ needs one to open, you will be asked for it, and you must know it.
 </div>
 
 <hr>
+
+
+
+
+<!-- What this program has to say for itself. Hidden here and shown by
+     firstrun.js as a dialog on the first visit, and from Help after that. -->
+<div id="first-run" hidden>
+
+<section data-step="The lock this removes, and the one it cannot">
+<p><strong>A PDF that will not let you print or copy it, opened.</strong></p>
+<p class="note">
+Some PDFs open fine but refuse to let you print, copy the text, or edit them.
+That is an <em>owner</em> password, and it is a request the reader is trusting you
+to honour, not real protection. This removes it: the file opens the same, minus
+the restriction.
+</p>
+<p class="note">
+Some PDFs will not open at all without a password. That is a <em>user</em>
+password, and the file is genuinely encrypted. This is <strong>not a
+cracker</strong>: it cannot guess a password you do not have. If your file
+needs one to open, you will be asked for it, and you must know it.
+</p>
+</section>
+
+<section data-step="Is this actually private?">
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
+</section>
 
-<details class="notes">
-<summary>The honest notes</summary>
+<section data-step="The honest notes">
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The PDF is opened, decoded and rebuilt in your browser.</li>
   <li><strong>How it works, and the cost.</strong> The reader here can open a restricted file, so it rebuilds it as a fresh PDF with no restrictions. Each page is rendered to an image, and the text is laid back over it invisibly, so you can still select and search it, but the pages are now pictures with a text layer, not the original vector text. The file usually gets larger, and very fine text is a touch softer. That is the trade for removing the lock without a server.</li>
@@ -122,10 +145,9 @@ needs one to open, you will be asked for it, and you must know it.
   <li><strong>Use it on your own documents.</strong> Owner restrictions are usually there for a reason even when they are trivial to remove. This exists for the everyday case (a statement you cannot print, a form you cannot fill), not for getting around someone else's wishes.</li>
   <li><strong>It downloads about 700&nbsp;KB</strong> the first time, to render pages (<a href="https://mozilla.github.io/pdf.js/">pdf.js</a>) and write the new file (<a href="https://github.com/Hopding/pdf-lib">pdf-lib</a>), served from this domain because the security policy forbids third-party scripts.</li>
 </ul>
-</details>
+</section>
 
-<hr>
-
+<section data-step="The rest of the site">
 <p class="footer">
 Hosted on Cloudflare &middot; Made with spite for bloat<br>
 <a href="/sign.html">edit a pdf</a> |
@@ -142,7 +164,9 @@ If something saved you an hour:<br>
 You can
 <a href="/wallet.html#addresses">check that address here</a> before sending anything.
 </p>
+</section>
 
+</div>
 </div>
 </div>
 </div>
@@ -159,7 +183,9 @@ You can
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
 <script src="/start.js"></script>
+<script src="/menubar.js"></script>
 <script src="/proof-panel.js"></script>
+<script src="/firstrun.js"></script>
 <script src="/dismiss.js"></script>
 </body>
 </html>

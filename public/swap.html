@@ -13,10 +13,11 @@
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/app-swap.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
-<body>
+<body data-app="swap">
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
@@ -79,28 +80,26 @@
 <div class="desk-shell">
 <div class="app-window" id="app">
 <div class="client-title"><h2>Swap</h2><a class="win-min" href="#" aria-label="Minimise Swap">_</a></div>
+<p class="tick menubar" role="menubar">
+<span class="menu"><button type="button" class="menu-title">Order</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="new-swap">New swap</button>
+    <button type="button" data-cmd="get-quotes">Get quotes</button>
+    <button type="button" data-cmd="flip">Flip direction</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Status</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="check-status">Check this order</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Help</button>
+  <span class="menu-drop">
+    <button type="button" data-help>What this program does</button>
+  </span></span>
+</p>
 <div class="app-body">
-<p class="tagline">Into Monero, or back out of it, through instant exchanges. No account here, none there.</p>
+<p class="tick-hint"><span class="tick-hint-mark">i</span>
+Pick what you are sending and what you want back, take a quote, and send to the address it gives you. No account here, and none at the exchange.</p>
 
-<details class="notice-box">
-<summary><strong>This is other people's exchange. Read this before you send anything.</strong></summary>
-<p class="note">
-The swap itself happens at an instant-exchange service (Exolix, and ChangeNOW
-when configured), not on this site. While it runs, they hold your coins: that
-is custody, however brief. These services advertise no accounts and no
-sign-up, and for ordinary amounts that is how it goes, but their terms let
-them freeze a deposit their risk system dislikes and ask for identification
-before releasing it. It is rare. It is not impossible. Do not swap more than
-you would be willing to have stuck in that conversation.
-</p>
-<p class="note">
-This page's server relays quotes and orders so the exchange sees Cloudflare
-rather than you, stores nothing about your swap, and never holds funds. The
-order id below is the only handle on your swap, and it lives in this tab.
-Send the deposit from a wallet you control, not from an exchange account:
-if anything is refunded, it has to have somewhere sensible to go back to.
-</p>
-</details>
 
 <h3>What are you swapping?</h3>
 <p>
@@ -186,8 +185,41 @@ which it will refuse.
 </p>
 </div>
 
-<details class="notes">
-<summary>The honest notes</summary>
+
+<hr>
+
+
+
+<!-- What this program has to say for itself. Hidden here and shown by
+     firstrun.js as a dialog on the first visit, and from Help after that. -->
+<div id="first-run" hidden>
+
+<section data-step="Swapping without an account">
+<p><strong>Into Monero, or back out of it, through instant exchanges.</strong></p>
+<p class="note">
+The swap itself happens at an instant-exchange service (Exolix, and ChangeNOW
+when configured), not on this site. While it runs, they hold your coins: that
+is custody, however brief. These services advertise no accounts and no
+sign-up, and for ordinary amounts that is how it goes, but their terms let
+them freeze a deposit their risk system dislikes and ask for identification
+before releasing it. It is rare. It is not impossible. Do not swap more than
+you would be willing to have stuck in that conversation.
+</p>
+<p class="note">
+This page's server relays quotes and orders so the exchange sees Cloudflare
+rather than you, stores nothing about your swap, and never holds funds. The
+order id below is the only handle on your swap, and it lives in this tab.
+Send the deposit from a wallet you control, not from an exchange account:
+if anything is refunded, it has to have somewhere sensible to go back to.
+</p>
+</section>
+
+<section data-step="Is this actually private?">
+<h3>Is this actually private?</h3>
+<div id="proof"></div>
+</section>
+
+<section data-step="The honest notes">
 <ul class="plain">
   <li><strong>Who does what.</strong> The exchange service does the swap and holds the coins while it runs. This site's server relays your quote and order requests so the exchange sees Cloudflare instead of your address, and stores nothing: no order table, no logs of amounts or addresses. The order id is kept in this tab and shown to you; lose both and only the exchange's own support can find your swap.</li>
   <li><strong>Both directions, one rule.</strong> Every swap here has Monero on one side, in or out. That is not a limit of the exchanges, which will trade anything for anything; it is what this page is for, and it keeps the checking down to one question with a right answer: does the address you pasted belong on the chain the money is going to. Paste a Monero address for a Tron payout and it refuses before an order exists.</li>
@@ -199,14 +231,9 @@ which it will refuse.
   <li><strong>Privacy, honestly stated.</strong> A swap through a service like this is visible on both chains: the BTC or USDC you send is public forever, and the exchange knows it paid your Monero address. What you gain is that the Monero, once received, is yours to move privately. If the link between your coins and your XMR address matters to you, this convenience is not the tool for that job.</li>
   <li><strong>This page needs its server.</strong> Like the disposable inbox, this tool is an honest exception to "nothing leaves your browser": quotes and orders go through this site's Worker to the exchange, because the browser is forbidden from talking to anyone else. The proof panel below shows exactly what was sent and where.</li>
 </ul>
-</details>
+</section>
 
-<hr>
-<h3>Is this actually private?</h3>
-<div id="proof"></div>
-
-<hr>
-
+<section data-step="The rest of the site">
 <p class="footer">
 Hosted on Cloudflare &middot; Made with spite for bloat<br>
 <a href="/wallet.html">monero wallet</a> |
@@ -222,7 +249,9 @@ If something saved you an hour:<br>
 You can
 <a href="/wallet.html#addresses">check that address here</a> before sending anything.
 </p>
+</section>
 
+</div>
 </div>
 </div>
 </div>
@@ -238,7 +267,9 @@ You can
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
 <script src="/start.js"></script>
+<script src="/menubar.js"></script>
 <script src="/proof-panel.js"></script>
+<script src="/firstrun.js"></script>
 <script src="/dismiss.js"></script>
 </body>
 </html>

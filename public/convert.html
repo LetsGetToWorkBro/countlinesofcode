@@ -13,10 +13,11 @@
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/app-convert.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
-<body>
+<body data-app="convert">
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
@@ -78,32 +79,32 @@
 <div class="desk-shell">
 <div class="app-window" id="app">
 <div class="client-title"><h2>PDF &harr; Word</h2><a class="win-min" href="#" aria-label="Minimise PDF &harr; Word">_</a></div>
+<p class="wd menubar" role="menubar">
+<span class="menu"><button type="button" class="menu-title">File</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="drop">Open...</button>
+    <button type="button" data-cmd="convert">Save as</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Format</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="target-format">Convert to...</button>
+    <button type="button" data-cmd="tune">Quality...</button>
+    <button type="button" data-cmd="ocr">Read scanned pages</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Help</button>
+  <span class="menu-drop">
+    <button type="button" data-help>What this program does</button>
+  </span></span>
+</p>
 <div class="app-body">
-<p class="tagline">Both directions, in this tab. Your file never leaves it.</p>
+<p class="wd-hint"><span class="wd-hint-mark">i</span>
+Open a PDF and it becomes a Word document, or the other way round. The file is converted in this tab and never uploaded.</p>
 
 <p class="note">
 Every PDF-to-Word site wants your document on their server. This one has no
 endpoint; turn off your wifi after it loads and it still works.
 </p>
 
-<details class="notice-box">
-<summary><strong>It tells you how well it will go, before you commit.</strong></summary>
-<p class="note">
-PDF was designed to look the same everywhere, not to be edited. Some PDFs
-carry a hidden description of their own structure: which text is a
-heading, what belongs in which table cell, what order it reads in. Anything
-saved out of Word, Google Docs or LibreOffice usually does. For those, this is a
-translation, and it is very good.
-</p>
-<p class="note">
-The rest (scans, LaTeX papers, output from older tools) are just
-positioned letters on a page. Nothing in the file says where a paragraph starts,
-so the structure has to be worked out from the layout. That is a reconstruction,
-and no converter on earth does it perfectly. The difference here is that you are
-told which of the two you have <em>before</em> you convert, and what to check
-afterwards.
-</p>
-</details>
 
 <hr>
 
@@ -163,11 +164,39 @@ afterwards.
 </div>
 
 <hr>
+
+
+
+
+<!-- What this program has to say for itself. Hidden here and shown by
+     firstrun.js as a dialog on the first visit, and from Help after that. -->
+<div id="first-run" hidden>
+
+<section data-step="PDF and Word, both directions">
+<p><strong>A PDF in, a .docx out, or the other way round.</strong></p>
+<p class="note">
+PDF was designed to look the same everywhere, not to be edited. Some PDFs
+carry a hidden description of their own structure: which text is a
+heading, what belongs in which table cell, what order it reads in. Anything
+saved out of Word, Google Docs or LibreOffice usually does. For those, this is a
+translation, and it is very good.
+</p>
+<p class="note">
+The rest (scans, LaTeX papers, output from older tools) are just
+positioned letters on a page. Nothing in the file says where a paragraph starts,
+so the structure has to be worked out from the layout. That is a reconstruction,
+and no converter on earth does it perfectly. The difference here is that you are
+told which of the two you have <em>before</em> you convert, and what to check
+afterwards.
+</p>
+</section>
+
+<section data-step="Is this actually private?">
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
+</section>
 
-<details class="notes">
-<summary>The honest notes</summary>
+<section data-step="The honest notes">
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. Both directions run in your browser.</li>
   <li><strong>EPUB is the better choice for <em>reading</em> a long PDF.</strong> A PDF is a fixed page, so on a phone you pinch and pan across a sheet designed for A4. An EPUB re-flows to whatever screen and text size you like, and chapters are split at the document's own top-level headings. It carries the words, the headings, the lists and the tables, but not the page design, which is the entire point of the format.</li>
@@ -179,10 +208,9 @@ afterwards.
   <li><strong>It learns locally, and only locally.</strong> Correcting the heading detection stores a number in <em>this browser</em>, against the software that produced the PDF. Nothing is collected, because nothing is sent anywhere, which is also why it cannot learn from anyone else's documents.</li>
   <li><strong>It downloads about 700&nbsp;KB</strong> the first time, to read PDFs (<a href="https://mozilla.github.io/pdf.js/">pdf.js</a>) and write them (<a href="https://github.com/Hopding/pdf-lib">pdf-lib</a>). The Word half needs nothing extra: a .docx is a ZIP of XML, and the browser already has a ZIP engine.</li>
 </ul>
-</details>
+</section>
 
-<hr>
-
+<section data-step="The rest of the site">
 <p class="footer">
 Hosted on Cloudflare &middot; Made with spite for bloat<br>
 <a href="/sign.html">edit a pdf</a> |
@@ -200,7 +228,9 @@ If something saved you an hour:<br>
 You can
 <a href="/wallet.html#addresses">check that address here</a> before sending anything.
 </p>
+</section>
 
+</div>
 </div>
 </div>
 </div>
@@ -216,7 +246,9 @@ You can
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
 <script src="/start.js"></script>
+<script src="/menubar.js"></script>
 <script src="/proof-panel.js"></script>
+<script src="/firstrun.js"></script>
 <script src="/dismiss.js"></script>
 </body>
 </html>

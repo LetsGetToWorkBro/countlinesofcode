@@ -40,7 +40,10 @@
 
 /* ---- the body ------------------------------------------------------ */
 [data-app="image"] .app-body {
-  background: #808080;   /* the mat the canvas sits on */
+  /* The mat the canvas sits on. Darker than Paint's own grey on purpose:
+     the notes printed over it are a light grey, and at #808080 that pair
+     came to 2.99:1, which is a caption you squint at. */
+  background: #6e6e6e;
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 11px;
   color: #000000;
@@ -60,12 +63,12 @@
   font-size: 11px;
   color: #ffffff;
 }
-[data-app="image"] .app-body .note { color: #e0e0e0; }
+[data-app="image"] .app-body .note { color: #f4f4f4; }
 [data-app="image"] .app-body > p,
 [data-app="image"] .app-body > div > p { max-width: 620px; }
 
 /* What to do on this screen. */
-[data-app="image"] .mp-hint {
+[data-app="image"] .app-body .mp-hint {
   display: flex;
   align-items: flex-start;
   gap: 7px;
@@ -77,9 +80,9 @@
   line-height: 1.45;
   max-width: 820px;
 }
-[data-app="image"] .mp-hint,
-[data-app="image"] .mp-hint * { color: #000000; }
-[data-app="image"] .mp-hint-mark {
+[data-app="image"] .app-body .mp-hint,
+[data-app="image"] .app-body .mp-hint * { color: #000000; }
+[data-app="image"] .app-body .mp-hint > .mp-hint-mark {
   flex: 0 0 auto;
   width: 16px;
   height: 16px;
@@ -109,9 +112,14 @@
   font-weight: bold;
   padding: 0 4px;
 }
-[data-app="image"] fieldset p,
-[data-app="image"] fieldset label,
-[data-app="image"] fieldset .note { color: #000000; }
+/* .app-body in the selector because the body rule sets white ink for the
+   grey mat, and a plainer `fieldset label` loses to it: the tray would come
+   out white on light grey. */
+[data-app="image"] .app-body fieldset p,
+[data-app="image"] .app-body fieldset label,
+[data-app="image"] .app-body fieldset legend,
+[data-app="image"] .app-body fieldset span,
+[data-app="image"] .app-body fieldset .note { color: #000000; }
 
 [data-app="image"] button:not(.notice-x):not(.menu-title):not(.win-min) {
   border: 2px outset #d4d0c8;

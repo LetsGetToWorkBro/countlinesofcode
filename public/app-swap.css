@@ -1,0 +1,207 @@
+/* 1999.LOC - the swap desk's face.
+ *
+ * A DEALING TERMINAL. Not a Windows program: the amber-on-black screens that
+ * quotes arrived on, and the one thing on this site where a number is a price
+ * that expires. Rates set in a fixed pitch so the digits line up column to
+ * column, which is the entire reason financial screens were monospaced.
+ */
+
+/* ---- the menu bar, pinned to the window --------------------------- */
+[data-app="swap"] .app-window > .tick-menu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 2px 4px;
+  background: #d4d0c8;
+  border-bottom: 1px solid #808080;
+  /* Stated rather than inherited: this sits outside the panels, so it would
+     otherwise come out in the page's serif. */
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #000000;
+}
+[data-app="swap"] .app-window > .tick-menu .menu-title {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  /* A thumb needs a target. */
+  min-height: 26px;
+}
+[data-app="swap"] .client-title { background: linear-gradient(90deg,#1a1200 0%,#3a2600 60%,#7a5410 100%); color: #ffffff; }
+
+/* ---- the body ------------------------------------------------------ */
+[data-app="swap"] .app-body {
+  background: #101010;
+  color: #d8d8d8;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 8px;
+}
+[data-app="swap"] .app-body h3 {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 12px;
+  color: #ff9d1c;
+  margin: 12px 0 6px 0;
+}
+[data-app="swap"] .app-body p,
+[data-app="swap"] .app-body label,
+[data-app="swap"] .app-body li,
+[data-app="swap"] .app-body legend {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  color: #d8d8d8;
+}
+[data-app="swap"] .app-body .note { color: #8f8f8f; }
+[data-app="swap"] .app-body > p,
+[data-app="swap"] .app-body > div > p { max-width: 620px; }
+
+/* What to do on this screen. */
+[data-app="swap"] .app-body .tick-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0 0 10px 0;
+  padding: 6px 9px;
+  background: #ffffe1;
+  border: 1px solid #808080;
+  color: #000000;
+  font-size: 11.5px;
+  line-height: 1.45;
+  max-width: 820px;
+}
+[data-app="swap"] .app-body .tick-hint,
+[data-app="swap"] .app-body .tick-hint * { color: #000000; }
+[data-app="swap"] .app-body .tick-hint > .tick-hint-mark {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ff9d1c;
+  color: #ffffff;
+  font-weight: bold;
+  font-style: italic;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* ---- controls ------------------------------------------------------ */
+[data-app="swap"] button:not(.notice-x):not(.menu-title):not(.win-min) {
+  border: 2px outset #d4d0c8;
+  background: #d4d0c8;
+  color: #000000;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 3px 12px;
+  cursor: pointer;
+}
+[data-app="swap"] button:not(.notice-x):active { border-style: inset; }
+[data-app="swap"] select,
+[data-app="swap"] input[type="text"],
+[data-app="swap"] input[type="number"],
+[data-app="swap"] textarea {
+  border: 2px inset #d4d0c8;
+  background: #0a0a0a;
+  color: #000000;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+}
+[data-app="swap"] .dropzone {
+  background: #0a0a0a;
+  border: 2px inset #d4d0c8;
+  color: #000000;
+}
+[data-app="swap"] fieldset {
+  border: 2px groove #ffffff;
+  background: #d4d0c8;
+  color: #000000;
+  margin: 0 0 10px 0;
+  padding: 8px 10px;
+  max-width: 620px;
+}
+/* A fieldset is a light tray, even in a program whose chrome is dark, so
+   everything inside it goes back to black. Said with .app-body in the
+   selector on purpose: the body rule above sets a light ink for the dark
+   chrome and is an attribute plus a class plus an element, so a plainer
+   `fieldset label` loses to it and the tray comes out grey on grey. */
+[data-app="swap"] .app-body fieldset p,
+[data-app="swap"] .app-body fieldset label,
+[data-app="swap"] .app-body fieldset legend,
+[data-app="swap"] .app-body fieldset span,
+[data-app="swap"] .app-body fieldset li,
+[data-app="swap"] .app-body fieldset .note { color: #000000; }
+
+/* The boxes the tool draws into. */
+[data-app="swap"] .notice-box,
+[data-app="swap"] .app-body details {
+  background: #ffffe1;
+  border: 1px solid #808080;
+  max-width: 820px;
+}
+[data-app="swap"] .notice-box *,
+[data-app="swap"] .app-body details * { color: #000000; }
+
+/* ---- THE BOARD -----------------------------------------------------
+   Amber on black, and every number in a fixed pitch so the digits line
+   up down the column. That is not nostalgia: a rate you are comparing
+   against another rate has to be readable at a glance, and proportional
+   digits make that harder. */
+[data-app="swap"] .app-body h3 { letter-spacing: 1px; text-transform: uppercase; font-weight: normal; }
+[data-app="swap"] #quotes,
+[data-app="swap"] #order-block,
+[data-app="swap"] #order-meta {
+  background: #0a0a0a;
+  border: 1px solid #3a2a10;
+  padding: 8px;
+  max-width: 820px;
+}
+[data-app="swap"] #quotes table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  border: 1px solid #3a2a10;
+}
+[data-app="swap"] #quotes th {
+  background: #1a1408;
+  color: #ff9d1c;
+  border: 1px solid #3a2a10;
+  text-align: left;
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+[data-app="swap"] #quotes td {
+  background: #0a0a0a;
+  color: #e8e8e8;
+  border: 1px solid #241a0a;
+  font-family: "Courier New", Courier, monospace;
+}
+[data-app="swap"] #quotes td.n,
+[data-app="swap"] #quotes td.rate { text-align: right; color: #ff9d1c; }
+[data-app="swap"] input[type="text"],
+[data-app="swap"] select {
+  background: #0a0a0a;
+  color: #ff9d1c;
+  border: 1px solid #3a2a10;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+}
+[data-app="swap"] button:not(.notice-x):not(.menu-title):not(.win-min) {
+  border: 1px solid #5a4420;
+  background: #241a0a;
+  color: #ffce7a;
+}
+[data-app="swap"] button:not(.notice-x):hover:not(:disabled) { background: #322408; }
+[data-app="swap"] code { font-family: "Courier New", Courier, monospace; color: #ff9d1c; }
+[data-app="swap"] .status { color: #7ad07a; }
+[data-app="swap"] .error { color: #ff8a5a; }
+[data-app="swap"] a { color: #ffce7a; }
+
+/* ---- responsive ---------------------------------------------------- */
+@media (max-width: 700px) {
+  [data-app="swap"] .app-body { padding: 6px; }
+  [data-app="swap"] .app-window > .tick-menu span { padding: 2px 5px; }
+}
+

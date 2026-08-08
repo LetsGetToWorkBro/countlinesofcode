@@ -500,6 +500,28 @@ describe('an app may have its own face, and it must stay in its own lane', () =>
     .filter((n) => n.endsWith('.html'))
     .map((n) => ({ name: n, html: readFileSync(`public/${n}`, 'utf8') }));
 
+  it('never paints a hint strip in the chrome ink', () => {
+    /* Every face draws the same pale-yellow line at the top of its screen,
+     * and every face also sets an ink for its own chrome. On the dark ones
+     * that ink is light, and `.app-body p` is an attribute plus a class plus
+     * an element while a plain `.x-hint` is an attribute plus a class: the
+     * body rule wins and the strip comes out light grey on cream. Measured
+     * at 1.02:1 on the Paint face before this was stated properly.
+     *
+     * So a hint's colour must be set at .app-body weight or higher, and it
+     * must cover the children too, because the text is inside the <p>. */
+    for (const face of FACES) {
+      const css = readFileSync(`public/${face.file}`, 'utf8');
+      const cls = /\[data-app="[a-z]+"\] \.app-body \.([a-z]+)-hint \{/.exec(css)?.[1];
+      if (!cls) continue;   // wallet draws its hint per skin
+      const rule = new RegExp(
+        `\\[data-app="${face.app}"\\] \\.app-body \\.${cls}-hint,\\s*` +
+        `\\[data-app="${face.app}"\\] \\.app-body \\.${cls}-hint \\* \\{[^}]*color:`);
+      expect(css, `${face.file} sets its hint ink too weakly to beat .app-body p`)
+        .toMatch(rule);
+    }
+  });
+
   it('draws a face for every page that claims one', () => {
     /* Was a hardcoded list of four, which meant every new identity broke a
      * test that had nothing to say about it. What actually matters is that

@@ -13,10 +13,11 @@
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/app-shrink.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
-<body>
+<body data-app="shrink">
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
@@ -73,25 +74,26 @@
 <div class="desk-shell">
 <div class="app-window" id="app">
 <div class="client-title"><h2>Shrink a PDF</h2><a class="win-min" href="#" aria-label="Minimise Shrink a PDF">_</a></div>
+<p class="dl menubar" role="menubar">
+<span class="menu"><button type="button" class="menu-title">File</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="drop">Open...</button>
+    <button type="button" data-cmd="shrink">Save the smaller copy</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Settings</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="controls">How hard to squeeze</button>
+    <button type="button" data-cmd="keep-text">Keep the text sharp</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Help</button>
+  <span class="menu-drop">
+    <button type="button" data-help>What this program does</button>
+  </span></span>
+</p>
 <div class="app-body">
-<p class="tagline">Make a heavy PDF small enough to email. Your file never leaves this tab.</p>
+<p class="dl-hint"><span class="dl-hint-mark">i</span>
+Open a heavy PDF and choose how hard to squeeze it. The pages are re-rendered in this tab; nothing is uploaded.</p>
 
-<details class="notice-box">
-<summary><strong>This works by re-rendering the pages, so know what it is good at.</strong></summary>
-<p class="note">
-The usual reason a PDF is enormous is that it is a scan: big photographs
-of pages at a far higher resolution than anyone needs. This re-renders each page
-at a sensible size and re-compresses it, which on a scan can cut the file by ten
-times. The text is laid back over each page invisibly, so you can still select
-and search it.
-</p>
-<p class="note">
-On a PDF that is <em>already</em> mostly crisp vector text, this will help little
-or may even make it larger, because there is nothing oversized to shrink. So it
-shows you the before and after and lets you keep the original if it won. It never
-overwrites anything; you download a new file.
-</p>
-</details>
 
 <hr>
 
@@ -126,11 +128,37 @@ overwrites anything; you download a new file.
 </div>
 
 <hr>
+
+
+
+
+<!-- What this program has to say for itself. Hidden here and shown by
+     firstrun.js as a dialog on the first visit, and from Help after that. -->
+<div id="first-run" hidden>
+
+<section data-step="Making a PDF small enough to send">
+<p><strong>A heavy PDF in, a lighter one out.</strong></p>
+<p class="note">
+The usual reason a PDF is enormous is that it is a scan: big photographs
+of pages at a far higher resolution than anyone needs. This re-renders each page
+at a sensible size and re-compresses it, which on a scan can cut the file by ten
+times. The text is laid back over each page invisibly, so you can still select
+and search it.
+</p>
+<p class="note">
+On a PDF that is <em>already</em> mostly crisp vector text, this will help little
+or may even make it larger, because there is nothing oversized to shrink. So it
+shows you the before and after and lets you keep the original if it won. It never
+overwrites anything; you download a new file.
+</p>
+</section>
+
+<section data-step="Is this actually private?">
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
+</section>
 
-<details class="notes">
-<summary>The honest notes</summary>
+<section data-step="The honest notes">
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The PDF is rendered and rewritten in your browser.</li>
   <li><strong>It re-renders; it does not optimise in place.</strong> Every page becomes a re-compressed image with an invisible text layer over it. That is what shrinks a scan dramatically, and what makes it the wrong tool for a document that was already efficient vector text, where it will show no gain and you keep the original.</li>
@@ -138,10 +166,9 @@ overwrites anything; you download a new file.
   <li><strong>Fonts and vector art become pixels.</strong> A shrunk page is an image, so zooming in far enough shows softness a vector PDF would not. At Light strength on a normal document that is hard to notice; at Strong on a dense page it is visible.</li>
   <li><strong>Big documents use memory and time.</strong> Each page is rendered at full size before being compressed, so a 300-page scan is real work for a phone. It runs a page at a time so the tab does not freeze.</li>
 </ul>
-</details>
+</section>
 
-<hr>
-
+<section data-step="The rest of the site">
 <p class="footer">
 Hosted on Cloudflare &middot; Made with spite for bloat<br>
 <a href="/sign.html">edit a pdf</a> |
@@ -158,7 +185,9 @@ If something saved you an hour:<br>
 You can
 <a href="/wallet.html#addresses">check that address here</a> before sending anything.
 </p>
+</section>
 
+</div>
 </div>
 </div>
 </div>
@@ -175,7 +204,9 @@ You can
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
 <script src="/start.js"></script>
+<script src="/menubar.js"></script>
 <script src="/proof-panel.js"></script>
+<script src="/firstrun.js"></script>
 <script src="/dismiss.js"></script>
 </body>
 </html>
