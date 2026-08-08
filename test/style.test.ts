@@ -1073,6 +1073,34 @@ describe('the wallets get out of their own way', () => {
       .not.toMatch(/#node-box[\s\S]{0,400}margin-left:\s*auto/);
   });
 
+  it('keeps the ! on the same line as the control it explains', () => {
+    /* It was its own flex item, so on a phone the bar ran out of width
+     * after the select and carried a single 20px button onto a line of its
+     * own: a whole extra row of toolbar for one character. Label, control
+     * and ! are one non-wrapping group now, and the select is the only
+     * thing in it allowed to give up width. */
+    const bangs = [...html.matchAll(/<button[^>]*class="wl-info"[^>]*>/g)];
+    expect(bangs.length, 'the ! buttons are gone').toBeGreaterThanOrEqual(2);
+    for (const bang of bangs) {
+      // Everything between the group this button is in and the button
+      // itself. These groups hold a label, a control and the button and
+      // nothing nested, so an unclosed </span> in that slice would mean the
+      // button is outside the group rather than in it.
+      const at = bang.index!;
+      const opens = html.lastIndexOf('<span class="wl-pick">', at);
+      expect(opens, 'a ! sits outside any wl-pick group').toBeGreaterThan(-1);
+      const inside = html.slice(opens, at);
+      expect(inside, 'a ! is not grouped with a control').toContain('<select');
+      expect(inside, 'the group closed before the ! got into it').not.toContain('</span>');
+    }
+    const rule = /\[data-app="wallet"\] \.wl-pick \{([^}]*)\}/.exec(css);
+    expect(rule, 'the group is gone').not.toBeNull();
+    expect(rule![1], 'the group may wrap, which is the bug').toMatch(/flex-wrap:\s*nowrap/);
+    // Only the select shrinks; a squeezed label reads as a broken control.
+    expect(css).toMatch(/\.wl-pick > \.wl-node-label \{ flex: 0 0 auto; \}/);
+    expect(css).toMatch(/\.wl-pick > \.wl-info \{ flex: 0 0 auto; \}/);
+  });
+
   it('never folds the node picker away again', () => {
     for (const id of ['node', 'btc-server']) {
       const before = html.slice(0, html.indexOf(`<select id="${id}">`));

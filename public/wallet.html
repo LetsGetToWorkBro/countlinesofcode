@@ -118,29 +118,37 @@
      beside it opens what it means. Which of the two shows follows the open
      panel, in CSS, because the panel already says which it is. -->
 <span class="wl-node" id="node-box">
-  <label for="node" class="wl-node-label">Node</label>
-  <select id="node"></select>
+  <!-- Label, control and its ! are one item, so the ! cannot be carried
+       onto a line of its own when the bar runs out of width. -->
+  <span class="wl-pick">
+    <label for="node" class="wl-node-label">Node</label>
+    <select id="node"></select>
+    <button type="button" class="wl-info" data-warn-open="node" aria-label="What the node does and sees">!</button>
+  </span>
   <span id="custom-node-row" class="hidden">
     <label for="custom-node" class="wl-node-label">Yours</label>
     <input type="text" id="custom-node" spellcheck="false" placeholder="https://your.node:18089" size="24">
   </span>
-  <button type="button" class="wl-info" data-warn-open="node" aria-label="What the node does and sees">!</button>
   <span id="node-note" class="wl-node-note"></span>
   <span id="node-swap" class="wl-node-note"></span>
 </span>
 <span class="wl-node" id="btc-server-box">
-  <label for="btc-server" class="wl-node-label">Explorer</label>
-  <select id="btc-server"></select>
+  <span class="wl-pick">
+    <label for="btc-server" class="wl-node-label">Explorer</label>
+    <select id="btc-server"></select>
+  </span>
   <span id="btc-custom-row" class="hidden">
     <label for="btc-custom" class="wl-node-label">Yours</label>
     <input type="text" id="btc-custom" spellcheck="false" placeholder="https://your.esplora/api" size="24">
   </span>
-  <label for="btc-privacy" class="wl-node-label">Lookups</label>
-  <select id="btc-privacy">
-    <option value="direct" selected>Direct</option>
-    <option value="padded">Padded (slower)</option>
-  </select>
-  <button type="button" class="wl-info" data-warn-open="explorer" aria-label="What the explorer does and sees">!</button>
+  <span class="wl-pick">
+    <label for="btc-privacy" class="wl-node-label">Lookups</label>
+    <select id="btc-privacy">
+      <option value="direct" selected>Direct</option>
+      <option value="padded">Padded (slower)</option>
+    </select>
+    <button type="button" class="wl-info" data-warn-open="explorer" aria-label="What the explorer does and sees">!</button>
+  </span>
   <span id="btc-server-note" class="wl-node-note"></span>
   <span id="btc-server-swap" class="wl-node-note"></span>
   <span id="btc-privacy-note" class="wl-node-note"></span>

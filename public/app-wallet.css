@@ -118,6 +118,33 @@
   padding-left: 12px;
   border-left: 1px solid #808080;
 }
+/* A control and the ! that explains it travel together.
+   The ! was its own flex item, so on a phone the bar ran out of width
+   after the select and carried a single 20px button onto a line of its
+   own: a whole extra row of toolbar for one character. Grouped, it rides
+   at the end of the select's line and the select gives up the width
+   instead, which it can afford because it is showing a hostname and not
+   a sentence. */
+[data-app="wallet"] .wl-pick {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+/* The label never gives up width; the select is the only thing in the
+   group that shrinks. Letting both shrink squeezed "Node" against the
+   control it names. */
+[data-app="wallet"] .wl-pick > .wl-node-label { flex: 0 0 auto; }
+[data-app="wallet"] .wl-pick > .wl-info { flex: 0 0 auto; }
+[data-app="wallet"] .wl-pick select {
+  flex: 0 1 auto;
+  min-width: 0;
+  /* The shared cap is for a select standing alone; inside a group the
+     flexbox already stops it and the cap would only truncate it early. */
+  max-width: none;
+}
+
 [data-app="wallet"] .wl-node-label {
   color: #4a4a4a;
   font-weight: bold;
