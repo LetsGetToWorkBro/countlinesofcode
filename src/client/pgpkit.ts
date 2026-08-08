@@ -118,6 +118,49 @@ export function profileFor(id: string): Profile {
 export type KeyKind = 'curve25519' | 'rsa4096';
 
 /**
+ * Whether an address can go on a key, and if not, why not in words.
+ *
+ * OpenPGP.js will not build a user ID out of an address it does not like, and
+ * what it throws when that happens is "Invalid user ID format" — an accurate
+ * sentence about its own internals and a useless one to the person who left a
+ * full stop on the end of their email. So the same rule is stated here, ahead
+ * of it, and each way of failing it gets told apart.
+ *
+ * The shape is the library's own: something, an @, a domain of at least two
+ * characters, and a last character that is not punctuation. No spaces, no
+ * angle brackets, no second @. It is deliberately not an attempt to decide
+ * whether an address is deliverable — nothing here can know that, and a key
+ * with a wrong address on it is still a working key. It only refuses what
+ * cannot be written into a key at all.
+ *
+ * An empty box is not a problem: a key can be named instead of addressed.
+ */
+const EMAIL_SHAPE = /^[^\p{C}\p{Z}@<>\\]+@[^\p{C}\p{Z}@<>\\]+[^\p{C}\p{Z}\p{P}]$/u;
+
+export function emailProblem(email: string): string | null {
+  const value = String(email ?? '').trim();
+  if (!value) return null;
+  if (EMAIL_SHAPE.test(value)) return null;
+
+  if (/\p{C}/u.test(value)) {
+    return 'That address has an invisible control character in it, which cannot go on a key. Type it out rather than pasting it.';
+  }
+  if (/[\p{Z}\s]/u.test(value)) {
+    return 'An email address on a key cannot have spaces in it. Put the address alone here, like ada@example.com, and the name in the box above.';
+  }
+  if (/[<>\\]/.test(value)) {
+    return 'Put the address by itself, like ada@example.com. The angle brackets are added for you, and the name goes in the box above.';
+  }
+
+  const parts = value.split('@');
+  if (parts.length === 1) return 'That is not an email address: there is no @ in it. Write the whole address, like ada@example.com, or leave the box empty and name the key above.';
+  if (parts.length > 2) return 'That has more than one @ in it. A key takes one address, like ada@example.com.';
+  if (!parts[0]) return 'There is nothing in front of the @. An email address needs a name on the left of it, like ada@example.com.';
+  if (parts[1]!.length < 2) return 'There is no domain after the @. An email address needs one, like ada@example.com.';
+  return 'An email address cannot end in punctuation. Take the "' + value.slice(-1) + '" off the end of it.';
+}
+
+/**
  * The two profiles want *different* Curve25519.
  *
  * `{ type: 'ecc', curve: 'curve25519' }` is the older encoding: EdDSA-legacy
@@ -130,8 +173,18 @@ export function keyOptions(
   profile: Profile,
   fields: { name?: string; email?: string; kind?: KeyKind; passphrase?: string; expiryYears?: number },
 ): Record<string, unknown> {
+  const name = (fields.name ?? '').trim();
+  const email = (fields.email ?? '').trim();
+
+  // The backstop. The page checks this before it gets here so the answer is
+  // quick, but nothing should be able to hand OpenPGP.js an address it will
+  // refuse — the only thing it says about one is "Invalid user ID format".
+  const trouble = emailProblem(email);
+  if (trouble) throw new Error(trouble);
+  if (!name && !email) throw new Error('A key needs a name or an email on it, so it can be told apart from every other key.');
+
   const options: Record<string, unknown> = {
-    userIDs: [{ name: fields.name || undefined, email: fields.email || undefined }],
+    userIDs: [{ name: name || undefined, email: email || undefined }],
     format: 'armored',
   };
 
@@ -621,6 +674,7 @@ globalScope.LOC1999_PGP = {
   PROFILES,
   profileFor,
   keyOptions,
+  emailProblem,
   expirySeconds,
   mayStorePrivate,
   splitArmored,

@@ -19,6 +19,7 @@ import {
   WORDS,
   armorKind,
   backupName,
+  emailProblem,
   expirySeconds,
   forgetAllKeys,
   forgetKey,
@@ -464,6 +465,80 @@ describe('profiles', () => {
     const options = keyOptions(PROFILES.modern, { name: 'A' });
     (options.config as Record<string, unknown>).aeadProtect = false;
     expect(PROFILES.modern.config.aeadProtect).toBe(true);
+  });
+
+  it('refuses an address OpenPGP.js would refuse, and says why itself', () => {
+    // The bug this exists for: a full stop on the end of an address came back
+    // as "Invalid user ID format", which is a true sentence about the
+    // library's internals and no help at all.
+    expect(() => keyOptions(PROFILES.compatible, { name: 'A', email: 'ada@example.com.' }))
+      .toThrow(/end in punctuation/i);
+    expect(() => keyOptions(PROFILES.compatible, { email: 'ada' })).toThrow(/no @ in it/i);
+    expect(() => keyOptions(PROFILES.compatible, { name: 'A', email: 'ada@example.com' })).not.toThrow();
+  });
+
+  it('will not build a key that has nothing on it to tell it apart', () => {
+    expect(() => keyOptions(PROFILES.compatible, {})).toThrow(/name or an email/i);
+    expect(() => keyOptions(PROFILES.compatible, { name: '   ' })).toThrow(/name or an email/i);
+  });
+
+  it('trims what it is given, so a stray space is not part of the name', () => {
+    const options = keyOptions(PROFILES.compatible, { name: ' Ada ', email: ' ada@example.com ' });
+    expect(options.userIDs).toEqual([{ name: 'Ada', email: 'ada@example.com' }]);
+  });
+});
+
+describe('emailProblem', () => {
+  it('is happy with an empty box, because a key can be named instead', () => {
+    // Not everyone wants an address on a public key, and that is a legitimate
+    // choice rather than an incomplete form.
+    expect(emailProblem('')).toBeNull();
+    expect(emailProblem('   ')).toBeNull();
+  });
+
+  it('accepts the addresses people actually have', () => {
+    for (const address of [
+      'ada@example.com',
+      'ada+pgp@example.com',
+      'ada.lovelace@example.co.uk',
+      'ADA@Example.COM',
+      'ada@localhost',
+      'ada@ex',
+      "o'hara@example.com",
+      'ada@127.0.0.1',
+    ]) {
+      expect(emailProblem(address), address).toBeNull();
+    }
+  });
+
+  it('tells the ways of getting it wrong apart', () => {
+    // A single "that is not valid" for all of these would leave someone
+    // staring at an address that looks fine to them.
+    expect(emailProblem('ada')).toMatch(/no @ in it/i);
+    expect(emailProblem('ada@')).toMatch(/no domain after the @/i);
+    expect(emailProblem('a@b')).toMatch(/no domain after the @/i);
+    expect(emailProblem('@example.com')).toMatch(/nothing in front of the @/i);
+    expect(emailProblem('ada@ex@ample.com')).toMatch(/more than one @/i);
+    expect(emailProblem('ada lovelace@example.com')).toMatch(/spaces/i);
+    expect(emailProblem('Ada <ada@example.com>')).toMatch(/spaces|angle brackets/i);
+    expect(emailProblem('<ada@example.com>')).toMatch(/angle brackets/i);
+    expect(emailProblem('ada@example.com.')).toMatch(/punctuation/i);
+    // Built rather than pasted, so the control character is visible in the source.
+    expect(emailProblem('ada@exam' + String.fromCharCode(7) + 'ple.com')).toMatch(/control character/i);
+  });
+
+  it('quotes the offending character back, so the fix is obvious', () => {
+    expect(emailProblem('ada@example.com.')).toContain('"."');
+    expect(emailProblem('ada@example.com,')).toContain('","');
+  });
+
+  it('never answers with something that is not a sentence to read', () => {
+    for (const bad of ['ada', 'ada@', '@x', 'a b@c.d', 'x@y.z.', 'ada@ex@ample.com']) {
+      const message = emailProblem(bad)!;
+      expect(message, bad).toMatch(/^[A-Z]/);
+      expect(message, bad).toMatch(/[.]$/);
+      expect(message.length, bad).toBeGreaterThan(30);
+    }
   });
 });
 

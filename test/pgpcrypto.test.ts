@@ -20,7 +20,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { PROFILES, keyOptions, messageFormatFor } from '../src/client/pgpkit';
+import { PROFILES, emailProblem, keyOptions, messageFormatFor } from '../src/client/pgpkit';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const openpgp: any = await import('../public/vendor/openpgp/openpgp.min.mjs' as string);
@@ -220,4 +220,56 @@ describe('which format a message actually gets', () => {
     expect(messageFormatFor(4).note).toMatch(/could not open/i);
     expect(messageFormatFor(6).note).toMatch(/authenticated/i);
   });
+});
+
+/**
+ * The one thing the other file cannot check.
+ *
+ * pgpkit's emailProblem() states OpenPGP.js's rule for an address in its own
+ * words, ahead of it, so that a full stop on the end comes back as a sentence
+ * about the full stop rather than "Invalid user ID format". A restatement of
+ * somebody else's rule is only useful while it agrees with the rule, so here
+ * both sides are asked about the same addresses and compared.
+ */
+describe('what an address may be', () => {
+  const ACCEPTED = ['ada@example.com', 'ada+pgp@example.com', 'ada.lovelace@example.co.uk', 'ada@localhost', 'ada@ex'];
+  const REFUSED = ['ada', 'ada@', 'a@b', '@example.com', 'ada@example.com.', 'ada lovelace@example.com'];
+
+  /** Straight to the library, bypassing our own check, to see what it does. */
+  async function libraryAccepts(email: string): Promise<boolean> {
+    try {
+      await openpgp.generateKey({
+        userIDs: [{ email }], type: 'ecc', curve: 'curve25519', format: 'armored',
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  it('agrees with OpenPGP.js about every address, in both directions', async () => {
+    for (const email of ACCEPTED) {
+      expect(emailProblem(email), `we refuse ${email}`).toBeNull();
+      expect(await libraryAccepts(email), `the library refuses ${email}`).toBe(true);
+    }
+    for (const email of REFUSED) {
+      expect(emailProblem(email), `we accept ${email}`).not.toBeNull();
+      expect(await libraryAccepts(email), `the library accepts ${email}`).toBe(false);
+    }
+  }, 60_000);
+
+  it('never lets "Invalid user ID format" reach anybody through keyOptions', async () => {
+    // The bug as it was reported. Whatever goes in, what comes out is either a
+    // key or a sentence written here.
+    for (const email of REFUSED) {
+      let message = '';
+      try {
+        await openpgp.generateKey(keyOptions(PROFILES.compatible, { name: 'Ada', email }));
+      } catch (err) {
+        message = (err as Error).message;
+      }
+      expect(message, email).not.toBe('');
+      expect(message, email).not.toMatch(/invalid user id format/i);
+    }
+  }, 60_000);
 });

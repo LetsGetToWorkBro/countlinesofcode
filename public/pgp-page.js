@@ -211,6 +211,12 @@
 
     ready()
       .then(function () {
+        // Said before the key is attempted rather than after: OpenPGP.js will
+        // not build a user ID out of an address it dislikes, and all it says
+        // about one is "Invalid user ID format".
+        var trouble = kit.emailProblem(email);
+        if (trouble) { $('key-email').focus(); throw new Error(trouble); }
+
         var options = kit.keyOptions(kit.profileFor($('key-profile').value), {
           name: name, email: email,
           kind: rsa ? 'rsa4096' : 'curve25519',
@@ -258,7 +264,13 @@
       })
       .catch(function (err) {
         $('generate-note').textContent = '';
-        fail((err && err.message) || String(err));
+        var message = (err && err.message) || String(err);
+        // Anything that still gets past the check above arrives as a sentence
+        // about the library's internals. Say what it means instead.
+        if (/invalid user id format/i.test(message)) {
+          message = 'The name or the email on the key cannot be written into one. Check the email box: an address there needs an @ with a domain after it, and no spaces.';
+        }
+        fail(message);
       })
       .then(function () { $('generate').disabled = false; });
   }
