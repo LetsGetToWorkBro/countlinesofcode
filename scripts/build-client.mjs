@@ -67,6 +67,16 @@ export const BUNDLES = [
     banner: '/* 1999.LOC archive engine. Built from src/client/zipkit.ts. Do not edit. */',
   },
   {
+    entry: 'src/client/archive.ts',
+    outfile: 'public/archive.js',
+    alias: {
+      fs: join(root, 'scripts/shims/empty.js'),
+      path: join(root, 'scripts/shims/path.js'),
+      crypto: join(root, 'scripts/shims/empty.js'),
+    },
+    banner: '/* 1999.LOC RAR/7z/tar reader. Built from src/client/archive.ts. Do not edit. Bundles libarchive-wasm (MIT) around libarchive (BSD); the .wasm is served from /vendor. */',
+  },
+  {
     entry: 'src/client/email.ts',
     outfile: 'public/email.js',
     banner: '/* 1999.LOC email checker. Built from src/client/email.ts. Do not edit. */',
@@ -167,6 +177,11 @@ export function optionsFor(spec) {
     ...COMMON,
     entryPoints: [join(root, spec.entry)],
     banner: { js: spec.banner },
+    /* A bundle may need Node built-ins aliased away. Emscripten output keeps
+       its Node branches behind an ENVIRONMENT_IS_NODE check the browser never
+       takes, but esbuild still has to resolve the requires to bundle the file
+       at all, so they point at the same empty shims the Monero library uses. */
+    ...(spec.alias ? { alias: spec.alias } : {}),
   };
 }
 

@@ -18,6 +18,8 @@
   var errorEl = $('error');
 
   var kit = null;          // window.LOC1999_ZIP
+  var arc = null;          // window.LOC1999_ARCHIVE, only once a non-ZIP turns up
+  var format = 'zip';      // what the open archive actually is
   var raw = null;          // the archive's bytes
   var listing = [];        // ZipListing[], sorted
   var chosen = null;       // Set of names
@@ -67,6 +69,35 @@
     });
   }
 
+  /* The other formats, on demand.
+   *
+   * 600KB of WebAssembly for RAR, 7z, tar and the rest. Most archives are
+   * ZIPs, which the other engine reads in seven kilobytes, so this is not
+   * fetched until something turns up that needs it. */
+  function loadArchiveKit() {
+    if (arc) return Promise.resolve();
+    return new Promise(function (resolve, reject) {
+      var el = document.createElement('script');
+      el.src = '/archive.js';
+      el.onload = function () {
+        arc = window.LOC1999_ARCHIVE;
+        arc ? resolve() : reject(new Error('the archive engine did not load'));
+      };
+      el.onerror = function () { reject(new Error('could not load the archive engine')); };
+      document.head.appendChild(el);
+    });
+  }
+
+  /* One entry's bytes, from whichever engine holds this archive. */
+  function readEntry(entry) {
+    return format === 'zip'
+      ? kit.extractEntry(raw, entry)
+      : arc.extractFromArchive(raw, entry.name).then(function (data) {
+          if (!data) throw new Error('That entry is not in the archive any more.');
+          return data;
+        });
+  }
+
   // ------------------------------------------------------------ opening
 
   function openArchive(file) {
@@ -81,7 +112,22 @@
       .then(function () { return file.arrayBuffer(); })
       .then(function (buffer) {
         raw = new Uint8Array(buffer);
-        listing = kit.sortListing(kit.listZip(raw));
+        /* The bytes decide, not the name. A .zip that is really a 7z opens,
+           and a .7z that is really a ZIP takes the fast path. */
+        format = kit.sniffFormat(raw);
+        if (format === 'unknown') {
+          throw new Error('That does not look like an archive this can open. ' +
+            'It reads ZIP, 7z, RAR, tar and a few others.');
+        }
+        /* A ZIP never fetches the big engine, which is nearly every archive
+           anyone opens. The magic numbers live in the small bundle exactly
+           so this decision can be made before the download. */
+        if (!kit.needsLibarchive(format)) return kit.listZip(raw);
+        setStatus('Reading a ' + kit.formatLabel(format) + ' archive\u2026');
+        return loadArchiveKit().then(function () { return arc.listArchive(raw); });
+      })
+      .then(function (entries) {
+        listing = kit.sortListing(entries);
         chosen = new Set(listing.filter(function (e) { return !e.directory; }).map(function (e) { return e.name; }));
         $('archive').classList.remove('hidden');
         showSummary();
@@ -167,7 +213,7 @@
     // uncompressed archive in memory at once, which is the thing to avoid.
     var chain = entries.reduce(function (promise, entry) {
       return promise.then(function () {
-        return kit.extractEntry(raw, entry).then(function (data) {
+        return readEntry(entry).then(function (data) {
           var name = kit.uniqueName(kit.safeName(entry.name), taken);
           taken.add(name);
           collected.push({ name: name, data: data, original: entry.name });
@@ -234,7 +280,7 @@
     $('preview-name').textContent = entry.name + ', ' + kit.formatBytes(entry.size);
     $('preview').textContent = 'Reading…';
 
-    kit.extractEntry(raw, entry).then(function (data) {
+    readEntry(entry).then(function (data) {
       var kind = kit.kindOf(entry.name);
       if (kind === 'image') {
         // Without a type the blob is octet-stream and the <img> refuses to

@@ -2659,9 +2659,14 @@ body[data-app] #page > hr { display: none; }
   color: #ffffff;
   font-weight: bold;
 }
+/* Same rule for the dialog's close box, and square for the same reason. */
 .fr-x {
+  box-sizing: border-box;
   width: 20px;
-  height: 18px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
   border: 2px outset #c0c0c0;
   background: #c0c0c0;
@@ -2816,11 +2821,26 @@ body[data-first-run] #first-run[hidden] { display: block; }
    floating over the corner, so it cannot land on top of the words. */
 .notice-box > summary { display: flex; align-items: flex-start; gap: 8px; }
 .notice-box > summary > :first-child { flex: 1; }
+/* A close box is square and the x sits in the middle of it.
+   Neither was true. The size was set with width/height and the centring
+   was left to a line-height, which only works while nothing else touches
+   the padding: an app skin styling `button` is an attribute plus a class
+   plus an element and outranks this one class, so the Monero skin's
+   `padding: 4px 12px` landed on it and the box came out 26 by 22 with the
+   glyph shoved off its middle.
+
+   So it centres with flex, which does not care what the font metrics are,
+   and it states its own padding at a weight the skins cannot reach past.
+   box-sizing so the border is inside the square rather than added to it. */
 .notice-x {
   flex: 0 0 auto;
+  box-sizing: border-box;
   width: 22px;
   height: 22px;
-  padding: 0;
+  min-width: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 2px outset #c0c0c0;
   background: #c0c0c0;
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
@@ -2830,5 +2850,7 @@ body[data-first-run] #first-run[hidden] { display: block; }
   cursor: pointer;
   touch-action: manipulation;
 }
+/* Said again, past any app skin that styles its buttons by element. */
+[data-app] .notice-box > summary > .notice-x { padding: 0; }
 .notice-x:active { border-style: inset; }
 .notice-x:focus-visible { outline: 1px dotted #000000; outline-offset: 1px; }

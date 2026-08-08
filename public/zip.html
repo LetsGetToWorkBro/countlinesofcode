@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Open a ZIP or Make One, in Your Browser | 1999.LOC</title>
+<title>Open a ZIP, 7z or RAR, or Make a ZIP, in Your Browser | 1999.LOC</title>
 <meta name="description" content="See what is inside a ZIP file, pull out just the files you want, or build an archive from your own files. Nothing is uploaded; the archive is opened inside the tab.">
 <link rel="canonical" href="https://1999loc.com/zip.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Open a ZIP or Make One, in Your Browser | 1999.LOC">
+<meta property="og:title" content="Open a ZIP, 7z or RAR, or Make a ZIP, in Your Browser | 1999.LOC">
 <meta property="og:description" content="Look inside a ZIP without uploading it anywhere, extract only what you need, or build one from your own files.">
 <meta property="og:url" content="https://1999loc.com/zip.html">
 <meta property="og:site_name" content="1999.LOC">
@@ -142,10 +142,10 @@
   </div>
 
 <div id="mode-open">
-  <div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open a ZIP archive">
-    <strong>Drop a .zip here, or click to choose</strong>
-    <span>Nothing is uploaded; it is read inside this tab</span>
-    <input type="file" id="file-input" accept=".zip,.docx,.xlsx,.pptx,.epub,.jar,.apk,application/zip" hidden>
+  <div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open an archive">
+    <strong>Drop an archive here, or click to choose</strong>
+    <span>zip, 7z, rar, tar and a few more. Nothing is uploaded; it is read inside this tab</span>
+    <input type="file" id="file-input" accept=".zip,.7z,.rar,.tar,.gz,.tgz,.bz2,.xz,.zst,.cab,.iso,.cpio,.docx,.xlsx,.pptx,.epub,.jar,.apk,application/zip" hidden>
   </div>
 
   <p id="status" class="status" role="status" aria-live="polite"></p>
@@ -205,6 +205,30 @@
      Still in the markup, so it is still readable in the source and still
      there for anything that indexes the page. -->
 <div id="first-run" hidden>
+
+<section data-step="What it opens, and what it makes">
+<p><strong>It opens zip, 7z, rar and tar. It makes zip.</strong></p>
+<p class="note">
+Reading the other formats is libarchive, the same library behind bsdtar and
+most of the extract buttons on a Linux desktop, compiled to WebAssembly and
+run here in the tab. It brings its own readers for RAR (both the old format
+and RAR5), 7z, tar, cpio, ISO and CAB. It is 600KB, so it is only fetched
+when something turns up that needs it: opening a plain zip never downloads
+it.
+</p>
+<p class="note">
+<strong>Making a RAR is not possible</strong>, here or in any free software.
+The format is proprietary and there has never been a compressor for it
+outside WinRAR itself. Making a 7z is possible in principle and not done
+here, because the build this uses reads only. So anything you create on this
+page comes out as a zip, which every one of those tools can open.
+</p>
+<p class="note">
+The format is read from the file's first bytes rather than its name, so a
+.zip that is really a 7z opens anyway, and a .7z that is really a zip takes
+the fast path.
+</p>
+</section>
 
 <section data-step="Welcome to WinZip">
 <p class="tagline">In this tab. The archive is never uploaded.</p>

@@ -17,6 +17,8 @@
  *   npm run hash:vendor
  */
 export const VENDORED_HASHES: Record<string, string> = {
+  'public/vendor/libarchive/libarchive.wasm':
+    '99889a4e7c3d1968303ef334a0ca89efffaf8867eb7cbd7c265602d8e0b50e63',
   'public/vendor/libheif/libheif-bundle.js':
     '793b36c913689784b2bfba60456fd87c14ed49e2d13f3b4d2611baaf05148f81',
   'public/vendor/mediabunny/mediabunny.min.mjs':

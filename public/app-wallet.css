@@ -395,7 +395,7 @@
   border: 2px inset #d4d0c8;
   background: #ffffff;
 }
-[data-app="wallet"] .skin-btc button {
+[data-app="wallet"] .skin-btc button:not(.notice-x) {
   border: 2px outset #d4d0c8;
   background: #d4d0c8;
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
@@ -511,7 +511,7 @@
   background: #141414;
   color: #e8e8e8;
 }
-[data-app="wallet"] .skin-xmr button {
+[data-app="wallet"] .skin-xmr button:not(.notice-x) {
   border: 1px solid #4a4a4a;
   background: #333333;
   color: #e8e8e8;
