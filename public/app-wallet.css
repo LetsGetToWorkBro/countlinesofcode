@@ -226,6 +226,29 @@
   }
 }
 [data-app="wallet"] .wl-main { min-width: 0; }
+
+/* What goes in that column depends on whether a wallet is open.
+   With one open it is the transaction log, which used to be a tab you had
+   to press while an entire column sat empty beside it: a wallet program
+   shows you what it has done without being asked. With none open it is
+   the checker, which is when a loose address is the thing you actually
+   arrived with. The column is never idle and neither thing needs a tab.
+
+   :has(), not script. The wallet blocks already carry .hidden, so the
+   panel can read its own state from here. A browser without :has() shows
+   both, one under the other, which is the old arrangement and readable. */
+[data-app="wallet"] [data-panel="wallet"] .wl-split:has(#wallet:not(.hidden)) .wl-check,
+[data-app="wallet"] [data-panel="btc"] .wl-split:has(#btc-wallet:not(.hidden)) .wl-check { display: none; }
+[data-app="wallet"] [data-panel="wallet"] .wl-split:has(#wallet.hidden) .wl-log,
+[data-app="wallet"] [data-panel="btc"] .wl-split:has(#btc-wallet.hidden) .wl-log { display: none; }
+
+/* The line at the top of the screen follows the same state. Telling somebody
+   with a wallet open to make one is worse than saying nothing. */
+[data-app="wallet"] .wl-hint-open { display: none; }
+[data-app="wallet"] [data-panel="wallet"]:has(#wallet:not(.hidden)) .wl-hint-setup,
+[data-app="wallet"] [data-panel="btc"]:has(#btc-wallet:not(.hidden)) .wl-hint-setup { display: none; }
+[data-app="wallet"] [data-panel="wallet"]:has(#wallet:not(.hidden)) .wl-hint-open,
+[data-app="wallet"] [data-panel="btc"]:has(#btc-wallet:not(.hidden)) .wl-hint-open { display: flex; }
 [data-app="wallet"] .wl-side { min-width: 0; }
 [data-app="wallet"] .wl-side h3 { margin-top: 0; }
 /* The panel has its own width, so the shared 620px measure would be a
@@ -567,3 +590,30 @@
 [data-app="wallet"] .wl-proof { margin: 10px 0; }
 [data-app="wallet"] .wl-proof > p { max-width: 620px; }
 [data-app="wallet"] .wl-proof table { width: 100%; font-size: 11px; }
+
+/* ---- the paper wallet's steps --------------------------------------
+   They were folded behind a disclosure triangle called "The two checks",
+   which put the instructions for doing this safely one click further away
+   than the button that does it unsafely. They are the tool now: a
+   numbered list you work down, with the controls sitting at step two. */
+[data-app="wallet"] .wl-steps {
+  margin: 0 0 14px 0;
+  padding-left: 22px;
+  max-width: 820px;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+[data-app="wallet"] .wl-steps > li { margin: 0 0 7px 0; padding-left: 3px; }
+[data-app="wallet"] .wl-steps > li::marker { font-weight: bold; color: #000080; }
+
+/* Which coin the generator is making. */
+[data-app="wallet"] .wl-coin {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin: 14px 0 10px 0;
+  padding-top: 10px;
+  border-top: 1px solid #808080;
+}

@@ -437,6 +437,83 @@
     box.addEventListener('paste', function () { setTimeout(run, 0); });
   }
 
+  /* ---- the paper wallet -----------------------------------------------
+   * The generator on this page made Monero wallets and nothing else, which
+   * was a strange gap next to a Bitcoin wallet in the tab beside it. Same
+   * page, same discipline: derived here in the tab, offline if you took
+   * the first step seriously, never sent anywhere and never stored.
+   *
+   * It lives in this file rather than with the Monero generator because
+   * everything it calls is the Bitcoin kit, and a wallet's own brain
+   * belongs beside the wallet. */
+  function bindPaper() {
+    var button = $('btc-generate');
+    var out = $('btc-paper-out');
+    var block = $('btc-paper');
+    if (!button || !out || !block) return;
+
+    button.addEventListener('click', function () {
+      if (!kit) { $('btc-generate-note').textContent = 'The engine has not loaded yet.'; return; }
+      var typed = ($('extra') && $('extra').value.trim()) || '';
+      var words, wallet, address;
+      try {
+        words = kit.newMnemonicFrom(new TextEncoder().encode(typed));
+        wallet = kit.openFromMnemonic(words);
+        address = kit.addressAt(wallet, 0, 0).address;
+      } catch (err) {
+        $('btc-generate-note').textContent = kit.prettyBtcError(err);
+        return;
+      }
+
+      out.innerHTML =
+        '<p><strong>First address</strong></p>' +
+        '<p><code>' + esc(address) + '</code></p>' +
+        '<p><strong>Seed phrase</strong>, the 12 words that restore everything. ' +
+          'Write these down. They are the wallet.</p>' +
+        '<ol class="seed-words">' + words.split(/\s+/).map(function (w) {
+          return '<li>' + esc(w) + '</li>';
+        }).join('') + '</ol>' +
+        '<table>' +
+        '<tr><th scope="row">Derivation</th><td><code>m/84\'/0\'/0\'</code> (BIP84, bech32)</td></tr>' +
+        '<tr><th scope="row">Watch-only key</th><td><code>' + esc(wallet.zpub) + '</code></td></tr>' +
+        '</table>' +
+        '<p class="note">The watch-only key shows every payment in and out without ' +
+        'being able to spend a satoshi. It also lets whoever holds it see the whole ' +
+        'wallet forever, so it is a smaller secret rather than a public one.</p>' +
+        '<div class="notice-box">' +
+        '<p><strong>Before you send anything to this address.</strong></p>' +
+        '<p class="note">Restore those 12 words in other software and confirm it shows ' +
+        'the same first address. Sparrow, Electrum and every hardware wallet will do it. ' +
+        'If the address differs, this page is wrong, and finding that out now costs you ' +
+        'nothing.</p>' +
+        '</div>';
+
+      block.classList.remove('hidden');
+      $('btc-generate-note').textContent = 'Made. Nothing about it is stored anywhere.';
+    });
+
+    var print = $('btc-print');
+    if (print) print.addEventListener('click', function () { window.print(); });
+  }
+
+  /* Which coin the generator is making. Both halves are on the page; this
+     is which one you are looking at. */
+  function bindCoinChoice() {
+    var xmrTab = $('pw-xmr');
+    var btcTab = $('pw-btc');
+    if (!xmrTab || !btcTab) return;
+    function pick(btc) {
+      xmrTab.classList.toggle('is-active', !btc);
+      btcTab.classList.toggle('is-active', btc);
+      $('pw-xmr-fields').classList.toggle('hidden', btc);
+      $('pw-btc-fields').classList.toggle('hidden', !btc);
+      // Leave whichever was already made on screen: closing it because you
+      // pressed a tab would throw away words somebody may not have copied.
+    }
+    xmrTab.addEventListener('click', function () { pick(false); });
+    btcTab.addEventListener('click', function () { pick(true); });
+  }
+
   // ---------------------------------------------------- tabs and sections
 
   var MODES = ['create', 'restore', 'watch'];
@@ -450,18 +527,30 @@
     });
   });
 
-  var SECTIONS = ['overview', 'receive', 'send', 'history', 'secrets'];
+  /* 'history' is not here any more: the log moved out of the tab strip and
+     into the column beside the wallet, where it is always on. The guards
+     stay anyway, because a section that goes missing should quietly not be
+     switched to rather than take the whole wallet down with it. */
+  var SECTIONS = ['overview', 'receive', 'send', 'secrets'];
   function showSection(which) {
     SECTIONS.forEach(function (name) {
-      $('btw-' + name).classList.toggle('is-active', name === which);
-      $('bsec-' + name).classList.toggle('hidden', name !== which);
+      var tab = $('btw-' + name);
+      var section = $('bsec-' + name);
+      if (!tab || !section) return;
+      tab.classList.toggle('is-active', name === which);
+      section.classList.toggle('hidden', name !== which);
     });
   }
   SECTIONS.forEach(function (name) {
-    $('btw-' + name).addEventListener('click', function () { showSection(name); });
+    var tab = $('btw-' + name);
+    if (tab) tab.addEventListener('click', function () { showSection(name); });
   });
 
   $('btc-privacy').addEventListener('change', syncPrivacyNote);
+
+  /* Choosing which coin the paper wallet is for needs no engine, so it is
+     wired straight away rather than waiting for one to load. */
+  bindCoinChoice();
 
   $('btc-server').addEventListener('change', function () {
     $('btc-custom-row').classList.toggle('hidden', $('btc-server').value !== 'custom');
@@ -486,14 +575,18 @@
       markAddress('btc-send-address', 'btc-addr-check', kit.checkBtcAddress);
       markAddress('btc-zpub-in', 'btc-zpub-check', kit.checkExtendedKey);
       bindChecker();
+      bindPaper();
     }, function () {
       setupFail('The wallet engine did not load. Reload the page.');
     });
   }
   var tabsRoot = document.querySelector('[data-tabs]');
   if (tabsRoot) {
+    /* The paper wallet is on the third tab and needs this engine too, so
+       the Bitcoin half boots for either. */
     tabsRoot.addEventListener('tab:shown', function (event) {
-      if (event.detail && event.detail.tab === 'btc') boot();
+      var tab = event.detail && event.detail.tab;
+      if (tab === 'btc' || tab === 'addresses') boot();
     });
     var panel = tabsRoot.querySelector('[data-panel="btc"]');
     if (panel && !panel.classList.contains('hidden')) boot();

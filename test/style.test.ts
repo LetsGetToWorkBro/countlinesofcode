@@ -1103,8 +1103,10 @@ describe('the wallets get out of their own way', () => {
   });
 
   it('tells you what to do on every screen', () => {
+    // A class token, not the whole attribute: the wallets carry a second
+    // class on theirs so the line can follow whether a wallet is open.
     for (const name of ['wallet', 'btc', 'addresses']) {
-      expect(panel(name), `${name} opens with no hint`).toContain('class="wl-hint"');
+      expect(panel(name), `${name} opens with no hint`).toMatch(/class="wl-hint[ "]/);
     }
   });
 
@@ -1142,6 +1144,56 @@ describe('the wallets get out of their own way', () => {
     expect(css).toMatch(/@media \(min-width: 900px\) \{\s*\[data-app="wallet"\] \.wl-split \{[^}]*grid-template-columns/);
     // One column on a phone: the wallet first, the checker under it.
     expect(css).toMatch(/\[data-app="wallet"\] \.wl-split \{ display: block; \}/);
+  });
+
+  it('gives the column the log when a wallet is open and the checker when not', () => {
+    /* The log used to be a tab you had to press while an entire column sat
+     * empty beside it, and the checker held that column permanently whether
+     * it was the useful thing there or not. Now the column is never idle:
+     * transactions while a wallet is open, the checker while none is, which
+     * is when a loose address is what you actually arrived with. */
+    expect(css).toMatch(/:has\(#wallet:not\(\.hidden\)\) \.wl-check/);
+    expect(css).toMatch(/:has\(#btc-wallet:not\(\.hidden\)\) \.wl-check/);
+    expect(css).toMatch(/:has\(#wallet\.hidden\) \.wl-log/);
+    expect(css).toMatch(/:has\(#btc-wallet\.hidden\) \.wl-log/);
+    for (const name of ['wallet', 'btc']) {
+      expect(panel(name), `${name} has no log column`).toContain('class="wl-log"');
+      expect(panel(name), `${name} has no checker column`).toContain('class="wl-check"');
+    }
+    // And it is not also still a tab.
+    expect(html, 'History is still in the Monero tab strip').not.toContain('id="wtab-history"');
+    expect(html, 'History is still in the Bitcoin tab strip').not.toContain('id="btw-history"');
+  });
+
+  it('does not tell somebody with a wallet open to make one', () => {
+    for (const name of ['wallet', 'btc']) {
+      expect(panel(name), `${name} has no open-wallet hint`).toContain('wl-hint-open');
+      expect(panel(name), `${name} has no setup hint`).toContain('wl-hint-setup');
+    }
+    expect(css).toMatch(/\[data-app="wallet"\] \.wl-hint-open \{ display: none; \}/);
+    expect(css).toMatch(/:has\(#wallet:not\(\.hidden\)\) \.wl-hint-setup/);
+  });
+
+  it('makes a paper wallet for either coin, with the steps in the open', () => {
+    /* It made Monero wallets and nothing else, which was a strange gap next
+     * to a Bitcoin wallet in the tab beside it. And the instructions for
+     * doing it safely were folded behind a triangle, one click further away
+     * than the button that does it unsafely. */
+    const paper = panel('addresses');
+    expect(paper, 'the steps are gone').toContain('class="wl-steps"');
+    const steps = paper.match(/<li><strong>/g) || [];
+    expect(steps.length, 'too few steps to be a procedure').toBeGreaterThanOrEqual(5);
+    // Out in the open: the list must not sit inside a <details>.
+    const at = paper.indexOf('class="wl-steps"');
+    const before = paper.slice(0, at);
+    expect((before.match(/<details/g) || []).length,
+      'the steps went back behind a disclosure triangle')
+      .toBe((before.match(/<\/details>/g) || []).length);
+    // Both coins.
+    expect(paper).toContain('id="pw-xmr"');
+    expect(paper).toContain('id="pw-btc"');
+    expect(paper, 'no Bitcoin generator').toContain('id="btc-generate"');
+    expect(paper, 'nowhere to print a Bitcoin wallet').toContain('id="btc-paper-out"');
   });
 
   it('states both ends of a colour on the dark panel', () => {

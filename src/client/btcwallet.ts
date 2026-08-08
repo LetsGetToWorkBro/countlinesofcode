@@ -14,7 +14,8 @@
  * mainstream wallet since 2018 can restore from it.
  */
 
-import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from '@scure/bip39';
+import { entropyToMnemonic, generateMnemonic, mnemonicToSeedSync, validateMnemonic } from '@scure/bip39';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { wordlist } from '@scure/bip39/wordlists/english.js';
 import { HDKey } from '@scure/bip32';
 import * as btc from '@scure/btc-signer';
@@ -74,6 +75,30 @@ export interface BtcWallet {
 
 export function newMnemonic(): string {
   return generateMnemonic(wordlist, 128);
+}
+
+/**
+ * A seed phrase from the browser's randomness with the visitor's own folded
+ * in, which is what the Monero side has always offered and this side did not.
+ *
+ * The two are hashed together, so the extra can only add and can never
+ * subtract: somebody rolling real dice gets real benefit, somebody typing
+ * nothing gets exactly what `newMnemonic` would have given them. It is not a
+ * substitute for a working generator: if `getRandomValues` is broken and the
+ * attacker also knows what you typed, this saves nobody.
+ *
+ * 16 bytes out, because a BIP84 12-word phrase is 128 bits of entropy and
+ * stretching a shorter secret over a longer phrase would be a lie about how
+ * much randomness is in it.
+ */
+export function newMnemonicFrom(extra: Uint8Array = new Uint8Array(0)): string {
+  const browser = new Uint8Array(32);
+  crypto.getRandomValues(browser);
+  if (!extra.length) return entropyToMnemonic(sha256(browser).slice(0, 16), wordlist);
+  const both = new Uint8Array(browser.length + extra.length);
+  both.set(browser);
+  both.set(extra, browser.length);
+  return entropyToMnemonic(sha256(both).slice(0, 16), wordlist);
 }
 
 /** Whitespace-normalise and checksum-check a typed seed phrase. */
@@ -580,6 +605,7 @@ globalScope.LOC1999_BTC = {
   parseBtc,
   formatBtc,
   newMnemonic,
+  newMnemonicFrom,
   checkMnemonic,
   openFromMnemonic,
   openWatch,

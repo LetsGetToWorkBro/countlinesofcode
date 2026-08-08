@@ -152,9 +152,12 @@
 <!-- ================================ WALLET ================================ -->
 <div data-panel="wallet" class="skin-xmr">
 
-<p class="wl-hint"><span class="wl-hint-mark">i</span>
+<p class="wl-hint wl-hint-setup"><span class="wl-hint-mark">i</span>
 Make a new wallet or open one you already have. Write the seed phrase down:
 nothing is stored here, so it is the only way back in.</p>
+<p class="wl-hint wl-hint-open"><span class="wl-hint-mark">i</span>
+Receive gives you an address to be paid at, Send spends from the balance, and
+Secrets holds the seed phrase. Transactions are logged beside the wallet.</p>
 
 
 
@@ -221,7 +224,6 @@ nothing is stored here, so it is the only way back in.</p>
     <button type="button" id="wtab-overview" class="sheet-tab is-active">Overview</button>
     <button type="button" id="wtab-receive" class="sheet-tab">Receive</button>
     <button type="button" id="wtab-send" class="sheet-tab">Send</button>
-    <button type="button" id="wtab-history" class="sheet-tab">History</button>
     <button type="button" id="wtab-secrets" class="sheet-tab">Secrets</button>
   </p>
 
@@ -275,11 +277,6 @@ nothing is stored here, so it is the only way back in.</p>
       </div>
     </div>
 
-    <div id="wsec-history" class="hidden">
-      <h3>History</h3>
-      <p id="history-note" class="note">No transactions yet.</p>
-      <div id="history"></div>
-    </div>
 
     <div id="wsec-secrets" class="hidden">
       <h3>Wallet secrets</h3>
@@ -304,6 +301,19 @@ nothing is stored here, so it is the only way back in.</p>
      while you are in a wallet rather than while you are hunting for a
      tool. -->
 <aside class="wl-side">
+
+<!-- The transaction log, once a wallet is open. It was a tab you had to
+     press, next to a column of nothing; a wallet program shows you what
+     it has done without being asked. -->
+<div class="wl-log">
+  <h3>Transactions</h3>
+  <p id="history-note" class="note">No transactions yet.</p>
+  <div id="history"></div>
+</div>
+
+<!-- And the checker while none is, which is when a loose address is the
+     thing you actually came here with. -->
+<div class="wl-check">
   <h3>Check an address</h3>
   <p class="note">Paste one to see whether its checksum holds. Handles no secrets.</p>
   <p><textarea id="xmr-check-text" rows="3" spellcheck="false" placeholder="4... or 8..."></textarea></p>
@@ -323,6 +333,7 @@ nothing is stored here, so it is the only way back in.</p>
       against the source, out loud or on a different device.
     </p>
     </details>
+</div>
 </aside>
 </div><!-- /.wl-split -->
 
@@ -344,9 +355,12 @@ nothing is stored here, so it is the only way back in.</p>
 <!-- ================================ BITCOIN ================================ -->
 <div data-panel="btc" class="skin-btc hidden">
 
-<p class="wl-hint"><span class="wl-hint-mark">i</span>
+<p class="wl-hint wl-hint-setup"><span class="wl-hint-mark">i</span>
 Make a new wallet or restore one from its 12 words. Bitcoin's chain is public,
 so the explorer above can group your addresses together.</p>
+<p class="wl-hint wl-hint-open"><span class="wl-hint-mark">i</span>
+Receive gives you an address to be paid at, Send spends from the balance, and
+Secrets holds the seed words. Transactions are logged beside the wallet.</p>
 
 
 
@@ -396,7 +410,6 @@ so the explorer above can group your addresses together.</p>
     <button type="button" id="btw-overview" class="sheet-tab is-active">Overview</button>
     <button type="button" id="btw-receive" class="sheet-tab">Receive</button>
     <button type="button" id="btw-send" class="sheet-tab">Send</button>
-    <button type="button" id="btw-history" class="sheet-tab">History</button>
     <button type="button" id="btw-secrets" class="sheet-tab">Secrets</button>
   </p>
 
@@ -455,11 +468,6 @@ so the explorer above can group your addresses together.</p>
     <div id="btc-send-result"></div>
   </div>
 
-  <div id="bsec-history" class="hidden">
-    <h3>History</h3>
-    <p id="btc-history-note" class="note">No transactions yet.</p>
-    <div id="btc-history"></div>
-  </div>
 
   <div id="bsec-secrets" class="hidden">
     <h3>Wallet secrets</h3>
@@ -487,6 +495,14 @@ so the explorer above can group your addresses together.</p>
      while you are in a wallet rather than while you are hunting for a
      tool. -->
 <aside class="wl-side">
+
+<div class="wl-log">
+  <h3>Transactions</h3>
+  <p id="btc-history-note" class="note">No transactions yet.</p>
+  <div id="btc-history"></div>
+</div>
+
+<div class="wl-check">
   <h3>Check an address</h3>
   <p class="note">Paste one to see whether its checksum holds. Handles no secrets.</p>
   <p><textarea id="btc-check-text" rows="3" spellcheck="false" placeholder="bc1... or 1... or 3..."></textarea></p>
@@ -505,6 +521,7 @@ so the explorer above can group your addresses together.</p>
       against the source, out loud or on a different device.
     </p>
     </details>
+</div>
 </aside>
 </div><!-- /.wl-split -->
 
@@ -559,8 +576,31 @@ to be opened when you want it, not read before you can reach the tool.
 <div id="mode-make">
   <h3>Make a paper wallet</h3>
 
+  <!-- The steps, in the open. They used to be folded behind "The two checks",
+       which put the instructions for doing this safely one click further away
+       than the button that does it unsafely. -->
+  <ol class="wl-steps">
+    <li><strong>Go offline first.</strong> Save this page to disk (Ctrl-S),
+      disconnect the machine from the internet, and open the saved copy.
+      Nothing here needs the network once the page has loaded, which you can
+      watch for yourself by pulling the plug and seeing it keep working. Best
+      of all is a machine that will be wiped afterwards.</li>
+    <li><strong>Pick the coin and make the wallet.</strong> Add your own
+      randomness if you have any: dice, a keyboard mash, anything. It is
+      hashed together with the browser's, so it can only add.</li>
+    <li><strong>Write the words down on paper.</strong> Not a photo, not a
+      password manager, not a text file. Nothing here is stored, so the words
+      are the only copy there will ever be.</li>
+    <li><strong>Check it restores, in other software, before funding it.</strong>
+      This is the step that actually proves the wallet, because it is a
+      different implementation agreeing. If the address differs by a single
+      character, this page is wrong and you have lost nothing.</li>
+    <li><strong>Send a small amount, then spend it back out.</strong> Do that
+      before the wallet holds anything you would miss.</li>
+  </ol>
+
   <details class="notice-box">
-  <summary><strong>The two checks. Do both, in this order.</strong></summary>
+  <summary><strong>The two checks that matter, spelled out.</strong></summary>
   <ol class="plain">
     <li><strong>Generate with the network off.</strong> Save this page to disk
       (Ctrl-S), disconnect the machine from the internet, open the saved copy,
@@ -581,6 +621,12 @@ to be opened when you want it, not read before you can reach the tool.
   </p>
   </details>
 
+  <p class="wl-coin">
+    <span class="wl-switch-label">Make a</span>
+    <button type="button" id="pw-xmr" class="sheet-tab is-active">Monero wallet</button>
+    <button type="button" id="pw-btc" class="sheet-tab">Bitcoin wallet</button>
+  </p>
+
   <h4>Where the randomness comes from</h4>
   <p class="note">
     32 bytes from <code>crypto.getRandomValues</code>, your browser's own
@@ -593,18 +639,48 @@ to be opened when you want it, not read before you can reach the tool.
     <label for="extra" class="inline">Your own entropy</label>
     <input type="text" id="extra" size="32" spellcheck="false" placeholder="optional: dice rolls, anything">
   </p>
-  <p>
-    <label for="network" class="inline">Network</label>
-    <select id="network">
-      <option value="mainnet">mainnet</option>
-      <option value="stagenet">stagenet</option>
-      <option value="testnet">testnet</option>
-    </select>
-  </p>
-  <p>
-    <button type="button" id="generate" disabled>Make a wallet</button>
-    <span id="generate-note" class="note"></span>
-  </p>
+  <div id="pw-xmr-fields">
+    <p>
+      <label for="network" class="inline">Network</label>
+      <select id="network">
+        <option value="mainnet">mainnet</option>
+        <option value="stagenet">stagenet</option>
+        <option value="testnet">testnet</option>
+      </select>
+    </p>
+    <p>
+      <button type="button" id="generate" disabled>Make a Monero wallet</button>
+      <span id="generate-note" class="note"></span>
+    </p>
+  </div>
+
+  <!-- The Bitcoin half. Same page, same rules, different chain: BIP84, 12
+       words, a bc1 address, and the same offline-and-verify discipline. -->
+  <div id="pw-btc-fields" class="hidden">
+    <p class="note">
+      Twelve words, BIP84, a <code>bc1</code> address: the standard every
+      mainstream wallet has restored from since 2018. Derived here in the tab
+      and never sent anywhere.
+    </p>
+    <p>
+      <button type="button" id="btc-generate">Make a Bitcoin wallet</button>
+      <span id="btc-generate-note" class="note"></span>
+    </p>
+  </div>
+
+  <div id="btc-paper" class="hidden">
+    <hr>
+    <h3>Your Bitcoin wallet</h3>
+    <p class="note">
+      Nothing here is stored. This page keeps no record of it, there is nowhere
+      for it to be sent, and closing the tab destroys it. Write it down or print
+      it before you leave.
+    </p>
+    <div id="btc-paper-out"></div>
+    <p>
+      <button type="button" id="btc-print">Print this</button>
+    </p>
+  </div>
 
   <div id="mx-wallet" class="hidden">
     <hr>

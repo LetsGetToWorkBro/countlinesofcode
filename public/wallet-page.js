@@ -605,7 +605,9 @@
     field.addEventListener('change', update);
   }
 
-  var WSECTIONS = ['overview', 'receive', 'send', 'history', 'secrets'];
+  /* 'history' is gone from the strip: the log moved into the column beside
+     the wallet, where it is always on rather than a tab you have to find. */
+  var WSECTIONS = ['overview', 'receive', 'send', 'secrets'];
   function showSection(which) {
     WSECTIONS.forEach(function (name) {
       var tab = $('wtab-' + name);

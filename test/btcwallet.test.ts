@@ -20,6 +20,7 @@ import {
   checkBtcAddress,
   checkExtendedKey,
   newMnemonic,
+  newMnemonicFrom,
   openFromMnemonic,
   openWatch,
   parseBtc,
@@ -398,5 +399,71 @@ describe('the tick beside the Bitcoin address field', () => {
     expect(checkExtendedKey(zpub)).toMatchObject({ state: 'ok', note: 'valid zpub' });
     expect(checkExtendedKey(zpub.slice(0, 40)).state).toBe('bad');
     expect(checkExtendedKey('bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu').state).toBe('bad');
+  });
+});
+
+
+describe('a paper wallet seed folds in whatever you typed', () => {
+  /* The Monero generator has always let you add your own randomness on top of
+   * the browser's; the Bitcoin side had none, so a paper wallet made here was
+   * only ever as good as getRandomValues. The two are hashed together, which
+   * means the extra can only add and can never subtract.
+   *
+   * getRandomValues is stubbed to a fixed value in the tests that care, so
+   * "different phrase" can only be coming from the typed bytes. That is the
+   * whole security claim and it is not observable otherwise.
+   */
+  const real = globalThis.crypto.getRandomValues.bind(globalThis.crypto);
+  function withFixedRandomness<T>(byte: number, run: () => T): T {
+    Object.defineProperty(globalThis.crypto, 'getRandomValues', {
+      value: (out: Uint8Array) => { out.fill(byte); return out; },
+      configurable: true,
+    });
+    try { return run(); }
+    finally {
+      Object.defineProperty(globalThis.crypto, 'getRandomValues', { value: real, configurable: true });
+    }
+  }
+
+  const bytes = (text: string) => new TextEncoder().encode(text);
+
+  it('makes a phrase every BIP39 wallet accepts', () => {
+    const words = newMnemonicFrom(bytes('dice 4 6 2 1 5 3'));
+    expect(words.split(' ')).toHaveLength(12);
+    expect(checkMnemonic(words).ok, `rejected its own phrase: ${words}`).toBe(true);
+  });
+
+  it('derives a real bech32 wallet from it', () => {
+    // The derivation itself is pinned to the official vector above; this is
+    // that a freshly made phrase actually reaches it.
+    const wallet = openFromMnemonic(newMnemonicFrom(bytes('anything')));
+    const first = addressAt(wallet, 0, 0).address;
+    expect(first.startsWith('bc1q')).toBe(true);
+    expect(isBtcAddress(first)).toBe(true);
+    expect(wallet.zpub.startsWith('zpub')).toBe(true);
+  });
+
+  it('gives a different phrase for different typing, from identical randomness', () => {
+    const a = withFixedRandomness(0x11, () => newMnemonicFrom(bytes('dice one')));
+    const b = withFixedRandomness(0x11, () => newMnemonicFrom(bytes('dice two')));
+    const none = withFixedRandomness(0x11, () => newMnemonicFrom());
+    expect(a).not.toBe(b);
+    expect(a).not.toBe(none);
+    expect(b).not.toBe(none);
+    // Same browser bytes and the same typing is the same phrase: the mixing
+    // is a hash of both, not a second source of randomness.
+    expect(withFixedRandomness(0x11, () => newMnemonicFrom(bytes('dice one')))).toBe(a);
+  });
+
+  it('still works, and still varies, when nothing is typed', () => {
+    const first = newMnemonicFrom();
+    const second = newMnemonicFrom();
+    expect(checkMnemonic(first).ok).toBe(true);
+    expect(first).not.toBe(second);
+  });
+
+  it('leaves the plain generator alone', () => {
+    // newMnemonic is still what the wallet tab uses to open a live wallet.
+    expect(newMnemonic().split(' ')).toHaveLength(12);
   });
 });
