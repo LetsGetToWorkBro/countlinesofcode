@@ -95,6 +95,126 @@
 }
 [data-app="wallet"] .wl-switch .sheet-tab:focus-visible { outline: 1px dotted #000000; outline-offset: -3px; }
 
+/* ---- the connection, in the toolbar --------------------------------
+   The node was a folded box near the bottom of the panel. It is the one
+   setting the wallet cannot work without, so it sits in the bar with the
+   wallet switcher, always open, and the ! opens what it means.
+
+   Which one shows follows the open panel. No script: the panel already
+   carries its own name, so :has() can read it from here. */
+[data-app="wallet"] .wl-node { display: none; }
+[data-app="wallet"] [data-tabs]:has(> .app-body > [data-panel="wallet"]:not(.hidden)) #node-box,
+[data-app="wallet"] [data-tabs]:has(> .app-body > [data-panel="btc"]:not(.hidden)) #btc-server-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  /* Next to the tools rather than flung to the far edge of the bar. On a
+     display this wide, margin-left:auto put the one control the wallet
+     cannot work without a thousand pixels from everything else you press,
+     which is a different way of hiding it. A separator does the grouping
+     that the space was doing. */
+  margin-left: 8px;
+  padding-left: 12px;
+  border-left: 1px solid #808080;
+}
+[data-app="wallet"] .wl-node-label {
+  color: #4a4a4a;
+  font-weight: bold;
+  font-size: 11px;
+}
+[data-app="wallet"] .wl-node select,
+[data-app="wallet"] .wl-node input[type="text"] {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  max-width: 40vw;
+  border: 1px solid;
+  border-color: #808080 #ffffff #ffffff #808080;
+  background: #ffffff;
+  color: #000000;
+}
+/* The ! that opens the explanation the folded box used to hold. A button,
+   not a span: a span with a hover style takes two taps on iOS, and the
+   first one does nothing, which reads as broken. */
+[data-app="wallet"] .wl-info {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 2px outset #d4d0c8;
+  background: #d4d0c8;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 1;
+  color: #000000;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+[data-app="wallet"] .wl-info:active { border-style: inset; }
+[data-app="wallet"] .wl-node-note:empty { display: none; }
+[data-app="wallet"] .wl-node-note {
+  font-size: 11px;
+  color: #6a4a00;
+}
+
+/* ---- what to do on this screen -------------------------------------
+   One line at the top of each panel saying what the screen is for. The
+   panels used to open on a tagline in the page's serif, which read as a
+   sentence about the program rather than an instruction to the person
+   using it. Each skin colours it; the shape is shared. */
+[data-app="wallet"] .wl-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0 0 10px 0;
+  padding: 6px 9px;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+[data-app="wallet"] .wl-hint-mark {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-weight: bold;
+  font-style: italic;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* ---- a measure for the controls ------------------------------------
+   The window is the whole display now. A wallet laid out across 1400px
+   is a row of small controls with a field of nothing beside them, and a
+   line of explanation under a field runs far past the field it explains.
+   So the program keeps its own width and sits at the left of the glass,
+   the way a wallet window did when you could still resize it. */
+[data-app="wallet"] .wl-col { max-width: 620px; }
+[data-app="wallet"] [data-panel] > p,
+[data-app="wallet"] [data-panel] > div > p,
+[data-app="wallet"] [data-panel] > div > div > p { max-width: 620px; }
+[data-app="wallet"] [data-panel] textarea,
+[data-app="wallet"] [data-panel] input[type="text"] { width: 100%; max-width: 560px; box-sizing: border-box; }
+/* A folded box is a line of text with an x on the end of it, and stretched
+   to the full width of a modern display that x ends up somewhere else
+   entirely. Wider than the prose measure, because these open onto tables. */
+[data-app="wallet"] [data-panel] details,
+[data-app="wallet"] [data-panel] .notice-box { max-width: 820px; }
+/* Except the evidence table, which is hex and will not narrow: it scrolls
+   inside its own box rather than pushing the window sideways. */
+[data-app="wallet"] .wl-proof #proof-checks { overflow-x: auto; }
+
+/* The skin is the program, so it takes the whole window rather than
+   stopping at its last paragraph and leaving the desktop showing under
+   it. */
+[data-app="wallet"] .app-body { display: flex; flex-direction: column; }
+[data-app="wallet"] .app-body > [data-panel] { flex: 1 1 auto; }
+
+/* Not shown, moved: warn.js lifts these into dialogs. Without scripting
+   they stay where they are and read down the page as they always did. */
+[data-app="wallet"] .warn-sources > .warn-source { margin: 12px 0; }
+
 /* ==================================================================
    BITCOIN CORE
    ================================================================== */
@@ -134,6 +254,15 @@
   background: #ece9d8;
   font-weight: bold;
 }
+
+/* The hint strip: the pale yellow a Windows program used for a tip, with
+   the grey rules a groupbox had. */
+[data-app="wallet"] .skin-btc .wl-hint {
+  background: #ffffe1;
+  border: 1px solid #808080;
+  color: #000000;
+}
+[data-app="wallet"] .skin-btc .wl-hint-mark { background: #000080; color: #ffffff; }
 
 /* The balance. Bold, large, and the one green thing in the window. */
 [data-app="wallet"] .skin-btc .xmr-balance {
@@ -223,6 +352,17 @@
   font-weight: bold;
 }
 
+/* The hint strip, in the GUI's own grammar: a darker panel with the orange
+   marking its left edge, which is how that wallet flagged anything it
+   wanted read. */
+[data-app="wallet"] .skin-xmr .wl-hint {
+  background: #242424;
+  border: 1px solid #3a3a3a;
+  border-left: 3px solid #ff6600;
+  color: #d8d8d8;
+}
+[data-app="wallet"] .skin-xmr .wl-hint-mark { background: #ff6600; color: #1a1a1a; }
+
 /* The balance, in the orange, which is the one thing the GUI shouted. */
 [data-app="wallet"] .skin-xmr .xmr-balance {
   display: inline-block;
@@ -293,3 +433,65 @@
   [data-app="wallet"] .skin-btc .xmr-balance { font-size: 17px; }
   [data-app="wallet"] .app-window > .wl-menu span { padding: 2px 5px; }
 }
+
+/* ==================================================================
+   THE ADDRESS CHECKER
+   ==================================================================
+
+   Not a wallet and not skinned as one: it is the page's own tool, on
+   paper, the way a utility that handles no secrets should look next to
+   two programs that do.
+   ================================================================== */
+
+[data-app="wallet"] [data-panel="addresses"] {
+  background: #ffffff;
+  border: 2px inset #d4d0c8;
+  padding: 10px;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 12px;
+}
+[data-app="wallet"] [data-panel="addresses"] .wl-hint {
+  background: #ffffe1;
+  border: 1px solid #808080;
+  color: #000000;
+}
+[data-app="wallet"] [data-panel="addresses"] .wl-hint-mark { background: #000080; color: #ffffff; }
+[data-app="wallet"] [data-panel="addresses"] h3 {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 13px;
+  margin: 12px 0 6px 0;
+}
+[data-app="wallet"] [data-panel="addresses"] p,
+[data-app="wallet"] [data-panel="addresses"] label,
+[data-app="wallet"] [data-panel="addresses"] li {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+}
+[data-app="wallet"] [data-panel="addresses"] .sheet-tab {
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  background: #d4d0c8;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 3px 10px;
+}
+[data-app="wallet"] [data-panel="addresses"] .sheet-tab.is-active {
+  border-color: #808080 #ffffff #ffffff #808080;
+  background: #ece9d8;
+  font-weight: bold;
+}
+[data-app="wallet"] [data-panel="addresses"] button:not(.sheet-tab):not(.notice-x) {
+  border: 2px outset #d4d0c8;
+  background: #d4d0c8;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 3px 10px;
+}
+[data-app="wallet"] [data-panel="addresses"] button:not(.sheet-tab):active { border-style: inset; }
+
+/* The nine checks are the evidence for a claim, not the claim, so they
+   fold. Open, the table is wide and monospaced and wants the window; the
+   620px measure the controls keep would squash it. */
+[data-app="wallet"] .wl-proof { margin: 10px 0; }
+[data-app="wallet"] .wl-proof > p { max-width: 620px; }
+[data-app="wallet"] .wl-proof table { width: 100%; font-size: 11px; }

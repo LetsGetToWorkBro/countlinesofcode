@@ -85,14 +85,19 @@
     return { id: select.value || 'mempool', custom: $('btc-custom').value };
   }
 
+  /* The one-line summary of a folded picker. The picker is not folded any
+     more, it is a select sitting open in the toolbar saying the same thing,
+     so there is usually nothing here to write to. */
   function syncServerSummary() {
+    var el = $('btc-server-summary');
+    if (!el) return;
     var choice = serverChoice();
     if (choice.id === 'custom') {
-      $('btc-server-summary').textContent = choice.custom ? choice.custom : 'your own server';
+      el.textContent = choice.custom ? choice.custom : 'your own server';
       return;
     }
     var known = kit.btcServers().filter(function (s) { return s.id === choice.id; })[0];
-    $('btc-server-summary').textContent = known ? known.label : choice.id;
+    el.textContent = known ? known.label : choice.id;
   }
 
   /** GET a path as JSON through the proxy, failing over between the curated

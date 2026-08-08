@@ -1015,3 +1015,114 @@ describe('a warning you have read can be put away', () => {
     expect(js).toMatch(/closest\('#first-run'\)/);
   });
 });
+
+describe('the wallets get out of their own way', () => {
+  /* Three complaints, all the same complaint: the program was arranged for
+   * the person who wrote it rather than the person using it.
+   *
+   * The node picker was a folded box near the bottom of the panel, so the
+   * one setting a wallet cannot work without sat behind a disclosure
+   * triangle, below the button that needs it. The safety warnings sat open
+   * in the middle of each wallet, between the tabs you press and the
+   * buttons you press, every visit forever. And the address checker led
+   * with nine rows of cryptographic evidence before it would show you the
+   * box you paste an address into.
+   */
+  const html = readFileSync(new URL('../public/wallet.html', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../public/app-wallet.css', import.meta.url), 'utf8');
+
+  /** The markup of one [data-panel] block, by name. */
+  function panel(name: string): string {
+    const at = html.indexOf(`<div data-panel="${name}"`);
+    expect(at, `no ${name} panel`).toBeGreaterThan(-1);
+    const next = html.indexOf('<div data-panel="', at + 10);
+    return html.slice(at, next === -1 ? html.indexOf('<div class="warn-sources">') : next);
+  }
+
+  it('keeps the connection open in the toolbar, next to the tools', () => {
+    const bar = /<p class="wl-switch"[\s\S]*?<\/p>/.exec(html);
+    expect(bar, 'the toolbar is gone').not.toBeNull();
+    // The controls themselves, not a summary of them behind a triangle.
+    expect(bar![0]).toContain('<select id="node">');
+    expect(bar![0]).toContain('<select id="btc-server">');
+    expect(bar![0], 'the tools it should sit beside').toContain('data-tab="addresses"');
+    // Next to them, rather than flung to the far edge of a 1440px bar.
+    // Comments stripped first: this file explains why margin-left:auto was
+    // wrong, and a note about a mistake is not the mistake.
+    const declarations = css.replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(declarations, 'the picker is pushed away from the tools again')
+      .not.toMatch(/#node-box[\s\S]{0,400}margin-left:\s*auto/);
+  });
+
+  it('never folds the node picker away again', () => {
+    for (const id of ['node', 'btc-server']) {
+      const before = html.slice(0, html.indexOf(`<select id="${id}">`));
+      const open = (before.match(/<details/g) || []).length;
+      const shut = (before.match(/<\/details>/g) || []).length;
+      expect(open, `the ${id} picker is inside a <details> again`).toBe(shut);
+    }
+  });
+
+  it('shows the right picker for the wallet that is open', () => {
+    // CSS, not script: the panel already carries its own name.
+    expect(css).toMatch(/\[data-panel="wallet"\]:not\(\.hidden\)\)\s*#node-box/);
+    expect(css).toMatch(/\[data-panel="btc"\]:not\(\.hidden\)\)\s*#btc-server-box/);
+    expect(css).toMatch(/\[data-app="wallet"\] \.wl-node \{ display: none; \}/);
+  });
+
+  it('has no warning left standing in the middle of a wallet', () => {
+    for (const name of ['wallet', 'btc', 'addresses']) {
+      const body = panel(name);
+      expect(body, `${name} still carries a warning block`).not.toContain('warn-source');
+      /* The big ones are the three that opened with "Read this". Small
+       * closed notes attached to a control are a different thing and are
+       * meant to stay: a folded line beside the box it is about is not a
+       * wall of text between you and the program. */
+      expect(body, `${name} still leads with a Read this warning`).not.toMatch(/<summary>[^<]*<strong>Read this/);
+      for (const box of body.matchAll(/<details([^>]*)class="notice-box"/g)) {
+        expect(box[1], `${name} has a notice box forced open`).not.toContain('open');
+      }
+    }
+    // They are not deleted, they are moved: warn.js builds a dialog per block.
+    const sources = html.match(/class="warn-source"/g) || [];
+    expect(sources.length, 'the warnings went missing rather than moving').toBeGreaterThanOrEqual(5);
+    for (const block of html.matchAll(/<div class="warn-source"([^>]*)>/g)) {
+      expect(block[1], 'a warning with no key cannot be dismissed on its own').toMatch(/data-warn="/);
+      expect(block[1], 'a warning with no title gets a generic dialog').toMatch(/data-warn-title="/);
+    }
+  });
+
+  it('loads warn.js before the tabs that fire at it', () => {
+    /* tabs.js fires tab:shown for the panel it opens on load, and that is
+     * the event that opens a wallet's warning the first time you look at
+     * it. Load them the other way round and the listener is registered
+     * after the only event it will ever miss. */
+    expect(html.indexOf('/warn.js')).toBeGreaterThan(-1);
+    expect(html.indexOf('/warn.js'), 'warn.js loads after tabs.js and misses the first show')
+      .toBeLessThan(html.indexOf('/tabs.js'));
+  });
+
+  it('tells you what to do on every screen', () => {
+    for (const name of ['wallet', 'btc', 'addresses']) {
+      expect(panel(name), `${name} opens with no hint`).toContain('class="wl-hint"');
+    }
+  });
+
+  it('folds the evidence instead of leading with it', () => {
+    // The nine checks are the reason to trust the generator, not the first
+    // thing to read on the way to the box you paste an address into.
+    const checker = panel('addresses');
+    const proof = checker.indexOf('id="proof-checks"');
+    const box = checker.indexOf('id="check-text"');
+    expect(proof, 'the proof panel is gone').toBeGreaterThan(-1);
+    expect(checker.slice(0, proof), 'the proof table is not folded').toContain('<details');
+    expect(box, 'the address box is gone').toBeGreaterThan(-1);
+  });
+
+  it('keeps the controls to a measure the window no longer sets', () => {
+    // The case is the whole display, so without this a wallet is a row of
+    // small controls with a field of nothing beside them.
+    expect(css).toMatch(/max-width:\s*620px/);
+    expect(css).toMatch(/\[data-app="wallet"\] \.app-body > \[data-panel\] \{ flex: 1 1 auto; \}/);
+  });
+});

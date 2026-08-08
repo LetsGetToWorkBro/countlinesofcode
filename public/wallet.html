@@ -109,45 +109,54 @@
 <span class="wl-switch-sep"></span>
 <span class="wl-switch-label">Tools</span>
 <button type="button" class="sheet-tab" data-tab="addresses" role="tab" aria-selected="false">Check an address</button>
+
+<!-- The connection, right here, next to the tools.
+     It used to be a folded box near the bottom of each wallet: the one
+     setting a wallet cannot work without, behind a disclosure triangle,
+     below the button that needs it. A wallet program keeps its connection
+     in the toolbar. The select is the control and is never closed; the !
+     beside it opens what it means. Which of the two shows follows the open
+     panel, in CSS, because the panel already says which it is. -->
+<span class="wl-node" id="node-box">
+  <label for="node" class="wl-node-label">Node</label>
+  <select id="node"></select>
+  <span id="custom-node-row" class="hidden">
+    <label for="custom-node" class="wl-node-label">Yours</label>
+    <input type="text" id="custom-node" spellcheck="false" placeholder="https://your.node:18089" size="24">
+  </span>
+  <button type="button" class="wl-info" data-warn-open="node" aria-label="What the node does and sees">!</button>
+  <span id="node-note" class="wl-node-note"></span>
+  <span id="node-swap" class="wl-node-note"></span>
+</span>
+<span class="wl-node" id="btc-server-box">
+  <label for="btc-server" class="wl-node-label">Explorer</label>
+  <select id="btc-server"></select>
+  <span id="btc-custom-row" class="hidden">
+    <label for="btc-custom" class="wl-node-label">Yours</label>
+    <input type="text" id="btc-custom" spellcheck="false" placeholder="https://your.esplora/api" size="24">
+  </span>
+  <label for="btc-privacy" class="wl-node-label">Lookups</label>
+  <select id="btc-privacy">
+    <option value="direct" selected>Direct</option>
+    <option value="padded">Padded (slower)</option>
+  </select>
+  <button type="button" class="wl-info" data-warn-open="explorer" aria-label="What the explorer does and sees">!</button>
+  <span id="btc-server-note" class="wl-node-note"></span>
+  <span id="btc-server-swap" class="wl-node-note"></span>
+  <span id="btc-privacy-note" class="wl-node-note"></span>
+</span>
 </p>
 <div class="app-body">
-<p class="tagline">One window, either wallet open in it, and an address checker that needs neither. Keys never leave the browser.</p>
 
 
 <!-- ================================ WALLET ================================ -->
 <div data-panel="wallet" class="skin-xmr">
 
-<p class="tagline">A real wallet, in this tab. Create it, watch it, spend from it.</p>
+<p class="wl-hint"><span class="wl-hint-mark">i</span>
+Make a new wallet or open one you already have. Write the seed phrase down:
+nothing is stored here, so it is the only way back in.</p>
 
-<details class="notice-box">
-<summary><strong>Read this before you put a single coin in it. A wallet that lives in a browser tab is the least safe way to hold Monero, and being honest about that is the point of this page.</strong></summary>
-<p class="note">
-The keys are made and kept in this tab and nowhere else. That is the good part.
-The bad part is everything a browser tab is: it shares a process with every
-other page you have open, it cannot reliably wipe a secret out of memory, and it
-is delivered fresh from a server every time you load it, so a single altered
-script on a single day would harvest every key made that day. The
-<a href="/wallet.html#addresses">paper wallet page</a> spells this out at length and it
-all applies here, more so, because this page also holds the spend key while it
-runs.
-</p>
-<p class="note">
-So the honest recommendation is the same one that page makes: for anything you
-would be upset to lose, use the
-<a href="https://www.getmonero.org/downloads/">official Monero wallet</a>,
-offline. Use this for a small, spendable amount you can afford to lose, the way
-you would carry cash in a pocket rather than keep your savings there. Write the
-seed phrase down when you create a wallet: it is the only copy, and closing this
-tab erases everything else.
-</p>
-<p class="note">
-<strong>Nothing is stored.</strong> The wallet lives in memory for as long as
-this tab is open and is gone the moment you close it or reload. That is
-deliberate: a wallet file sitting in browser storage is a wallet file waiting to
-be read. It also means the seed phrase is the only way back in, so if you have
-not written it down, you have not made a wallet, you have made a countdown.
-</p>
-</details>
+
 
 <div id="setup">
   <p>
@@ -200,30 +209,6 @@ not written it down, you have not made a wallet, you have made a countdown.
       <p><button type="button" id="restore-keys">Open this wallet</button></p>
     </div>
 
-    <p id="node-swap" class="note"></p>
-
-    <details class="notice-box">
-      <summary><strong>Node:</strong> <span id="node-summary">choosing&hellip;</span> <span class="note">(change)</span></summary>
-      <p class="note">
-        A wallet has to talk to a Monero node to see the chain and to broadcast a
-        payment. Your browser is not allowed to reach any other site from this page, so
-        the traffic goes through this site's server to the node you pick. The node sees
-        this site asking, never your address or your IP; it cannot spend anything and,
-        because the scanning happens here in the tab, it cannot even see which payments
-        are yours. If the node you pick stops answering, the wallet quietly tries the
-        others and says so. Point it at your own node if you would rather not trust one
-        of these.
-      </p>
-      <p>
-        <label for="node" class="inline">Node</label>
-        <select id="node"></select>
-      </p>
-      <p id="custom-node-row" class="hidden">
-        <label for="custom-node" class="inline">Your node</label>
-        <input type="text" id="custom-node" spellcheck="false" placeholder="https://your.node:18089" size="34">
-        <span id="node-note" class="note"></span>
-      </p>
-  </details>
 </div>
 
 <!-- The wallet itself: a little client. A title bar, tabs down the middle,
@@ -325,27 +310,11 @@ not written it down, you have not made a wallet, you have made a countdown.
 <!-- ================================ BITCOIN ================================ -->
 <div data-panel="btc" class="skin-btc hidden">
 
-<p class="tagline">A Bitcoin wallet in this tab: 12 words, bc1 addresses, nothing installed.</p>
+<p class="wl-hint"><span class="wl-hint-mark">i</span>
+Make a new wallet or restore one from its 12 words. Bitcoin's chain is public,
+so the explorer above can group your addresses together.</p>
 
-<details class="notice-box">
-<summary><strong>Read this before you put a single sat in it. The Monero warnings apply, plus one Bitcoin brings itself.</strong></summary>
-<p class="note">
-Everything the Monero tab's warning says about a wallet in a browser tab is
-true here too: keys made and held in this tab only, nothing stored, a reload
-erases everything but the seed words, and one poisoned script on one day
-could steal every key made that day. For anything you would be upset to lose,
-use a hardware wallet or <a href="https://sparrowwallet.com/">Sparrow</a>
-offline; use this like cash in a pocket.
-</p>
-<p class="note">
-The extra warning is privacy. Bitcoin's chain is public: every address, every
-amount, forever. This wallet asks the block explorer you pick about your
-addresses as a group, so that explorer can link them together as one wallet.
-The request goes through this site's server, so the explorer does not learn
-your IP, but linkability is what Bitcoin is. If that matters to you, it is
-the reason the rest of this page is about Monero.
-</p>
-</details>
+
 
 <div id="btc-setup">
   <p>
@@ -383,38 +352,6 @@ the reason the rest of this page is about Monero.
     <p><button type="button" id="btc-watch">Watch this wallet</button></p>
   </div>
 
-  <p id="btc-server-swap" class="note"></p>
-
-  <details class="notice-box">
-    <summary><strong>Explorer:</strong> <span id="btc-server-summary">choosing&hellip;</span> <span class="note">(change)</span></summary>
-    <p class="note">
-      A light Bitcoin wallet asks a block explorer about its addresses and hands
-      it finished transactions to broadcast. Your browser is not allowed to reach
-      any other site from this page, so the traffic goes through this site's
-      server to the explorer you pick. The explorer sees the addresses it is
-      asked about, never your IP; it holds no keys and cannot spend anything. If
-      it stops answering, the wallet quietly tries the other and says so. Point
-      this at your own Esplora instance if you would rather trust nobody.
-    </p>
-    <p>
-      <label for="btc-server" class="inline">Explorer</label>
-      <select id="btc-server"></select>
-    </p>
-    <p id="btc-custom-row" class="hidden">
-      <label for="btc-custom" class="inline">Your server</label>
-      <input type="text" id="btc-custom" spellcheck="false" placeholder="https://your.esplora/api" size="34">
-      <span id="btc-server-note" class="note"></span>
-    </p>
-    <hr>
-    <p>
-      <label for="btc-privacy" class="inline">Lookups</label>
-      <select id="btc-privacy">
-        <option value="direct" selected>Direct: ask about my addresses only</option>
-        <option value="padded">Padded: hide them in a crowd (slower)</option>
-      </select>
-    </p>
-    <p class="note" id="btc-privacy-note"></p>
-  </details>
 </div>
 
 <div id="btc-wallet" class="hidden">
@@ -523,32 +460,11 @@ the reason the rest of this page is about Monero.
 <!-- ======================= ADDRESSES & PAPER WALLETS ======================= -->
 <div data-panel="addresses" class="hidden">
 
-<p class="tagline">Check an address, restore a phrase, or make a paper wallet you can verify. The checker handles no secrets.</p>
+<p class="wl-hint"><span class="wl-hint-mark">i</span>
+Paste an address to check it. Checking and restoring handle no secrets and are
+safe for anything; making a wallet here is the part that needs care.</p>
 
-<details class="notice-box">
-<summary><strong>Read this first. A wallet generator on a website is a dangerous thing, and this one is no exception.</strong></summary>
-<p class="note">
-Every other tool on this site fails loudly. A broken image converter gives you a
-broken image and you can see it. This one fails <em>silently</em>: a derivation
-that is wrong by a single step produces a perfectly well-formed address that
-looks exactly like a working one, and the only way to find out is to send money
-to it and never see the money again.
-</p>
-<p class="note">
-Web wallet generators have also been a favourite target for supply-chain
-attacks, because one altered script on one day harvests every key made that day.
-That risk does not go away because we are honest. It goes away because you check.
-</p>
-<p class="note">
-<strong>So the recommendation is plainly this: do not use the generator unless
-you are willing to do the two checks below.</strong> If you are not going to do
-them, use the
-<a href="https://www.getmonero.org/downloads/">official Monero wallet</a>
-instead, offline. It is free, it takes ten minutes, and it is what we would tell
-a friend to do. The address checker and the phrase restorer on this page are
-safe to use for anything, because they handle no secrets.
-</p>
-</details>
+
 
 <p>
 <button type="button" id="tab-check" class="sheet-tab is-active">Check an address</button>
@@ -561,14 +477,15 @@ safe to use for anything, because they handle no secrets.
 <p id="status" class="status" role="status" aria-live="polite"></p>
 
 <!-- ---------------------------------------------------------- proof -->
-<h3>Does this page actually work?</h3>
+<details class="notice-box wl-proof">
+<summary><strong>Does this page actually work?</strong> <span class="note">Nine checks, run in your browser before anything else was allowed to happen.</span></summary>
 <p class="note">
-Run in your browser, on this page load, before anything else is allowed to
-happen. If any of it fails, the generator stays switched off.
+If any of it fails, the generator stays switched off. This is the evidence for
+that claim rather than the claim itself, which is why it is folded: it is here
+to be opened when you want it, not read before you can reach the tool.
 </p>
 <div id="proof-checks"></div>
-
-<hr>
+</details>
 
 <!-- ---------------------------------------------------------- check -->
 <div id="mode-check">
@@ -750,6 +667,129 @@ happen. If any of it fails, the generator stays switched off.
      firstrun.js as a dialog on the first visit, and from Help after that.
      Still in the markup, so it is still readable in the source and still
      there for anything that indexes the page. -->
+
+<!-- ================================ WARNINGS ==============================
+     These used to sit folded open in the middle of each wallet, between the
+     tabs you press and the buttons you press. warn.js turns each into a
+     dialog that opens by itself the first time you look at that wallet and
+     lives behind the ! in its toolbar after that. The words are unchanged
+     and still here in the markup; with scripting off they read down the
+     page the way they always did.
+     ==================================================================== -->
+<div class="warn-sources">
+
+<div class="warn-source" data-warn="xmr" data-warn-panel="wallet"
+     data-warn-title="Before you put a single coin in it">
+<p><strong>A wallet that lives in a browser tab is the least safe way to hold Monero, and being honest about that is the point of this page.</strong></p>
+<p class="note">
+The keys are made and kept in this tab and nowhere else. That is the good part.
+The bad part is everything a browser tab is: it shares a process with every
+other page you have open, it cannot reliably wipe a secret out of memory, and it
+is delivered fresh from a server every time you load it, so a single altered
+script on a single day would harvest every key made that day. The
+<a href="/wallet.html#addresses">paper wallet page</a> spells this out at length and it
+all applies here, more so, because this page also holds the spend key while it
+runs.
+</p>
+<p class="note">
+So the honest recommendation is the same one that page makes: for anything you
+would be upset to lose, use the
+<a href="https://www.getmonero.org/downloads/">official Monero wallet</a>,
+offline. Use this for a small, spendable amount you can afford to lose, the way
+you would carry cash in a pocket rather than keep your savings there. Write the
+seed phrase down when you create a wallet: it is the only copy, and closing this
+tab erases everything else.
+</p>
+<p class="note">
+<strong>Nothing is stored.</strong> The wallet lives in memory for as long as
+this tab is open and is gone the moment you close it or reload. That is
+deliberate: a wallet file sitting in browser storage is a wallet file waiting to
+be read. It also means the seed phrase is the only way back in, so if you have
+not written it down, you have not made a wallet, you have made a countdown.
+</p>
+</div>
+
+<div class="warn-source" data-warn="btc" data-warn-panel="btc"
+     data-warn-title="Before you put a single sat in it">
+<p><strong>The Monero warnings apply here too, plus one Bitcoin brings itself.</strong></p>
+<p class="note">
+Everything the Monero tab's warning says about a wallet in a browser tab is
+true here too: keys made and held in this tab only, nothing stored, a reload
+erases everything but the seed words, and one poisoned script on one day
+could steal every key made that day. For anything you would be upset to lose,
+use a hardware wallet or <a href="https://sparrowwallet.com/">Sparrow</a>
+offline; use this like cash in a pocket.
+</p>
+<p class="note">
+The extra warning is privacy. Bitcoin's chain is public: every address, every
+amount, forever. This wallet asks the block explorer you pick about your
+addresses as a group, so that explorer can link them together as one wallet.
+The request goes through this site's server, so the explorer does not learn
+your IP, but linkability is what Bitcoin is. If that matters to you, it is
+the reason the rest of this page is about Monero.
+</p>
+</div>
+
+<div class="warn-source" data-warn="checker" data-warn-panel="addresses"
+     data-warn-title="Read this before you make a wallet here">
+<p><strong>A wallet generator on a website is a dangerous thing, and this one is no exception.</strong></p>
+<p class="note">
+Every other tool on this site fails loudly. A broken image converter gives you a
+broken image and you can see it. This one fails <em>silently</em>: a derivation
+that is wrong by a single step produces a perfectly well-formed address that
+looks exactly like a working one, and the only way to find out is to send money
+to it and never see the money again.
+</p>
+<p class="note">
+Web wallet generators have also been a favourite target for supply-chain
+attacks, because one altered script on one day harvests every key made that day.
+That risk does not go away because we are honest. It goes away because you check.
+</p>
+<p class="note">
+<strong>So the recommendation is plainly this: do not use the generator unless
+you are willing to do the two checks below.</strong> If you are not going to do
+them, use the
+<a href="https://www.getmonero.org/downloads/">official Monero wallet</a>
+instead, offline. It is free, it takes ten minutes, and it is what we would tell
+a friend to do. The address checker and the phrase restorer on this page are
+safe to use for anything, because they handle no secrets.
+</p>
+</div>
+
+<div class="warn-source" data-warn="node"
+     data-warn-title="What the node does, and what it sees">
+<p class="note">
+A wallet has to talk to a Monero node to see the chain and to broadcast a
+payment. Your browser is not allowed to reach any other site from this page, so
+the traffic goes through this site's server to the node you pick. The node sees
+this site asking, never your address or your IP; it cannot spend anything and,
+because the scanning happens here in the tab, it cannot even see which payments
+are yours. If the node you pick stops answering, the wallet quietly tries the
+others and says so. Point it at your own node if you would rather not trust one
+of these.
+</p>
+</div>
+
+<div class="warn-source" data-warn="explorer"
+     data-warn-title="What the explorer does, and what it sees">
+<p class="note">
+A light Bitcoin wallet asks a block explorer about its addresses and hands
+it finished transactions to broadcast. Your browser is not allowed to reach
+any other site from this page, so the traffic goes through this site's
+server to the explorer you pick. The explorer sees the addresses it is
+asked about, never your IP; it holds no keys and cannot spend anything. If
+it stops answering, the wallet quietly tries the other and says so. Point
+this at your own Esplora instance if you would rather trust nobody.
+</p>
+<p class="note">
+<strong>Lookups.</strong> Direct asks the explorer about your addresses and
+nothing else, which is fast and lets it group them as one wallet. Padded hides
+them among others so it cannot, at the cost of a slower sync.
+</p>
+</div>
+
+</div>
+
 <div id="first-run" hidden>
 
 <section data-step="Is this actually private?">
@@ -806,6 +846,7 @@ You can
 <script src="/wallet-page.js"></script>
 <script src="/monero-page.js"></script>
 <script src="/btc-page.js"></script>
+<script src="/warn.js"></script>
 <script src="/tabs.js"></script>
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
