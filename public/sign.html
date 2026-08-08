@@ -90,13 +90,11 @@
 <div class="desk-shell">
 <div class="app-window" id="app">
 <div class="client-title"><h2>PDF</h2><a class="win-min" href="#" aria-label="Minimise PDF">_</a></div>
-<p class="reader-menu" aria-hidden="true">
-<span>File</span><span>Edit</span><span>View</span><span>Document</span><span>Pages</span><span>Tools</span>
+<p class="reader-menu">
+<span>File</span><span>Edit</span><span>View</span><span>Document</span><span>Pages</span><span>Tools</span><span data-help>Help</span>
 <span class="reader-badge">PDF</span>
 </p>
 <div class="app-body">
-<p class="tagline">Sign it, fill it, cut text out of it, merge it, reorder it, split it. One application, running in this tab; your file is never uploaded.</p>
-
 
 <!-- =================== THE APPLICATION ===================
      Everything above and below this block is a web page. This block is
@@ -305,6 +303,13 @@
     <span class="opt-hint" id="split-note"></span>
   </div>
 
+  <div class="reader-say">
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+    <p id="error" class="error" role="alert"></p>
+    <p id="summary" class="note"></p>
+    <div id="output"></div>
+  </div>
+
   <p class="reader-status">
     <span id="st-page">No document open</span>
     <span id="st-size"></span>
@@ -312,28 +317,38 @@
   </p>
 </div>
 
-<p id="status" class="status" role="status" aria-live="polite"></p>
-<p id="error" class="error" role="alert"></p>
-<p id="summary" class="note"></p>
-<div id="output"></div>
 
+<!-- What this program has to say about itself. Hidden here and shown by
+     firstrun.js as a dialog on the first visit, and from Help after that.
+     Still in the markup, so it is still readable in the source and still
+     there for anything that indexes the page. Without scripting the CSS
+     reveals it and it reads down the page as it always did. -->
+<div id="first-run" hidden>
+
+<section data-step="Welcome to PDF">
 <p class="note">
 Signing a PDF normally means uploading it to a stranger or buying software. This
 runs in your tab; turn off your wifi once it loads and everything still works.
 </p>
+<p class="note">
+Sign it, fill it, cut text out of it, merge it, reorder it, split it. The
+toolbar across the top is what a click on the page does; the rail down the
+left is the document's own shape.
+</p>
+</section>
 
-<details class="notice-box">
-<summary><strong>It rearranges. It does not re-render.</strong></summary>
+<section data-step="It rearranges, it does not re-render">
+<h3>It rearranges. It does not re-render.</h3>
 <p class="note">
 Pages are copied across whole: their fonts, their images, their form
 fields and their annotations come with them. Nothing is rasterised, nothing is
 re-compressed, and text stays selectable and searchable exactly as it was. A
 page that comes out of here is the page that went in, in a different place.
 </p>
-</details>
+</section>
 
-<details class="notice-box">
-<summary><strong>About deleting text, because this one matters.</strong></summary>
+<section data-step="About deleting text">
+<h3>About deleting text, because this one matters.</h3>
 <p class="note">
 Drawing a black rectangle over text is not redaction, and it is how governments
 and law firms have leaked documents for twenty years. The text stays in the file
@@ -358,15 +373,10 @@ stops being selectable text and the file gets bigger. Only the pages you black
 out are affected. If you black out a page, check the preview covers every
 character, because what your box misses is still readable as pixels.
 </p>
-</details>
+</section>
 
-<p class="note">
-Too big to email? <a href="/shrink.html">Shrink it</a>. Locked against copying?
-<a href="/unlock.html">Unlock it</a>. Just rearranging pages? The rail down the left side does that.
-</p>
-
-<details class="notes">
-<summary>The honest notes</summary>
+<section data-step="The honest notes">
+<h3>The honest notes</h3>
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account.</li>
   <li><strong>This is not a digital signature.</strong> It draws your signature onto the page, exactly like signing a printout and scanning it. It is what almost everyone means by &ldquo;sign this PDF&rdquo;, and it is what most people are asked for, but it carries no cryptographic proof of who signed. If you need a certifying signature that Acrobat will validate, you need a certificate, and this is not that.</li>
@@ -380,14 +390,18 @@ Too big to email? <a href="/shrink.html">Shrink it</a>. Locked against copying?
   <li><strong>Splitting into many files gives you one ZIP.</strong> A browser blocks a burst of downloads, so anything that produces more than one file comes back as an archive, which you can look inside with the <a href="/zip.html">archive tool</a>.</li>
   <li><strong>Large scans use memory.</strong> Everything is in the tab, so a 200-page scan may struggle on a phone.</li>
 </ul>
-</details>
+</section>
 
-<hr>
+<section data-step="Is this actually private?">
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
+<p class="note">
+Too big to email? <a href="/shrink.html">Shrink it</a>. Locked against copying?
+<a href="/unlock.html">Unlock it</a>. Just rearranging pages? The rail down the left side does that.
+</p>
+</section>
 
-<hr>
-
+<section data-step="The rest of the site">
 <p class="footer">
 Hosted on Cloudflare &middot; Made with spite for bloat<br>
 <a href="/convert.html">pdf to word</a> |
@@ -404,6 +418,9 @@ If something saved you an hour:<br>
 You can
 <a href="/wallet.html#addresses">check that address here</a> before sending anything.
 </p>
+</section>
+
+</div>
 
 </div>
 </div>
@@ -421,5 +438,6 @@ You can
 <script src="/icons.js"></script>
 <script src="/start.js"></script>
 <script src="/proof-panel.js"></script>
+<script src="/firstrun.js"></script>
 </body>
 </html>

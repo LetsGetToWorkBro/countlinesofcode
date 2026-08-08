@@ -2799,3 +2799,180 @@ body.is-typing::after { filter: brightness(1.5) contrast(1.04); }
   outline-offset: -1px;
 }
 .desk-icon.is-picked svg { filter: drop-shadow(0 0 4px rgba(120, 200, 255, 0.9)); }
+
+/* ===================================================================
+   AN APPLICATION OWNS THE DEVICE
+   ===================================================================
+
+   A tool page used to be a screenful of program followed by four
+   screenfuls of reading, and on a phone the reading sat between you and
+   the Back button. A program does not do that. It opens at the size of
+   the screen, and what it has to say about itself is in Help.
+
+   So a page carrying [data-app] is sized to the viewport and does not
+   scroll: the machine fits, the application fills the machine, and
+   anything longer than the window scrolls inside the window. The prose
+   moved into #first-run and is shown by firstrun.js as a dialog.
+
+   Only [data-app] pages. The tools that have not been through this yet
+   still lay themselves out down the page, and clipping them to the
+   viewport would cut them off rather than fix them.
+   =================================================================== */
+
+body[data-app] {
+  /* dvh, not vh: on a phone vh is the tallest the viewport ever gets, so
+     the bottom of the app would sit under the browser's own chrome. */
+  height: 100dvh;
+  overflow: hidden;
+  padding-bottom: 20px;
+}
+/* No keyboard on a tool page. There is no room for one once the
+   application has the screen, and the desk it sat on goes with it. */
+body[data-app]::after { display: none; }
+body[data-app]::before { height: 120px; }
+
+body[data-app] #page {
+  height: 100%;
+  min-height: 0;
+  /* The 4:3 tube is the landing page's shape, where a desktop full of
+     icons has to be square-ish to read as one. An application window is
+     whatever shape the screen is, which is what a maximised window is. */
+  max-width: 1200px;
+}
+body[data-app] #page > .desk-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+}
+body[data-app] .desk-shell > .app-window {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 6px;
+}
+/* The wallets keep a switcher between the window and its body, so the
+   body is a grandchild there rather than a child. Both shapes flex. */
+body[data-app] .app-window > [data-tabs] {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+body[data-app] .app-window > .app-body,
+body[data-app] .app-window > [data-tabs] > .app-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  /* A program that lays itself out in bands wants none of this padding;
+     it has its own. */
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+/* The wordmark and the nav are the desktop's, not the application's, and
+   on a screen this size they are what the application is short of. */
+body[data-app] #page > h1,
+body[data-app] #page > .tagline,
+body[data-app] #page > .nav,
+body[data-app] #page > hr { display: none; }
+
+/* ---- the first-run dialog ------------------------------------------
+   A modal in the era's shape: a title bar with an x, the page under it,
+   and Back / Next along the bottom. */
+.fr-back {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.45);
+}
+.fr-back.hidden { display: none; }
+
+.fr-box {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  max-height: min(560px, 100%);
+  background: #c0c0c0;
+  border: 2px outset #c0c0c0;
+  box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.5);
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 12px;
+  color: #000000;
+}
+
+.fr-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 3px 4px 3px 8px;
+  background: linear-gradient(90deg, #000080, #1084d0);
+  color: #ffffff;
+  font-weight: bold;
+}
+.fr-x {
+  width: 20px;
+  height: 18px;
+  padding: 0;
+  border: 2px outset #c0c0c0;
+  background: #c0c0c0;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+.fr-x:active { border-style: inset; }
+
+.fr-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 2px inset #c0c0c0;
+  margin: 6px;
+  /* The prose is prose: it keeps the serif it was written in, inside a
+     dialog that is otherwise the machine's. */
+  font-family: "Times New Roman", Times, serif;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.fr-body > .hidden { display: none; }
+.fr-body h3 { margin-top: 0; }
+.fr-body p:first-child { margin-top: 0; }
+.fr-body p:last-child { margin-bottom: 0; }
+
+.fr-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0 8px 8px 8px;
+}
+.fr-count { flex: 1; color: #333333; }
+.fr-foot button {
+  min-width: 76px;
+  padding: 4px 12px;
+  border: 2px outset #c0c0c0;
+  background: #c0c0c0;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.fr-foot button:active:not(:disabled) { border-style: inset; }
+.fr-foot button:disabled { color: #808080; cursor: default; }
+.fr-next { font-weight: bold; }
+
+/* Help in a menu bar is a word that used to do nothing. */
+[data-help] { cursor: pointer; }
+[data-help]:hover { background: #316ac5; color: #ffffff; }
+
+/* Without scripting the dialog never gets built, so the prose stays where
+   it is and reads down the page as it always did. */
+#first-run > [data-step] { display: block; }

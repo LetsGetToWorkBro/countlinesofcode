@@ -242,7 +242,9 @@
     overflow-x: auto;
   }
   [data-app="email"] .olbtn { flex: 0 0 auto; }
-  /* Six menu titles do not fit a phone; the first four carry the ones
-     whose commands are on the toolbar underneath. */
-  [data-app="email"] .app-window > .ol-menu span:nth-child(n+5) { display: none; }
+  /* Six menu titles do not fit a phone. The first four carry the ones
+     whose commands are on the toolbar underneath, and Help survives
+     regardless: it is the only way back to what the program has to say
+     about itself, and it is needed most where there is least room. */
+  [data-app="email"] .app-window > .ol-menu span:nth-child(n+5):not([data-help]) { display: none; }
 }

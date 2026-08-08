@@ -80,7 +80,7 @@
 <div class="app-window" id="app">
 <div class="client-title"><h2>Open a ZIP, or make one</h2><a class="win-min" href="#" aria-label="Minimise Open a ZIP, or make one">_</a></div>
 <p class="zip-menu" aria-hidden="true">
-<span>File</span><span>Actions</span><span>Options</span><span>Help</span>
+<span>File</span><span>Actions</span><span>Options</span><span data-help>Help</span>
 </p>
 <div class="app-body">
 
@@ -180,19 +180,28 @@
   </p>
 </div>
 
+<!-- What this program has to say about itself. Hidden here and shown by
+     firstrun.js as a dialog on the first visit, and from Help after that.
+     Still in the markup, so it is still readable in the source and still
+     there for anything that indexes the page. -->
+<div id="first-run" hidden>
+
+<section data-step="Welcome to WinZip">
 <p class="tagline">In this tab. The archive is never uploaded.</p>
 
 <p class="note">
 Every &ldquo;unzip online&rdquo; site opens your archive on their server. This
 one reads it where it already is, on your machine.
 </p>
+</section>
 
-<hr>
+<section data-step="Is this actually private?">
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
+</section>
 
-<details class="notes">
-<summary>The honest notes</summary>
+<section data-step="The honest notes">
+<h3>The honest notes</h3>
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The archive is read from disk into this tab and anything you extract is written back out of it.</li>
   <li><strong>The list costs nothing.</strong> A ZIP keeps an index of its contents at the end of the file, so what is in a 500&nbsp;MB archive can be shown without unpacking any of it. Only the files you actually ask for are decompressed.</li>
@@ -202,10 +211,9 @@ one reads it where it already is, on your machine.
   <li><strong>The compression is the browser's own.</strong> <code>DecompressionStream</code> is built in and is exactly the algorithm ZIP uses, so there is no decompressor here to get wrong and nothing extra to download. The whole tool is under seven kilobytes.</li>
   <li><strong>It works in memory.</strong> Everything is held in the tab, so a very large archive can run one out of memory. Extracting a few files at a time is the fix.</li>
 </ul>
-</details>
+</section>
 
-<hr>
-
+<section data-step="The rest of the site">
 <p class="footer">
 Hosted on Cloudflare &middot; Made with spite for bloat<br>
 <a href="/inspect.html">inspect a file</a> |
@@ -223,6 +231,10 @@ You can
 <a href="/wallet.html#addresses">check that address here</a> before sending anything.
 </p>
 
+</section>
+
+</div>
+
 </div>
 </div>
 </div>
@@ -239,5 +251,6 @@ You can
 <script src="/icons.js"></script>
 <script src="/start.js"></script>
 <script src="/proof-panel.js"></script>
+<script src="/firstrun.js"></script>
 </body>
 </html>

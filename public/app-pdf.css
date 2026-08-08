@@ -203,14 +203,20 @@
 [data-app="pdf"] .tbtn.hidden,
 [data-app="pdf"] .sig-drawer.hidden { display: none; }
 
+[data-app="pdf"] .reader {
+  /* The application is the window: it takes the height it is given and
+     the document well takes whatever the bands above and below do not. */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  margin: 0;
+}
 [data-app="pdf"] .reader-body {
   display: flex;
   align-items: stretch;
   background: #808080;
-  /* Tall enough to be a document window rather than a strip, short
-     enough that the whole application still fits a laptop screen. */
-  height: 60vh;
-  min-height: 380px;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* ---- the pinned menu bar -------------------------------------------
@@ -383,6 +389,25 @@
   min-width: 4px;
 }
 
+/* ---- what the program is saying ------------------------------------
+   Progress, errors, the summary and the link to the file it just wrote.
+   Inside the application above the status bar, and each line collapses
+   when it is empty, so a window with nothing to say shows nothing rather
+   than a band of white below the app. */
+[data-app="pdf"] .reader-say {
+  background: #d4d0c8;
+  border-top: 1px solid #aca899;
+}
+[data-app="pdf"] .reader-say > * {
+  margin: 0;
+  padding: 3px 8px;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+}
+[data-app="pdf"] .reader-say > :empty { display: none; }
+[data-app="pdf"] .reader-say:not(:has(> :not(:empty))) { display: none; }
+[data-app="pdf"] .reader-say ul { margin: 0; padding: 0; list-style: none; }
+
 /* ---- the status bar ------------------------------------------------ */
 [data-app="pdf"] .reader-status {
   display: flex;
@@ -413,8 +438,8 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 60vh;
-  min-height: 380px;
+  flex: 1 1 auto;
+  min-height: 0;
   background: #808080;
   color: #ffffff;
   text-align: center;
@@ -553,15 +578,14 @@
   [data-app="pdf"] .rail-foot { text-align: left; }
   [data-app="pdf"] .rbtn { padding: 4px 8px; }
 
-  /* Six menu titles and a badge do not fit a phone, and the badge is the one
-     that has to survive: it is the app saying which app it is. The three that
-     go are the three whose commands are furthest from a thumb. */
-  [data-app="pdf"] .reader-menu span:nth-child(n+4):not(.reader-badge) { display: none; }
+  /* Seven menu titles and a badge do not fit a phone. Two have to survive:
+     the badge, which is the app saying which app it is, and Help, which is
+     now the only way back to what the app has to say about itself, and is
+     needed most on the machine with the least room to say it. */
+  [data-app="pdf"] .reader-menu span:nth-child(n+4):not(.reader-badge):not([data-help]) { display: none; }
   [data-app="pdf"] .reader-menu { padding: 2px 3px; }
   [data-app="pdf"] .reader-menu span { padding: 2px 5px; }
-  [data-app="pdf"] .reader-body { height: 58vh; min-height: 300px; }
   [data-app="pdf"] .reader-stage { padding: 6px; }
-  [data-app="pdf"] .reader-open { height: 40vh; min-height: 220px; }
   [data-app="pdf"] .tbtn-label { display: none; }
   [data-app="pdf"] .sig-drawer #sig-pad { width: 200px; height: 64px; }
   /* Toolbar buttons are the thing a thumb aims at, so they grow rather

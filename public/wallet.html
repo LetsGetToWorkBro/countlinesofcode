@@ -82,7 +82,7 @@
 <div class="app-window" id="app">
 <div class="client-title"><h2>Wallets</h2><a class="win-min" href="#" aria-label="Minimise Wallets">_</a></div>
 <p class="wl-menu" aria-hidden="true">
-<span>File</span><span>Settings</span><span>Help</span>
+<span>File</span><span>Settings</span><span data-help>Help</span>
 </p>
 <!-- The window holds one wallet at a time and says which. Three peer tabs
      said the address checker was a third wallet, which it is not: two of
@@ -734,12 +734,19 @@ happen. If any of it fails, the generator stays switched off.
 </div>
 </div>
 
-<hr>
+<!-- What this program has to say about itself. Hidden here and shown by
+     firstrun.js as a dialog on the first visit, and from Help after that.
+     Still in the markup, so it is still readable in the source and still
+     there for anything that indexes the page. -->
+<div id="first-run" hidden>
+
+<section data-step="Is this actually private?">
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
+</section>
 
-<details class="notes">
-<summary>The honest notes</summary>
+<section data-step="The honest notes">
+<h3>The honest notes</h3>
 <ul class="plain">
   <li><strong>The keys never leave the tab.</strong> Creating, restoring, scanning and signing all happen in this page, in a background worker. What crosses the network is what any wallet sends a node: requests for blocks, and a finished transaction to broadcast. The security policy served with this page forbids it opening a connection to anywhere but this site, which your browser enforces, and the panel above lets you watch it do so.</li>
   <li><strong>The node talks to our server, not to you.</strong> Your browser cannot reach a node directly under that policy, so the request goes to this site and this site forwards it. The upside is real: the node never learns your IP address, and it never learns which of the transactions it hands over are the ones you care about, because that matching happens in your tab. The downside is that this site's server sees that some visitor is talking to that node. It does not see your address, your keys or your balance, none of which are ever sent to it. If even that is too much, run your own node and point the wallet at it.</li>
@@ -749,10 +756,9 @@ happen. If any of it fails, the generator stays switched off.
   <li><strong>Sending is deliberate, not instant.</strong> A payment is built first, its fee shown, and nothing leaves until you confirm the exact amount and destination on a second screen. Check the address on that screen: malware that swaps an address on the clipboard swaps in one that looks just as valid.</li>
   <li><strong>Restoring is slow the first time.</strong> A wallet has to scan the chain from its restore height to catch up, and on a phone that can take a while. Setting the date it was made, when you know it, is what keeps that from being the whole chain.</li>
 </ul>
-</details>
+</section>
 
-<hr>
-
+<section data-step="The rest of the site">
 <p class="footer">
 Hosted on Cloudflare &middot; Made with spite for bloat<br>
 <a href="/wallet.html#addresses">paper wallet</a> |
@@ -769,6 +775,10 @@ If something saved you an hour:<br>
 You can
 <a href="/wallet.html#addresses">check that address here</a> before sending anything.
 </p>
+
+</section>
+
+</div>
 
 </div>
 </div>
@@ -789,5 +799,6 @@ You can
 <script src="/icons.js"></script>
 <script src="/start.js"></script>
 <script src="/proof-panel.js"></script>
+<script src="/firstrun.js"></script>
 </body>
 </html>

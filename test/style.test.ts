@@ -489,11 +489,17 @@ describe('an app may have its own face, and it must stay in its own lane', () =>
             new RegExp(`\\[data-app="${face.app}"\\]\\s+\\.([\\w-]+)\\.hidden`, 'g'),
           )].map((m) => m[1]!),
         );
+        /* Whole class tokens, not substrings. `\b${band}\b` looked right and
+         * was not: a hyphen is a word boundary, so "reader" matched inside
+         * "reader-body" and the test asked for a hidden rule the markup never
+         * needs. Split the attribute and compare names. */
+        const wearsBoth = (band: string) =>
+          [...html.matchAll(/class="([^"]*)"/g)].some((m) => {
+            const names = m[1]!.split(/\s+/);
+            return names.includes(band) && names.includes('hidden');
+          });
         for (const band of shown) {
-          const canHide = new RegExp(
-            `class="[^"]*\\b${band}\\b[^"]*hidden|class="[^"]*hidden[^"]*\\b${band}\\b`,
-          );
-          if (canHide.test(html)) {
+          if (wearsBoth(band)) {
             expect(guarded.has(band), `.${band} can be given .hidden but no rule honours it`).toBe(true);
           }
         }
@@ -652,6 +658,70 @@ describe('an app is one app, not two behind tabs', () => {
       if (page.html.includes('tabs.js')) {
         expect(page.html, `${page.name} loads tabs.js with nothing to drive`).toMatch(/data-tabs/);
       }
+    }
+  });
+});
+
+describe('an application owns the device', () => {
+  /* A tool page used to be a screenful of program followed by four
+   * screenfuls of reading, and on a phone the reading sat between you and
+   * the Back button. A program does not do that: it opens at the size of the
+   * screen, and what it has to say about itself is in Help. */
+  const css = readFileSync('public/style.css', 'utf8');
+  const APPS = readdirSync('public')
+    .filter((n) => n.endsWith('.html'))
+    .map((n) => ({ name: n, html: readFileSync(`public/${n}`, 'utf8') }))
+    .filter((p) => /<body[^>]*data-app=/.test(p.html));
+
+  it('sizes an app page to the viewport and stops it scrolling', () => {
+    expect(css).toMatch(/body\[data-app\]\s*\{[^}]*height:\s*100dvh/);
+    expect(css).toMatch(/body\[data-app\]\s*\{[^}]*overflow:\s*hidden/);
+    // dvh, not vh: on a phone vh is the tallest the viewport ever gets, so
+    // the bottom of the app would sit under the browser's own chrome.
+    expect(css).not.toMatch(/body\[data-app\]\s*\{[^}]*height:\s*100vh/);
+  });
+
+  it('gives every app a first-run dialog and a way back to it', () => {
+    expect(APPS.length).toBeGreaterThanOrEqual(4);
+    for (const page of APPS) {
+      expect(page.html, `${page.name} has no first-run block`).toContain('id="first-run"');
+      expect(page.html, `${page.name} never loads firstrun.js`).toContain('firstrun.js');
+      expect(page.html, `${page.name} has no Help that opens it`).toMatch(/data-help/);
+      const steps = page.html.match(/data-step="/g) || [];
+      expect(steps.length, `${page.name} has too few steps to be worth a dialog`).toBeGreaterThan(1);
+    }
+  });
+
+  it('keeps Help reachable on a phone', () => {
+    /* Every app trims its menu bar by position on a narrow screen, and Help
+     * is last in every one of them, so a naive nth-child rule hides exactly
+     * the thing a phone needs most. Both rules that do this must spare it. */
+    for (const file of readdirSync('public').filter((n) => /^app-[a-z]+\.css$/.test(n))) {
+      const sheet = readFileSync(`public/${file}`, 'utf8');
+      for (const rule of sheet.matchAll(/([^\n{}]*menu[^\n{}]*nth-child[^\n{}]*)\{([^}]*)\}/g)) {
+        if (!/display:\s*none/.test(rule[2]!)) continue;
+        expect(rule[1], `${file} hides menu items by position without sparing [data-help]`)
+          .toMatch(/:not\(\[data-help\]\)/);
+      }
+    }
+  });
+
+  it('does not leave the prose on the page as well as in the dialog', () => {
+    // One copy, or the ids inside it exist twice and the live proof panel is
+    // wired to whichever the browser found first.
+    for (const page of APPS) {
+      const ids = [...page.html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
+      expect(new Set(ids).size, `${page.name} has duplicate ids`).toBe(ids.length);
+    }
+  });
+
+  it('still ships the prose in the markup rather than building it in script', () => {
+    // The dialog moves it; it does not invent it. Anything reading the source
+    // or indexing the page still finds every word.
+    for (const page of APPS) {
+      const block = /<div id="first-run"[^>]*>([\s\S]*?)\n<\/div>/.exec(page.html);
+      expect(block, `${page.name} has no first-run content`).not.toBeNull();
+      expect(block![1]!.length, `${page.name} moved its prose somewhere else`).toBeGreaterThan(800);
     }
   });
 });
