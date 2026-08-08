@@ -1,0 +1,453 @@
+/* 1999.LOC — the PDF app's own face.
+ *
+ * The first of the per-app identities. Every tool on this site has so far
+ * worn the same grey Windows chrome, which is right for the desktop that
+ * holds them and wrong for the applications themselves: on a real machine
+ * of this era you knew which program you were in before you read a word,
+ * because Acrobat did not look like Notepad.
+ *
+ * The convention this file starts: one stylesheet per app, named
+ * app-<tool>.css, loaded only by that tool's page, and scoped entirely
+ * under [data-app="<tool>"] so it can never leak into the shared
+ * stylesheet's territory. style.css owns the desktop, the window frame and
+ * the taskbar; this owns everything inside the client area.
+ *
+ * The face here is Acrobat Reader as it looked around version 5: a menu
+ * bar, banded toolbars of small icon buttons, a thumbnail rail down the
+ * left, the page floating on a dark grey well, and a status bar along the
+ * bottom that tells you where you are in the document.
+ *
+ * No custom properties, no webfonts, no inline styles — same house rules
+ * as style.css, and the Content-Security-Policy on this domain enforces
+ * the last of those whether we agree with it or not.
+ */
+
+/* ---- palette -------------------------------------------------------
+   Acrobat's grey is not Windows grey. It is a shade cooler and a shade
+   darker, which is most of why the two never looked alike:
+     #ece9d8  the face of a button
+     #d4d0c8  the toolbar band
+     #808080  the well the page floats on
+     #9a1220  the red, used once, on the app's own badge
+------------------------------------------------------------------- */
+
+/* ==================================================================
+   THE FRAME
+   ================================================================== */
+
+[data-app="pdf"] .reader {
+  border: 2px inset #d4d0c8;
+  background: #d4d0c8;
+  /* The application is one block: no margins between its bands, because
+     the gaps are what made this read as a web page with widgets on it. */
+  margin: 0 0 10px 0;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  color: #000000;
+}
+
+/* ---- the menu bar --------------------------------------------------
+   It does not open menus. It is the line that tells you this is an
+   application and not a form, and every item in it names something the
+   toolbar underneath can actually do, so it is a label rather than a
+   promise. Marked aria-hidden in the markup for the same reason. */
+[data-app="pdf"] .reader-menu {
+  display: flex;
+  gap: 2px;
+  padding: 2px 4px;
+  background: #ece9d8;
+  border-bottom: 1px solid #aca899;
+}
+[data-app="pdf"] .reader-menu span {
+  padding: 2px 7px;
+  border: 1px solid transparent;
+}
+
+/* ---- the badge -----------------------------------------------------
+   The one piece of colour in the whole application, at the right-hand
+   end of the menu bar where Acrobat kept its own. */
+[data-app="pdf"] .reader-badge {
+  margin-left: auto;
+  padding: 1px 7px 2px 7px;
+  background: #9a1220;
+  color: #ffffff;
+  font-weight: bold;
+  letter-spacing: 0.4px;
+  border: 1px solid #6d0c17;
+}
+
+/* ---- the toolbars --------------------------------------------------
+   Two bands: the document band (open, save, print-ish, undo) and the
+   tool band (what a click on the page does). Separated by a groove, the
+   way every application of the period separated them. */
+[data-app="pdf"] .reader-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1px;
+  padding: 3px 4px;
+  background: #d4d0c8;
+  border-bottom: 1px solid #aca899;
+}
+
+[data-app="pdf"] .tbar-sep {
+  width: 0;
+  height: 20px;
+  margin: 0 5px;
+  border-left: 1px solid #9a968c;
+  border-right: 1px solid #f4f2ea;
+}
+
+[data-app="pdf"] .tbar-gap { flex: 1; }
+
+/* The page-number box and the zoom read-out live in the toolbar, so they
+   take the toolbar's type rather than the document's. */
+[data-app="pdf"] .reader-tools #page-num {
+  width: 38px;
+  padding: 1px 2px;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  text-align: right;
+  border: 1px solid #7f9db9;
+  background: #ffffff;
+}
+[data-app="pdf"] .reader-tools #zoom-label {
+  min-width: 40px;
+  text-align: center;
+}
+[data-app="pdf"] .reader-tools .opt-hint { color: #333333; }
+
+/* A toolbar button. Flat until you point at it, which is the single
+   detail that separates a 1990s toolbar from a row of buttons. */
+[data-app="pdf"] .tbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  color: #000000;
+  cursor: pointer;
+  /* The toolbar is tapped repeatedly and must never zoom the page. */
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+[data-app="pdf"] .tbtn:hover:not(:disabled) {
+  border-color: #ffffff #808080 #808080 #ffffff;
+  background: #ece9d8;
+}
+[data-app="pdf"] .tbtn:active:not(:disabled),
+[data-app="pdf"] .tbtn.is-active {
+  border-color: #808080 #ffffff #ffffff #808080;
+  background: #dcd8cc;
+}
+/* The tool in your hand stays pressed and takes a tint, because "which
+   tool am I holding" must be answerable from across the room. */
+[data-app="pdf"] .tbtn.is-active { background: #cfe0f0; }
+[data-app="pdf"] .tbtn:disabled { opacity: 0.4; cursor: default; }
+[data-app="pdf"] .tbtn:focus-visible { outline: 1px dotted #000000; outline-offset: -3px; }
+[data-app="pdf"] .tbtn svg { display: block; }
+[data-app="pdf"] .tbtn-label { padding-right: 2px; }
+
+/* ---- the tool options strip ----------------------------------------
+   Acrobat put the settings for the tool you were holding in a band under
+   the toolbar rather than in a panel beside the document, so the page
+   never moved when you changed tools. Same here: one row, one tool. */
+[data-app="pdf"] .reader-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  min-height: 24px;
+  background: #ece9d8;
+  border-bottom: 1px solid #aca899;
+}
+[data-app="pdf"] .reader-options label { color: #000000; }
+[data-app="pdf"] .reader-options input[type="text"],
+[data-app="pdf"] .reader-options input[type="number"],
+[data-app="pdf"] .reader-options select {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 1px 3px;
+  border: 1px solid #7f9db9;
+  background: #ffffff;
+}
+[data-app="pdf"] .reader-options .opt-hint { color: #4a4a4a; }
+[data-app="pdf"] .opt-group { display: none; align-items: center; gap: 6px; flex-wrap: wrap; }
+[data-app="pdf"] .opt-group.is-on { display: flex; }
+
+/* ==================================================================
+   THE BODY: rail on the left, page well on the right
+   ================================================================== */
+
+/* `.hidden` in the shared stylesheet is one class; every rule in this file is
+   an attribute plus a class, so it outranks it and a hidden band would keep
+   its display. These put it back. Anything here given a display must say how
+   it hides, or it cannot be hidden at all. */
+[data-app="pdf"] .reader-body.hidden,
+[data-app="pdf"] .reader-open.hidden,
+[data-app="pdf"] .tbtn.hidden,
+[data-app="pdf"] .sig-drawer.hidden { display: none; }
+
+[data-app="pdf"] .reader-body {
+  display: flex;
+  align-items: stretch;
+  background: #808080;
+  /* Tall enough to be a document window rather than a strip, short
+     enough that the whole application still fits a laptop screen. */
+  height: 60vh;
+  min-height: 380px;
+}
+
+/* ---- the thumbnail rail -------------------------------------------- */
+[data-app="pdf"] .reader-rail {
+  flex: 0 0 96px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 4px;
+  background: #ece9d8;
+  border-right: 1px solid #aca899;
+}
+[data-app="pdf"] .reader-rail.is-hidden { display: none; }
+
+[data-app="pdf"] .thumb {
+  display: block;
+  width: 100%;
+  margin: 0 0 6px 0;
+  padding: 3px 2px 2px 2px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: #000000;
+  touch-action: manipulation;
+}
+[data-app="pdf"] .thumb canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #ffffff;
+  border: 1px solid #808080;
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35);
+}
+[data-app="pdf"] .thumb span { display: block; padding-top: 2px; text-align: center; }
+[data-app="pdf"] .thumb:hover { border-color: #7f9db9; }
+[data-app="pdf"] .thumb.is-current {
+  border-color: #0a246a;
+  background: #cfe0f0;
+}
+[data-app="pdf"] .thumb:focus-visible { outline: 1px dotted #000000; }
+
+/* ---- the page well -------------------------------------------------
+   The page floats on grey with a drop shadow. This is the single most
+   recognisable thing about every PDF reader ever written, and the
+   current page's whole problem was that it did not do it: the page sat
+   flush on the document like an illustration in an article. */
+[data-app="pdf"] .reader-stage {
+  flex: 1;
+  overflow: auto;
+  padding: 14px;
+  background: #808080;
+  text-align: center;
+}
+
+[data-app="pdf"] .sheet {
+  position: relative;
+  display: inline-block;
+  background: #ffffff;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+  /* The canvases inside are block-level and exactly page-sized, so the
+     sheet is the page and nothing has to be measured to line them up. */
+  line-height: 0;
+}
+[data-app="pdf"] .sheet canvas { display: block; }
+/* The overlay sits exactly on the render, which is what makes a click on
+   it a click on the page. */
+[data-app="pdf"] .sheet #overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  touch-action: none;   /* a drag on the page is a drag, never a pan */
+}
+
+/* ---- the caret ------------------------------------------------------
+   Typing happens in a real text box sitting on the page at the point
+   that was clicked, so what you see while typing is where it lands.
+   Transparent, borderless except for a hairline, and set in the same
+   family and size the text will be written at. */
+[data-app="pdf"] .sheet .page-caret {
+  position: absolute;
+  z-index: 3;
+  margin: 0;
+  padding: 0 1px;
+  border: 1px solid #0a246a;
+  outline: none;
+  background: rgba(255, 255, 255, 0.82);
+  color: #000000;
+  font-family: Helvetica, Arial, sans-serif;
+  line-height: 1.05;
+  white-space: pre;
+  overflow: hidden;
+  resize: none;
+  min-width: 4px;
+}
+
+/* ---- the status bar ------------------------------------------------ */
+[data-app="pdf"] .reader-status {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  background: #d4d0c8;
+  border-top: 1px solid #ffffff;
+}
+[data-app="pdf"] .reader-status > span {
+  padding: 3px 8px;
+  border-right: 1px solid #9a968c;
+  color: #1a1a1a;
+}
+[data-app="pdf"] .reader-status > span:last-child {
+  border-right: none;
+  flex: 1;
+}
+[data-app="pdf"] .reader-status strong { font-weight: bold; }
+
+/* ==================================================================
+   THE DROP TARGET, before a document is open
+   ================================================================== */
+
+[data-app="pdf"] .reader-open {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 60vh;
+  min-height: 380px;
+  background: #808080;
+  color: #ffffff;
+  text-align: center;
+  cursor: pointer;
+}
+[data-app="pdf"] .reader-open strong { font-size: 13px; }
+[data-app="pdf"] .reader-open span { color: #e8e8e8; }
+[data-app="pdf"] .reader-open.is-over {
+  background: #6d6d6d;
+  outline: 2px dashed #ffffff;
+  outline-offset: -10px;
+}
+[data-app="pdf"] .reader-open:focus-visible { outline: 2px solid #ffffff; outline-offset: -10px; }
+
+/* The sheet of paper drawn on the drop target, so the empty state still
+   says "documents go here" without a word of instruction. */
+[data-app="pdf"] .reader-open svg { margin-bottom: 4px; }
+
+/* ==================================================================
+   THE SIGNATURE DRAWER
+   A drawer that slides under the toolbar rather than a fieldset in the
+   page, because it belongs to the tool and not to the document.
+   ================================================================== */
+
+[data-app="pdf"] .sig-drawer {
+  display: none;
+  gap: 10px;
+  padding: 8px;
+  background: #ece9d8;
+  border-bottom: 1px solid #aca899;
+}
+[data-app="pdf"] .sig-drawer.is-on { display: flex; flex-wrap: wrap; }
+[data-app="pdf"] .sig-drawer fieldset {
+  margin: 0;
+  padding: 5px 7px 7px 7px;
+  border: 1px solid #aca899;
+}
+[data-app="pdf"] .sig-drawer legend { padding: 0 3px; color: #333333; }
+[data-app="pdf"] .sig-drawer #sig-pad {
+  display: block;
+  width: 210px;
+  height: 66px;
+  background: #ffffff;
+  border: 1px solid #7f9db9;
+  cursor: crosshair;
+  touch-action: none;
+}
+[data-app="pdf"] .sig-drawer p { margin: 4px 0 0 0; }
+/* Capped, or the text box grows to fill the band and pushes the chip onto a
+   second row. The drawer sits on top of the document, so every row it takes
+   is a row of the document you cannot see while you are signing it. */
+[data-app="pdf"] .sig-drawer #sig-typed { width: 130px; }
+[data-app="pdf"] .sig-drawer #sig-font { max-width: 110px; }
+[data-app="pdf"] .sig-drawer button { font-size: 11px; padding: 1px 6px; }
+
+/* The stamp you drag. This is the fix for "the drag and drop needs some
+   work": there was nothing to drag, only a canvas and a click-to-place.
+   Now the signature exists as an object you can pick up and drop where
+   you want it, which is what everybody expects and tries first. */
+[data-app="pdf"] .sig-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 4px 5px;
+  border: 1px solid #7f9db9;
+  background: #ffffff;
+  cursor: grab;
+  touch-action: none;
+}
+[data-app="pdf"] .sig-chip:active { cursor: grabbing; }
+[data-app="pdf"] .sig-chip.is-empty { opacity: 0.45; cursor: default; }
+[data-app="pdf"] .sig-chip img {
+  display: block;
+  height: 30px;
+  width: auto;
+  max-width: 150px;
+}
+[data-app="pdf"] .sig-chip-hint { color: #4a4a4a; }
+
+/* What follows the pointer while a signature is being dragged onto the
+   page. Positioned in the document, so it can cross out of the drawer
+   and over the well without being clipped by either. */
+[data-app="pdf"] .drag-ghost {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.75;
+  box-shadow: 1px 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* The saved signatures, kept in this browser only. */
+[data-app="pdf"] .saved-sigs { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+[data-app="pdf"] .saved-sigs button {
+  padding: 2px 4px;
+  border: 1px solid #aca899;
+  background: #ffffff;
+  cursor: pointer;
+}
+[data-app="pdf"] .saved-sigs button img { display: block; height: 24px; width: auto; }
+[data-app="pdf"] .saved-sigs .drop-saved {
+  padding: 1px 5px;
+  background: #ece9d8;
+  color: #7a1a1a;
+}
+
+/* ==================================================================
+   RESPONSIVE
+   A palmtop cannot show a rail, a well and a document at once. The rail
+   goes, the well loses its margins, and the toolbar wraps.
+   ================================================================== */
+
+@media (max-width: 700px) {
+  [data-app="pdf"] .reader-rail { display: none; }
+  [data-app="pdf"] .reader-body { height: 58vh; min-height: 300px; }
+  [data-app="pdf"] .reader-stage { padding: 6px; }
+  [data-app="pdf"] .reader-open { height: 40vh; min-height: 220px; }
+  [data-app="pdf"] .tbtn-label { display: none; }
+  [data-app="pdf"] .sig-drawer #sig-pad { width: 200px; height: 64px; }
+  /* Toolbar buttons are the thing a thumb aims at, so they grow rather
+     than shrink on the machine with no mouse. */
+  [data-app="pdf"] .tbtn { min-width: 32px; height: 30px; }
+}

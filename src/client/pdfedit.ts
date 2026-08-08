@@ -423,6 +423,21 @@ export interface RasterPage {
 }
 
 /**
+ * A page the visitor turned, and the rotation to write on it.
+ *
+ * `angle` is absolute and already includes whatever /Rotate the page carried
+ * to begin with, because that is the only number the rest of the pipeline can
+ * use: it is what the page was displayed at, so it is the space the marks were
+ * placed in, and it is what a reader must apply to show the same thing again.
+ * Sending the visitor's quarter-turns instead would mean every consumer had to
+ * re-derive the total and agree about the sign.
+ */
+export interface PageRotation {
+  page: number;
+  angle: number;
+}
+
+/**
  * Write the edits into a new PDF.
  *
  * Pages with no redaction are copied intact, so their text stays selectable and
@@ -439,6 +454,7 @@ export async function applyEdits(
   rasters: RasterPage[],
   removals: Removal[] = [],
   formValues: FormValue[] = [],
+  rotations: PageRotation[] = [],
 ): Promise<Uint8Array> {
   const src = await PDFDocument.load(source, { ignoreEncryption: true });
 
@@ -485,7 +501,15 @@ export async function applyEdits(
   const out = await PDFDocument.create();
   const font = await out.embedFont(StandardFonts.Helvetica);
   const rasterByPage = new Map(rasters.map((r) => [r.page, r.png]));
+  const turnedByPage = new Map(rotations.map((r) => [r.page, r.angle]));
   const pageCount = src.getPageCount();
+
+  /* The rotation a page is to end up at: what the visitor turned it to, or
+   * what it already carried if they left it alone. Everything downstream —
+   * where a mark lands, which way round a flattened page is — is measured
+   * against this one number rather than against the source's /Rotate. */
+  const rotationOf = (index: number) =>
+    turnedByPage.get(index) ?? src.getPage(index).getRotation().angle;
 
   /* One copy per picture, however many times it is placed. Stamping the same
    * signature or logo on forty pages should not put forty copies of it in the
@@ -520,7 +544,7 @@ export async function applyEdits(
       // size squashed a landscape raster into a portrait frame on rotated pages.
       const original = src.getPage(index);
       const { width: nativeW, height: nativeH } = original.getSize();
-      const swap = Math.abs(original.getRotation().angle) % 180 === 90;
+      const swap = Math.abs(rotationOf(index)) % 180 === 90;
       const width = swap ? nativeH : nativeW;
       const height = swap ? nativeW : nativeH;
       page = out.addPage([width, height]);
@@ -533,10 +557,19 @@ export async function applyEdits(
       if (!copied) throw new Error(`Could not copy page ${index + 1}.`);
       out.addPage(copied);
       page = copied;
-      // A copied page keeps its /Rotate, so an anchor in the space the user saw
-      // has to be transformed back into native user space.
+      /* A copied page keeps its /Rotate, so an anchor in the space the user
+       * saw has to be transformed back into native user space. If they turned
+       * the page, the rotation is written first and then used for that
+       * transform, because the space they placed marks in was the turned one.
+       *
+       * Turning a page is metadata and not pixels: a quarter turn changes one
+       * number in the page dictionary, and the content, the fonts and the text
+       * are untouched. That is why it composes with the marks instead of
+       * fighting them, and why a scan that arrives sideways can be set upright
+       * without being re-encoded. */
       const { width: nativeW, height: nativeH } = copied.getSize();
-      const rotation = copied.getRotation().angle;
+      const rotation = rotationOf(index);
+      if (turnedByPage.has(index)) copied.setRotation(degrees(rotation));
       place = (dx, dy) => placeForRotation(rotation, nativeW, nativeH, dx, dy);
     }
 

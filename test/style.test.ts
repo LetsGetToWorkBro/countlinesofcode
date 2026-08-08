@@ -430,3 +430,114 @@ describe('the palmtop power lamp sits on its button', () => {
     expect(base + (outer - inner) / 2 + ledWidth / 2).toBe(powerRight + powerWidth / 2);
   });
 });
+
+describe('an app may have its own face, and it must stay in its own lane', () => {
+  const css = readFileSync(new URL('../public/app-pdf.css', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('../public/sign.html', import.meta.url), 'utf8');
+  /** Selector lists, ignoring at-rule headers, comments and declarations. */
+  const selectors = css
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('}')
+    .map((block) => block.slice(block.lastIndexOf('{') === -1 ? 0 : 0).split('{')[0])
+    .flatMap((head) => head.split(','))
+    .map((s) => s.trim())
+    .filter((s) => s && !s.startsWith('@'));
+
+  it('is loaded by its own page and by no other', () => {
+    expect(html).toContain('href="/app-pdf.css"');
+    for (const page of ['index', 'wallet', 'email', 'convert', 'zip']) {
+      const other = readFileSync(new URL(`../public/${page}.html`, import.meta.url), 'utf8');
+      expect(other, `${page}.html loads another app's stylesheet`).not.toContain('app-pdf.css');
+    }
+  });
+
+  it('marks the page it belongs to', () => {
+    expect(html).toMatch(/<body[^>]*data-app="pdf"/);
+  });
+
+  it('scopes every rule under that marker', () => {
+    // The whole point of a per-app stylesheet is that it cannot reach the
+    // desktop, the window frame or the other fifteen tools. One unscoped
+    // selector and it is just more global CSS with a different filename.
+    const leaks = selectors.filter((s) => !s.startsWith('[data-app="pdf"]'));
+    expect(leaks, 'these selectors escape the app').toEqual([]);
+  });
+
+  it('says how each band hides, since it outranks .hidden', () => {
+    // `.hidden` is one class; every rule here is an attribute plus a class and
+    // beats it. A band given a display without a matching hidden rule cannot
+    // be hidden at all, which is how the drop target once stayed on screen
+    // underneath the document it had just opened.
+    const shown = new Set(
+      [...css.matchAll(/\[data-app="pdf"\]\s+\.([\w-]+)\s*\{[^}]*display:\s*(flex|block|inline-flex)/g)]
+        .map((m) => m[1]),
+    );
+    const hideRule = /\[data-app="pdf"\][^{]*\.hidden[^{]*\{\s*display:\s*none/.exec(css);
+    expect(hideRule, 'no hidden guard in app-pdf.css').not.toBeNull();
+    const guarded = new Set(
+      [...css.matchAll(/\[data-app="pdf"\]\s+\.([\w-]+)\.hidden/g)].map((m) => m[1]),
+    );
+    for (const band of shown) {
+      // Only the ones the markup actually hides need it.
+      const hidden = new RegExp(`class="[^"]*\\b${band}\\b[^"]*hidden|class="[^"]*hidden[^"]*\\b${band}\\b`);
+      if (hidden.test(html)) {
+        expect(guarded.has(band), `.${band} can be given .hidden but has no rule that honours it`).toBe(true);
+      }
+    }
+  });
+});
+
+describe('the PDF editor is an application, not a form', () => {
+  const html = readFileSync(new URL('../public/sign.html', import.meta.url), 'utf8');
+  const js = readFileSync(new URL('../public/sign.js', import.meta.url), 'utf8');
+
+  it('has the bands a document window has', () => {
+    for (const band of ['reader-menu', 'reader-tools', 'reader-options',
+      'reader-rail', 'reader-stage', 'reader-status']) {
+      expect(html, `no ${band}`).toContain(`class="${band}"`);
+    }
+  });
+
+  it('picks tools with toolbar buttons, not radio bubbles', () => {
+    expect(html).not.toMatch(/<input[^>]*type="radio"[^>]*name="tool"/);
+    const tools = [...html.matchAll(/class="tbtn tool[^"]*"[^>]*data-tool="(\w+)"/g)].map((m) => m[1]);
+    expect(tools.sort()).toEqual(['blackout', 'delete', 'form', 'image', 'stamp', 'text']);
+  });
+
+  it('has no numbered steps left in the editor', () => {
+    // "1. Open a PDF / 2. Pick a tool / 3. The document / 4. Save it" is the
+    // shape of a form. An editor has a toolbar and a document.
+    //
+    // Scoped to the Edit panel on purpose: the Pages tab is still the older
+    // step-by-step page and has not been brought into this chrome yet, so
+    // asserting across the whole file would be asserting something untrue.
+    const edit = html.slice(
+      html.indexOf('<div data-panel="edit">'),
+      html.indexOf('<div data-panel="pages"'),
+    );
+    expect(edit.length).toBeGreaterThan(1000);
+    expect(edit).not.toMatch(/<h3>\d\.\s/);
+  });
+
+  it('types where you click instead of asking for the words first', () => {
+    // The old flow had a text box you filled in before choosing the place.
+    expect(html).not.toContain('id="text-value"');
+    expect(js).toContain('function openCaret');
+    expect(js).toMatch(/tool\(\)\s*===\s*'text'\)\s*return openCaret/);
+  });
+
+  it('can turn a page, and sends the total rotation when it saves', () => {
+    expect(html).toContain('id="t-rot-l"');
+    expect(html).toContain('id="t-rot-r"');
+    expect(js).toContain('function turnMarks');
+    expect(js).toMatch(/angle:\s*totalRotation\(/);
+  });
+
+  it('lets the signature be dragged onto the page', () => {
+    expect(html).toContain('id="sig-chip"');
+    // Pointer events, not the native drag API, which never fires on touch.
+    expect(js).toMatch(/chip\.addEventListener\('pointerdown'/);
+    expect(js).toMatch(/chip\.addEventListener\('pointerup'/);
+    expect(js).toContain('drag-ghost');
+  });
+});

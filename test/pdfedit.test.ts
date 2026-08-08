@@ -11,7 +11,7 @@
  * Flattening needs a canvas, so that half is exercised in a browser.
  */
 
-import { PDFDocument, PDFName, StandardFonts } from 'pdf-lib';
+import { PDFDocument, PDFName, StandardFonts, degrees } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import {
   MIN_REDACTION_POINTS,
@@ -559,5 +559,65 @@ describe('placeForRotation (finding: rotated pages misplace signatures)', () => 
     for (const odd of [45, 30, 137, -45]) {
       expect(placeForRotation(odd, NW, NH, 100, 700), String(odd)).toEqual({ x: 100, y: 700, angle: 0 });
     }
+  });
+});
+
+describe('applyEdits: turning a page', () => {
+  async function upright(): Promise<Uint8Array> {
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    doc.addPage([612, 792]).drawText('BODY', { x: 60, y: 700, size: 12, font });
+    return doc.save();
+  }
+
+  it('writes the rotation onto the page and leaves the paper the same size', async () => {
+    // A quarter turn is one number in the page dictionary, not a re-render:
+    // the MediaBox, the fonts and the text all survive it untouched. That is
+    // the whole reason a sideways scan can be set straight without loss.
+    const out = await applyEdits(await upright(), [], [], [], [], [{ page: 0, angle: 90 }]);
+    const doc = await PDFDocument.load(out);
+    expect(doc.getPage(0).getRotation().angle).toBe(90);
+    expect(doc.getPage(0).getSize()).toEqual({ width: 612, height: 792 });
+  });
+
+  it('leaves pages the visitor did not turn alone', async () => {
+    const doc = await PDFDocument.create();
+    doc.addPage([612, 792]);
+    doc.addPage([612, 792]);
+    const out = await applyEdits(await doc.save(), [], [], [], [], [{ page: 1, angle: 270 }]);
+    const back = await PDFDocument.load(out);
+    expect(back.getPage(0).getRotation().angle).toBe(0);
+    expect(back.getPage(1).getRotation().angle).toBe(270);
+  });
+
+  it('adds to a rotation the page already had, rather than replacing it', async () => {
+    // The caller sends the total because it is what the page was displayed at,
+    // which is the space the marks were placed in. A page already at 90 that
+    // the visitor turns once more arrives here as 180.
+    const doc = await PDFDocument.create();
+    const page = doc.addPage([612, 792]);
+    page.setRotation(degrees(90));
+    const out = await applyEdits(await doc.save(), [], [], [], [], [{ page: 0, angle: 180 }]);
+    expect((await PDFDocument.load(out)).getPage(0).getRotation().angle).toBe(180);
+  });
+
+  it('places a mark against the rotation the page ends up at, not the one it started with', async () => {
+    // The bug this pins: a signature placed on a page the visitor had turned
+    // was transformed with the source's own /Rotate, so it landed as if the
+    // turn had never happened. Both must agree on one angle.
+    const source = await upright();
+    const out = await applyEdits(
+      source,
+      [{ kind: 'text', page: 0, at: { x: 100, y: 200 }, value: 'MARK', size: 12 }],
+      [], [], [],
+      [{ page: 0, angle: 90 }],
+    );
+    const doc = await loadForEditing(out);
+    const stream = new TextDecoder('latin1').decode(readContentStream(doc, 0));
+    // placeForRotation(90, 612, 792, 100, 200) is (612-200, 100) drawn at 90
+    // degrees; pdf-lib writes the angle as a rotation matrix, so the giveaway
+    // is the translation, which an untransformed placement would put at 100 200.
+    expect(stream).toContain('412');
+    expect(stream).not.toMatch(/1 0 0 1 100 200 Tm/);
   });
 });
