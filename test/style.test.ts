@@ -500,6 +500,29 @@ describe('an app may have its own face, and it must stay in its own lane', () =>
     .filter((n) => n.endsWith('.html'))
     .map((n) => ({ name: n, html: readFileSync(`public/${n}`, 'utf8') }));
 
+  it("leaves an open program's icon on the desk", () => {
+    /* Minimising an app used to reveal a desk with a hole in it: the
+     * shortcuts were built from the nav with the current tool filtered out,
+     * on the reasoning that you are already there. A desktop does not take
+     * an icon away because its program is running. The icon stays and says
+     * so; the taskbar is what tells you it is open.
+     *
+     * And pressing your own icon restores the window rather than loading the
+     * page again, which would throw away whatever is open in it. */
+    const start = readFileSync('public/start.js', 'utf8');
+    const lay = /function layShortcuts\(\)[\s\S]*?\n  \}/.exec(start);
+    expect(lay, 'the shortcut builder is gone').not.toBeNull();
+    expect(lay![0], 'the current tool is filtered off its own desk')
+      .not.toMatch(/filter\([^)]*href !== here/);
+    expect(lay![0], 'nothing marks which program is running').toContain('is-here');
+    expect(lay![0], 'pressing your own icon would reload the page')
+      .toContain('preventDefault');
+
+    const chrome = readFileSync('public/style.css', 'utf8');
+    expect(chrome, "the running program's icon looks like every other one")
+      .toMatch(/\.desk-shortcut\.is-here span \{/);
+  });
+
   it('never lets an app face reach the machine it is running on', () => {
     /* The chin is part of the device: the d-pad, the four keys, the power
      * button. It lives inside #page, which is inside body[data-app], so

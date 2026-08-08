@@ -175,9 +175,14 @@ describe('the toolkit bar', () => {
   });
 
   it('does not link a page to itself', () => {
+    /* The label is read from SITE_TOOLS rather than written out: this test
+     * is about a page not linking to where you already are, and renaming a
+     * tool should not fail it. */
+    const pdf = SITE_TOOLS.find((t) => t.id === 'pdf');
+    expect(pdf, 'the PDF editor left SITE_TOOLS').toBeDefined();
     const rendered = siteNav('pdf');
-    expect(rendered).toContain('<strong>pdf</strong>');
-    expect(rendered).not.toContain('href="/pdf.html"');
+    expect(rendered).toContain(`<strong>${pdf!.label}</strong>`);
+    expect(rendered).not.toContain(`href="${pdf!.href}"`);
     expect(rendered).toContain('href="/golf"');
   });
 

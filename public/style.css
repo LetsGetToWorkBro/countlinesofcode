@@ -1964,6 +1964,19 @@ body {
   text-shadow: 1px 1px 0 #000000;
 }
 .desk-shortcut:hover span, .desk-shortcut:focus span { background: #000080; outline: 1px dotted #ffffff; }
+
+/* The icon of the program that is actually running.
+   A desktop never removed an icon because its program was open, so this one
+   stays where it was; it just says so, the way a shortcut you had selected
+   said so. Pressing it restores the window rather than loading the page
+   again, which would throw away whatever is open in it. */
+.desk-shortcut.is-here span {
+  background: #000080;
+  color: #ffffff;
+  outline: 1px dotted #ffffff;
+  outline-offset: -1px;
+}
+.desk-shortcut.is-here svg { filter: drop-shadow(0 0 3px rgba(140, 200, 255, 0.9)); }
 .desk-shortcut-label {
   flex-basis: 100%;
   color: #b8dcdc;

@@ -107,15 +107,15 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
   // The PDF tool is two tools on one page now: the editor (sign, fill, redact)
   // and page operations (merge, split, reorder, rotate), on tabs. /pages.html
   // redirects to /sign.html.
-  { href: '/sign.html', label: 'pdf', id: 'pdf', group: 'documents' },
+  { href: '/sign.html', label: 'pdf editor', id: 'pdf', group: 'documents' },
   { href: '/convert.html', label: 'pdf \u2194 word', id: 'convert', group: 'documents' },
   { href: '/sheet.html', label: 'excel \u2194 csv', id: 'sheets', group: 'documents' },
   // The archive tool sits with the documents because on this site it usually is
   // one: a .docx, .xlsx and .epub are all ZIPs, and it opens them.
   { href: '/zip.html', label: 'zip', id: 'zip', group: 'documents' },
 
-  { href: '/image.html', label: 'images', id: 'images', group: 'media' },
-  { href: '/video.html', label: 'video', id: 'video', group: 'media' },
+  { href: '/image.html', label: 'image tools', id: 'images', group: 'media' },
+  { href: '/video.html', label: 'video tools', id: 'video', group: 'media' },
 
   // 'pgp' is the honest name for the whole page: the password lock writes
   // OpenPGP too. Messages & keys lead; password-locking a file is the second

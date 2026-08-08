@@ -106,19 +106,39 @@
   }
 
   function layShortcuts() {
+    var APP = desk.querySelector('.app-window');
     // Only where there is a single app on the desk: the landing page has its
     // own icons, drawn properly, and does not need these.
     if (!desk.classList.contains('desk-shell')) return;
     var here = location.pathname;
     var box = el('div', 'desk-shortcuts');
     GROUPS.forEach(function (group) {
-      var others = group.items.filter(function (tool) { return tool.href !== here; });
-      if (!others.length) return;
+      if (!group.items.length) return;
       box.appendChild(el('span', 'desk-shortcut-label', group.label));
-      others.forEach(function (tool) {
-        var link = el('a', 'desk-shortcut');
-        link.href = tool.href;
+      /* Every tool, including the one you are in.
+       *
+       * It used to be filtered out, on the reasoning that you are already
+       * there. But this is a desktop, and a desktop does not take an icon
+       * away because its program is running: the icon stays where it was and
+       * the taskbar tells you it is open. Minimising the app and finding a
+       * hole where its icon should be is the desk rearranging itself behind
+       * your back. */
+      group.items.forEach(function (tool) {
+        var mine = tool.href === here;
+        var link = el('a', 'desk-shortcut' + (mine ? ' is-here' : ''));
+        link.href = mine ? '#' + (APP ? APP.id : '') : tool.href;
         link.innerHTML = iconFor(tool.href) + '<span>' + esc(iconLabel(tool)) + '</span>';
+        if (mine) {
+          link.setAttribute('aria-current', 'page');
+          /* Pressing your own icon restores the window rather than loading
+             the page again, which would throw away whatever is open in it. */
+          link.addEventListener('click', function (event) {
+            event.preventDefault();
+            if (APP) { APP.classList.add('is-open'); APP.scrollIntoView({ block: 'nearest' }); }
+            var button = document.querySelector('.taskbar .task-btn');
+            if (button) button.classList.add('is-open');
+          });
+        }
         box.appendChild(link);
       });
     });
