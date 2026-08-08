@@ -135,14 +135,16 @@ describe('the toolkit bar', () => {
 
   it('needs no JavaScript to list the tools', () => {
     // A landing page that renders nothing without JS is the thing this site
-    // exists to be the opposite of. Both scripts are pure enhancement: desk.js
-    // minimises the info windows into the taskbar, start.js builds the Start
-    // menu and the DOS prompt out of what the page already says. Neither may
-    // pre-hide anything, so with scripting off every window and every tool
-    // listing is simply there.
+    // exists to be the opposite of. Every script it carries is pure
+    // enhancement: desk.js minimises the info windows into the taskbar,
+    // start.js builds the Start menu and the DOS prompt out of what the page
+    // already says, firstrun.js folds the standing prose into a dialog behind
+    // Help, dismiss.js puts an x on the warning boxes. None may pre-hide
+    // anything, so with scripting off every window and every tool listing is
+    // simply there.
     const landing = readFileSync('public/index.html', 'utf8');
     const scripts = [...landing.matchAll(/<script[^>]*src="([^"]+)"/g)].map((m) => m[1]);
-    expect(scripts).toEqual(['/desk.js', '/start.js']);
+    expect(scripts).toEqual(['/desk.js', '/start.js', '/firstrun.js', '/dismiss.js']);
     expect(landing).not.toMatch(/<script[^>]*>[^<]/);           // no inline code
     expect(landing).not.toMatch(/app-window[^"]*(hidden|is-open)/); // nothing pre-hidden
   });

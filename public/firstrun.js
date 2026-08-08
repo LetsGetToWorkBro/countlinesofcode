@@ -23,7 +23,8 @@
   var source = document.getElementById('first-run');
   if (!source) return;
 
-  var app = document.body.getAttribute('data-app') || 'app';
+  var app = document.body.getAttribute('data-app') ||
+            document.body.getAttribute('data-first-run') || 'app';
   var KEY = 'loc1999:seen:' + app;
 
   var steps = [].slice.call(source.querySelectorAll('[data-step]'));

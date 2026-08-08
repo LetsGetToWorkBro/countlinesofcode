@@ -728,6 +728,63 @@ describe('an application owns the device', () => {
   });
 });
 
+describe('the desktop explains itself once', () => {
+  /* The landing page had two sticky notes taped under the machine and a
+   * yellow "Click here to begin" callout pointing at Start. Both talked at
+   * you: the notes were four paragraphs of standing prose that every repeat
+   * visitor scrolled past forever, and the callout fired on a timer whether
+   * anyone was looking or not. The desktop now says what it is the same way
+   * the apps do, in a dialog you can page through, close, and reopen from
+   * Start > Help. */
+  const landing = readFileSync('public/index.html', 'utf8');
+  const css = readFileSync('public/style.css', 'utf8');
+  const start = readFileSync('public/start.js', 'utf8');
+
+  it('has a first-run dialog with something to page through', () => {
+    expect(landing).toContain('id="first-run"');
+    expect(landing).toContain('firstrun.js');
+    const steps = landing.match(/data-step="/g) || [];
+    expect(steps.length, 'too few steps to be worth a dialog').toBeGreaterThan(1);
+  });
+
+  it('keys it as the desktop without turning the desktop into an app', () => {
+    /* data-first-run, not data-app. The fill shell clips a page to the
+     * viewport and hides everything past it, which on the landing page is
+     * the desk, the keyboard and the cord: the machine would be sitting on
+     * nothing. The landing page is a room, not a program. */
+    expect(landing).toMatch(/<body[^>]*data-first-run="desktop"/);
+    expect(landing, 'the desktop is not an application').not.toMatch(/<body[^>]*data-app=/);
+  });
+
+  it('reopens from Start, and only when there is something to reopen', () => {
+    expect(start).toContain("getElementById('first-run')");
+    expect(start).toContain("setAttribute('data-help'");
+    expect(start, 'no fallback for pages without a dialog').toContain('/how.html');
+  });
+
+  it('reads without scripting rather than hiding the footer it replaced', () => {
+    /* The cross-links and the donation address used to be a visible footer.
+     * They live in the dialog now, and a dialog is built by script, so with
+     * scripting off the block has to come back on its own. */
+    expect(css).toMatch(/body\[data-first-run\]\s+#first-run\[hidden\]\s*\{\s*display:\s*block/);
+    expect(landing, 'the donation address left the page').toMatch(/4[0-9A-HJ-NP-Za-km-z]{50,}/);
+  });
+
+  it('leaves no sticky notes and no callout behind', () => {
+    for (const gone of ['desk-note', 'room-footer', 'begin-hint']) {
+      expect(css, `${gone} is still styled`).not.toContain(gone);
+      expect(landing, `${gone} is still in the markup`).not.toContain(gone);
+    }
+  });
+
+  it('keeps one copy of every id', () => {
+    // firstrun.js moves the sections rather than copying them; two of any id
+    // would leave whichever the browser found first wired to nothing.
+    const ids = [...landing.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
 describe('a menu bar opens menus', () => {
   /* Every app grew a bar reading File / Edit / View / Help and none of them
    * opened anything. The stylesheet called it "a label rather than a

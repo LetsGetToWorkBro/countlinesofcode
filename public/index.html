@@ -16,7 +16,7 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
-<body>
+<body data-first-run="desktop">
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
@@ -327,12 +327,24 @@ All of it is open source, including the parts that are inconvenient to admit:
 </div>
 </div>
 
-<!-- The credits and the donation address are not something the machine is
-     showing, so they are not on the glass. They are the things somebody
-     wrote down and stuck to the desk beside the keyboard, which is where
-     this kind of note lived, so that is what they are drawn as. -->
-<footer class="room-footer">
-<div class="desk-note">
+<!-- What the desktop has to say for itself. Hidden here and shown by
+     firstrun.js on the first visit, and from Start > Help after that.
+     It used to be two sticky notes taped to the desk, which was a nice
+     picture and still a wall of small print between the machine and the
+     bottom of the screen. -->
+<div id="first-run" hidden>
+
+<section data-step="Welcome to 1999.LOC">
+<h3>Small tools. No accounts. Nothing leaves your browser.</h3>
+<p>Every tool on this desktop runs in the tab you are reading this in. There
+is no upload, no sign-in and nothing to install: double-click an icon and the
+program opens on the screen.</p>
+<p>Turn your wifi off after a tool has loaded and it still works. That is not
+a slogan, it is the test, and every tool has a button that runs it.</p>
+</section>
+
+<section data-step="What is on the desktop">
+<h3>What is on the desktop</h3>
 <p class="footer">
 Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spite for bloat<br>
 <a href="/code.html">count code</a> |
@@ -349,9 +361,10 @@ Hosted on Cloudflare &middot; Not affiliated with GitHub &middot; Made with spit
 <a href="/how.html">how we count</a> |
 <a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
 </p>
-</div>
+</section>
 
-<div class="desk-note desk-note-tip">
+<section data-step="Nothing here is for sale">
+<h3>Nothing here is for sale</h3>
 <p class="footer support">
 Nothing here is for sale, nothing is tracked, and there is no account to make.
 If something saved you an hour:<br>
@@ -359,9 +372,13 @@ If something saved you an hour:<br>
 You can
 <a href="/wallet.html#addresses">check that address here</a> before sending anything.
 </p>
+</section>
+
 </div>
-</footer>
+
 <script src="/desk.js"></script>
 <script src="/start.js"></script>
+<script src="/firstrun.js"></script>
+<script src="/dismiss.js"></script>
 </body>
 </html>

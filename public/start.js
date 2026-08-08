@@ -230,8 +230,17 @@
   items.appendChild(el('div', 'start-sep'));
   items.appendChild(action('Run...', openRun));
   items.appendChild(action('MS-DOS Prompt', function () { openDos(true); }));
+  /* Help opens what this desktop has to say about itself, where there is
+   * such a thing; firstrun.js is listening for data-help and runs after
+   * this file. Elsewhere it stays a link to the long-form page. */
   var help = el('a', 'start-item', 'Help');
-  help.href = '/how.html';
+  if (document.getElementById('first-run')) {
+    help.href = '#';
+    help.setAttribute('data-help', '');
+    help.addEventListener('click', function (e) { e.preventDefault(); closeMenu(); });
+  } else {
+    help.href = '/how.html';
+  }
   help.addEventListener('mouseenter', closeFlyouts);
   items.appendChild(help);
   items.appendChild(el('div', 'start-sep'));

@@ -226,11 +226,6 @@ pre {
   font-weight: bold;
 }
 
-.desk-note {
-  font-size: 14px;
-  color: #333333;
-}
-
 .footer {
   font-size: 13px;
   color: #333333;
@@ -1711,9 +1706,7 @@ body::after {
 
 /* The machine and the notes are objects in the room, not paint on the
    floor of it, so they sit above the desk wash. */
-#page, .room-footer { position: relative; z-index: 1; }
-
-/* The taskbar sticks to the bottom of the glass, and the glass now has a
+#page, /* The taskbar sticks to the bottom of the glass, and the glass now has a
    desk in front of it, so it stops where the desk starts. */
 #page > .taskbar { z-index: 12; }
 
@@ -1938,104 +1931,10 @@ body::after {
   margin: 0 0 10px 0;
 }
 
-/* ---- the desk under the monitor -----------------------------------
-   The credits, the tool list and the donation address spent a while on
-   the wallpaper: pale text over teal, under the icons, competing with
-   the desktop for the same square of glass and losing. None of it is
-   something the machine is showing, so it is not on the screen any
-   more. It sits below the case, on the desk, where the background is
-   dark, nothing else is happening, and the screen ends cleanly at its
-   own taskbar the way a screen should. */
-.room-footer {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 1120px;
-  /* Stuck to the machine rather than lying on the floor in front of it.
-     The negative pull puts the top of each note over the bottom bezel,
-     which is where somebody actually sticks a note, and the two go to
-     opposite corners so the stand comes down between them. */
-  margin: -30px auto 0 auto;
-  /* Narrower than the case on purpose: the notes are stuck across the
-     chin, and if they run its full width they cover the power button and
-     the light as well. This leaves both ends of the chin showing. */
-  max-width: 748px;
-  justify-content: space-between;
-  padding: 0 4px 8px 4px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 26px 30px;
-}
-
-/* Nobody sets their credits in pale grey on a desk. They write the thing
-   down and stick it to the desk, and it stays there going slightly curled
-   until the machine is thrown out. Two notes: what this is and who it is
-   not affiliated with, and the address, which is the one thing here
-   somebody might actually want to copy off a note. */
-.desk-note {
-  position: relative;
-  flex: 0 1 340px;
-  max-width: 340px;
-  box-sizing: border-box;
-  background: #fbee5d;
-  background-image: linear-gradient(160deg, #fdf47f 0%, #f7e64c 62%, #eeda42 100%);
-  color: #2a2712;
-  padding: 20px 20px 18px 20px;
-  transform: rotate(-1.3deg);
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.35),
-    0 14px 22px rgba(0, 0, 0, 0.42);
-}
-.desk-note-tip {
-  background: #b8e6f6;
-  background-image: linear-gradient(160deg, #cdeffb 0%, #ade1f4 62%, #9ed6ec 100%);
-  transform: rotate(1.1deg);
-}
-/* The strip of tape holding it down. */
-.desk-note::before {
-  content: "";
-  position: absolute;
-  /* Mostly on the paper, a little over the edge. Translucent tape hanging
-     further than that over a near-black desk stops reading as tape and
-     starts reading as a grey tab someone bolted on. */
-  top: -7px;
-  left: 50%;
-  width: 86px;
-  height: 21px;
-  transform: translateX(-50%) rotate(-1.8deg);
-  background: rgba(255, 255, 255, 0.5);
-  border-left: 1px solid rgba(255, 255, 255, 0.6);
-  border-right: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
-}
-.desk-note-tip::before { transform: translateX(-50%) rotate(2.2deg); }
-
-.desk-note .footer {
-  color: #2a2712;
-  font-size: 13.5px;
-  line-height: 1.5;
-  margin: 0;
-}
-.desk-note .footer.support { margin: 0; }
-.desk-note a { color: #14149c; }
-.desk-note a:visited { color: #5a2a8a; }
-.desk-note code {
-  display: inline-block;
-  max-width: 100%;
-  color: #1c1a0c;
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(0, 0, 0, 0.16);
-  padding: 3px 5px;
-  margin: 3px 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
   /* A note lying perfectly straight is a nicer read for anyone who has
      asked the machine to stop tilting things at them. */
-  .note, .desk-note-tip { transform: none; }
-  .desk-note::before { transform: translateX(-50%); }
-}
+  .note, }
 
 /* The toolkit bar was a table of contents six lines deep, which on a
    wide screen is a lot of height spent on a list the Start menu also
@@ -2281,69 +2180,13 @@ body::after {
   }
 }
 
-/* ---- click here to begin -------------------------------------------
-   Windows 95 shipped with a callout pointing at the Start button on
-   first boot, because a desktop with nothing open tells a first-time
-   visitor nothing about where to press. This one has the same problem
-   and takes the same answer. It fades out on its own after a few
-   seconds and disappears the moment the menu opens, so it is never
-   something to dismiss.
-
-   Landing only, and only while the menu is shut. */
-/* Anchored to the button, not to the bar: "left: 100%" has to mean the
-   right edge of Start, or the callout lands off the end of the taskbar. */
-#page:has(.desktop) .taskbar .start { position: relative; }
-#page:has(.desktop):not(:has(.start-menu.is-open)):not(:has(.app-window.is-open)) .taskbar .start::after {
-  content: "Click here to begin";
-  position: absolute;
-  /* Above the bar, over the wallpaper. Beside the button is where Windows
-     put it, but Windows had an empty taskbar to put it in and this one
-     has the open windows on it. */
-  left: 0;
-  bottom: calc(100% + 11px);
-  white-space: nowrap;
-  background: #ffffe1;              /* the era's tooltip yellow */
-  color: #000000;
-  border: 1px solid #000000;
-  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
-  font-size: 12px;
-  font-weight: normal;
-  padding: 3px 8px;
-  pointer-events: none;
-  z-index: 11;
-  /* It floats over the desktop, and on a phone the icons run right down
-     to the taskbar, so it will land on one. A tooltip with a shadow under
-     it reads as being in front of the icon; without one it reads as
-     having collided with it. */
-  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.4);
-  animation: begin-hint 9s ease-out both;
-}
-/* The arrow, pointing back at the button it is talking about. */
-#page:has(.desktop):not(:has(.start-menu.is-open)):not(:has(.app-window.is-open)) .taskbar .start::before {
-  content: "";
-  position: absolute;
-  left: 16px;
-  bottom: calc(100% + 5px);
-  border: 6px solid transparent;
-  border-top-color: #000000;
-  border-bottom-width: 0;
-  pointer-events: none;
-  z-index: 12;
-  animation: begin-hint 9s ease-out both;
-}
-@keyframes begin-hint {
-  0%, 4%    { opacity: 0; }
-  10%, 82%  { opacity: 1; }
-  100%      { opacity: 0; visibility: hidden; }
-}
-@media (prefers-reduced-motion: reduce) {
-  /* No pulse and no timed fade: it is simply there, and the menu
-     opening still takes it away. */
-  #page:has(.desktop):not(:has(.start-menu.is-open)):not(:has(.app-window.is-open)) .taskbar .start::after,
-  #page:has(.desktop):not(:has(.start-menu.is-open)):not(:has(.app-window.is-open)) .taskbar .start::before {
-    animation: none;
-  }
-}
+/* The "Click here to begin" callout was here.
+   It pointed at Start the way Windows 95 did on first boot, and it was
+   the right answer to the real problem: a desktop with nothing open
+   tells a first-time visitor nothing. There is a better answer now.
+   The desktop says what it is in a dialog on the first visit, which can
+   be read, paged through, and closed, rather than a line of yellow that
+   talks at you and fades whether you were looking or not. */
 
 /* ---- small screens -------------------------------------------------
    A phone is not a desk. The case thins to a rim, the stand and the
@@ -2514,15 +2357,6 @@ body::after {
   .start-menu { left: 2px; max-width: calc(100vw - 28px); }
   /* Its flyouts open underneath rather than off the right edge into nowhere. */
   .start-fly { position: static; left: auto; bottom: auto; margin: 0 0 2px 12px; max-height: 42vh; }
-
-  /* There is no stand on a phone, so the desk starts right under the rim
-     rather than 84px down where the neck would have been. The notes go
-     one above the other and lie almost flat: a note tilted 1.3 degrees
-     across a full-width phone column throws its bottom corner further
-     than it is worth. */
-  .room-footer { margin-top: 20px; padding: 0 2px 4px 2px; gap: 22px; }
-  .desk-note { flex: 1 1 100%; max-width: none; transform: rotate(-0.5deg); padding: 16px 15px 15px 15px; }
-  .desk-note-tip { transform: rotate(0.5deg); }
 
   /* Icons and shortcuts pack tighter, and a band's cells narrow with them
      so four fit across a phone instead of two with a hole down the right.
@@ -2985,8 +2819,24 @@ body[data-app] #page > hr { display: none; }
 [data-help] { cursor: pointer; }
 [data-help]:hover { background: #316ac5; color: #ffffff; }
 
-/* Without scripting the dialog never gets built, so the prose stays where
-   it is and reads down the page as it always did. */
+/* Without scripting the dialog never gets built, so the prose has to stay
+   where it is and read down the page as it always did.
+
+   The block carries the [hidden] attribute so that the split second
+   between parsing it and firstrun.js lifting it out is not a flash of
+   prose. [hidden] is a UA rule, though, and an author rule beats it, so
+   putting the block back is one line. A display:none parent hides its
+   children whatever they say, which is why revealing the sections alone
+   was not enough.
+
+   Only on the desktop. An app page is clipped to the viewport by the
+   fill shell above, so prose restored below the application would sit in
+   a window that does not scroll and could not be read anyway; there it
+   stays in the markup for anyone reading the source, and Help is the way
+   to it. The desktop is an ordinary scrolling document and has no such
+   excuse: with scripting off its cross-links and its donation address
+   are simply there, at the bottom, where they used to be. */
+body[data-first-run] #first-run[hidden] { display: block; }
 #first-run > [data-step] { display: block; }
 
 /* ---- menu bars that open -------------------------------------------
