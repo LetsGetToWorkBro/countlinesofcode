@@ -500,8 +500,26 @@ describe('an app may have its own face, and it must stay in its own lane', () =>
     .filter((n) => n.endsWith('.html'))
     .map((n) => ({ name: n, html: readFileSync(`public/${n}`, 'utf8') }));
 
-  it('has at least the four faces the site has drawn', () => {
-    expect(FACES.map((f) => f.app).sort()).toEqual(['email', 'pdf', 'wallet', 'zip']);
+  it('draws a face for every page that claims one', () => {
+    /* Was a hardcoded list of four, which meant every new identity broke a
+     * test that had nothing to say about it. What actually matters is that
+     * the two sides agree: a page carrying data-app="x" has an app-x.css to
+     * carry, and an app-x.css has a page that wears it. A stylesheet nobody
+     * loads is dead weight; a page pointing at one that does not exist is a
+     * program with no face at all. */
+    const claimed = [...new Set(
+      PAGES.flatMap((p) => [...p.html.matchAll(/<body[^>]*data-app="([a-z]+)"/g)].map((m) => m[1]!)),
+    )].sort();
+    expect(claimed.length, 'no page claims an identity').toBeGreaterThanOrEqual(4);
+    expect(FACES.map((f) => f.app).sort()).toEqual(claimed);
+
+    // And each one links the sheet it claims, or it is styled by nothing.
+    for (const page of PAGES) {
+      const app = /<body[^>]*data-app="([a-z]+)"/.exec(page.html)?.[1];
+      if (!app) continue;
+      expect(page.html, `${page.name} claims ${app} without loading app-${app}.css`)
+        .toContain(`/app-${app}.css`);
+    }
   });
 
   for (const face of FACES) {

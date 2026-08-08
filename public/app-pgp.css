@@ -1,0 +1,196 @@
+/* 1999.LOC — the encryption tool's face.
+ *
+ * PGP 6.0, and specifically PGPtools, which was the shape of that product:
+ * not a document window with menus, but a small tray of operations you
+ * pressed one of. Encrypt, Sign, Encrypt & Sign, Decrypt/Verify, Wipe. You
+ * chose the verb first and the program showed you the form for it.
+ *
+ * This page already had that shape and was drawing it as a tab strip, which
+ * said "these are seven views of one document" when what it means is "these
+ * are seven things you can do". So the strip is drawn as PGP's tray: raised
+ * square-ish buttons in a sunken well, the chosen one pressed in.
+ *
+ * The colours are PGP 6's: grey chrome, and the one accent a deep blue-teal
+ * that the lock and key icons were drawn in. It is used on the pressed
+ * operation and nowhere else, because a program that shouts everywhere is a
+ * program you stop reading.
+ *
+ * Scoped entirely under [data-app="pgp"] like every other app face here.
+ */
+
+/* ---- the menu bar, pinned to the window --------------------------- */
+[data-app="pgp"] .app-window > .pgp-menu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 2px 4px;
+  background: #d4d0c8;
+  border-bottom: 1px solid #808080;
+  /* Stated rather than inherited: outside the panels, so it would otherwise
+     come out in the page's serif. */
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #000000;
+}
+[data-app="pgp"] .app-window > .pgp-menu .menu-title {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  min-height: 26px;
+}
+
+/* ---- the body ------------------------------------------------------ */
+[data-app="pgp"] .app-body {
+  background: #d4d0c8;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  color: #000000;
+  padding: 8px;
+}
+[data-app="pgp"] .app-body h3 {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 12px;
+  color: #12525c;
+  border-bottom: 1px solid #a8a498;
+  padding-bottom: 3px;
+  margin: 12px 0 8px 0;
+}
+[data-app="pgp"] .app-body p,
+[data-app="pgp"] .app-body label,
+[data-app="pgp"] .app-body li,
+[data-app="pgp"] .app-body legend {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+}
+[data-app="pgp"] .app-body > p,
+[data-app="pgp"] .app-body > div > p { max-width: 620px; }
+
+/* What to do on this screen. */
+[data-app="pgp"] .pgp-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0 0 10px 0;
+  padding: 6px 9px;
+  background: #ffffe1;
+  border: 1px solid #808080;
+  font-size: 11.5px;
+  line-height: 1.45;
+  max-width: 820px;
+}
+[data-app="pgp"] .pgp-hint-mark {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #12525c;
+  color: #ffffff;
+  font-weight: bold;
+  font-style: italic;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* ---- PGPTOOLS: the tray of operations ------------------------------
+   The whole identity. A sunken well with raised buttons in it, and the
+   one you are in pressed down and coloured. Not a tab strip: these are
+   seven verbs, not seven views. */
+[data-app="pgp"] .tool-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 12px 0;
+  padding: 6px;
+  background: #c8c4bc;
+  border: 2px inset #d4d0c8;
+}
+[data-app="pgp"] .tool-tabs-sep {
+  align-self: stretch;
+  width: 0;
+  margin: 0 6px;
+  border-left: 1px solid #808080;
+  border-right: 1px solid #ffffff;
+}
+[data-app="pgp"] .tool-tabs .sheet-tab {
+  border: 2px outset #d4d0c8;
+  background: #d4d0c8;
+  color: #000000;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 6px 14px;
+  cursor: pointer;
+  touch-action: manipulation;
+  /* A thumb needs a target, and this row is the first thing anybody presses. */
+  min-height: 30px;
+}
+[data-app="pgp"] .tool-tabs .sheet-tab:hover:not(.is-active) { background: #dcd8d0; }
+[data-app="pgp"] .tool-tabs .sheet-tab.is-active {
+  border-style: inset;
+  background: #12525c;
+  color: #ffffff;
+}
+[data-app="pgp"] .tool-tabs .sheet-tab:focus-visible { outline: 1px dotted #000000; outline-offset: -4px; }
+
+/* ---- controls ------------------------------------------------------ */
+[data-app="pgp"] button:not(.notice-x):not(.menu-title):not(.win-min):not(.sheet-tab) {
+  border: 2px outset #d4d0c8;
+  background: #d4d0c8;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 3px 12px;
+  cursor: pointer;
+}
+[data-app="pgp"] button:not(.notice-x):not(.sheet-tab):active { border-style: inset; }
+[data-app="pgp"] select,
+[data-app="pgp"] input[type="text"],
+[data-app="pgp"] input[type="password"],
+[data-app="pgp"] textarea {
+  border: 2px inset #d4d0c8;
+  background: #ffffff;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+}
+[data-app="pgp"] fieldset {
+  border: 2px groove #ffffff;
+  margin: 0 0 10px 0;
+  padding: 8px 10px;
+  max-width: 620px;
+}
+
+/* A key block is armour text, and armour text is monospaced or it is
+   unreadable. The sunken well is where PGP put one. */
+[data-app="pgp"] textarea { min-height: 90px; width: 100%; box-sizing: border-box; }
+[data-app="pgp"] code, [data-app="pgp"] pre {
+  font-family: "Courier New", Courier, monospace;
+}
+[data-app="pgp"] .dropzone {
+  background: #ffffff;
+  border: 2px inset #d4d0c8;
+  color: #000000;
+}
+
+/* The keyring list, as the report a key manager showed. */
+[data-app="pgp"] #keyring table,
+[data-app="pgp"] .keyring table { width: 100%; font-size: 11px; }
+[data-app="pgp"] #keyring th[scope="row"] { background: #ece9d8; }
+
+[data-app="pgp"] .notice-box,
+[data-app="pgp"] .app-body details {
+  background: #ffffe1;
+  border: 1px solid #808080;
+  max-width: 820px;
+}
+[data-app="pgp"] .status { color: #12525c; }
+[data-app="pgp"] .error { color: #a01010; }
+
+/* ---- responsive ---------------------------------------------------- */
+@media (max-width: 700px) {
+  [data-app="pgp"] .app-body { padding: 6px; }
+  [data-app="pgp"] .tool-tabs { padding: 4px; gap: 3px; }
+  [data-app="pgp"] .tool-tabs .sheet-tab { padding: 6px 10px; }
+  [data-app="pgp"] .app-window > .pgp-menu span { padding: 2px 5px; }
+}

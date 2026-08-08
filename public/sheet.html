@@ -13,10 +13,11 @@
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/app-sheet.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
-<body>
+<body data-app="sheet">
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
@@ -74,25 +75,25 @@
 <div class="desk-shell">
 <div class="app-window" id="app">
 <div class="client-title"><h2>Excel &harr; CSV</h2><a class="win-min" href="#" aria-label="Minimise Excel &harr; CSV">_</a></div>
+<p class="xl-menu menubar" role="menubar">
+<span class="menu"><button type="button" class="menu-title">File</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="drop">Open...</button>
+    <button type="button" data-cmd="save">Save as</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Data</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="delimiter">Delimiter...</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Help</button>
+  <span class="menu-drop">
+    <button type="button" data-help>What this program does</button>
+  </span></span>
+</p>
 <div class="app-body">
-<p class="tagline">Both directions, in this tab. Your file never leaves it.</p>
+<p class="xl-hint"><span class="xl-hint-mark">i</span>
+Open an .xlsx or a .csv and it converts to the other. Nothing is uploaded: an .xlsx is a ZIP of XML and the browser already has a ZIP engine.</p>
 
-<details class="notice-box">
-<summary><strong>It will not turn your postcodes into numbers.</strong></summary>
-<p class="note">
-The classic way a spreadsheet tool destroys data is by being clever: it sees
-<code>007</code> and stores 7, sees <code>SW1A 1AA</code> and mangles it, sees a
-date and reformats it to whatever locale it feels like. Anything with a leading
-zero is treated as text here, because a value that starts with a zero is nearly
-always an identifier (an account, a phone number, a postcode) and
-never a quantity.
-</p>
-<p class="note">
-CSV is read with its quoting rules honoured, so a comma inside a quoted field
-stays inside that field. The delimiter is detected rather than assumed, so the
-semicolon-separated exports that most of Europe produces work without a setting.
-</p>
-</details>
 
 <hr>
 
@@ -129,12 +130,36 @@ semicolon-separated exports that most of Europe produces work without a setting.
   <div id="output"></div>
 </div>
 
-<hr>
+
+
+
+<!-- What this program has to say for itself. Hidden here and shown by
+     firstrun.js as a dialog on the first visit, and from Help after that. -->
+<div id="first-run" hidden>
+
+<section data-step="Excel and CSV, both directions">
+<p><strong>Open an .xlsx or a .csv and save it as the other.</strong></p>
+<p class="note">
+The classic way a spreadsheet tool destroys data is by being clever: it sees
+<code>007</code> and stores 7, sees <code>SW1A 1AA</code> and mangles it, sees a
+date and reformats it to whatever locale it feels like. Anything with a leading
+zero is treated as text here, because a value that starts with a zero is nearly
+always an identifier (an account, a phone number, a postcode) and
+never a quantity.
+</p>
+<p class="note">
+CSV is read with its quoting rules honoured, so a comma inside a quoted field
+stays inside that field. The delimiter is detected rather than assumed, so the
+semicolon-separated exports that most of Europe produces work without a setting.
+</p>
+</section>
+
+<section data-step="Is this actually private?">
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
+</section>
 
-<details class="notes">
-<summary>The honest notes</summary>
+<section data-step="The honest notes">
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. An .xlsx is a ZIP of XML and the browser already has a ZIP engine, so this half needs no download at all.</li>
   <li><strong>Values, not formulas.</strong> A cell containing a formula exports the value it last calculated, which is what the spreadsheet was showing. Formulas themselves are not carried into CSV, because CSV has no way to hold one.</li>
@@ -144,10 +169,9 @@ semicolon-separated exports that most of Europe produces work without a setting.
   <li><strong>Every sheet is read.</strong> Pick which one to export; CSV holds exactly one grid, so one sheet at a time. Exporting to .xlsx keeps them all.</li>
   <li><strong>Big files are real work.</strong> Everything is held in the tab, so a spreadsheet with hundreds of thousands of rows will be slow on a phone.</li>
 </ul>
-</details>
+</section>
 
-<hr>
-
+<section data-step="The rest of the site">
 <p class="footer">
 Hosted on Cloudflare &middot; Made with spite for bloat<br>
 <a href="/convert.html">pdf to word</a> |
@@ -164,7 +188,9 @@ If something saved you an hour:<br>
 You can
 <a href="/wallet.html#addresses">check that address here</a> before sending anything.
 </p>
+</section>
 
+</div>
 </div>
 </div>
 </div>
@@ -180,7 +206,9 @@ You can
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
 <script src="/start.js"></script>
+<script src="/menubar.js"></script>
 <script src="/proof-panel.js"></script>
+<script src="/firstrun.js"></script>
 <script src="/dismiss.js"></script>
 </body>
 </html>

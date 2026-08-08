@@ -13,10 +13,11 @@
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/app-image.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
-<body>
+<body data-app="image">
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
@@ -74,25 +75,32 @@
 <div class="desk-shell">
 <div class="app-window" id="app">
 <div class="client-title"><h2>Image tools</h2><a class="win-min" href="#" aria-label="Minimise Image tools">_</a></div>
+<p class="mp-menu menubar" role="menubar">
+<span class="menu"><button type="button" class="menu-title">File</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="drop">Open...</button>
+    <button type="button" data-cmd="convert">Save as</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Image</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="longest">Resize...</button>
+    <button type="button" data-cmd="tool">Convert to...</button>
+    <button type="button" data-cmd="quality">Quality...</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Help</button>
+  <span class="menu-drop">
+    <button type="button" data-help>What this program does</button>
+  </span></span>
+</p>
 <div class="app-body">
-<p class="tagline">Resize, compress and convert a picture. Your file never leaves this tab.</p>
+<p class="mp-hint"><span class="mp-hint-mark">i</span>
+Open a picture, set a size or a format, and save it back out. The GPS coordinates and camera data go with the re-encode, whether you remember to ask or not.</p>
 
 <p class="note">
 Every &ldquo;resize an image&rdquo; site wants your photo on their server. This
 does it in your tab; turn off your wifi once it loads and everything still works.
 </p>
 
-<details class="notice-box">
-<summary><strong>Location and camera data are removed.</strong></summary>
-<p class="note">
-A photo carries EXIF metadata: often the GPS coordinates it was taken at,
-the camera, the date and time. Re-encoding the picture here drops all of it, so
-what you download is just the image. That is a side effect of how this works,
-not a setting you can forget to switch on.
-</p>
-</details>
-
-<hr>
 
 <h3>1. Open an image</h3>
 
@@ -146,12 +154,29 @@ not a setting you can forget to switch on.
   <div id="preview"></div>
 </div>
 
-<hr>
+
+
+
+<!-- What this program has to say for itself. Hidden here and shown by
+     firstrun.js as a dialog on the first visit, and from Help after that. -->
+<div id="first-run" hidden>
+
+<section data-step="Resize, compress, convert">
+<p><strong>A picture in, a smaller or different picture out.</strong></p>
+<p class="note">
+A photo carries EXIF metadata: often the GPS coordinates it was taken at,
+the camera, the date and time. Re-encoding the picture here drops all of it, so
+what you download is just the image. That is a side effect of how this works,
+not a setting you can forget to switch on.
+</p>
+</section>
+
+<section data-step="Is this actually private?">
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
+</section>
 
-<details class="notes">
-<summary>The honest notes</summary>
+<section data-step="The honest notes">
 <ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The picture is decoded, resized and re-encoded in your browser.</li>
   <li><strong>Metadata is always dropped.</strong> Re-encoding cannot keep EXIF, so the location and camera data go. If you needed to <em>keep</em> it, this is the wrong tool, but for sharing a photo, losing it is the point.</li>
@@ -159,10 +184,9 @@ not a setting you can forget to switch on.
   <li><strong>Very large photos use memory.</strong> A 100-megapixel image is held uncompressed while it is worked on, so a phone may struggle where a laptop will not.</li>
   <li><strong>This does not upscale.</strong> Asking for a longest side larger than the original just re-encodes at the original size; enlarging a picture cannot invent detail that was never there.</li>
 </ul>
-</details>
+</section>
 
-<hr>
-
+<section data-step="The rest of the site">
 <p class="footer">
 Hosted on Cloudflare &middot; Made with spite for bloat<br>
 <a href="/sign.html">edit a pdf</a> |
@@ -179,7 +203,9 @@ If something saved you an hour:<br>
 You can
 <a href="/wallet.html#addresses">check that address here</a> before sending anything.
 </p>
+</section>
 
+</div>
 </div>
 </div>
 </div>
@@ -195,7 +221,9 @@ You can
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
 <script src="/start.js"></script>
+<script src="/menubar.js"></script>
 <script src="/proof-panel.js"></script>
+<script src="/firstrun.js"></script>
 <script src="/dismiss.js"></script>
 </body>
 </html>

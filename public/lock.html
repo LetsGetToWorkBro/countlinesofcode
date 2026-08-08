@@ -13,10 +13,11 @@
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/app-pgp.css">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 </head>
-<body>
+<body data-app="pgp">
 <!--
   EXPECTED LAYOUT (single column, ~680px, left aligned):
 
@@ -74,10 +75,30 @@
 <div class="desk-shell">
 <div class="app-window" id="app">
 <div class="client-title"><h2>PGP</h2><a class="win-min" href="#" aria-label="Minimise PGP">_</a></div>
+<p class="pgp-menu menubar" role="menubar">
+<span class="menu"><button type="button" class="menu-title">File</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="tab-encrypt">Encrypt</button>
+    <button type="button" data-cmd="tab-decrypt">Decrypt</button>
+    <button type="button" data-cmd="tab-sign">Sign</button>
+    <button type="button" data-cmd="tab-verify">Verify</button>
+    <span class="menu-rule"></span>
+    <button type="button" data-cmd="tab-lock">Lock with a password</button>
+    <button type="button" data-cmd="tab-unlock">Unlock a locked file</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Keys</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="tab-keys">Keyring</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Help</button>
+  <span class="menu-drop">
+    <button type="button" data-help>What this program does</button>
+  </span></span>
+</p>
 <div class="app-body">
-<p class="tagline">Encrypt a message or a file to someone&rsquo;s key, or lock a file with a password. Both write the same OpenPGP; nothing is uploaded.</p>
+<p class="pgp-hint"><span class="pgp-hint-mark">i</span>
+Pick an operation from the row below. Encrypt and Sign need a key, which Keys makes; Lock with a password needs nothing but the password. Your private key never leaves this tab.</p>
 
-<p class="tagline">Keys, messages and files. Your private key never leaves this tab.</p>
 
 <p class="note">
 PGP is what journalists and security teams have used for thirty years to send
@@ -85,18 +106,6 @@ things nobody else can read. People paste their private keys into unknown
 websites to do it; this page has no server to paste them to.
 </p>
 
-<details class="notice-box">
-<summary><strong>Read this before you trust it with anything that matters.</strong></summary>
-<p class="note">
-This is real OpenPGP, done properly, in your browser. But a browser tab is not a
-hardware token and this page is not <a href="https://gnupg.org/">GnuPG</a>. If
-you are protecting a source, a disclosure, or anything where being wrong has
-consequences for a person, use a desktop tool with a key on a device that is not
-also running a hundred other tabs. This is for the enormous middle ground:
-sending a colleague something private, checking a signature, and learning how
-any of it works without handing your key to a stranger.
-</p>
-</details>
 
 <!-- One row of operations, which is what PGP's own toolbox was: a window
      with Encrypt, Sign, Decrypt/Verify in it, not two programs behind
@@ -280,27 +289,9 @@ any of it works without handing your key to a stranger.
   <div id="verify-output"></div>
 </div>
 
-<details class="notes">
-<summary>The honest notes</summary>
-<ul class="plain">
-  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account, no keyserver. Your private key is generated in the tab and stays there.</li>
-  <li><strong>A private key is never stored here without a passphrase.</strong> Local storage is convenient and it is not a vault: anything running as this site's origin could read it, and clearing your browsing data deletes it. With a passphrase, what is in there is a block that costs a real search to open. Without one it would be the key itself. So a key made without a passphrase is downloaded and not kept, and a private key imported without one is locked with a passphrase you give before it is stored. Export anything you want to keep, and put the export somewhere you actually back up.</li>
-  <li><strong>The passphrase is stretched, and how far depends on the format.</strong> Compatible keys use 16,777,216 rounds of SHA-256, which is the most the older format allows. Modern keys use Argon2, which is <em>memory</em>-hard: the reason that matters is that a graphics card can run billions of hashes a second but cannot cheaply give each of them its own megabytes of RAM, so the same money buys an attacker far fewer guesses.</li>
-  <li><strong>Two formats, and the newer one is not the default.</strong> RFC 9580 arrived in 2024 with authenticated encryption, version 6 keys and Argon2. All of it is better and none of it is universally readable yet, so the compatible format is what you get unless you choose otherwise. Both use the same Ed25519 and X25519 underneath; what differs is the packet encoding and the passphrase stretching. The page prints exactly what each will produce before you make anything, and the test suite generates real keys with those settings and reads the algorithms back out, so those sentences cannot quietly drift out of true.</li>
-  <li><strong>Which format a message gets is decided by the recipient, not by you.</strong> Encrypting to a version 6 key gives authenticated encryption; encrypting to an older key gives the older format even with the modern setting chosen. That is the library refusing to write something the recipient could not open, and it is right to, but it does mean the toggle governs the keys you make rather than every message you send.</li>
-  <li><strong>A browser tab is not GnuPG.</strong> The cryptography is the same and the files are interchangeable, but the surroundings are not: a desktop tool keeps your key out of a process that also renders web pages. For work where being wrong has consequences for a person, use <a href="https://gnupg.org/">GnuPG</a> and a hardware token. This page is for the very large space of things that are private but not perilous.</li>
-  <li><strong>Curve25519 by default, RSA if you need it.</strong> Curve25519 keys are tiny, generate in a fraction of a second, and are supported by every current implementation. RSA 4096 takes several seconds to generate and is what to pick if the person on the other end is running something very old.</li>
-  <li><strong>Everything is standard OpenPGP.</strong> Keys made here import into GnuPG, Kleopatra, GPG Suite, Thunderbird and Proton Mail. Messages encrypted here decrypt there and the reverse. This page is a convenience, never a dependency.</li>
-  <li><strong>Verification needs their key, and their key needs checking.</strong> A signature only tells you the message matches a key. That the key belongs to the person you think it does is a separate question, and the only real answer is comparing the fingerprint with them through some channel an attacker does not also control.</li>
-  <li><strong>Take your keys with you.</strong> Any key saves out as a <code>.asc</code>, a pair saves as one file with the public half first, and the whole keyring saves in one go. Import works the other way: paste a key, or open a file, and a file holding several keys imports all of them rather than the first. Nothing here is a place your keys have to live.</li>
-  <li><strong>What it does not do:</strong> keyservers, the web of trust, revocation certificates, subkey editing, and encrypting to more than one recipient at a time. An expiry can be set when a key is made but not changed afterwards. Those are real PGP features and this is deliberately the small end of it.</li>
-  <li><strong>It downloads about 390&nbsp;KB</strong> the first time you open this tab: <a href="https://github.com/openpgpjs/openpgpjs">OpenPGP.js</a>, LGPL, served unmodified from this domain. The one library here that exists because writing it ourselves would be reckless.</li>
-</ul>
-</details>
 
 
 <!-- ============================== PASSWORD ============================== -->
-<p class="tagline">One password locks the file; the same password opens it. The simplest kind, and enough for most things.</p>
 
 <p class="note">
 Every other &ldquo;encrypt a file online&rdquo; service asks you to upload the
@@ -408,9 +399,47 @@ Nothing here is a lock only we hold the key to.
   <div id="unlock-output"></div>
 </div>
 
-<details class="notes">
-<summary>The honest notes</summary>
+
+
+
+
+<!-- What this program has to say for itself. Hidden here and shown by
+     firstrun.js as a dialog on the first visit, and from Help after that. -->
+<div id="first-run" hidden>
+
+<section data-step="One program, seven operations">
+<p><strong>Encrypt a message or a file to someone\u2019s key, or lock a file with a password.</strong> Both write the same OpenPGP; nothing is uploaded.</p>\n<p class="note">
+This is real OpenPGP, done properly, in your browser. But a browser tab is not a
+hardware token and this page is not <a href="https://gnupg.org/">GnuPG</a>. If
+you are protecting a source, a disclosure, or anything where being wrong has
+consequences for a person, use a desktop tool with a key on a device that is not
+also running a hundred other tabs. This is for the enormous middle ground:
+sending a colleague something private, checking a signature, and learning how
+any of it works without handing your key to a stranger.
+</p>
+</section>
+
+<section data-step="Is this actually private?">
+<hr>
+<h3>Is this actually private?</h3>
+<div id="proof"></div>
+</section>
+
+<section data-step="The honest notes">
 <ul class="plain">
+  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account, no keyserver. Your private key is generated in the tab and stays there.</li>
+  <li><strong>A private key is never stored here without a passphrase.</strong> Local storage is convenient and it is not a vault: anything running as this site's origin could read it, and clearing your browsing data deletes it. With a passphrase, what is in there is a block that costs a real search to open. Without one it would be the key itself. So a key made without a passphrase is downloaded and not kept, and a private key imported without one is locked with a passphrase you give before it is stored. Export anything you want to keep, and put the export somewhere you actually back up.</li>
+  <li><strong>The passphrase is stretched, and how far depends on the format.</strong> Compatible keys use 16,777,216 rounds of SHA-256, which is the most the older format allows. Modern keys use Argon2, which is <em>memory</em>-hard: the reason that matters is that a graphics card can run billions of hashes a second but cannot cheaply give each of them its own megabytes of RAM, so the same money buys an attacker far fewer guesses.</li>
+  <li><strong>Two formats, and the newer one is not the default.</strong> RFC 9580 arrived in 2024 with authenticated encryption, version 6 keys and Argon2. All of it is better and none of it is universally readable yet, so the compatible format is what you get unless you choose otherwise. Both use the same Ed25519 and X25519 underneath; what differs is the packet encoding and the passphrase stretching. The page prints exactly what each will produce before you make anything, and the test suite generates real keys with those settings and reads the algorithms back out, so those sentences cannot quietly drift out of true.</li>
+  <li><strong>Which format a message gets is decided by the recipient, not by you.</strong> Encrypting to a version 6 key gives authenticated encryption; encrypting to an older key gives the older format even with the modern setting chosen. That is the library refusing to write something the recipient could not open, and it is right to, but it does mean the toggle governs the keys you make rather than every message you send.</li>
+  <li><strong>A browser tab is not GnuPG.</strong> The cryptography is the same and the files are interchangeable, but the surroundings are not: a desktop tool keeps your key out of a process that also renders web pages. For work where being wrong has consequences for a person, use <a href="https://gnupg.org/">GnuPG</a> and a hardware token. This page is for the very large space of things that are private but not perilous.</li>
+  <li><strong>Curve25519 by default, RSA if you need it.</strong> Curve25519 keys are tiny, generate in a fraction of a second, and are supported by every current implementation. RSA 4096 takes several seconds to generate and is what to pick if the person on the other end is running something very old.</li>
+  <li><strong>Everything is standard OpenPGP.</strong> Keys made here import into GnuPG, Kleopatra, GPG Suite, Thunderbird and Proton Mail. Messages encrypted here decrypt there and the reverse. This page is a convenience, never a dependency.</li>
+  <li><strong>Verification needs their key, and their key needs checking.</strong> A signature only tells you the message matches a key. That the key belongs to the person you think it does is a separate question, and the only real answer is comparing the fingerprint with them through some channel an attacker does not also control.</li>
+  <li><strong>Take your keys with you.</strong> Any key saves out as a <code>.asc</code>, a pair saves as one file with the public half first, and the whole keyring saves in one go. Import works the other way: paste a key, or open a file, and a file holding several keys imports all of them rather than the first. Nothing here is a place your keys have to live.</li>
+  <li><strong>What it does not do:</strong> keyservers, the web of trust, revocation certificates, subkey editing, and encrypting to more than one recipient at a time. An expiry can be set when a key is made but not changed afterwards. Those are real PGP features and this is deliberately the small end of it.</li>
+  <li><strong>It downloads about 390&nbsp;KB</strong> the first time you open this tab: <a href="https://github.com/openpgpjs/openpgpjs">OpenPGP.js</a>, LGPL, served unmodified from this domain. The one library here that exists because writing it ourselves would be reckless.</li>
+</ul>\n<ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. Neither the file nor the password leaves the tab, and there is nowhere for them to go.</li>
   <li><strong>The output is OpenPGP, symmetric mode.</strong> The same thing <code>gpg --symmetric</code> produces: your password is stretched into a key, a random session key encrypts the data, and the result is a file any OpenPGP implementation can read. AES-256, and a file that has been tampered with fails to open rather than decrypting into something subtly wrong.</li>
   <li><strong>It is the older format, and that is the choice.</strong> This tab used to say &ldquo;an authenticated mode&rdquo;, which was not accurate and has been corrected. What it writes is AES-256 in CFB with a modification-detection code appended, and your password stretched through 16,777,216 rounds of SHA-256. Tampering is caught either way, but the check happens after decrypting rather than as part of it. OpenPGP has had genuine authenticated encryption since RFC 9580 in 2024, along with Argon2 in place of that SHA-256 loop, and both are better. Neither is written here, because a great deal of installed software cannot read them yet and a file the recipient cannot open is not a stronger file. The <a href="#pgp">PGP tab</a> offers the newer format as a deliberate choice, where you know who is opening it.</li>
@@ -421,14 +450,9 @@ Nothing here is a lock only we hold the key to.
   <li><strong>It downloads about 390&nbsp;KB</strong> the first time: <a href="https://github.com/openpgpjs/openpgpjs">OpenPGP.js</a>, served from this domain. It is the one library here that exists because writing it ourselves would be reckless: a cipher that is subtly wrong looks exactly like one that is right, and nobody holding the file could tell.</li>
   <li><strong>Everything is in memory.</strong> A very large file will run a tab out of memory. There is no streaming mode here yet.</li>
 </ul>
-</details>
+</section>
 
-<hr>
-<h3>Is this actually private?</h3>
-<div id="proof"></div>
-
-<hr>
-
+<section data-step="The rest of the site">
 <p class="footer">
 Hosted on Cloudflare &middot; Made with spite for bloat<br>
 <a href="/inspect.html">inspect a file</a> |
@@ -445,7 +469,9 @@ If something saved you an hour:<br>
 You can
 <a href="/wallet.html#addresses">check that address here</a> before sending anything.
 </p>
+</section>
 
+</div>
 </div>
 </div>
 </div>
@@ -462,7 +488,9 @@ You can
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
 <script src="/start.js"></script>
+<script src="/menubar.js"></script>
 <script src="/proof-panel.js"></script>
+<script src="/firstrun.js"></script>
 <script src="/dismiss.js"></script>
 </body>
 </html>

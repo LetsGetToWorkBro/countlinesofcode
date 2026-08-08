@@ -1,0 +1,202 @@
+/* 1999.LOC — the spreadsheet tool's face.
+ *
+ * EXCEL 97, which is the one everybody pictures. Grey chrome, a menu bar over
+ * a toolbar, and then the thing that made it recognisable from across a room:
+ * the grid. Grey column headings with a raised edge, row numbers down the
+ * left, hairline gridlines, and a heavy black rectangle round the one cell
+ * that is selected.
+ *
+ * The green is Excel's, from the icon and the status bar of that era, and it
+ * is used exactly where that program used it: the title bar and nothing else.
+ * A spreadsheet is mostly white because a spreadsheet is mostly paper.
+ *
+ * Scoped entirely under [data-app="sheet"] like every other app face here.
+ */
+
+/* ---- the menu bar, pinned to the window --------------------------- */
+[data-app="sheet"] .app-window > .xl-menu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 2px 4px;
+  background: #d4d0c8;
+  border-bottom: 1px solid #808080;
+  /* Stated rather than inherited: this sits outside the panels, so it would
+     otherwise come out in the page's serif. */
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #000000;
+}
+[data-app="sheet"] .app-window > .xl-menu .menu-title {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  /* A thumb needs a target. */
+  min-height: 26px;
+}
+
+/* Excel's title bar was the one green thing on the screen. */
+[data-app="sheet"] .client-title {
+  background: linear-gradient(90deg, #0a6b3d 0%, #1a8f55 60%, #4bbd85 100%);
+  color: #ffffff;
+}
+
+/* ---- the body ------------------------------------------------------ */
+[data-app="sheet"] .app-body {
+  background: #d4d0c8;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  color: #000000;
+  padding: 8px;
+}
+[data-app="sheet"] .app-body h3 {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 12px;
+  margin: 12px 0 6px 0;
+}
+[data-app="sheet"] .app-body p,
+[data-app="sheet"] .app-body label,
+[data-app="sheet"] .app-body li {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+}
+[data-app="sheet"] .app-body > p,
+[data-app="sheet"] .app-body > div > p { max-width: 620px; }
+
+/* What to do on this screen: the pale yellow strip a Windows program used
+   for a tip, with the sunken rule a groupbox had. */
+[data-app="sheet"] .xl-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0 0 10px 0;
+  padding: 6px 9px;
+  background: #ffffe1;
+  border: 1px solid #808080;
+  font-size: 11.5px;
+  line-height: 1.45;
+  max-width: 820px;
+}
+[data-app="sheet"] .xl-hint-mark {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #0a6b3d;
+  color: #ffffff;
+  font-weight: bold;
+  font-style: italic;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* ---- controls ------------------------------------------------------ */
+[data-app="sheet"] button:not(.notice-x):not(.menu-title):not(.win-min) {
+  border: 2px outset #d4d0c8;
+  background: #d4d0c8;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 3px 12px;
+  cursor: pointer;
+}
+[data-app="sheet"] button:not(.notice-x):active { border-style: inset; }
+[data-app="sheet"] select,
+[data-app="sheet"] input[type="text"] {
+  border: 2px inset #d4d0c8;
+  background: #ffffff;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+}
+
+/* The drop target, as the sunken well a document goes into. */
+[data-app="sheet"] .dropzone {
+  background: #ffffff;
+  border: 2px inset #d4d0c8;
+  color: #000000;
+}
+[data-app="sheet"] .dropzone strong { font-size: 12px; }
+
+/* ---- THE GRID ------------------------------------------------------
+   The whole identity, really. A spreadsheet is a grid with grey headings
+   and hairlines, and nothing else on this site looks remotely like it. */
+[data-app="sheet"] .sheet-preview {
+  background: #ffffff;
+  border: 2px inset #d4d0c8;
+  overflow: auto;
+  max-height: 60vh;
+}
+[data-app="sheet"] .sheet-preview table {
+  border-collapse: collapse;
+  border: none;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  width: auto;
+}
+[data-app="sheet"] .sheet-preview td,
+[data-app="sheet"] .sheet-preview th {
+  border: 1px solid #d0d0d0;
+  padding: 1px 5px;
+  white-space: nowrap;
+  background: #ffffff;
+  color: #000000;
+  text-align: left;
+  vertical-align: bottom;
+}
+/* Column headings and row numbers: raised grey, centred, the way the real
+   thing drew them. th[scope="row"] carries a light background from the base
+   stylesheet, so both ends are stated here rather than half-inherited. */
+[data-app="sheet"] .sheet-preview thead th,
+[data-app="sheet"] .sheet-preview th[scope="row"],
+[data-app="sheet"] .sheet-preview tbody th {
+  background: #d4d0c8;
+  color: #000000;
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  font-weight: normal;
+  text-align: center;
+  padding: 1px 6px;
+  position: sticky;
+  top: 0;
+}
+[data-app="sheet"] .sheet-preview th[scope="row"],
+[data-app="sheet"] .sheet-preview tbody th { position: static; }
+
+/* A number in a spreadsheet sits on the right. That is not decoration: it
+   is how you see at a glance that a column really is numeric. */
+[data-app="sheet"] .sheet-preview td.n,
+[data-app="sheet"] .sheet-preview td.num { text-align: right; }
+
+/* The sheet tabs along the bottom of a workbook. */
+[data-app="sheet"] #sheet-pick button {
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  border-top-width: 2px;
+  background: #d4d0c8;
+  padding: 3px 12px;
+  font-size: 11px;
+}
+[data-app="sheet"] #sheet-pick button.is-active,
+[data-app="sheet"] #sheet-pick button[aria-pressed="true"] {
+  background: #ffffff;
+  border-top-color: #0a6b3d;
+  font-weight: bold;
+}
+
+/* The boxes the tool draws into, in the program's own grey. */
+[data-app="sheet"] .notice-box,
+[data-app="sheet"] .app-body > details {
+  background: #ffffe1;
+  border: 1px solid #808080;
+  max-width: 820px;
+}
+[data-app="sheet"] .status { color: #0a6b3d; }
+[data-app="sheet"] .error { color: #a01010; }
+
+/* ---- responsive ---------------------------------------------------- */
+@media (max-width: 700px) {
+  [data-app="sheet"] .app-body { padding: 6px; }
+  [data-app="sheet"] .sheet-preview { max-height: 50vh; }
+  [data-app="sheet"] .app-window > .xl-menu span { padding: 2px 5px; }
+}
