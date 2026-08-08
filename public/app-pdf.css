@@ -67,9 +67,14 @@
   line-height: 1.3;
   color: #000000;
 }
-[data-app="pdf"] .reader-menu span {
-  padding: 2px 7px;
-  border: 1px solid transparent;
+/* The titles carry the app's own type; the drops take the shared look
+   from style.css, because a menu is a menu on every one of them. */
+[data-app="pdf"] .reader-menu .menu-title {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  /* A thumb needs a target, and 20px of span was most of why Help felt
+     like it did not work. */
+  min-height: 26px;
 }
 
 /* ---- the badge -----------------------------------------------------
@@ -578,11 +583,13 @@
   [data-app="pdf"] .rail-foot { text-align: left; }
   [data-app="pdf"] .rbtn { padding: 4px 8px; }
 
-  /* Seven menu titles and a badge do not fit a phone. Two have to survive:
-     the badge, which is the app saying which app it is, and Help, which is
-     now the only way back to what the app has to say about itself, and is
-     needed most on the machine with the least room to say it. */
-  [data-app="pdf"] .reader-menu span:nth-child(n+4):not(.reader-badge):not([data-help]) { display: none; }
+  /* Six menus and a badge do not fit a phone, so two are marked in the
+     markup as the ones that may go. Named rather than counted: this rule
+     was written twice by position and hid Help both times, once because a
+     hyphen is a word boundary and once because the badge is also a span
+     and so :last-of-type was the badge. Every command in the two that go
+     is still on a toolbar. */
+  [data-app="pdf"] .menu-optional { display: none; }
   [data-app="pdf"] .reader-menu { padding: 2px 3px; }
   [data-app="pdf"] .reader-menu span { padding: 2px 5px; }
   [data-app="pdf"] .reader-stage { padding: 6px; }

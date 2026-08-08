@@ -81,8 +81,20 @@
 <div class="desk-shell">
 <div class="app-window" id="app">
 <div class="client-title"><h2>Wallets</h2><a class="win-min" href="#" aria-label="Minimise Wallets">_</a></div>
-<p class="wl-menu" aria-hidden="true">
-<span>File</span><span>Settings</span><span data-help>Help</span>
+<!-- A menu bar that opens. Every item clicks a control that already
+     exists in the window, so a menu cannot drift from what it says. -->
+<p class="wl-menu menubar" role="menubar">
+<span class="menu"><button type="button" class="menu-title">File</button>
+  <span class="menu-drop">
+    <button type="button" data-pick=".wl-switch [data-tab=&quot;wallet&quot;]">Open the Monero wallet</button>
+    <button type="button" data-pick=".wl-switch [data-tab=&quot;btc&quot;]">Open the Bitcoin wallet</button>
+    <span class="menu-rule"></span>
+    <button type="button" data-pick=".wl-switch [data-tab=&quot;addresses&quot;]">Check an address</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Help</button>
+  <span class="menu-drop">
+    <button type="button" data-help>What this program does</button>
+  </span></span>
 </p>
 <!-- The window holds one wallet at a time and says which. Three peer tabs
      said the address checker was a third wallet, which it is not: two of
@@ -799,6 +811,7 @@ You can
 <script src="/icons.js"></script>
 <script src="/start.js"></script>
 <script src="/proof-panel.js"></script>
+<script src="/menubar.js"></script>
 <script src="/firstrun.js"></script>
 </body>
 </html>

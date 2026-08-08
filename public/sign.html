@@ -90,8 +90,56 @@
 <div class="desk-shell">
 <div class="app-window" id="app">
 <div class="client-title"><h2>PDF</h2><a class="win-min" href="#" aria-label="Minimise PDF">_</a></div>
-<p class="reader-menu">
-<span>File</span><span>Edit</span><span>View</span><span>Document</span><span>Pages</span><span>Tools</span><span data-help>Help</span>
+<!-- A menu bar that opens. Every item names a control that already
+     exists on a toolbar and clicks it, so a menu cannot drift away from
+     what it claims to do, and an item whose control is disabled is
+     disabled with it. -->
+<p class="reader-menu menubar" role="menubar">
+<span class="menu"><button type="button" class="menu-title">File</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="t-open">Open a PDF...</button>
+    <button type="button" data-cmd="p-insert">Insert pages from another...</button>
+    <span class="menu-rule"></span>
+    <button type="button" data-cmd="t-save">Save</button>
+    <button type="button" data-cmd="t-save-split">Split into several files</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Edit</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="t-undo">Undo</button>
+    <span class="menu-rule"></span>
+    <button type="button" data-pick=".tbtn.tool[data-tool=&quot;text&quot;]">Text</button>
+    <button type="button" data-pick=".tbtn.tool[data-tool=&quot;stamp&quot;]">Signature</button>
+    <button type="button" data-pick=".tbtn.tool[data-tool=&quot;image&quot;]">Picture</button>
+    <button type="button" data-pick=".tbtn.tool[data-tool=&quot;delete&quot;]">Delete text</button>
+    <button type="button" data-pick=".tbtn.tool[data-tool=&quot;blackout&quot;]">Black out</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">View</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="t-zoom-in">Zoom in</button>
+    <button type="button" data-cmd="t-zoom-out">Zoom out</button>
+    <span class="menu-rule"></span>
+    <button type="button" data-cmd="t-prev">Previous page</button>
+    <button type="button" data-cmd="t-next">Next page</button>
+  </span></span>
+<span class="menu menu-optional"><button type="button" class="menu-title">Document</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="t-rot-l">Turn page left</button>
+    <button type="button" data-cmd="t-rot-r">Turn page right</button>
+    <span class="menu-rule"></span>
+    <button type="button" data-pick=".tbtn.tool[data-tool=&quot;form&quot;]">Fill the form</button>
+  </span></span>
+<span class="menu menu-optional"><button type="button" class="menu-title">Pages</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="p-insert">Insert...</button>
+    <button type="button" data-cmd="p-delete">Delete</button>
+    <span class="menu-rule"></span>
+    <button type="button" data-cmd="p-up">Move up</button>
+    <button type="button" data-cmd="p-down">Move down</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Help</button>
+  <span class="menu-drop">
+    <button type="button" data-help>What this program does</button>
+  </span></span>
 <span class="reader-badge">PDF</span>
 </p>
 <div class="app-body">
@@ -438,6 +486,7 @@ You can
 <script src="/icons.js"></script>
 <script src="/start.js"></script>
 <script src="/proof-panel.js"></script>
+<script src="/menubar.js"></script>
 <script src="/firstrun.js"></script>
 </body>
 </html>

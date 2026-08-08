@@ -526,7 +526,9 @@ describe('the PDF editor is an application, not a form', () => {
   it('has the bands a document window has', () => {
     for (const band of ['reader-menu', 'reader-tools', 'reader-options',
       'reader-rail', 'reader-stage', 'reader-status']) {
-      expect(html, `no ${band}`).toContain(`class="${band}"`);
+      // Matched as a class name rather than as the whole attribute: the menu
+      // bar carries `menubar` too now that its titles open menus.
+      expect(html, `no ${band}`).toMatch(new RegExp(`class="[^"]*\\b${band}\\b`));
     }
   });
 
@@ -553,8 +555,8 @@ describe('the PDF editor is an application, not a form', () => {
   it('pins the menu bar to the window rather than burying it in the tool', () => {
     // Directly after the title bar and outside .app-body: a menu belongs to
     // the window, which is where every application of the era put it.
-    expect(html).toMatch(/<\/div>\s*<p class="reader-menu"/);
-    const menuAt = html.indexOf('class="reader-menu"');
+    expect(html).toMatch(/<\/div>\s*(<!--[\s\S]*?-->\s*)?<p class="reader-menu/);
+    const menuAt = html.indexOf('class="reader-menu');
     const bodyAt = html.indexOf('<div class="app-body">');
     expect(menuAt).toBeGreaterThan(-1);
     expect(menuAt).toBeLessThan(bodyAt);
@@ -722,6 +724,81 @@ describe('an application owns the device', () => {
       const block = /<div id="first-run"[^>]*>([\s\S]*?)\n<\/div>/.exec(page.html);
       expect(block, `${page.name} has no first-run content`).not.toBeNull();
       expect(block![1]!.length, `${page.name} moved its prose somewhere else`).toBeGreaterThan(800);
+    }
+  });
+});
+
+describe('a menu bar opens menus', () => {
+  /* Every app grew a bar reading File / Edit / View / Help and none of them
+   * opened anything. The stylesheet called it "a label rather than a
+   * promise", which was a nice way of saying the first thing anybody taps
+   * does nothing, and on a phone it was worse: the titles were spans with a
+   * hover style, and a span with a hover style on iOS takes one tap to hover
+   * and a second to fire, so even Help read as broken. */
+  const PAGES = readdirSync('public')
+    .filter((n) => n.endsWith('.html'))
+    .map((n) => ({ name: n, html: readFileSync(`public/${n}`, 'utf8') }))
+    .filter((p) => /<body[^>]*data-app=/.test(p.html));
+
+  it('makes every title a button, not a span', () => {
+    for (const page of PAGES) {
+      // A span is why the first tap was a hover. A button is a thing a
+      // touchscreen presses.
+      expect(page.html, `${page.name} has a menu title that is not a button`)
+        .not.toMatch(/<span[^>]*class="[^"]*menu-title/);
+      const titles = page.html.match(/<button[^>]*class="menu-title"/g) || [];
+      expect(titles.length, `${page.name} has no menu titles`).toBeGreaterThan(1);
+    }
+  });
+
+  it('gives every menu something in it', () => {
+    for (const page of PAGES) {
+      for (const menu of page.html.matchAll(/<span class="menu[^"]*">([\s\S]*?)<\/span><\/span>/g)) {
+        const items = menu[1]!.match(/<button/g) || [];
+        // The title plus at least one command.
+        expect(items.length, `${page.name} has a menu with no commands in it`).toBeGreaterThan(1);
+      }
+    }
+  });
+
+  it('points every command at a control that exists', () => {
+    // The menu is a second way to reach a button that is already there, so
+    // an item cannot drift away from what it claims to do. If the id is
+    // wrong the item is dead, which is the bug this whole change is about.
+    for (const page of PAGES) {
+      for (const m of page.html.matchAll(/data-cmd="([^"]+)"/g)) {
+        expect(page.html, `${page.name}: menu points at #${m[1]} which does not exist`)
+          .toContain(`id="${m[1]}"`);
+      }
+    }
+  });
+
+  it('always keeps Help, and never hides menus by counting', () => {
+    for (const page of PAGES) {
+      expect(page.html, `${page.name} has no Help menu`).toMatch(/menu-title">Help<\/button>/);
+    }
+    /* Named, not counted. This rule was written by position twice and hid
+     * Help both times: once because a hyphen is a word boundary so "reader"
+     * matched inside "reader-body", and once because the app badge is also a
+     * span so :last-of-type was the badge rather than Help. */
+    for (const file of readdirSync('public').filter((n) => /^app-[a-z]+\.css$/.test(n))) {
+      const sheet = readFileSync(`public/${file}`, 'utf8');
+      for (const rule of sheet.matchAll(/([^\n{}]*menu[^\n{}]*)\{([^}]*)\}/g)) {
+        if (!/display:\s*none/.test(rule[2]!)) continue;
+        expect(rule[1], `${file} hides menus by position; mark them .menu-optional instead`)
+          .not.toMatch(/nth-child|nth-of-type/);
+      }
+    }
+  });
+
+  it('gives a title a target a thumb can hit', () => {
+    const css = readFileSync('public/style.css', 'utf8');
+    expect(css).toMatch(/\.menu-title\s*\{[^}]*touch-action:\s*manipulation/);
+    for (const file of readdirSync('public').filter((n) => /^app-[a-z]+\.css$/.test(n))) {
+      const sheet = readFileSync(`public/${file}`, 'utf8');
+      if (!/\.menu-title/.test(sheet)) continue;
+      expect(sheet, `${file} does not give its menu titles a minimum height`)
+        .toMatch(/\.menu-title\s*\{[^}]*min-height/);
     }
   });
 });

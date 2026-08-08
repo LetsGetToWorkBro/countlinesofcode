@@ -80,8 +80,32 @@
 <div class="desk-shell">
 <div class="app-window" id="app">
 <div class="client-title"><h2>Email</h2><a class="win-min" href="#" aria-label="Minimise Email">_</a></div>
-<p class="ol-menu" aria-hidden="true">
-<span>File</span><span>Edit</span><span>View</span><span>Tools</span><span>Message</span><span data-help>Help</span>
+<!-- A menu bar that opens. Every item clicks a control that already
+     exists in the window, so a menu cannot drift from what it says. -->
+<p class="ol-menu menubar" role="menubar">
+<span class="menu"><button type="button" class="menu-title">File</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="new">New address</button>
+    <span class="menu-rule"></span>
+    <button type="button" data-pick="#ol-rail [data-view=&quot;inbox&quot;]">Open the inbox</button>
+    <button type="button" data-pick="#ol-rail [data-view=&quot;check&quot;]">Check a message</button>
+  </span></span>
+<span class="menu menu-optional"><button type="button" class="menu-title">Edit</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="copy">Copy the address</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Tools</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="refresh">Send and receive</button>
+  </span></span>
+<span class="menu menu-optional"><button type="button" class="menu-title">Message</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="burn">Delete this inbox</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Help</button>
+  <span class="menu-drop">
+    <button type="button" data-help>What this program does</button>
+  </span></span>
 </p>
 <div class="ol-bar" role="toolbar" aria-label="Mail">
   <button type="button" class="olbtn" id="new">
@@ -301,6 +325,7 @@ You can
 <script src="/icons.js"></script>
 <script src="/start.js"></script>
 <script src="/proof-panel.js"></script>
+<script src="/menubar.js"></script>
 <script src="/firstrun.js"></script>
 </body>
 </html>

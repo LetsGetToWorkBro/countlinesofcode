@@ -2976,3 +2976,73 @@ body[data-app] #page > hr { display: none; }
 /* Without scripting the dialog never gets built, so the prose stays where
    it is and reads down the page as it always did. */
 #first-run > [data-step] { display: block; }
+
+/* ---- menu bars that open -------------------------------------------
+   Shared, because all four apps have one and they only differ in colour,
+   which their own stylesheet supplies.
+
+   A title is a <button> rather than a span, and that is not pedantry: a
+   span with a hover style on iOS takes one tap to apply the hover and a
+   second to fire the click, so the Help item read as broken on exactly
+   the device with the least room for a second try. A button is a thing a
+   touchscreen presses. */
+.menubar { position: relative; }
+.menu { position: relative; display: inline-block; }
+
+.menu-title {
+  padding: 3px 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  /* A menu title is tapped, and two quick taps must never zoom the page. */
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.menu.is-open > .menu-title,
+.menu-title:hover { background: #0a246a; color: #ffffff; }
+.menu-title:focus-visible { outline: 1px dotted #000000; outline-offset: -3px; }
+
+.menu-drop {
+  display: none;
+  position: absolute;
+  z-index: 30;
+  top: 100%;
+  left: 0;
+  min-width: 190px;
+  padding: 2px;
+  background: #d4d0c8;
+  border: 2px outset #d4d0c8;
+  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
+  text-align: left;
+}
+.menu.is-open > .menu-drop { display: block; }
+
+.menu-drop button {
+  display: block;
+  width: 100%;
+  padding: 5px 14px;
+  border: none;
+  background: transparent;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 12px;
+  color: #000000;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.menu-drop button:hover:not(:disabled) { background: #0a246a; color: #ffffff; }
+.menu-drop button:disabled { color: #808080; cursor: default; }
+.menu-rule {
+  display: block;
+  margin: 3px 2px;
+  border-top: 1px solid #808080;
+  border-bottom: 1px solid #ffffff;
+}
+
+/* The dead-word rule from before, now only for the badge and any title
+   that has not been given a menu yet. */
+[data-help] { cursor: pointer; }
