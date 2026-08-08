@@ -976,7 +976,7 @@ const RETIRED_PAGES: Record<string, string> = {
   // PGP is now a tab on the encrypt page, beside password locking.
   '/pgp.html': '/lock.html#pgp',
   // Page operations are now a tab on the PDF editor.
-  '/pages.html': '/sign.html#pages',
+  '/pages.html': '/sign.html',
   // The address checker / paper wallet is now a tab on the wallet page.
   '/monero.html': '/wallet.html#addresses',
 };

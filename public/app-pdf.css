@@ -53,10 +53,19 @@
    promise. Marked aria-hidden in the markup for the same reason. */
 [data-app="pdf"] .reader-menu {
   display: flex;
+  align-items: center;
   gap: 2px;
+  margin: 0;
   padding: 2px 4px;
   background: #ece9d8;
   border-bottom: 1px solid #aca899;
+  /* Stated rather than inherited: the menu was moved out of .reader and up
+     to the window, so it is no longer inside the element that carries the
+     application's type and would otherwise come out in the page's serif. */
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #000000;
 }
 [data-app="pdf"] .reader-menu span {
   padding: 2px 7px;
@@ -204,14 +213,86 @@
   min-height: 380px;
 }
 
+/* ---- the pinned menu bar -------------------------------------------
+   Directly under the window's own title bar and the full width of it,
+   which is where an application's menu goes and where it stayed for
+   twenty years. It used to sit inside the tool, below a tagline and a
+   row of tabs, which is where a web page puts a nav. */
+[data-app="pdf"] .app-window > .reader-menu {
+  margin: 0;
+  border-bottom: 1px solid #aca899;
+}
+
+/* ---- the pages column ----------------------------------------------
+   The rail, its own little toolbar, and a count. This is the whole of
+   what used to be a second tab. */
+[data-app="pdf"] .reader-pages {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 104px;
+  background: #ece9d8;
+  border-right: 1px solid #aca899;
+}
+[data-app="pdf"] .rail-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  padding: 3px 2px;
+  border-bottom: 1px solid #d0ccc0;
+}
+[data-app="pdf"] .rail-foot {
+  margin: 0;
+  padding: 3px 4px;
+  border-top: 1px solid #d0ccc0;
+  color: #444444;
+  text-align: center;
+}
+
+/* A small button, for the rail and the save strip. */
+[data-app="pdf"] .rbtn {
+  padding: 2px 5px;
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  background: #ece9d8;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  color: #000000;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+[data-app="pdf"] .rbtn:active:not(:disabled) {
+  border-color: #808080 #ffffff #ffffff #808080;
+  background: #dcd8cc;
+}
+[data-app="pdf"] .rbtn:disabled { opacity: 0.45; cursor: default; }
+[data-app="pdf"] .rbtn:focus-visible { outline: 1px dotted #000000; outline-offset: -3px; }
+
+/* ---- the save strip ------------------------------------------------ */
+[data-app="pdf"] .reader-save {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: #ece9d8;
+  border-top: 1px solid #aca899;
+}
+[data-app="pdf"] .reader-save select,
+[data-app="pdf"] .reader-save input {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 1px 3px;
+  border: 1px solid #7f9db9;
+  background: #ffffff;
+}
+[data-app="pdf"] .reader-save .hidden { display: none; }
+
 /* ---- the thumbnail rail -------------------------------------------- */
 [data-app="pdf"] .reader-rail {
-  flex: 0 0 96px;
+  flex: 1 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 6px 4px;
-  background: #ece9d8;
-  border-right: 1px solid #aca899;
 }
 [data-app="pdf"] .reader-rail.is-hidden { display: none; }
 
@@ -237,10 +318,15 @@
 }
 [data-app="pdf"] .thumb span { display: block; padding-top: 2px; text-align: center; }
 [data-app="pdf"] .thumb:hover { border-color: #7f9db9; }
-[data-app="pdf"] .thumb.is-current {
-  border-color: #0a246a;
-  background: #cfe0f0;
-}
+/* Two different marks, because they mean different things: the page you
+   are looking at, and the pages the next command will act on. They are
+   usually the same page and occasionally are not, and a rail that cannot
+   say which is which cannot be trusted with Delete. */
+[data-app="pdf"] .thumb.is-picked { background: #cfe0f0; }
+[data-app="pdf"] .thumb.is-current { border-color: #0a246a; }
+[data-app="pdf"] .thumb.is-current canvas { border-color: #0a246a; }
+[data-app="pdf"] .thumb.is-dragging { opacity: 0.4; }
+[data-app="pdf"] .thumb.is-drop { border-color: #9a1220; border-style: dashed; }
 [data-app="pdf"] .thumb:focus-visible { outline: 1px dotted #000000; }
 
 /* ---- the page well -------------------------------------------------
@@ -441,7 +527,38 @@
    ================================================================== */
 
 @media (max-width: 700px) {
-  [data-app="pdf"] .reader-rail { display: none; }
+  /* The rail becomes a filmstrip rather than disappearing.
+     Hiding it was the easy answer and the wrong one: it is the only way to
+     reorder, merge or delete a page, so a hidden rail means a phone can read
+     a document and not restructure one. Turned on its side it costs about
+     ninety pixels of height and keeps the whole feature. */
+  [data-app="pdf"] .reader-body { flex-direction: column; }
+  [data-app="pdf"] .reader-pages {
+    flex: 0 0 auto;
+    border-right: none;
+    border-bottom: 1px solid #aca899;
+  }
+  [data-app="pdf"] .reader-rail {
+    display: flex;
+    gap: 5px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 5px 4px;
+  }
+  [data-app="pdf"] .thumb {
+    flex: 0 0 58px;
+    width: 58px;
+    margin: 0;
+  }
+  [data-app="pdf"] .rail-foot { text-align: left; }
+  [data-app="pdf"] .rbtn { padding: 4px 8px; }
+
+  /* Six menu titles and a badge do not fit a phone, and the badge is the one
+     that has to survive: it is the app saying which app it is. The three that
+     go are the three whose commands are furthest from a thumb. */
+  [data-app="pdf"] .reader-menu span:nth-child(n+4):not(.reader-badge) { display: none; }
+  [data-app="pdf"] .reader-menu { padding: 2px 3px; }
+  [data-app="pdf"] .reader-menu span { padding: 2px 5px; }
   [data-app="pdf"] .reader-body { height: 58vh; min-height: 300px; }
   [data-app="pdf"] .reader-stage { padding: 6px; }
   [data-app="pdf"] .reader-open { height: 40vh; min-height: 220px; }

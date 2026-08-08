@@ -53,16 +53,34 @@
   var chip = $('sig-chip');
 
   var pdfjs = null;
-  var doc = null;              // pdf.js document
-  var libDoc = null;           // pdf-lib document, for the content streams
-  var sourceBytes = null;
-  var pageIndex = 0;
+
+  /* THE DOCUMENT MODEL
+   *
+   * There used to be two applications: one that marked a page up and one that
+   * moved pages around, in separate tabs, each with its own copy of the file
+   * open. That is two mental models for one document, and it meant merging a
+   * PDF and signing it were things you did in different places.
+   *
+   * So there is one model now. `sources` holds every file that has been
+   * opened, and `order` is the document being built out of them: a flat list
+   * of "page 3 of file 2, turned once". Reordering, deleting and inserting are
+   * operations on that list and nothing else.
+   *
+   * Marks are keyed by which page of which file they were put on, never by
+   * position. Drag page five to the front and your signature goes with it,
+   * because it was never attached to "page five" in the first place.
+   */
+  var sources = [];            // { name, bytes, doc (pdf.js), libDoc (pdf-lib) }
+  var order = [];              // { doc, page, rotation } - the document, in order
+  var at = 0;                  // which position in `order` is on screen
+  var picked = {};             // positions selected in the rail
+
   var viewport = null;
-  var pages = [];              // per page: { items, ops, opOf }
+  var analysed = {};           // page key -> { items, ops, opOf }
   var objects = [];            // things placed on top: text and signatures
-  var removals = {};           // page -> { opIndex: true }
-  var flatten = {};            // page -> [rects]  (the blunt fallback)
-  var turns = {};              // page -> quarter turns the visitor has added
+  var removals = {};           // page key -> { opIndex: true }
+  var flatten = {};            // page key -> [rects]  (the blunt fallback)
+  var baseRotations = {};      // page key -> the /Rotate the file itself carries
   var selected = null;
   var liveUrls = [];
   var nextId = 1;
@@ -146,44 +164,49 @@
   }
 
   // ------------------------------------------------------------ opening files
+  /** Read a file into a source, both engines at once. */
+  function readSource(file) {
+    return file.arrayBuffer().then(function (data) {
+      var bytes = new Uint8Array(data);
+      /* standardFontDataUrl and cMapUrl matter more here than in a viewer.
+       * Without them pdf.js substitutes fonts and blanks CJK text, which would
+       * misplace every box you click on and would be baked in permanently on
+       * any page you flatten. */
+      return Promise.all([
+        pdfjs.getDocument({
+          data: bytes.slice(),
+          standardFontDataUrl: '/vendor/standard_fonts/',
+          cMapUrl: '/vendor/cmaps/',
+          cMapPacked: true,
+        }).promise,
+        window.LOC1999_SIGN.loadForEditing(bytes),
+      ]).then(function (both) {
+        return { name: file.name || 'document.pdf', bytes: bytes, doc: both[0], libDoc: both[1] };
+      });
+    });
+  }
+
   function open(file) {
     clearError();
     resetOutput();
     loadEngines()
-      .then(function () { return file.arrayBuffer(); })
-      .then(function (data) {
-        sourceBytes = new Uint8Array(data);
-        /* standardFontDataUrl and cMapUrl matter more here than in a viewer.
-         * Without them pdf.js substitutes fonts and blanks CJK text — which
-         * would misplace every box you click on, and would be baked in
-         * permanently on any page you flatten. */
-        return Promise.all([
-          pdfjs.getDocument({
-            data: sourceBytes.slice(),
-            standardFontDataUrl: '/vendor/standard_fonts/',
-            cMapUrl: '/vendor/cmaps/',
-            cMapPacked: true,
-          }).promise,
-          window.LOC1999_SIGN.loadForEditing(sourceBytes),
-        ]);
-      })
-      .then(function (both) {
-        doc = both[0];
-        libDoc = both[1];
-        pageIndex = 0;
+      .then(function () { return readSource(file); })
+      .then(function (source) {
+        sources = [source];
+        order = [];
+        for (var i = 0; i < source.doc.numPages; i++) order.push({ doc: 0, page: i, rotation: 0 });
+        at = 0;
+        picked = {};
         objects = [];
         removals = {};
         flatten = {};
-        turns = {};
-        selected = null;
+        analysed = {};
+        baseRotations = {};
         formValues = {};
         zoomMode = 'fit';
-        pages = new Array(doc.numPages);
         readForm();
         show(dropzone, false);
         show(body, true);
-        $('page-count').textContent = doc.numPages;
-        $('page-num').max = doc.numPages;
         enableChrome(true);
         buildRail();
         return renderPage();
@@ -193,11 +216,42 @@
       });
   }
 
+  /* Insert another PDF's pages at the end.
+   *
+   * This is the merge, and it is now a button on the rail rather than a
+   * separate tab with its own copy of everything. Pages are copied whole when
+   * the file is written, so their fonts, images, links and annotations come
+   * with them; nothing is re-rendered. */
+  function insert(files) {
+    if (!sources.length) return;
+    clearError();
+    statusEl.textContent = 'Reading ' + files.length + ' file' + (files.length === 1 ? '' : 's') + '…';
+    var list = Array.prototype.slice.call(files);
+    list.reduce(function (chain, file) {
+      return chain.then(function () {
+        return readSource(file).then(function (source) {
+          var index = sources.push(source) - 1;
+          for (var i = 0; i < source.doc.numPages; i++) {
+            order.push({ doc: index, page: i, rotation: 0 });
+          }
+        });
+      });
+    }, Promise.resolve())
+      .then(function () {
+        statusEl.textContent = order.length + ' pages from ' + sources.length + ' files.';
+        buildRail();
+        return renderPage();
+      })
+      .catch(function (err) {
+        fail((err && err.message) || 'One of those files could not be read as a PDF.');
+      });
+  }
+
   /* The toolbar is dead until there is a document to act on. A row of buttons
    * that do nothing is the thing that made the old page feel broken. */
   function enableChrome(on) {
-    ['t-save', 't-undo', 't-rot-l', 't-rot-r', 't-zoom-in', 't-zoom-out',
-      't-prev', 't-next', 'page-num'].forEach(function (id) { $(id).disabled = !on; });
+    ['t-save', 't-save-split', 't-undo', 't-rot-l', 't-rot-r', 't-zoom-in', 't-zoom-out',
+      't-prev', 't-next', 'page-num', 'p-insert'].forEach(function (id) { $(id).disabled = !on; });
     Array.prototype.forEach.call(document.querySelectorAll('.tbtn.tool'), function (b) {
       b.disabled = !on;
     });
@@ -205,9 +259,18 @@
     $('t-undo').disabled = true;   // nothing to undo yet
   }
 
-  function analysePage(index) {
-    if (pages[index]) return Promise.resolve(pages[index]);
-    return doc.getPage(index + 1).then(function (page) {
+  // ------------------------------------------------------- the page, addressed
+  /** Where a mark lives: which page of which file, never which position. */
+  function keyOf(ref) { return ref.doc + ':' + ref.page; }
+  function ref() { return order[at] || { doc: 0, page: 0, rotation: 0 }; }
+  function key() { return keyOf(ref()); }
+  function docOf(ref2) { return sources[ref2.doc]; }
+
+  function analysePage(ref2) {
+    var id = keyOf(ref2);
+    if (analysed[id]) return Promise.resolve(analysed[id]);
+    var source = docOf(ref2);
+    return source.doc.getPage(ref2.page + 1).then(function (page) {
       return page.getTextContent().then(function (content) {
         var items = [];
         content.items.forEach(function (it) {
@@ -220,42 +283,55 @@
             height: it.height || Math.abs(it.transform[3]) || 10,
           });
         });
-        var ops = window.LOC1999_SIGN.pageTextOps(libDoc, index);
+        var ops = window.LOC1999_SIGN.pageTextOps(source.libDoc, ref2.page);
         var report = window.LOC1999_SIGN.matchOpsToItems(ops, items);
         var opOf = {};
         report.matched.forEach(function (m) { opOf[m.itemIndex] = m.opIndex; });
-        pages[index] = { items: items, ops: ops, opOf: opOf, unmatched: report.unmatchedItems.length };
-        return pages[index];
+        analysed[id] = { items: items, ops: ops, opOf: opOf, unmatched: report.unmatchedItems.length };
+        return analysed[id];
       });
     });
   }
 
   // ---------------------------------------------------------------- rotation
-  /* A page already carries a rotation of its own — that is how a sideways
-   * scan is stored — and the visitor's turns add to it. What everything else
-   * works in is the total: it is what pdf.js is asked to display, what the
-   * click coordinates are measured against, and what gets written to the page
-   * on save. Keeping the visitor's turns separate from the page's own is what
-   * lets "turn left" mean the same thing on an upright page and a sideways one.
-   */
-  var baseRotations = {};   // page -> the /Rotate the document itself carries
-
-  function totalRotation(index) {
-    return (((baseRotations[index] || 0) + (turns[index] || 0) * 90) % 360 + 360) % 360;
+  /* A page already carries a rotation of its own, which is how a sideways scan
+   * is stored, and the visitor's turns add to it. What everything else works in
+   * is the total: it is what pdf.js is asked to display, what the click
+   * coordinates are measured against, and what gets written on save. Keeping
+   * the two apart is what lets "turn left" mean the same thing on an upright
+   * page and a sideways one. */
+  function totalRotation(pos) {
+    var r = order[pos];
+    if (!r) return 0;
+    return (((baseRotations[keyOf(r)] || 0) + r.rotation) % 360 + 360) % 360;
   }
 
   function turn(by) {
-    if (!doc || !viewport) return;
+    if (!order.length || !viewport) return;
     commitCaret();
-    // The page's size in points as it is displayed *now*, before the turn.
-    // Everything already on the page is anchored in that space, so it has to
-    // be carried into the new one or it stays where the old page used to be.
-    turnMarks(by, viewport.width / viewport.scale, viewport.height / viewport.scale);
-    turns[pageIndex] = ((turns[pageIndex] || 0) + by) % 4;
-    renderPage().then(function () { drawThumb(pageIndex); });
+    var targets = selection();
+    // Only the page on screen has its marks carried, because it is the only
+    // one whose display size is known here; the others have none to carry
+    // unless they were visited, and a visited page caches its size.
+    targets.forEach(function (pos) {
+      var current = order[pos];
+      var size = pageSize(pos);
+      if (size) turnMarks(by, keyOf(current), size.width, size.height);
+      current.rotation = ((current.rotation + by * 90) % 360 + 360) % 360;
+    });
+    renderPage().then(function () {
+      return Promise.all(targets.map(drawThumb));
+    });
   }
 
-  /* Carry everything on this page through a quarter turn.
+  /** The displayed size of a position in points, if it has ever been rendered. */
+  var sizeCache = {};
+  function pageSize(pos) {
+    var r = order[pos];
+    return r ? sizeCache[keyOf(r) + '@' + r.rotation] || null : null;
+  }
+
+  /* Carry everything on a page through a quarter turn.
    *
    * Turning the paper has to take what is written on it along, or signing a
    * contract and then straightening the scan puts your name in the margin.
@@ -267,18 +343,18 @@
    * which is what you want in the case this exists for: a sideways scan set
    * straight, with its signature still readable.
    */
-  function turnMarks(by, width, height) {
+  function turnMarks(by, id, width, height) {
     var clockwise = by > 0;
     objects.forEach(function (obj) {
-      if (obj.page !== pageIndex) return;
+      if (obj.key !== id) return;
       var x = obj.x, y = obj.y;
       obj.x = clockwise ? y : height - y;
       obj.y = clockwise ? width - x : x;
     });
     // A blackout box turns too, and swaps its sides doing it.
-    var boxes = flatten[pageIndex];
+    var boxes = flatten[id];
     if (!boxes || !boxes.length) return;
-    flatten[pageIndex] = boxes.map(function (r) {
+    flatten[id] = boxes.map(function (r) {
       return clockwise
         ? { x: r.y, y: width - r.x - r.width, width: r.height, height: r.width }
         : { x: height - r.y - r.height, y: r.x, width: r.height, height: r.width };
@@ -295,11 +371,14 @@
   }
 
   function renderPage() {
-    if (!doc) return Promise.resolve();
-    return doc.getPage(pageIndex + 1).then(function (page) {
-      baseRotations[pageIndex] = page.rotate || 0;
-      var rotation = totalRotation(pageIndex);
+    if (!order.length) return Promise.resolve();
+    var current = ref();
+    var source = docOf(current);
+    return source.doc.getPage(current.page + 1).then(function (page) {
+      baseRotations[keyOf(current)] = page.rotate || 0;
+      var rotation = totalRotation(at);
       var base = page.getViewport({ scale: 1, rotation: rotation });
+      sizeCache[keyOf(current) + '@' + current.rotation] = { width: base.width, height: base.height };
       viewport = page.getViewport({ scale: scaleFor(base.width), rotation: rotation });
       view.width = Math.floor(viewport.width);
       view.height = Math.floor(viewport.height);
@@ -307,56 +386,40 @@
       overlay.height = view.height;
       return page.render({ canvasContext: view.getContext('2d'), viewport: viewport }).promise;
     }).then(function () {
-      return analysePage(pageIndex);
+      return analysePage(ref());
     }).then(function () {
       draw();
-      syncStatus();
       markCurrentThumb();
       if (tool() === 'form') placeFormInputs();
     });
   }
 
-  function goTo(index) {
-    if (!doc) return;
-    var next = Math.max(0, Math.min(doc.numPages - 1, index));
-    if (next === pageIndex) return;
+  function goTo(pos) {
+    if (!order.length) return;
+    var next = Math.max(0, Math.min(order.length - 1, pos));
+    if (next === at) return;
     commitCaret();
-    pageIndex = next;
+    at = next;
     selected = null;
+    picked = {};
+    picked[at] = true;
     renderPage();
+    syncRail();
   }
 
   // ------------------------------------------------------------ the page rail
-  /* One thumbnail per page, rendered small and once. A reader without a rail
-   * makes you page through a contract with two arrows and a guess. */
-  function buildRail() {
-    rail.innerHTML = '';
-    var chain = Promise.resolve();
-    for (var i = 0; i < doc.numPages; i++) {
-      (function (index) {
-        var button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'thumb';
-        button.setAttribute('data-page', index);
-        button.title = 'Page ' + (index + 1);
-        var canvas = document.createElement('canvas');
-        var label = document.createElement('span');
-        label.textContent = index + 1;
-        button.appendChild(canvas);
-        button.appendChild(label);
-        button.addEventListener('click', function () { goTo(index); });
-        rail.appendChild(button);
-        chain = chain.then(function () { return drawThumb(index); });
-      })(i);
-    }
-    markCurrentThumb();
-  }
+  /* The rail is the document's shape: what order the pages are in, which of
+   * them the next command acts on, which go and which stay. It was a whole
+   * second tab with its own file open; now it is the left-hand column of the
+   * one application, and it is the same list that gets written out. */
+  function buildRail() { buildRailFrom({}); }
 
-  function drawThumb(index) {
-    var button = rail.querySelector('.thumb[data-page="' + index + '"]');
-    if (!button || !doc) return Promise.resolve();
-    return doc.getPage(index + 1).then(function (page) {
-      var rotation = totalRotation(index);
+  function drawThumb(pos) {
+    var button = rail.querySelector('.thumb[data-pos="' + pos + '"]');
+    var current = order[pos];
+    if (!button || !current) return Promise.resolve();
+    return docOf(current).doc.getPage(current.page + 1).then(function (page) {
+      var rotation = totalRotation(pos);
       var base = page.getViewport({ scale: 1, rotation: rotation });
       var vp = page.getViewport({ scale: 78 / base.width, rotation: rotation });
       var canvas = button.querySelector('canvas');
@@ -368,10 +431,77 @@
 
   function markCurrentThumb() {
     Array.prototype.forEach.call(rail.querySelectorAll('.thumb'), function (b) {
-      var on = Number(b.getAttribute('data-page')) === pageIndex;
+      var on = Number(b.getAttribute('data-pos')) === at;
       b.classList.toggle('is-current', on);
       if (on && b.scrollIntoView) b.scrollIntoView({ block: 'nearest' });
     });
+  }
+
+  /** Which positions a page command acts on: the selection, or the one shown. */
+  function selection() {
+    var list = Object.keys(picked).map(Number).filter(function (p) { return p < order.length; });
+    return list.length ? list.sort(function (a, b) { return a - b; }) : [at];
+  }
+
+  function syncRail() {
+    Array.prototype.forEach.call(rail.querySelectorAll('.thumb'), function (b) {
+      var pos = Number(b.getAttribute('data-pos'));
+      b.classList.toggle('is-picked', !!picked[pos]);
+      b.classList.toggle('is-current', pos === at);
+    });
+    var n = order.length;
+    $('rail-count').textContent = n + ' page' + (n === 1 ? '' : 's') +
+      (sources.length > 1 ? ' from ' + sources.length + ' files' : '');
+    var many = selection().length;
+    $('p-delete').disabled = !n || many >= n;
+    $('p-up').disabled = !n || selection()[0] === 0;
+    $('p-down').disabled = !n || selection()[many - 1] === n - 1;
+    $('page-count').textContent = n;
+    $('page-num').max = n;
+    syncSplit();
+    syncStatus();
+  }
+
+  /* Rebuild the rail after the list itself changed. The thumbnails are already
+   * drawn, so they are moved rather than re-rendered: turning a page is cheap
+   * but rendering 300 of them again because two swapped places is not. */
+  function reflowRail(keepKey) {
+    var drawn = {};
+    Array.prototype.forEach.call(rail.querySelectorAll('.thumb'), function (b) {
+      drawn[b.getAttribute('data-key')] = b.querySelector('canvas');
+    });
+    buildRailFrom(drawn);
+    if (keepKey !== undefined) {
+      for (var i = 0; i < order.length; i++) {
+        if (keyOf(order[i]) === keepKey) { at = i; break; }
+      }
+      if (at >= order.length) at = Math.max(0, order.length - 1);
+    }
+  }
+
+  function buildRailFrom(drawn) {
+    rail.innerHTML = '';
+    var missing = [];
+    order.forEach(function (r, pos) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'thumb';
+      button.setAttribute('data-pos', pos);
+      button.setAttribute('data-key', keyOf(r) + '@' + r.rotation);
+      button.draggable = true;
+      button.title = 'Page ' + (pos + 1);
+      var already = drawn[keyOf(r) + '@' + r.rotation];
+      button.appendChild(already || document.createElement('canvas'));
+      if (!already) missing.push(pos);
+      var label = document.createElement('span');
+      label.textContent = pos + 1;
+      button.appendChild(label);
+      rail.appendChild(button);
+    });
+    missing.reduce(function (chain, pos) {
+      return chain.then(function () { return drawThumb(pos); });
+    }, Promise.resolve());
+    syncRail();
   }
 
   // -------------------------------------------------------------- coordinates
@@ -421,7 +551,7 @@
   }
 
   function gripAt(point) {
-    if (!selected || selected.page !== pageIndex) return null;
+    if (!selected || selected.key !== key()) return null;
     var grips = gripsOf(selected);
     for (var i = 0; i < grips.length; i++) {
       if (Math.abs(point.x - grips[i].x) <= GRIP && Math.abs(point.y - grips[i].y) <= GRIP) return grips[i];
@@ -461,7 +591,7 @@
   var GRAB_SLOP = 4;
   function objectAt(point) {
     for (var i = objects.length - 1; i >= 0; i--) {
-      if (objects[i].page !== pageIndex) continue;
+      if (objects[i].key !== key()) continue;
       var b = boxOf(objects[i]);
       if (point.x >= b.x - GRAB_SLOP && point.x <= b.x + b.w + GRAB_SLOP &&
           point.y >= b.y - GRAB_SLOP && point.y <= b.y + b.h + GRAB_SLOP) return objects[i];
@@ -470,7 +600,7 @@
   }
 
   function itemAt(point) {
-    var info = pages[pageIndex];
+    var info = analysed[key()];
     if (!info) return -1;
     var p = toPdf(point);
     for (var i = 0; i < info.items.length; i++) {
@@ -488,11 +618,11 @@
     var ctx = overlay.getContext('2d');
     ctx.clearRect(0, 0, overlay.width, overlay.height);
     var s = viewport.scale;
-    var info = pages[pageIndex] || { items: [], opOf: {} };
+    var info = analysed[key()] || { items: [], opOf: {} };
 
     // Text queued for deletion: struck through and tinted, so it is obvious
     // what will go without pretending it has already gone.
-    var pending = removals[pageIndex] || {};
+    var pending = removals[key()] || {};
     Object.keys(info.opOf).forEach(function (itemIndex) {
       if (!pending[info.opOf[itemIndex]]) return;
       var it = info.items[itemIndex];
@@ -508,13 +638,13 @@
     });
 
     // Blackout rectangles: the blunt fallback that flattens the page.
-    (flatten[pageIndex] || []).forEach(function (rect) {
+    (flatten[key()] || []).forEach(function (rect) {
       ctx.fillStyle = '#000000';
       ctx.fillRect(rect.x * s, overlay.height - (rect.y + rect.height) * s, rect.width * s, rect.height * s);
     });
 
     objects.forEach(function (obj) {
-      if (obj.page !== pageIndex) return;
+      if (obj.key !== key()) return;
       var at = toCanvas(obj);
       if (obj.kind === 'text') {
         ctx.fillStyle = '#000000';
@@ -559,16 +689,15 @@
   /* The status bar. Where you are, how big it is, what you have changed —
    * the three things a document window has told you since about 1990. */
   function syncStatus() {
-    if (!doc) {
+    if (!order.length) {
       $('st-page').textContent = 'No document open';
       $('st-size').textContent = '';
       $('st-edits').textContent = 'Nothing changed yet';
       return;
     }
-    var turned = (turns[pageIndex] || 0) % 4;
-    $('st-page').textContent = 'Page ' + (pageIndex + 1) + ' of ' + doc.numPages +
-      (turned ? ' (turned)' : '');
-    $('page-num').value = pageIndex + 1;
+    var turned = (order[at] && order[at].rotation) ? ' (turned)' : '';
+    $('st-page').textContent = 'Page ' + (at + 1) + ' of ' + order.length + turned;
+    $('page-num').value = at + 1;
     var pct = Math.round(viewport ? viewport.scale * 100 : 100);
     $('zoom-label').textContent = pct + '%';
     /* The paper's real size, which is the thing a document window's status bar
@@ -583,8 +712,9 @@
     var removed = 0;
     Object.keys(removals).forEach(function (p) { removed += Object.keys(removals[p]).length; });
     var flattened = Object.keys(flatten).filter(function (p) { return (flatten[p] || []).length; }).length;
-    var turnCount = Object.keys(turns).filter(function (p) { return turns[p] % 4; }).length;
+    var turnCount = order.filter(function (r) { return r.rotation; }).length;
     var bits = [];
+    if (sources.length > 1) bits.push(sources.length + ' files');
     if (objects.length) bits.push(objects.length + ' added');
     if (removed) bits.push(removed + ' deleted from the file');
     if (flattened) bits.push(flattened + ' to flatten');
@@ -593,8 +723,11 @@
       ? bits.join(' · ') + (selected ? ' · drag it, or arrow keys to nudge' : '')
       : 'Nothing changed yet';
     $('t-undo').disabled = !objects.length;
-    $('t-save').disabled = !(objects.length || removed || flattened || turnCount ||
-      Object.keys(formValues).length);
+    /* Saving is offered as soon as there is a document, not only once
+     * something has been changed: reordering, merging and splitting are
+     * reasons to save that leave none of the counters above above zero. */
+    $('t-save').disabled = !order.length;
+    $('t-save-split').disabled = !order.length;
   }
 
   // ------------------------------------------------------------- the caret
@@ -660,7 +793,7 @@
     live.el.remove();
     if (!value) return;
     var obj = {
-      id: nextId++, kind: 'text', page: pageIndex,
+      id: nextId++, kind: 'text', key: key(),
       x: live.at.x, y: live.at.y, size: live.size, value: value,
     };
     objects.push(obj);
@@ -685,7 +818,7 @@
   var moved = false;
 
   overlay.addEventListener('pointerdown', function (event) {
-    if (!doc) return;
+    if (!order.length) return;
     var point = canvasPoint(event);
     moved = false;
 
@@ -725,7 +858,7 @@
   });
 
   overlay.addEventListener('pointermove', function (event) {
-    if (!doc) return;
+    if (!order.length) return;
     var point = canvasPoint(event);
 
     if (resize) { moved = true; resizeTo(resize, point); draw(); return; }
@@ -760,7 +893,7 @@
   });
 
   overlay.addEventListener('pointerup', function (event) {
-    if (!doc) return;
+    if (!order.length) return;
     var point = canvasPoint(event);
 
     if (resize) { resize = null; draw(); return; }
@@ -775,7 +908,7 @@
         return fail('That box is too small to be a selection. Drag across what you want covered.');
       }
       clearError();
-      flatten[pageIndex] = (flatten[pageIndex] || []).concat([rect]);
+      flatten[key()] = (flatten[key()] || []).concat([rect]);
       return draw();
     }
 
@@ -790,10 +923,10 @@
    * new text is placed where it sat, at the same size. Two steps, one gesture,
    * and the old characters really are gone rather than hidden underneath. */
   overlay.addEventListener('dblclick', function (event) {
-    if (!doc || tool() !== 'delete') return;
+    if (!order.length || tool() !== 'delete') return;
     var point = canvasPoint(event);
     var index = itemAt(point);
-    var info = pages[pageIndex];
+    var info = analysed[key()];
     if (index < 0 || !info) return;
     var it = info.items[index];
     if (!markForRemoval(index)) return;
@@ -809,7 +942,7 @@
   });
 
   function markForRemoval(index) {
-    var info = pages[pageIndex];
+    var info = analysed[key()];
     var opIndex = info.opOf[index];
     if (opIndex === undefined) {
       fail(
@@ -820,9 +953,10 @@
       return false;
     }
     clearError();
-    removals[pageIndex] = removals[pageIndex] || {};
-    if (removals[pageIndex][opIndex]) delete removals[pageIndex][opIndex];
-    else removals[pageIndex][opIndex] = true;
+    var id = key();
+    removals[id] = removals[id] || {};
+    if (removals[id][opIndex]) delete removals[id][opIndex];
+    else removals[id][opIndex] = true;
     return true;
   }
 
@@ -835,7 +969,7 @@
 
   /** Snap a dragged position onto a nearby line, and remember the guide. */
   function snap(p) {
-    var info = pages[pageIndex];
+    var info = analysed[key()];
     snapLine = null;
     if (!info || !info.items.length || !$('snap').checked) return p;
 
@@ -855,7 +989,7 @@
 
   /** The size of nearby text, so what you type matches the form it goes on. */
   function sizeNear(p) {
-    var info = pages[pageIndex];
+    var info = analysed[key()];
     if (!info) return null;
     var best = null, bestDy = 24;
     info.items.forEach(function (it) {
@@ -881,7 +1015,7 @@
            * hangs your name underneath it and every signature needs dragging. */
           var height = (img.height / img.width) * width;
           var obj = {
-            id: nextId++, kind: 'stamp', what: 'signature', page: pageIndex,
+            id: nextId++, kind: 'stamp', what: 'signature', key: key(),
             x: at.x, y: at.y + height, width: width, bytes: sig.bytes, img: img,
           };
           objects.push(obj);
@@ -906,7 +1040,7 @@
   var carrying = null;
 
   chip.addEventListener('pointerdown', function (event) {
-    if (chip.classList.contains('is-empty') || !doc) return;
+    if (chip.classList.contains('is-empty') || !order.length) return;
     event.preventDefault();
     chip.setPointerCapture(event.pointerId);
     var ghost = document.createElement('img');
@@ -954,7 +1088,7 @@
    * like anything else. */
   chip.addEventListener('keydown', function (event) {
     if (event.key !== 'Enter' && event.key !== ' ') return;
-    if (chip.classList.contains('is-empty') || !doc) return;
+    if (chip.classList.contains('is-empty') || !order.length) return;
     event.preventDefault();
     placeSignature({ x: overlay.width / 2, y: overlay.height / 2 });
   });
@@ -985,7 +1119,7 @@
   function readForm() {
     formFields = [];
     try {
-      formFields = window.LOC1999_SIGN.readFormFields(libDoc) || [];
+      formFields = window.LOC1999_SIGN.readFormFields(sources[0].libDoc) || [];
     } catch (e) { formFields = []; }
 
     var has = formFields.length > 0;
@@ -1000,7 +1134,11 @@
 
   /** The fields drawn on the page currently shown. */
   function fieldsOnPage() {
-    return formFields.filter(function (f) { return f.page === pageIndex; });
+    var current = ref();
+    // Fields come from the file that was opened, so they only apply to its
+    // own pages: an inserted PDF's pages carry none of them.
+    if (current.doc !== 0) return [];
+    return formFields.filter(function (f) { return f.page === current.page; });
   }
 
   /* One HTML input per field, laid directly over where the field sits on the
@@ -1155,7 +1293,7 @@
     clearError();
     var at = snap(toPdf(point));
     var obj = {
-      id: nextId++, kind: 'stamp', what: 'picture', page: pageIndex,
+      id: nextId++, kind: 'stamp', what: 'picture', key: key(),
       // The click marks the top-left for a picture: that is where the cursor is.
       x: at.x, y: at.y, width: Number($('image-width').value) || 200,
       bytes: picture.bytes, img: picture.img,
@@ -1367,120 +1505,178 @@
     summaryEl.textContent = '';
   }
 
-  function rasterise(fromDoc, index) {
-    return fromDoc.getPage(index + 1).then(function (page) {
+  /* WRITING THE FILE
+   *
+   * Three passes, because three different things are being done and each has
+   * to happen in its own coordinate system.
+   *
+   *   1. Cut. Per source file: delete the text operators marked for removal
+   *      and fill in and flatten any form. Removal indices were computed
+   *      against that file's own content streams, so this has to run on that
+   *      file, before its pages go anywhere.
+   *
+   *   2. Assemble. Copy the pages out of the cut files in the order the rail
+   *      shows, applying each page's turn. This is the merge, the reorder, the
+   *      delete and the rotate, and it is one call: pages are copied whole, so
+   *      their fonts, images, links and annotations come with them.
+   *
+   *   3. Mark. Draw the text, signatures and pictures onto the assembled
+   *      document, where a page's position is finally known and its rotation
+   *      is already written on it.
+   *
+   * Doing it in this order is what lets a mark survive a reorder: it is placed
+   * against the finished document, and the mark's page is looked up by which
+   * page of which file it was put on, not by where that page used to be.
+   */
+  function rasterise(fromDoc, sourcePage, boxes, rotation) {
+    return fromDoc.getPage(sourcePage + 1).then(function (page) {
       // The raster has to be taken at the rotation the visitor was looking at,
       // or a page they turned would be flattened back to how it used to lie.
-      var vp = page.getViewport({ scale: RASTER_SCALE, rotation: totalRotation(index) });
+      var vp = page.getViewport({ scale: RASTER_SCALE, rotation: rotation });
       var canvas = document.createElement('canvas');
       canvas.width = Math.floor(vp.width);
       canvas.height = Math.floor(vp.height);
       var ctx = canvas.getContext('2d');
       return page.render({ canvasContext: ctx, viewport: vp }).promise.then(function () {
         ctx.fillStyle = '#000000';
-        (flatten[index] || []).forEach(function (r) {
+        boxes.forEach(function (r) {
           ctx.fillRect(r.x * RASTER_SCALE, canvas.height - (r.y + r.height) * RASTER_SCALE,
             r.width * RASTER_SCALE, r.height * RASTER_SCALE);
         });
         return new Promise(function (resolve) {
           canvas.toBlob(function (blob) {
-            blob.arrayBuffer().then(function (buf) {
-              resolve({ page: index, png: new Uint8Array(buf) });
-            });
+            blob.arrayBuffer().then(function (buf) { resolve(new Uint8Array(buf)); });
           }, 'image/png');
         });
       });
     });
   }
 
-  /* Which document the blackout pages get rendered from.
-   *
-   * If a page has both surgical deletions and a blackout box, and it is
-   * blacked out, rendering the original would paint the deleted text straight
-   * back in as pixels — permanently, and invisibly to the person who thought
-   * they had deleted it. So in that case the cuts are written first and the
-   * result re-opened, and the raster is taken from the document that no longer
-   * contains the text. Costs one extra write, only when both tools were used.
-   */
-  function basisFor(removalList, flatPages) {
-    if (!removalList.length || !flatPages.length) {
-      return Promise.resolve({ bytes: sourceBytes, doc: doc, removals: removalList });
-    }
-    return window.LOC1999_SIGN.applyEdits(sourceBytes, [], [], removalList).then(function (cut) {
-      return pdfjs.getDocument({
-        data: cut.slice(),
-        standardFontDataUrl: '/vendor/standard_fonts/',
-        cMapUrl: '/vendor/cmaps/',
-        cMapPacked: true,
-      }).promise.then(function (reopened) {
-        // The cuts are already in these bytes, so they must not be applied again.
-        return { bytes: cut, doc: reopened, removals: [] };
-      });
+  /** Pass one, for one source: cut its text and settle its form. */
+  function cutSource(index) {
+    var source = sources[index];
+    var removalList = [];
+    Object.keys(removals).forEach(function (id) {
+      var parts = id.split(':');
+      if (Number(parts[0]) !== index) return;
+      var ops = Object.keys(removals[id]).map(Number);
+      if (ops.length) removalList.push({ page: Number(parts[1]), opIndices: ops });
     });
+    // Only the file that was opened has a form the visitor could fill in.
+    var values = index === 0 ? collectFormValues() : [];
+    var hasForm = index === 0 && formFields.length > 0;
+    if (!removalList.length && !values.length && !hasForm) {
+      return Promise.resolve({ bytes: source.bytes, doc: source.doc });
+    }
+    return window.LOC1999_SIGN.applyEdits(source.bytes, [], [], removalList, values)
+      .then(function (cut) {
+        // Only reopen for rendering if something on this file has to be
+        // flattened; that is the only reason a second pdf.js document is worth
+        // the memory, and rendering the *original* would paint deleted text
+        // straight back in as pixels.
+        var needsRender = Object.keys(flatten).some(function (id) {
+          return Number(id.split(':')[0]) === index && (flatten[id] || []).length;
+        });
+        if (!needsRender) return { bytes: cut, doc: null };
+        return pdfjs.getDocument({
+          data: cut.slice(),
+          standardFontDataUrl: '/vendor/standard_fonts/',
+          cMapUrl: '/vendor/cmaps/',
+          cMapPacked: true,
+        }).promise.then(function (reopened) { return { bytes: cut, doc: reopened }; });
+      });
+  }
+
+  /** The finished document: all three passes, in bytes. */
+  function build() {
+    var pagesApi = window.LOC1999_PAGES;
+    return sources
+      .map(function (unused, i) { return i; })
+      .reduce(function (chain, i) {
+        return chain.then(function (list) {
+          return cutSource(i).then(function (cut) { return list.concat([cut]); });
+        });
+      }, Promise.resolve([]))
+      .then(function (cuts) {
+        // Pass three needs a raster per blacked-out page, at its final index.
+        var jobs = [];
+        order.forEach(function (r, pos) {
+          var id = keyOf(r);
+          var boxes = flatten[id] || [];
+          if (!boxes.length) return;
+          var from = cuts[r.doc].doc || sources[r.doc].doc;
+          jobs.push(rasterise(from, r.page, boxes, totalRotation(pos)).then(function (png) {
+            return { page: pos, png: png };
+          }));
+        });
+        return Promise.all(jobs).then(function (rasters) { return { cuts: cuts, rasters: rasters }; });
+      })
+      .then(function (state) {
+        statusEl.textContent = 'Putting the pages together…';
+        return pagesApi.loadSources(state.cuts.map(function (c, i) {
+          return { name: sources[i].name, bytes: c.bytes };
+        })).then(function (docs) {
+          return pagesApi.buildPdf(docs, order);
+        }).then(function (assembled) { return { assembled: assembled, rasters: state.rasters }; });
+      })
+      .then(function (state) {
+        statusEl.textContent = 'Writing the PDF…';
+        // Where each mark's page ended up. A mark whose page was deleted has
+        // nowhere to go, and is dropped rather than landing on a stranger.
+        var finalOf = {};
+        order.forEach(function (r, pos) { finalOf[keyOf(r)] = pos; });
+        var edits = objects
+          .filter(function (o) { return finalOf[o.key] !== undefined; })
+          .map(function (o) {
+            var page = finalOf[o.key];
+            return o.kind === 'text'
+              ? { kind: 'text', page: page, at: { x: o.x, y: o.y }, value: o.value, size: o.size }
+              : { kind: 'stamp', page: page, at: { x: o.x, y: o.y }, bytes: o.bytes, width: o.width };
+          });
+        /* No rotations list: the assembled pages already carry the right
+         * /Rotate, and applyEdits reads it off the page. Passing it again
+         * would be two sources of truth for one number. */
+        return window.LOC1999_SIGN.applyEdits(state.assembled, edits, state.rasters, [], []);
+      });
+  }
+
+  function summarise(blob) {
+    var removed = 0;
+    Object.keys(removals).forEach(function (id) { removed += Object.keys(removals[id]).length; });
+    var flattened = Object.keys(flatten).filter(function (id) { return (flatten[id] || []).length; }).length;
+    var turned = order.filter(function (r) { return r.rotation; }).length;
+    return [
+      sources.length > 1 ? sources.length + ' files merged' : null,
+      objects.length ? objects.length + ' added' : null,
+      removed ? removed + ' deleted from the file itself' : null,
+      turned ? turned + ' page' + (turned === 1 ? '' : 's') + ' turned' : null,
+      flattened ? flattened + ' page' + (flattened === 1 ? '' : 's') + ' flattened' : null,
+      order.length + ' page' + (order.length === 1 ? '' : 's'),
+    ].filter(Boolean).join(', ') + '. ' + bytesLabel(blob.size) + '.';
+  }
+
+  function offer(name, blob) {
+    var url = URL.createObjectURL(blob);
+    liveUrls.push(url);
+    outputEl.innerHTML = '<ul class="plain"><li><a href="' + url + '" download="' + esc(name) +
+      '">' + esc(name) + '</a></li></ul>';
   }
 
   function save() {
     commitCaret();
     clearError();
     resetOutput();
-    var removalList = Object.keys(removals)
-      .map(function (p) { return { page: Number(p), opIndices: pageRemovals(p) }; })
-      .filter(function (r) { return r.opIndices.length; });
-    var flatPages = Object.keys(flatten)
-      .filter(function (p) { return (flatten[p] || []).length; })
-      .map(Number);
-    var formList = collectFormValues();
-    var hasForm = formFields.length > 0;
-    // Only the pages actually turned, expressed as the rotation to write.
-    var rotationList = Object.keys(turns)
-      .filter(function (p) { return turns[p] % 4; })
-      .map(function (p) { return { page: Number(p), angle: totalRotation(Number(p)) }; });
-
-    if (!objects.length && !removalList.length && !flatPages.length && !formList.length &&
-        !rotationList.length) {
-      return fail(hasForm
-        ? 'Nothing has been changed yet. Fill in a field, sign it, or add something.'
-        : 'Nothing has been changed yet.');
-    }
+    if (!order.length) return fail('There are no pages left to save.');
 
     $('t-save').disabled = true;
-    statusEl.textContent = flatPages.length ? 'Flattening blacked-out pages…' : 'Writing the PDF…';
-
-    basisFor(removalList, flatPages)
-      .then(function (basis) {
-        return flatPages
-          .reduce(function (chain, index) {
-            return chain.then(function (list) {
-              return rasterise(basis.doc, index).then(function (r) { return list.concat([r]); });
-            });
-          }, Promise.resolve([]))
-          .then(function (rasters) {
-            statusEl.textContent = 'Writing the PDF…';
-            var edits = objects.map(function (o) {
-              return o.kind === 'text'
-                ? { kind: 'text', page: o.page, at: { x: o.x, y: o.y }, value: o.value, size: o.size }
-                : { kind: 'stamp', page: o.page, at: { x: o.x, y: o.y }, bytes: o.bytes, width: o.width };
-            });
-            return window.LOC1999_SIGN.applyEdits(
-              basis.bytes, edits, rasters, basis.removals, formList, rotationList,
-            );
-          });
-      })
+    $('t-save-split').disabled = true;
+    statusEl.textContent = 'Writing the PDF…';
+    build()
       .then(function (out) {
         statusEl.textContent = '';
         var blob = new Blob([out], { type: 'application/pdf' });
-        var url = URL.createObjectURL(blob);
-        liveUrls.push(url);
-        var removed = removalList.reduce(function (n, r) { return n + r.opIndices.length; }, 0);
-        summaryEl.textContent =
-          [formList.length ? formList.length + ' field' + (formList.length === 1 ? '' : 's') + ' filled' : null,
-            hasForm ? 'form flattened' : null,
-            objects.length ? objects.length + ' added' : null,
-            removed ? removed + ' deleted from the file itself' : null,
-            rotationList.length ? rotationList.length + ' page' + (rotationList.length === 1 ? '' : 's') + ' turned' : null,
-            flatPages.length ? flatPages.length + ' page' + (flatPages.length === 1 ? '' : 's') + ' flattened' : null]
-            .filter(Boolean).join(', ') + '. ' + bytesLabel(blob.size) + '.';
-        outputEl.innerHTML = '<ul class="plain"><li><a href="' + url + '" download="edited.pdf">edited.pdf</a></li></ul>';
+        summaryEl.textContent = summarise(blob);
+        offer(window.LOC1999_PAGES.outputName(sources.map(function (s2) { return s2.name; }), 'edited'), blob);
         syncStatus();
       })
       .catch(function (err) {
@@ -1488,6 +1684,211 @@
         fail((err && err.message) || 'Could not write that PDF.');
       });
   }
+
+  /* Splitting works on the finished document rather than on the sources, so
+   * everything that was signed, cut or turned is already in the pages before
+   * they are divided up. Doing it the other way round would mean applying
+   * every mark once per output file and getting the page numbers wrong. */
+  function splitRequest() {
+    var mode = $('split-mode').value;
+    return { mode: mode, size: Number($('split-size').value) || 0, ranges: $('split-ranges').value };
+  }
+
+  function saveSplit() {
+    commitCaret();
+    clearError();
+    resetOutput();
+    var plan = window.LOC1999_PAGES.planSplit(order.length, splitRequest());
+    if (plan.error) return fail('Cannot split: ' + plan.error + '.');
+    if (!plan.groups.length) return fail('That does not select any pages.');
+
+    $('t-save').disabled = true;
+    $('t-save-split').disabled = true;
+    statusEl.textContent = 'Writing ' + plan.groups.length + ' files…';
+    var stem = window.LOC1999_PAGES.outputName(sources.map(function (s2) { return s2.name; }), 'split')
+      .replace(/\.pdf$/i, '');
+
+    build()
+      .then(function (whole) {
+        return window.LOC1999_PAGES.loadSources([{ name: 'edited.pdf', bytes: whole }]);
+      })
+      .then(function (docs) {
+        return plan.groups.reduce(function (chain, group) {
+          return chain.then(function (files) {
+            var refs = group.pages.map(function (i) { return { doc: 0, page: i, rotation: 0 }; });
+            return window.LOC1999_PAGES.buildPdf(docs, refs).then(function (bytes) {
+              return files.concat([{ name: stem + '-' + group.label + '.pdf', bytes: bytes }]);
+            });
+          });
+        }, Promise.resolve([]));
+      })
+      .then(function (files) {
+        statusEl.textContent = '';
+        syncStatus();
+        if (files.length === 1) {
+          var one = new Blob([files[0].bytes], { type: 'application/pdf' });
+          summaryEl.textContent = '1 file. ' + bytesLabel(one.size) + '.';
+          return offer(files[0].name, one);
+        }
+        /* A browser blocks a burst of downloads, so more than one file comes
+         * back as an archive. The writer is borrowed from the ZIP tool rather
+         * than duplicated. */
+        return loadZip().then(function (zip) {
+          // The archive writer's entries are {name, data}, not {name, bytes}.
+          return zip(files.map(function (f) {
+            return { name: f.name, data: f.bytes };
+          })).then(function (bytes) {
+            var blob = new Blob([bytes], { type: 'application/zip' });
+            summaryEl.textContent = files.length + ' files, delivered as one ZIP. ' + bytesLabel(blob.size) + '.';
+            offer(stem + '.zip', blob);
+          });
+        });
+      })
+      .catch(function (err) {
+        syncStatus();
+        fail((err && err.message) || 'Could not split that PDF.');
+      });
+  }
+
+  function loadZip() {
+    if (window.LOC1999_ZIP) return Promise.resolve(window.LOC1999_ZIP.zip);
+    return new Promise(function (resolve, reject) {
+      var el = document.createElement('script');
+      el.src = '/zipkit.js';
+      el.onload = function () {
+        if (window.LOC1999_ZIP) resolve(window.LOC1999_ZIP.zip);
+        else reject(new Error('the archive engine did not load'));
+      };
+      el.onerror = function () { reject(new Error('the archive engine did not load')); };
+      document.head.appendChild(el);
+    });
+  }
+
+  // ---------------------------------------------------------- the rail's own
+  /* Click selects, shift-click extends, ctrl or cmd adds. Same three gestures
+   * as every file list of the era, and the reason the rail can replace a whole
+   * tab: acting on several pages at once needs no extra furniture. */
+  var anchorPos = 0;
+  rail.addEventListener('click', function (event) {
+    var button = event.target.closest ? event.target.closest('.thumb') : null;
+    if (!button) return;
+    var pos = Number(button.getAttribute('data-pos'));
+    if (event.shiftKey) {
+      picked = {};
+      var lo = Math.min(anchorPos, pos), hi = Math.max(anchorPos, pos);
+      for (var i = lo; i <= hi; i++) picked[i] = true;
+    } else if (event.ctrlKey || event.metaKey) {
+      if (picked[pos]) delete picked[pos]; else picked[pos] = true;
+      anchorPos = pos;
+    } else {
+      picked = {};
+      picked[pos] = true;
+      anchorPos = pos;
+    }
+    if (pos !== at) { commitCaret(); at = pos; selected = null; renderPage(); }
+    syncRail();
+  });
+
+  /* Dragging a thumbnail moves the page. Native drag-and-drop here rather than
+   * pointer events, the opposite choice from the signature chip: this list has
+   * a keyboard equivalent right beside it in Up and Down, so a phone loses
+   * nothing, and the native API gives the drop indicator for free. */
+  var dragFrom = null;
+  rail.addEventListener('dragstart', function (event) {
+    var button = event.target.closest ? event.target.closest('.thumb') : null;
+    if (!button) return;
+    dragFrom = Number(button.getAttribute('data-pos'));
+    button.classList.add('is-dragging');
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+  });
+  rail.addEventListener('dragover', function (event) {
+    if (dragFrom === null) return;
+    event.preventDefault();
+    var button = event.target.closest ? event.target.closest('.thumb') : null;
+    Array.prototype.forEach.call(rail.querySelectorAll('.thumb'), function (b) {
+      b.classList.toggle('is-drop', b === button);
+    });
+  });
+  rail.addEventListener('drop', function (event) {
+    if (dragFrom === null) return;
+    event.preventDefault();
+    var button = event.target.closest ? event.target.closest('.thumb') : null;
+    if (button) movePages([dragFrom], Number(button.getAttribute('data-pos')));
+    endDrag();
+  });
+  rail.addEventListener('dragend', endDrag);
+  function endDrag() {
+    dragFrom = null;
+    Array.prototype.forEach.call(rail.querySelectorAll('.thumb'), function (b) {
+      b.classList.remove('is-dragging', 'is-drop');
+    });
+  }
+
+  /** Move pages to a position, keeping the one on screen on screen. */
+  function movePages(from, to) {
+    commitCaret();
+    var here = keyOf(ref());
+    var moving = from.map(function (i) { return order[i]; });
+    var rest = order.filter(function (r) { return moving.indexOf(r) < 0; });
+    var target = rest.indexOf(order[to]);
+    if (target < 0) target = rest.length;
+    else if (to > from[0]) target += 1;
+    order = rest.slice(0, target).concat(moving, rest.slice(target));
+    picked = {};
+    moving.forEach(function (r) { picked[order.indexOf(r)] = true; });
+    reflowRail(here);
+    renderPage();
+  }
+
+  $('p-insert').addEventListener('click', function () { $('insert-input').click(); });
+  $('insert-input').addEventListener('change', function () {
+    if ($('insert-input').files.length) insert($('insert-input').files);
+    $('insert-input').value = '';
+  });
+
+  $('p-delete').addEventListener('click', function () {
+    var going = selection();
+    if (going.length >= order.length) return fail('That would delete every page.');
+    commitCaret();
+    clearError();
+    /* The marks on a deleted page are left where they are rather than thrown
+     * away: put the page back with Insert and they are still on it, and the
+     * writer skips any mark whose page is no longer in the document. */
+    order = window.LOC1999_PAGES.removePages(order, going);
+    at = Math.min(at, order.length - 1);
+    picked = {};
+    picked[at] = true;
+    reflowRail();
+    renderPage();
+  });
+
+  $('p-up').addEventListener('click', function () {
+    var list = selection();
+    if (list[0] === 0) return;
+    movePages(list, list[0] - 1);
+  });
+  $('p-down').addEventListener('click', function () {
+    var list = selection();
+    if (list[list.length - 1] >= order.length - 1) return;
+    movePages(list, Math.min(order.length - 1, list[list.length - 1] + 1));
+  });
+
+  // The split controls only show the box the chosen mode needs.
+  function syncSplit() {
+    var mode = $('split-mode').value;
+    show($('split-size'), mode === 'every');
+    show($('split-ranges'), mode === 'ranges');
+    if (!order.length) { $('split-note').textContent = ''; return; }
+    var plan = window.LOC1999_PAGES.planSplit(order.length, splitRequest());
+    $('split-note').textContent = plan.error
+      ? plan.error
+      : plan.groups.length + ' file' + (plan.groups.length === 1 ? '' : 's') +
+        (plan.groups.length > 1 ? ', delivered as one ZIP' : '');
+  }
+  $('split-mode').addEventListener('change', syncSplit);
+  $('split-size').addEventListener('input', syncSplit);
+  $('split-ranges').addEventListener('input', syncSplit);
+  $('t-save-split').addEventListener('click', saveSplit);
 
   // ------------------------------------------------------------------ wiring
   dropzone.addEventListener('click', function () { fileInput.click(); });
@@ -1513,8 +1914,8 @@
     button.addEventListener('click', function () { setTool(button.getAttribute('data-tool')); });
   });
 
-  $('t-prev').addEventListener('click', function () { goTo(pageIndex - 1); });
-  $('t-next').addEventListener('click', function () { goTo(pageIndex + 1); });
+  $('t-prev').addEventListener('click', function () { goTo(at - 1); });
+  $('t-next').addEventListener('click', function () { goTo(at + 1); });
   $('page-num').addEventListener('change', function () {
     goTo((Number($('page-num').value) || 1) - 1);
   });
@@ -1589,13 +1990,14 @@
    * who chose 150% did not ask for it to move. */
   var resizeTimer = null;
   window.addEventListener('resize', function () {
-    if (!doc || zoomMode !== 'fit') return;
+    if (!order.length || zoomMode !== 'fit') return;
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function () { renderPage(); }, 150);
   });
 
   renderSaved();
   refreshChip();
+  syncSplit();
   setTool('text');
   enableChrome(false);
   syncStatus();

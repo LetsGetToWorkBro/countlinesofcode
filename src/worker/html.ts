@@ -106,7 +106,7 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
   // out in the world.
   // The PDF tool is two tools on one page now: the editor (sign, fill, redact)
   // and page operations (merge, split, reorder, rotate), on tabs. /pages.html
-  // redirects to /sign.html#pages.
+  // redirects to /sign.html.
   { href: '/sign.html', label: 'pdf', id: 'pdf', group: 'documents' },
   { href: '/convert.html', label: 'convert', id: 'convert', group: 'documents' },
   { href: '/sheet.html', label: 'sheets', id: 'sheets', group: 'documents' },

@@ -688,7 +688,7 @@ describe('www handling', () => {
   it('301s the retired /pages.html to the PDF page Pages tab', async () => {
     const response = await get('https://loc.example/pages.html');
     expect(response.status).toBe(301);
-    expect(response.headers.get('location')).toBe('https://loc.example/sign.html#pages');
+    expect(response.headers.get('location')).toBe('https://loc.example/sign.html');
   });
 
   it('301s the retired /monero.html to the wallet page addresses tab', async () => {

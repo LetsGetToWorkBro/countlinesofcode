@@ -217,7 +217,7 @@ export const SOURCES: Record<string, string[]> = {
     'src/lib/mailbox.ts',
   ],
   // The PDF page: the editor and page operations, on tabs, over the same engine.
-  '/sign.html': ['public/sign.js', 'public/pages-page.js', 'public/tabs.js', 'src/client/pdfedit.ts', 'src/client/pdfstream.ts', 'src/client/pdfpages.ts'],
+  '/sign.html': ['public/sign.js', 'src/client/pdfedit.ts', 'src/client/pdfstream.ts', 'src/client/pdfpages.ts'],
   '/convert.html': ['public/convert-page.js', 'src/client/convert.ts', 'src/client/docmodel.ts'],
   '/inspect.html': ['public/inspect-page.js', 'src/client/inspect.ts'],
   '/sheet.html': ['public/sheet-page.js', 'src/client/sheet.ts'],

@@ -16,7 +16,7 @@
  *   to contain it to do their job.
  */
 
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { BUNDLES, MONERO_LIB } from '../scripts/build-client.mjs';
 import { describe, expect, it } from 'vitest';
 
@@ -504,19 +504,49 @@ describe('the PDF editor is an application, not a form', () => {
     expect(tools.sort()).toEqual(['blackout', 'delete', 'form', 'image', 'stamp', 'text']);
   });
 
-  it('has no numbered steps left in the editor', () => {
+  it('has no numbered steps left in it', () => {
     // "1. Open a PDF / 2. Pick a tool / 3. The document / 4. Save it" is the
     // shape of a form. An editor has a toolbar and a document.
-    //
-    // Scoped to the Edit panel on purpose: the Pages tab is still the older
-    // step-by-step page and has not been brought into this chrome yet, so
-    // asserting across the whole file would be asserting something untrue.
-    const edit = html.slice(
-      html.indexOf('<div data-panel="edit">'),
-      html.indexOf('<div data-panel="pages"'),
-    );
-    expect(edit.length).toBeGreaterThan(1000);
-    expect(edit).not.toMatch(/<h3>\d\.\s/);
+    expect(html).not.toMatch(/<h3>\d\.\s/);
+  });
+
+  it('is one application, with no tab strip and no second copy of itself', () => {
+    // Editing a page and moving pages used to be separate tabs, each with the
+    // file open in its own right. One document, one model, one place.
+    expect(html).not.toMatch(/data-tabs|class="tool-tabs"|data-panel=/);
+    expect(html).not.toContain('pages-page.js');
+    expect(existsSync(new URL('../public/pages-page.js', import.meta.url))).toBe(false);
+  });
+
+  it('pins the menu bar to the window rather than burying it in the tool', () => {
+    // Directly after the title bar and outside .app-body: a menu belongs to
+    // the window, which is where every application of the era put it.
+    expect(html).toMatch(/<\/div>\s*<p class="reader-menu"/);
+    const menuAt = html.indexOf('class="reader-menu"');
+    const bodyAt = html.indexOf('<div class="app-body">');
+    expect(menuAt).toBeGreaterThan(-1);
+    expect(menuAt).toBeLessThan(bodyAt);
+  });
+
+  it('puts the page commands on the rail', () => {
+    for (const id of ['p-insert', 'p-delete', 'p-up', 'p-down', 'rail-count']) {
+      expect(html, `no #${id}`).toContain(`id="${id}"`);
+    }
+    expect(js).toContain('function movePages');
+    // Reordering must not strand a mark: they are keyed by which page of
+    // which file they were put on, never by position.
+    expect(js).toContain("function keyOf(ref) { return ref.doc + ':' + ref.page; }");
+    expect(js).not.toMatch(/page:\s*pageIndex/);
+  });
+
+  it('can still merge and split, now without a second tab', () => {
+    expect(html).toContain('id="insert-input"');
+    expect(html).toContain('id="t-save-split"');
+    expect(js).toContain('function insert(');
+    expect(js).toContain('planSplit');
+    // The archive writer's entries are {name, data}; {name, bytes} silently
+    // produced an unreadable ZIP.
+    expect(js).toMatch(/\{ name: f\.name, data: f\.bytes \}/);
   });
 
   it('types where you click instead of asking for the words first', () => {
@@ -526,11 +556,16 @@ describe('the PDF editor is an application, not a form', () => {
     expect(js).toMatch(/tool\(\)\s*===\s*'text'\)\s*return openCaret/);
   });
 
-  it('can turn a page, and sends the total rotation when it saves', () => {
+  it('can turn a page, and carries what is written on it through the turn', () => {
     expect(html).toContain('id="t-rot-l"');
     expect(html).toContain('id="t-rot-r"');
     expect(js).toContain('function turnMarks');
-    expect(js).toMatch(/angle:\s*totalRotation\(/);
+    // A turn is a number on the page in the ordered list, and the assembler
+    // writes it. It used to be a separate list handed to applyEdits, which
+    // meant the rotation existed in two places and they could disagree.
+    expect(js).toMatch(/current\.rotation = /);
+    expect(js).toContain('buildPdf(docs, order)');
+    expect(js).not.toMatch(/applyEdits\([^)]*rotationList/);
   });
 
   it('lets the signature be dragged onto the page', () => {
