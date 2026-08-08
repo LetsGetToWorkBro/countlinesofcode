@@ -737,6 +737,25 @@ describe('an application owns the device', () => {
     expect(css).not.toMatch(/body\[data-app\]\s*\{[^}]*height:\s*100vh/);
   });
 
+  it('lets a minimised application actually disappear', () => {
+    /* The desktop hides a window with no .is-open on it, and the rule that
+     * lets an application fill the machine gives it display:flex. That rule
+     * is an attribute plus two classes plus an element, which outranks the
+     * desktop's three classes, so pressing _ took the class off, flipped the
+     * taskbar button back to its out state, and left the program sitting
+     * there with the desk shortcuts drawn underneath it. Both at once, and
+     * no way to put the application away.
+     *
+     * Same shape as the .hidden trap this file has hit before. A rule that
+     * sets display on something the desktop also hides must say what happens
+     * when it is hidden, in its own voice, at its own weight. */
+    expect(css, 'a minimised app has nothing to hide it again')
+      .toMatch(/body\[data-app\][^{]*\.app-window:not\(\.is-open\)\s*\{[^}]*display:\s*none/);
+
+    // And the rule it is there to answer is still the one that needs it.
+    expect(css).toMatch(/body\[data-app\] \.desk-shell > \.app-window \{[^}]*display:\s*flex/);
+  });
+
   it('gives every app a first-run dialog and a way back to it', () => {
     expect(APPS.length).toBeGreaterThanOrEqual(4);
     for (const page of APPS) {

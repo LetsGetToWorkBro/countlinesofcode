@@ -2561,6 +2561,20 @@ body[data-app] #page > .desk-shell {
   min-height: 0;
   margin: 0;
 }
+/* Minimise has to actually minimise.
+   The rule below gives an application window display:flex so it can fill
+   the machine, and it is an attribute plus two classes plus an element,
+   which outranks the .desk-js.desk-shell rule that hides a window with no
+   .is-open on it. So pressing _ took the class off, turned the taskbar
+   button back to its out state, and left the program sitting there, with
+   the desk shortcuts drawn underneath it: both at once, and no way to put
+   the application away.
+
+   Same shape as the .hidden trap this file has hit before. A rule that
+   sets display on something the desktop also hides has to say what
+   happens when it is hidden, in its own voice, at its own weight. */
+body[data-app] .desk-js.desk-shell > .app-window:not(.is-open) { display: none; }
+
 body[data-app] .desk-shell > .app-window {
   flex: 1 1 auto;
   min-height: 0;
