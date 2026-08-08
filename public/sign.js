@@ -76,6 +76,8 @@
   var picked = {};             // positions selected in the rail
 
   var viewport = null;
+  var viewW = 0, viewH = 0;   // the page's size in layout pixels
+  var dpr = 1;                // how many real pixels the screen puts in one
   var analysed = {};           // page key -> { items, ops, opOf }
   var objects = [];            // things placed on top: text and signatures
   var removals = {};           // page key -> { opIndex: true }
@@ -380,11 +382,31 @@
       var base = page.getViewport({ scale: 1, rotation: rotation });
       sizeCache[keyOf(current) + '@' + current.rotation] = { width: base.width, height: base.height };
       viewport = page.getViewport({ scale: scaleFor(base.width), rotation: rotation });
-      view.width = Math.floor(viewport.width);
-      view.height = Math.floor(viewport.height);
-      overlay.width = view.width;
-      overlay.height = view.height;
-      return page.render({ canvasContext: view.getContext('2d'), viewport: viewport }).promise;
+      /* THE PAGE IS DRAWN AT THE SCREEN'S RESOLUTION, NOT THE LAYOUT'S.
+       *
+       * A canvas has two sizes: how many pixels it holds and how big it is
+       * on the page. Setting only the first and letting CSS stretch it is
+       * what made a document on a phone unreadable: a 3x display was being
+       * handed a 1x rendering and blowing it up. So the backing store is
+       * multiplied by devicePixelRatio and the CSS size is pinned to the
+       * layout size, which is the difference between 400 and 1200 real
+       * pixels of text on the same piece of glass.
+       *
+       * Everything downstream keeps working in layout pixels: viewW and
+       * viewH are the logical size, the overlay's context is scaled once
+       * so the drawing code never sees the ratio, and a click is converted
+       * against the CSS box. */
+      viewW = Math.floor(viewport.width);
+      viewH = Math.floor(viewport.height);
+      dpr = Math.min(window.devicePixelRatio || 1, 3);
+      [view, overlay].forEach(function (canvas) {
+        canvas.width = Math.floor(viewW * dpr);
+        canvas.height = Math.floor(viewH * dpr);
+        canvas.style.width = viewW + 'px';
+        canvas.style.height = viewH + 'px';
+      });
+      var hi = page.getViewport({ scale: viewport.scale * dpr, rotation: rotation });
+      return page.render({ canvasContext: view.getContext('2d'), viewport: hi }).promise;
     }).then(function () {
       return analysePage(ref());
     }).then(function () {
@@ -505,14 +527,14 @@
   }
 
   // -------------------------------------------------------------- coordinates
-  function toCanvas(p) { return { x: p.x * viewport.scale, y: overlay.height - p.y * viewport.scale }; }
+  function toCanvas(p) { return { x: p.x * viewport.scale, y: viewH - p.y * viewport.scale }; }
   function toPdf(p) { return window.LOC1999_SIGN.canvasToPdf(p, viewport); }
 
   function canvasPoint(event) {
     var r = overlay.getBoundingClientRect();
     return {
-      x: (event.clientX - r.left) * (overlay.width / r.width),
-      y: (event.clientY - r.top) * (overlay.height / r.height),
+      x: (event.clientX - r.left) * (viewW / r.width),
+      y: (event.clientY - r.top) * (viewH / r.height),
     };
   }
 
@@ -576,11 +598,11 @@
     if (obj.kind === 'text') {
       obj.size = Math.max(2, Math.round((height / scale) * 10) / 10);
       // y is the baseline for text, which is the bottom of the box.
-      obj.y = (overlay.height - (top + height)) / scale;
+      obj.y = (viewH - (top + height)) / scale;
       $('text-size').value = obj.size;
     } else {
       obj.width = Math.round((width / scale) * 10) / 10;
-      obj.y = (overlay.height - top) / scale; // y is the top for a picture
+      obj.y = (viewH - top) / scale; // y is the top for a picture
       $(obj.what === 'picture' ? 'image-width' : 'sig-width').value = obj.width;
     }
   }
@@ -616,7 +638,10 @@
   function draw() {
     if (!viewport) return;
     var ctx = overlay.getContext('2d');
-    ctx.clearRect(0, 0, overlay.width, overlay.height);
+    /* One transform, set each time, so every line below draws in layout
+     * pixels and knows nothing about the screen's density. */
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, viewW, viewH);
     var s = viewport.scale;
     var info = analysed[key()] || { items: [], opOf: {} };
 
@@ -640,7 +665,7 @@
     // Blackout rectangles: the blunt fallback that flattens the page.
     (flatten[key()] || []).forEach(function (rect) {
       ctx.fillStyle = '#000000';
-      ctx.fillRect(rect.x * s, overlay.height - (rect.y + rect.height) * s, rect.width * s, rect.height * s);
+      ctx.fillRect(rect.x * s, viewH - (rect.y + rect.height) * s, rect.width * s, rect.height * s);
     });
 
     objects.forEach(function (obj) {
@@ -679,7 +704,7 @@
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, snapLine);
-      ctx.lineTo(overlay.width, snapLine);
+      ctx.lineTo(viewW, snapLine);
       ctx.stroke();
     }
 
@@ -758,7 +783,7 @@
     box.value = seed || '';
     var px = size * viewport.scale;
     var pos = toCanvas(at);
-    var ratio = overlay.getBoundingClientRect().width / overlay.width; // canvas px -> css px
+    var ratio = overlay.getBoundingClientRect().width / viewW; // layout px -> css px
     box.style.fontSize = (px * ratio) + 'px';
     box.style.left = (pos.x * ratio) + 'px';
     /* The click marks the baseline, the way it does for the finished text.
@@ -877,6 +902,7 @@
       moved = true;
       draw();
       var ctx = overlay.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.fillStyle = 'rgba(0,0,0,0.55)';
       ctx.fillRect(Math.min(boxFrom.x, point.x), Math.min(boxFrom.y, point.y),
         Math.abs(point.x - boxFrom.x), Math.abs(point.y - boxFrom.y));
@@ -1090,7 +1116,7 @@
     if (event.key !== 'Enter' && event.key !== ' ') return;
     if (chip.classList.contains('is-empty') || !order.length) return;
     event.preventDefault();
-    placeSignature({ x: overlay.width / 2, y: overlay.height / 2 });
+    placeSignature({ x: viewW / 2, y: viewH / 2 });
   });
 
   /** The chip shows whatever signature is currently ready to go. */
@@ -1150,7 +1176,7 @@
     layer.innerHTML = '';
     if (tool() !== 'form' || !viewport) return;
     var rect = overlay.getBoundingClientRect();
-    var ratio = rect.width / overlay.width; // canvas px -> css px
+    var ratio = rect.width / viewW; // layout px -> css px
 
     // Radio widgets share a name; group them so one choice clears the rest.
     fieldsOnPage().forEach(function (field) {
@@ -1173,7 +1199,7 @@
     var topPdf = field.rect.y + field.rect.height;
     return {
       x: field.rect.x * s * ratio,
-      y: (overlay.height - topPdf * s) * ratio,
+      y: (viewH - topPdf * s) * ratio,
       w: field.rect.width * s * ratio,
       h: field.rect.height * s * ratio,
     };
@@ -1839,6 +1865,21 @@
     reflowRail(here);
     renderPage();
   }
+
+  /* The thumbnails fold away.
+   *
+   * On a phone the rail is a filmstrip across the top, and between it, two
+   * toolbars, the options strip and the save strip there was nothing left
+   * for the document: a three page PDF showed as a sliver you could not
+   * read. The pages are how you get around a long document and useless
+   * while you are reading one, so they collapse, and the button says which
+   * state it is in. */
+  $('p-fold').addEventListener('click', function () {
+    var folded = reader.classList.toggle('is-folded');
+    $('p-fold').setAttribute('aria-expanded', folded ? 'false' : 'true');
+    $('p-fold').textContent = folded ? 'Pages...' : 'Pages';
+    if (zoomMode === 'fit') renderPage();
+  });
 
   $('p-insert').addEventListener('click', function () { $('insert-input').click(); });
   $('insert-input').addEventListener('change', function () {

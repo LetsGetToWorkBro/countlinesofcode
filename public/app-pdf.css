@@ -307,6 +307,13 @@
 }
 [data-app="pdf"] .reader-rail.is-hidden { display: none; }
 
+/* Folded: the strip of thumbnails goes, its own toolbar stays, because
+   that toolbar is how you unfold it again. */
+[data-app="pdf"] .reader.is-folded .reader-rail,
+[data-app="pdf"] .reader.is-folded .rail-foot { display: none; }
+[data-app="pdf"] .reader.is-folded .reader-pages { flex: 0 0 auto; }
+[data-app="pdf"] .rail-fold { font-weight: bold; }
+
 [data-app="pdf"] .thumb {
   display: block;
   width: 100%;
@@ -557,6 +564,18 @@
    ================================================================== */
 
 @media (max-width: 700px) {
+  /* A toolbar that wraps is two toolbars, and it costs a row of the
+     document to say the same thing. It scrolls sideways instead. */
+  [data-app="pdf"] .reader-tools {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    /* Only sideways. Leaving this at the default lets the horizontal
+       scrollbar claim a strip of height in a band that is one row tall. */
+    overflow-y: hidden;
+  }
+  [data-app="pdf"] .reader-tools > * { flex: 0 0 auto; }
+  [data-app="pdf"] .tbar-gap { display: none; }
+
   /* The rail becomes a filmstrip rather than disappearing.
      Hiding it was the easy answer and the wrong one: it is the only way to
      reorder, merge or delete a page, so a hidden rail means a phone can read

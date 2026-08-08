@@ -802,3 +802,79 @@ describe('a menu bar opens menus', () => {
     }
   });
 });
+
+describe('the document is drawn at the screen it is on', () => {
+  const js = readFileSync('public/sign.js', 'utf8');
+
+  it('sizes the canvas backing store by devicePixelRatio', () => {
+    /* A canvas has two sizes: how many pixels it holds and how big it is on
+     * the page. Setting only the first and letting CSS stretch it handed a
+     * 3x phone a 1x rendering, which is why a document on a phone was
+     * unreadable. */
+    expect(js).toMatch(/dpr\s*=\s*Math\.min\(window\.devicePixelRatio/);
+    expect(js).toMatch(/canvas\.width\s*=\s*Math\.floor\(viewW \* dpr\)/);
+    expect(js).toMatch(/canvas\.style\.width\s*=\s*viewW \+ 'px'/);
+    expect(js).toMatch(/scale:\s*viewport\.scale \* dpr/);
+  });
+
+  it('keeps every other measurement in layout pixels', () => {
+    // The overlay's context is scaled once so the drawing code never sees
+    // the ratio, and a click is converted against the CSS box. Reading
+    // canvas.width anywhere else would be reading device pixels by mistake.
+    expect(js).toMatch(/ctx\.setTransform\(dpr, 0, 0, dpr, 0, 0\)/);
+    expect(js).not.toMatch(/overlay\.width|overlay\.height/);
+  });
+});
+
+describe('the app has room for the document', () => {
+  const html = readFileSync('public/sign.html', 'utf8');
+  const css = readFileSync('public/app-pdf.css', 'utf8');
+  const shared = readFileSync('public/style.css', 'utf8');
+
+  it('lets the page thumbnails fold away', () => {
+    // On a phone the rail is a filmstrip across the top, and between it, two
+    // toolbars and two strips there was nothing left for the document.
+    expect(html).toContain('id="p-fold"');
+    expect(css).toMatch(/\.reader\.is-folded \.reader-rail/);
+    expect(readFileSync('public/sign.js', 'utf8')).toContain("classList.toggle('is-folded')");
+  });
+
+  it('scrolls the toolbar sideways rather than wrapping it', () => {
+    // A toolbar that wraps is two toolbars, and it costs a row of document
+    // to say the same thing.
+    const phone = css.slice(css.indexOf('@media (max-width: 700px)'));
+    expect(phone).toMatch(/\.reader-tools \{[^}]*flex-wrap:\s*nowrap/);
+    expect(phone).toMatch(/\.reader-tools \{[^}]*overflow-y:\s*hidden/);
+  });
+
+  it('runs the window edge to edge, with no desktop showing round it', () => {
+    expect(shared).toMatch(/body\[data-app\] \.desk-shell > \.app-window \{[^}]*margin:\s*0/);
+    expect(shared).toMatch(/body\[data-app\] #page > \.desk-shell \{[^}]*background:\s*none/);
+  });
+});
+
+describe('a warning you have read can be put away', () => {
+  const js = readFileSync('public/dismiss.js', 'utf8');
+  const PAGES = readdirSync('public')
+    .filter((n) => n.endsWith('.html'))
+    .map((n) => ({ name: n, html: readFileSync(`public/${n}`, 'utf8') }))
+    .filter((p) => p.html.includes('notice-box'));
+
+  it('ships the dismisser to every page that has a warning on it', () => {
+    for (const page of PAGES) {
+      expect(page.html, `${page.name} has warnings but cannot dismiss them`).toContain('dismiss.js');
+    }
+  });
+
+  it('remembers by what the warning says, not where it is', () => {
+    // Keyed by position, adding a warning above an existing one would either
+    // un-dismiss it or dismiss the new one on its behalf.
+    expect(js).toMatch(/summary\.textContent/);
+    expect(js).toMatch(/localStorage\.setItem/);
+  });
+
+  it('leaves the copy in the first-run dialog alone', () => {
+    // In there the warning is the explanation itself and already has a Close.
+    expect(js).toMatch(/closest\('#first-run'\)/);
+  });
+});

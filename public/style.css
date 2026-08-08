@@ -2849,7 +2849,19 @@ body[data-app] .desk-shell > .app-window {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  margin: 6px;
+  /* Edge to edge. The teal around the window is the desktop showing
+     through, which is right on the landing page where there is a desktop
+     to see and wrong here, where it is a border of nothing between the
+     glass and the program. The taskbar below it is where the machine
+     starts again. */
+  margin: 0;
+}
+body[data-app] #page > .desk-shell {
+  border: none;
+  padding: 0;
+  /* The teal is the desktop showing through, and there is no desktop here.
+     Any of it left over reads as a gap between the glass and the program. */
+  background: none;
 }
 /* The wallets keep a switcher between the window and its body, so the
    body is a grandchild there rather than a child. Both shapes flex. */
@@ -3046,3 +3058,24 @@ body[data-app] #page > hr { display: none; }
 /* The dead-word rule from before, now only for the badge and any title
    that has not been given a menu yet. */
 [data-help] { cursor: pointer; }
+
+/* The x on a warning box. It sits at the end of the summary rather than
+   floating over the corner, so it cannot land on top of the words. */
+.notice-box > summary { display: flex; align-items: flex-start; gap: 8px; }
+.notice-box > summary > :first-child { flex: 1; }
+.notice-x {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px outset #c0c0c0;
+  background: #c0c0c0;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  line-height: 1;
+  color: #000000;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.notice-x:active { border-style: inset; }
+.notice-x:focus-visible { outline: 1px dotted #000000; outline-offset: 1px; }
