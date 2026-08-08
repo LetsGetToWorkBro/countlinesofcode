@@ -28,17 +28,36 @@
   'use strict';
 
   function setup(root) {
-    var buttons = Array.prototype.slice.call(root.querySelectorAll('[data-tab]'));
     var panels = Array.prototype.slice.call(root.querySelectorAll('[data-panel]'));
+    var names = panels.map(function (p) { return p.getAttribute('data-panel'); });
+
+    /* A tab control does not have to live in the tab strip.
+     *
+     * These used to be gathered from inside the container only, which meant
+     * a panel could be reached from one place and one place alone. A menu
+     * item that opens a panel had to be a proxy that clicked the strip's
+     * button instead, and it went dead the moment that button was not on
+     * screen. Anything anywhere naming a panel of this root is a control
+     * for it now, which is how a File menu has always worked: the same
+     * command, reachable twice. */
+    var buttons = Array.prototype.slice.call(document.querySelectorAll('[data-tab]'))
+      .filter(function (b) {
+        return names.indexOf(b.getAttribute('data-tab')) !== -1 &&
+               (root.contains(b) || !b.closest('[data-tabs]'));
+      });
     if (!buttons.length) return;
     var current = null;
 
-    function names() {
-      return buttons.map(function (b) { return b.getAttribute('data-tab'); });
-    }
-
     function show(name, updateHash) {
-      if (names().indexOf(name) === -1) name = buttons[0].getAttribute('data-tab');
+      /* Fall back to the first PANEL, not the first control.
+       *
+       * It used to be buttons[0], which was the same thing while every
+       * control lived in the tab strip in panel order. Now that a menu item
+       * can be one, buttons[0] is whichever appears first in the document,
+       * and the menu bar sits above the strip: the page booted on the paper
+       * wallet because its File item was the first [data-tab] in the file.
+       * The panels are the running order; the controls are just ways in. */
+      if (names.indexOf(name) === -1) name = names[0];
       if (name === current) return;
       var prev = current;
       current = name;
@@ -70,7 +89,7 @@
       show((location.hash || '').replace(/^#/, ''), false);
     });
 
-    show((location.hash || '').replace(/^#/, '') || buttons[0].getAttribute('data-tab'), false);
+    show((location.hash || '').replace(/^#/, '') || names[0], false);
   }
 
   function init() {

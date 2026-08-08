@@ -2779,7 +2779,11 @@ body[data-first-run] #first-run[hidden] { display: block; }
 }
 .menu.is-open > .menu-drop { display: block; }
 
-.menu-drop button {
+/* An item that leaves for another program is a link, because that is what
+   it is: the browser should treat it as one, and it should work with
+   scripting off, which a button that waits for a click handler does not. */
+.menu-drop button,
+.menu-drop a {
   display: block;
   width: 100%;
   padding: 5px 14px;
@@ -2793,7 +2797,9 @@ body[data-first-run] #first-run[hidden] { display: block; }
   cursor: pointer;
   touch-action: manipulation;
 }
-.menu-drop button:hover:not(:disabled) { background: #0a246a; color: #ffffff; }
+.menu-drop button:hover:not(:disabled),
+.menu-drop a:hover { background: #0a246a; color: #ffffff; }
+.menu-drop a { text-decoration: none; box-sizing: border-box; }
 .menu-drop button:disabled { color: #808080; cursor: default; }
 .menu-rule {
   display: block;

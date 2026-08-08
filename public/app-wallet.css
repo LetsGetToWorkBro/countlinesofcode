@@ -95,6 +95,20 @@
 }
 [data-app="wallet"] .wl-switch .sheet-tab:focus-visible { outline: 1px dotted #000000; outline-offset: -3px; }
 
+/* Swap is the next program along rather than a panel of this one, so it
+   never takes the pressed-in look the tabs do: it is a place to go, not a
+   place you are. The arrow is the whole difference and it is enough. */
+[data-app="wallet"] .wl-switch .wl-go {
+  color: #000000;
+  text-decoration: none;
+  line-height: 1.35;
+}
+[data-app="wallet"] .wl-switch .wl-go::after {
+  content: " \2192";
+  color: #4a4a4a;
+}
+[data-app="wallet"] .wl-switch .wl-go:hover { background: #e8e6e0; }
+
 /* ---- the connection, in the toolbar --------------------------------
    The node was a folded box near the bottom of the panel. It is the one
    setting the wallet cannot work without, so it sits in the bar with the

@@ -699,14 +699,22 @@ describe('an app is one app, not two behind tabs', () => {
     }
   });
 
-  it('says which of the wallets is a wallet and which is a tool', () => {
-    // The one page that keeps a switcher, because it genuinely holds two
-    // wallets. Three peer tabs claimed the address checker was a third.
+  it('says which of the wallets is a wallet and which is somewhere else', () => {
+    /* The one page that keeps a switcher, because it genuinely holds two
+     * wallets. It used to carry a Tools group as well, holding the paper
+     * wallet generator: a thing you use once, in the spot beside the two
+     * you use every time. Swap has that spot now, because moving between
+     * the two coins you are holding is the likeliest next thing, and it is
+     * a link rather than a tab because it is the next program along. */
     const html = PAGES.find((p) => p.name === 'wallet.html')!.html;
     expect(html).toContain('class="wl-switch"');
     expect(html).toMatch(/<span class="wl-switch-label">Wallet<\/span>/);
-    expect(html).toMatch(/<span class="wl-switch-label">Tools<\/span>/);
+    expect(html, 'the Tools group is back in the toolbar')
+      .not.toMatch(/<span class="wl-switch-label">Tools<\/span>/);
     expect(html).not.toMatch(/class="tool-tabs"/);
+    // A link, not a tab: it leaves rather than switching a panel.
+    expect(html).toMatch(/<a class="sheet-tab wl-go" href="\/swap\.html">/);
+    expect(html, 'Swap became a panel of this window').not.toMatch(/data-tab="swap"/);
   });
 
   it('drops the tab driver from pages that no longer have tabs', () => {
@@ -1064,13 +1072,44 @@ describe('the wallets get out of their own way', () => {
     // The controls themselves, not a summary of them behind a triangle.
     expect(bar![0]).toContain('<select id="node">');
     expect(bar![0]).toContain('<select id="btc-server">');
-    expect(bar![0], 'the tools it should sit beside').toContain('data-tab="addresses"');
+    expect(bar![0], 'the wallets it should sit beside').toContain('data-tab="btc"');
     // Next to them, rather than flung to the far edge of a 1440px bar.
     // Comments stripped first: this file explains why margin-left:auto was
     // wrong, and a note about a mistake is not the mistake.
     const declarations = css.replace(/\/\*[\s\S]*?\*\//g, '');
     expect(declarations, 'the picker is pushed away from the tools again')
       .not.toMatch(/#node-box[\s\S]{0,400}margin-left:\s*auto/);
+  });
+
+  it('keeps the paper wallet reachable after taking it out of the toolbar', () => {
+    /* This is the part that could go wrong quietly. tabs.js used to gather
+     * its controls from inside the tab container only, so deleting the
+     * toolbar button would have left the panel with nothing that could
+     * reach it: the File item was a data-pick proxy that clicked that very
+     * button, and a hash link would have fallen back to the first tab
+     * because 'addresses' was no longer a name it knew.
+     *
+     * So the menu item is the tab control now, rather than a proxy for
+     * one, and tabs.js accepts a control that lives outside the strip. */
+    expect(html, 'the paper wallet lost its way in')
+      .toMatch(/<button type="button" data-tab="addresses">/);
+    expect(html, 'the menu item is a proxy for a button that no longer exists')
+      .not.toMatch(/data-pick="[^"]*addresses/);
+    // The panel it opens is still there.
+    expect(html).toContain('<div data-panel="addresses"');
+
+    const tabs = readFileSync(new URL('../public/tabs.js', import.meta.url), 'utf8');
+    expect(tabs, 'tab controls are gathered from the strip only again')
+      .toMatch(/document\.querySelectorAll\('\[data-tab\]'\)/);
+
+    /* And the page still boots on the first panel rather than on whichever
+     * control happens to come first in the file. Those were the same thing
+     * while every control lived in the strip in panel order; the moment a
+     * menu item became one they were not, and because the menu bar sits
+     * above the strip the wallet page booted on the paper wallet. */
+    expect(tabs, 'the default tab follows the controls again, not the panels')
+      .not.toMatch(/name = buttons\[0\]/);
+    expect(tabs).toMatch(/name = names\[0\]/);
   });
 
   it('keeps the ! on the same line as the control it explains', () => {
