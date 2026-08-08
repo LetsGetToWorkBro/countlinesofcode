@@ -596,11 +596,20 @@
 
   // ---------------------------------------------------------------- wiring
 
-  var TABS = ['keys', 'encrypt', 'decrypt', 'sign', 'verify'];
-  TABS.forEach(function (name) {
+  /* The whole row, and the half of it this file owns.
+   *
+   * Encrypting to a key and locking with a password used to be two tabs with
+   * a second row of tabs inside each, which is two programs in one window
+   * pretending to be one. They are one row of operations now, and this file
+   * still only implements five of them, so it has to know the names of the
+   * other two in order to put them away. lock-page.js does the same in
+   * reverse. Neither can show a mode the other owns; both can hide one. */
+  var ALL = ['keys', 'encrypt', 'decrypt', 'sign', 'verify', 'lock', 'unlock'];
+  var OWN = ['keys', 'encrypt', 'decrypt', 'sign', 'verify'];
+  OWN.forEach(function (name) {
     $('tab-' + name).addEventListener('click', function () {
       clearError();
-      TABS.forEach(function (other) {
+      ALL.forEach(function (other) {
         $('mode-' + other).classList.toggle('hidden', other !== name);
         $('tab-' + other).classList.toggle('is-active', other === name);
       });

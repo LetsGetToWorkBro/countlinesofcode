@@ -45,6 +45,53 @@
   border: 1px solid transparent;
 }
 
+/* ---- the wallet switcher -------------------------------------------
+   Not a tab strip. Two of these open a wallet and one is a tool that
+   needs no wallet at all, and three peer tabs said otherwise. Labelling
+   the groups is what turns it into the program saying which wallet is
+   open, which is the job a File menu does in a real one. */
+[data-app="wallet"] .app-window > [data-tabs] > .wl-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 4px 6px;
+  background: #d4d0c8;
+  border-bottom: 1px solid #808080;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  color: #000000;
+}
+[data-app="wallet"] .wl-switch-label {
+  padding-right: 3px;
+  color: #4a4a4a;
+  font-weight: bold;
+}
+[data-app="wallet"] .wl-switch-sep {
+  align-self: stretch;
+  width: 0;
+  margin: 0 8px;
+  border-left: 1px solid #808080;
+  border-right: 1px solid #ffffff;
+}
+[data-app="wallet"] .wl-switch .sheet-tab {
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  background: #d4d0c8;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 3px 12px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+[data-app="wallet"] .wl-switch .sheet-tab.is-active {
+  border-color: #808080 #ffffff #ffffff #808080;
+  background: #ffffff;
+  font-weight: bold;
+}
+[data-app="wallet"] .wl-switch .sheet-tab:focus-visible { outline: 1px dotted #000000; outline-offset: -3px; }
+
 /* ==================================================================
    BITCOIN CORE
    ================================================================== */

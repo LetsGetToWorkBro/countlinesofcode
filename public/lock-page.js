@@ -239,11 +239,18 @@
   $('tab-lock').addEventListener('click', function () { switchMode(true); });
   $('tab-unlock').addEventListener('click', function () { switchMode(false); });
 
+  /* The whole row, and the two of it this file owns. See the same note in
+   * pgp-page.js: the password half and the key half are one row of
+   * operations now, so each file has to know how to put the other's modes
+   * away even though it cannot open them. */
+  var ALL = ['keys', 'encrypt', 'decrypt', 'sign', 'verify', 'lock', 'unlock'];
+
   function switchMode(locking) {
-    $('mode-lock').classList.toggle('hidden', !locking);
-    $('mode-unlock').classList.toggle('hidden', locking);
-    $('tab-lock').classList.toggle('is-active', locking);
-    $('tab-unlock').classList.toggle('is-active', !locking);
+    var showing = locking ? 'lock' : 'unlock';
+    ALL.forEach(function (name) {
+      $('mode-' + name).classList.toggle('hidden', name !== showing);
+      $('tab-' + name).classList.toggle('is-active', name === showing);
+    });
     // Loading early means the meter works before a file is chosen.
     loadEngines().then(updateWordsNote).catch(function () {});
   }

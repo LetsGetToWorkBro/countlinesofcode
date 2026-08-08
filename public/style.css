@@ -1151,6 +1151,17 @@ p.tool-tabs {
   margin: 16px 0 14px 0;
   padding: 0 8px;
 }
+/* A gap in a row of operations, for where one group ends and another
+   begins. The alternative was a second row of tabs, which is the thing
+   being got rid of: two rows means two programs, however you label them. */
+.tool-tabs-sep {
+  align-self: stretch;
+  width: 0;
+  margin: 0 4px;
+  border-left: 1px solid #808080;
+  border-right: 1px solid #ffffff;
+}
+
 p.tool-tabs button.sheet-tab {
   font-size: 16px;
   padding: 6px 18px;

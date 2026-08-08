@@ -84,15 +84,23 @@
 <p class="wl-menu" aria-hidden="true">
 <span>File</span><span>Settings</span><span>Help</span>
 </p>
-<div class="app-body">
-<p class="tagline">Monero and Bitcoin wallets that live in this tab, and an address checker beside them. Keys never leave the browser.</p>
-
+<!-- The window holds one wallet at a time and says which. Three peer tabs
+     said the address checker was a third wallet, which it is not: two of
+     these open a wallet and one is a tool that needs none. Labelling the
+     row is the consolidation, because it turns a tab strip into the
+     program's own File menu. -->
 <div data-tabs>
-<p class="tool-tabs" role="tablist" aria-label="Monero tools">
+<p class="wl-switch" role="tablist" aria-label="Wallet">
+<span class="wl-switch-label">Wallet</span>
 <button type="button" class="sheet-tab is-active" data-tab="wallet" role="tab" aria-selected="true">Monero</button>
 <button type="button" class="sheet-tab" data-tab="btc" role="tab" aria-selected="false">Bitcoin</button>
+<span class="wl-switch-sep"></span>
+<span class="wl-switch-label">Tools</span>
 <button type="button" class="sheet-tab" data-tab="addresses" role="tab" aria-selected="false">Check an address</button>
 </p>
+<div class="app-body">
+<p class="tagline">One window, either wallet open in it, and an address checker that needs neither. Keys never leave the browser.</p>
+
 
 <!-- ================================ WALLET ================================ -->
 <div data-panel="wallet" class="skin-xmr">

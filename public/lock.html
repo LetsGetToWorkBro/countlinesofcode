@@ -77,15 +77,6 @@
 <div class="app-body">
 <p class="tagline">Encrypt a message or a file to someone&rsquo;s key, or lock a file with a password. Both write the same OpenPGP; nothing is uploaded.</p>
 
-<div data-tabs>
-<p class="tool-tabs" role="tablist" aria-label="Encryption tools">
-<button type="button" class="sheet-tab is-active" data-tab="pgp" role="tab" aria-selected="true">Messages &amp; keys</button>
-<button type="button" class="sheet-tab" data-tab="password" role="tab" aria-selected="false">Password-lock a file</button>
-</p>
-
-<!-- ============================== KEY PAIR (PGP) ============================== -->
-<div data-panel="pgp">
-
 <p class="tagline">Keys, messages and files. Your private key never leaves this tab.</p>
 
 <p class="note">
@@ -107,12 +98,18 @@ any of it works without handing your key to a stranger.
 </p>
 </details>
 
-<p>
+<!-- One row of operations, which is what PGP's own toolbox was: a window
+     with Encrypt, Sign, Decrypt/Verify in it, not two programs behind
+     tabs with a second set of tabs inside each. -->
+<p class="tool-tabs" role="tablist" aria-label="What to do">
 <button type="button" id="tab-keys" class="sheet-tab is-active">Keys</button>
 <button type="button" id="tab-encrypt" class="sheet-tab">Encrypt</button>
 <button type="button" id="tab-decrypt" class="sheet-tab">Decrypt</button>
 <button type="button" id="tab-sign" class="sheet-tab">Sign</button>
 <button type="button" id="tab-verify" class="sheet-tab">Verify</button>
+<span class="tool-tabs-sep"></span>
+<button type="button" id="tab-lock" class="sheet-tab">Lock with a password</button>
+<button type="button" id="tab-unlock" class="sheet-tab">Unlock</button>
 </p>
 
 <p id="error" class="error" role="alert"></p>
@@ -301,11 +298,8 @@ any of it works without handing your key to a stranger.
 </ul>
 </details>
 
-</div>
 
 <!-- ============================== PASSWORD ============================== -->
-<div data-panel="password" class="hidden">
-
 <p class="tagline">One password locks the file; the same password opens it. The simplest kind, and enough for most things.</p>
 
 <p class="note">
@@ -330,14 +324,7 @@ Nothing here is a lock only we hold the key to.
 </p>
 </details>
 
-<p>
-<button type="button" id="tab-lock" class="sheet-tab is-active">Lock a file</button>
-<button type="button" id="tab-unlock" class="sheet-tab">Unlock one</button>
-</p>
-
-<hr>
-
-<div id="mode-lock">
+<div id="mode-lock" class="hidden">
   <h3>1. Choose a file</h3>
 
   <div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Choose a file to encrypt">
@@ -436,10 +423,6 @@ Nothing here is a lock only we hold the key to.
 </ul>
 </details>
 
-</div>
-
-</div>
-
 <hr>
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
@@ -476,7 +459,6 @@ You can
 </div>
 <script src="/lock-page.js"></script>
 <script src="/pgp-page.js"></script>
-<script src="/tabs.js"></script>
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
 <script src="/start.js"></script>

@@ -602,3 +602,56 @@ describe('the PDF editor is an application, not a form', () => {
     expect(js).toContain('drag-ghost');
   });
 });
+
+describe('an app is one app, not two behind tabs', () => {
+  /* The rule the site is converging on: a window holds one program. Two
+   * programs behind a tab strip is two mental models for one thing, and it
+   * showed up as a second row of tabs inside the first, which is the shape
+   * this test actually forbids. What is allowed is a program's own
+   * navigation, of which it may have exactly one row.
+   *
+   * The PDF editor lost its Edit/Pages split, the encryption tool merged two
+   * strips into one row of seven operations, the mail client's folder rail
+   * became the navigation, and the wallets' strip became a labelled switcher
+   * that says which of the two is a tool. */
+  const PAGES = readdirSync('public')
+    .filter((n) => n.endsWith('.html'))
+    .map((n) => ({ name: n, html: readFileSync(`public/${n}`, 'utf8') }));
+
+  it('never nests one tab strip inside another', () => {
+    for (const page of PAGES) {
+      // Every region a tab strip switches to, and whether it holds a strip.
+      for (const m of page.html.matchAll(/<div data-panel="[^"]*"[^>]*>([\s\S]*?)(?=<div data-panel=|<hr>\n<h3>Is this actually private)/g)) {
+        expect(
+          /class="(tool-tabs|wl-switch)"/.test(m[1]!),
+          `${page.name} has a tab strip inside a tab panel, which is two programs in one window`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  it('left the consolidated apps with no panel machinery at all', () => {
+    for (const name of ['sign.html', 'lock.html', 'email.html']) {
+      const html = PAGES.find((p) => p.name === name)!.html;
+      expect(html, `${name} still splits itself into panels`).not.toMatch(/data-tabs|data-panel=/);
+    }
+  });
+
+  it('says which of the wallets is a wallet and which is a tool', () => {
+    // The one page that keeps a switcher, because it genuinely holds two
+    // wallets. Three peer tabs claimed the address checker was a third.
+    const html = PAGES.find((p) => p.name === 'wallet.html')!.html;
+    expect(html).toContain('class="wl-switch"');
+    expect(html).toMatch(/<span class="wl-switch-label">Wallet<\/span>/);
+    expect(html).toMatch(/<span class="wl-switch-label">Tools<\/span>/);
+    expect(html).not.toMatch(/class="tool-tabs"/);
+  });
+
+  it('drops the tab driver from pages that no longer have tabs', () => {
+    for (const page of PAGES) {
+      if (page.html.includes('tabs.js')) {
+        expect(page.html, `${page.name} loads tabs.js with nothing to drive`).toMatch(/data-tabs/);
+      }
+    }
+  });
+});

@@ -130,11 +130,20 @@
   padding: 2px 6px 2px 10px;
   color: #333333;
 }
-[data-app="email"] .ol-folders li.is-current {
+[data-app="email"] .ol-folders li[data-view] { cursor: pointer; }
+[data-app="email"] .ol-folders li[data-view]:hover { background: #d8e4f4; }
+[data-app="email"] .ol-folders li[data-view]:focus-visible { outline: 1px dotted #000000; }
+[data-app="email"] .ol-folders li.is-current,
+[data-app="email"] .ol-folders li.is-current:hover {
   background: #316ac5;
   color: #ffffff;
   font-weight: bold;
 }
+/* The four that are drawn because a mail client has them and that hold
+   nothing. Greyed rather than hidden: their absence is what would look
+   wrong, and their being live is what would be a lie. */
+[data-app="email"] .ol-folders li.is-inert { color: #8a8a8a; cursor: default; }
+[data-app="email"] .ol-folders li.is-inert .ol-ico { opacity: 0.5; }
 [data-app="email"] #ol-count { font-weight: bold; }
 
 /* The little folder icons, drawn in CSS rather than shipped as five more
@@ -152,6 +161,7 @@
 [data-app="email"] .ol-ico-sent { background: #8fd08f; border-color: #2c5f2c; }
 [data-app="email"] .ol-ico-del { background: #d08f8f; border-color: #5f2c2c; }
 [data-app="email"] .ol-ico-draft { background: #cccccc; border-color: #666666; }
+[data-app="email"] .ol-ico-check { background: #c8a8e0; border-color: #5a3a7a; }
 
 /* ---- the message pane ---------------------------------------------- */
 [data-app="email"] .ol-pane {
@@ -160,6 +170,7 @@
   padding: 6px;
   background: #d4d0c8;
 }
+[data-app="email"] .ol-addr.hidden { display: none; }
 [data-app="email"] .ol-addr {
   display: flex;
   flex-wrap: wrap;
