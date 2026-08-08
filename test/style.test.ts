@@ -185,50 +185,79 @@ describe('no emoji anywhere on the site', () => {
 });
 
 /**
- * The tube's proportions.
+ * The machine is the display.
  *
- * A 1999 monitor is four by three, and the screen is held to that by capping
- * the case's width against the viewport height. The cap carries two magic
- * numbers, and both are sums of things declared elsewhere in the same file:
- * one is everything between the top of the viewport and the top of the glass
- * doubled up for the bottom, the other is the same across. Change the bezel
- * or the padding without changing them and the screen quietly stops being
- * 4:3, which is the kind of drift nobody sees and everybody feels.
+ * The case used to be a monitor standing in a room: held to four by three by
+ * capping its width against the viewport height, centred, with a wooden desk
+ * under it, a keyboard in front of it, a coiled cord between the two and a
+ * stand beneath. It was the difference between a monitor and a beige
+ * rectangle, and it cost the bottom third of every screen to say so. On a
+ * phone that is most of the device given over to furniture.
+ *
+ * The case fills the viewport now. There is no room in front of the machine
+ * to put a desk in, so none of the props can come back without taking that
+ * space with them, and none of them can come back by accident either: every
+ * one was a rule in this file.
  */
-describe('the monitor is four by three', () => {
+describe('the machine fills the display', () => {
   const css = readFileSync(new URL('../public/style.css', import.meta.url), 'utf8');
+  const start = readFileSync(new URL('../public/start.js', import.meta.url), 'utf8');
 
-  /* Both declarations live in the #page rule that draws the case, and
-     both names appear all over the file. There is more than one #page
-     rule (an early one sets a width and nothing else), so take the block
-     that actually carries the border. */
-  const blocks = [...css.matchAll(/\n#page \{([^}]*)\}/g)].map((m) => m[1]);
-  const caseRule = blocks.find((b) => b.includes('border-width'));
+  /* There is more than one #page rule (an early one sets a width and
+     nothing else), so take the block that actually carries the border. */
+  const caseRule = [...css.matchAll(/\n#page \{([^}]*)\}/g)]
+    .map((m) => m[1]!)
+    .find((b) => b.includes('border-width'));
   if (!caseRule) throw new Error('no #page rule with a border-width in style.css');
 
-  /** The px values of a shorthand like "28px 30px 54px 30px". */
-  function shorthand(declaration: string): number[] {
-    const match = new RegExp(`\\b${declaration}:\\s*([^;]+);`).exec(caseRule);
-    if (!match) throw new Error(`no ${declaration} in the #page rule`);
-    return match[1].trim().split(/\s+/).map((v) => Number(v.replace('px', '')));
-  }
+  it('gives the case the whole viewport rather than a slice of it', () => {
+    expect(caseRule).toMatch(/max-width:\s*none/);
+    expect(caseRule).toMatch(/min-height:\s*100dvh/);
+    // margin: 0, not 0 auto. Centring only means something inside a room.
+    expect(caseRule).toMatch(/margin:\s*0;/);
+  });
 
-  it('caps the width against the height with the right constants', () => {
-    const cap = /max-width:\s*min\(1120px,\s*max\(\d+px,\s*calc\(\(100vh - (\d+)px\) \* 4 \/ 3 \+ (\d+)px\)\)\)/.exec(css);
-    expect(cap, 'the 4:3 cap is gone from #page').not.toBeNull();
-    const [vertical, horizontal] = [Number(cap![1]), Number(cap![2])];
+  it('leaves no room reserved around it', () => {
+    // A body padding is a strip of room the case cannot reach into, which
+    // is exactly the desk space that went.
+    const body = /\nbody \{([^}]*)\}/.exec(css.slice(css.indexOf('background-attachment: fixed') - 2000));
+    expect(body, 'no room-era body rule').not.toBeNull();
+    expect(body![1]).toMatch(/padding:\s*0;/);
+    expect(body![1], 'vh leaves the case under the phone browser chrome')
+      .toMatch(/min-height:\s*100dvh/);
+  });
 
-    // The case: border-width is top/right/bottom/left, padding likewise.
-    const [borderTop, borderRight, borderBottom, borderLeft] = shorthand('border-width');
-    const [padTop, padRight, padBottom, padLeft] = shorthand('padding');
+  it('measures the desktop against the display and not against a room', () => {
+    // Every one of these used to subtract the room's 290px.
+    expect(css, 'a room-height constant is back').not.toMatch(/100vh\s*-\s*\d+px/);
+    expect(css, 'the 4:3 cap is back, and it needs a room to sit in')
+      .not.toMatch(/4\s*\/\s*3/);
+  });
 
-    // 172 is the room the page already reserves above and below the case:
-    // the body's own padding plus the stand drawn under it.
-    const ROOM = 290;
-    expect(vertical, 'vertical constant must be the room plus the case top and bottom')
-      .toBe(ROOM + borderTop + borderBottom + padTop + padBottom);
-    expect(horizontal, 'horizontal constant must be the case left and right')
-      .toBe(borderLeft + borderRight + padLeft + padRight);
+  it('keeps a measure on the prose the case used to give it for free', () => {
+    /* Line length was a side effect of the 1120px cap: the case stopped,
+     * so the words stopped. Taking the cap off took the measure with it
+     * and put a paragraph of how.html at 1332px on a 1440 screen, about
+     * two hundred characters a line. The case does not narrow again; the
+     * words carry their own limit now. */
+    const rule = /#page:not\(:has\(\.desktop\)\):not\(:has\(\.desk-shell\)\) > \*([^{]*)\{([^}]*)\}/.exec(css);
+    expect(rule, 'the prose measure is gone').not.toBeNull();
+    expect(rule![2]).toMatch(/max-width:\s*\d+ch/);
+    // Tables squash rather than wrap, and a wrapped listing is a lie.
+    expect(rule![1]).toContain(':not(table)');
+    expect(rule![1]).toContain(':not(pre)');
+  });
+
+  it('has nothing left in the room to draw', () => {
+    // The desk and the keyboard were body::before and body::after; the
+    // stand was #page::after. All three drew below or in front of the case.
+    expect(css, 'body::before is back').not.toMatch(/\nbody::before\s*\{/);
+    expect(css, 'body::after is back').not.toMatch(/\nbody::after\s*\{/);
+    expect(css, '#page::after is back').not.toMatch(/\n#page::after\s*\{/);
+    for (const prop of ['kbd-lamp', 'kbd-cord', 'is-typing', 'is-caps']) {
+      expect(css, `${prop} is back in the stylesheet`).not.toContain(prop);
+      expect(start, `${prop} is back in start.js`).not.toContain(prop);
+    }
   });
 });
 
@@ -332,7 +361,30 @@ describe('the desktop is drawn at 1999 scale', () => {
     expect(wide, 'the wide-screen block is gone').not.toBeNull();
     expect(wide![1]).toMatch(/\.desk-groups \.desk-group \{ display: contents; \}/);
     expect(wide![1]).toMatch(/\.desk-groups \.desk-group-label \{ display: none; \}/);
-    expect(wide![1]).toMatch(/grid-template-columns:\s*repeat\(auto-fit/);
+    expect(wide![1]).toMatch(/grid-auto-flow:\s*column/);
+  });
+
+  it('fills the icon field down before across, in a counted number of rows', () => {
+    /* Down a column then on to the next is how a desktop has always filled
+     * itself, and it is the only arrangement that still looks like one now
+     * the case is the whole display: row-major with 1fr rows put eleven
+     * icons in a line across the top of a 1440 screen and left a gulf under
+     * them.
+     *
+     * The row count is written out rather than auto-filled. auto-fill has to
+     * know the height of the track area before it can decide how many rows
+     * fit, and this box takes its height from a flex parent, which is not a
+     * definite size when tracks are sized: it resolved to a single row of
+     * sixteen, 1856px wide, and pushed the desktop out of the case. */
+    const wide = /@media \(min-width: 900px\) \{([\s\S]*?)\n\}/.exec(css)![1]!;
+    expect(wide).toMatch(/grid-template-rows:\s*repeat\(\d+, \d+px\)/);
+    expect(wide, 'auto-fill rows cannot resolve against a flex height')
+      .not.toMatch(/grid-template-rows:\s*repeat\(auto-fill/);
+    expect(wide, 'icons should start in the corner, not spread to fill')
+      .toMatch(/align-content:\s*start/);
+    // Four rows need about 700px of window. Below that the count drops
+    // rather than the case overflowing.
+    expect(css).toMatch(/@media \(min-width: 900px\) and \(max-height: \d+px\) \{\s*\.desk-groups \{ grid-template-rows: repeat\(3, \d+px\); \}/);
   });
 
   it('keeps the headings on a phone, where the bands are the right shape', () => {
@@ -344,11 +396,13 @@ describe('the desktop is drawn at 1999 scale', () => {
     expect(narrow![1]).not.toMatch(/\.desk-group-label \{ display: none/);
   });
 
-  it('gives the case a width floor so a short window cannot collapse it', () => {
-    // Without it: less height means a narrower case, a narrower case means
-    // fewer icons per row, fewer per row means a taller field, and a taller
-    // field means a taller case. At 1440x700 that settled at 1296px.
-    expect(css).toMatch(/max-width:\s*min\(1120px,\s*max\(\d+px,\s*calc\(/);
+  it('no longer needs a width floor, because nothing feeds back', () => {
+    // The floor existed because 4:3 fed back on itself: less height meant a
+    // narrower case, narrower meant fewer icons per row, fewer per row meant
+    // a taller field, and a taller field meant a taller case. At 1440x700
+    // that loop settled at 1296px. A case that is simply the display has no
+    // loop to settle, so both the cap and its floor are gone.
+    expect(css).not.toMatch(/max-width:\s*min\(1120px/);
   });
 });
 
@@ -692,6 +746,32 @@ describe('an application owns the device', () => {
       const steps = page.html.match(/data-step="/g) || [];
       expect(steps.length, `${page.name} has too few steps to be worth a dialog`).toBeGreaterThan(1);
     }
+  });
+
+  it('leaves no teal showing around a maximised window', () => {
+    /* The desktop insets its glass so icons do not sit hard against the
+     * bezel. Under a maximised window that inset is a strip of wallpaper
+     * down either side of the application, and the gap above the taskbar
+     * is one more.
+     *
+     * It cannot go to nought, though, and that is the trap: #page::before
+     * paints the tube's black inner frame eight pixels wide over
+     * everything in the glass, so a window with no padding does not reach
+     * the edge of the picture, it runs under the edge of the picture. On a
+     * phone that took the right-hand end of the document toolbar with it.
+     * Nine clears the frame by one. */
+    const rule = /body\[data-app\] #page \{([^}]*)\}/.exec(css);
+    expect(rule, 'the app page rule is gone').not.toBeNull();
+    const pad = /padding:\s*(\d+)px;/.exec(rule![1]!);
+    expect(pad, 'an app page should set its own glass padding').not.toBeNull();
+    const frame = /inset 0 0 0 (\d+)px #0a0d0f/.exec(css);
+    expect(frame, 'the tube frame is gone from #page::before').not.toBeNull();
+    expect(Number(pad![1]), 'the window would run under the tube frame')
+      .toBeGreaterThan(Number(frame![1]));
+    expect(Number(pad![1]), 'more padding than the frame needs is teal')
+      .toBeLessThanOrEqual(Number(frame![1]) + 4);
+    // The taskbar bleeds to the same edge, with no wallpaper above it.
+    expect(css).toMatch(/body\[data-app\] #page > \.taskbar \{ margin: 0 -\d+px/);
   });
 
   it('keeps Help reachable on a phone', () => {

@@ -832,56 +832,10 @@
     page.classList.add('has-chin');
   }
 
-  /* --- what is on the desk in front of the monitor --------------------
-   * The keyboard is painted by the stylesheet, but its lock lamp has to
-   * be a real element to be lit, and its cord has to be an SVG because a
-   * coiled cable is thirty ellipses along a curve and CSS has no way to
-   * say that. Both are decorative and both are hidden on a phone, where
-   * the machine is a palmtop and has neither. */
-  if (document.body && document.querySelector('.desktop, .desk-shell')) {
-    var lamp = el('span', 'kbd-lamp');
-    lamp.setAttribute('aria-hidden', 'true');
-    document.body.appendChild(lamp);
-
-    var cord = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    cord.setAttribute('class', 'kbd-cord');
-    cord.setAttribute('viewBox', '0 0 130 230');
-    cord.setAttribute('aria-hidden', 'true');
-    /* Out from under the keyboard, twelve turns of coil, then away to the
-       right and behind the case. Both ends run under something on purpose:
-       the keyboard covers one and the monitor covers the other, so neither
-       has to be finished and neither can be caught dangling. */
-    var d = 'M 40 229 C 36 216 32 208 40 196';
-    for (var turn = 0; turn < 12; turn++) {
-      var y = 192 - turn * 13;
-      d += ' C 8 ' + (y - 2) + ' 8 ' + (y - 11) + ' 40 ' + (y - 13);
-    }
-    d += ' C 66 26 94 16 124 6';
-    /* Drawn twice over the same path: a wide dark stroke for the shadow
-       side of the cable and a narrower pale one for its sleeve. */
-    ['shadow', 'sleeve'].forEach(function (part) {
-      var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', d);
-      path.setAttribute('class', part);
-      cord.appendChild(path);
-    });
-    document.body.appendChild(cord);
-  }
-
-  /* --- the keyboard reacts to the keyboard ----------------------------
-   * The drawn keyboard at the bottom of a desktop window is a picture,
-   * and a picture of a keyboard that does nothing while you type on a
-   * real one is a missed trick. It lights on every keypress, and its
-   * lock light follows the actual Caps Lock. */
-  if (document.body) {
-    var lit = null;
-    document.addEventListener('keydown', function (event) {
-      document.body.classList.add('is-typing');
-      clearTimeout(lit);
-      lit = setTimeout(function () { document.body.classList.remove('is-typing'); }, 110);
-      if (event.getModifierState) {
-        document.body.classList.toggle('is-caps', event.getModifierState('CapsLock'));
-      }
-    });
-  }
+  /* The keyboard's lock lamp and its cord were built here: a real element
+   * so the lamp could be lit by the actual Caps Lock, and an SVG for the
+   * cord because a coiled cable is thirty ellipses along a curve and CSS
+   * has no way to say that. The keyboard they belonged to was painted by
+   * the stylesheet on the desk in front of the monitor, and the desk is
+   * gone: the case fills the display, so there is no in front of it. */
 })();
