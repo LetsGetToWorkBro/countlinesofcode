@@ -34,6 +34,24 @@ const BANNER =
   ' * page. One source, two forms.\n' +
   ' */\n';
 
+/**
+ * The handful of named entities a hand-written page uses, turned back into
+ * characters.
+ *
+ * The label ends up in a JavaScript string that start.js escapes before
+ * inserting, so an entity carried through verbatim would be escaped a second
+ * time and printed as its own source: a shortcut reading `PDF &lt;-&gt; Word`
+ * rather than `PDF <-> Word`.
+ */
+function decodeEntities(text) {
+  return text
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&middot;/g, '\u00b7')
+    .replace(/&rsquo;/g, '\u2019')
+    .replace(/&amp;/g, '&');   // last, so &amp;lt; does not become <
+}
+
 /** Every `<a class="desk-icon" href="...">` on the landing page. */
 export function iconsFromLanding(html) {
   const icons = {};
@@ -41,7 +59,7 @@ export function iconsFromLanding(html) {
   let match;
   while ((match = re.exec(html)) !== null) {
     const [, href, svg, label] = match;
-    icons[href] = { svg: svg.replace(/\s+/g, ' ').trim(), label };
+    icons[href] = { svg: svg.replace(/\s+/g, ' ').trim(), label: decodeEntities(label) };
   }
   return icons;
 }

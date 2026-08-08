@@ -107,6 +107,13 @@ describe('page copy has no em dashes', () => {
  * has to be added here deliberately, which is the moment to ask whether a
  * phone is going to colour it in.
  *
+ * U+2194 was on this list and should never have been. It is the left-right
+ * arrow, it was used for the PDF and Excel converter titles, and it is also
+ * an emoji: iOS draws it as a blue-and-white cartoon. Exactly the failure
+ * this rule exists to catch, waved through by the list that was supposed to
+ * catch it. Those titles use an ASCII <-> now, which no platform can colour
+ * in, and the codepoint is gone from here so it cannot come back.
+ *
  * The built bundles are exempt for the same reason the em dash rule exempts
  * them: they carry Unicode tables as data, not as page copy.
  */
@@ -122,7 +129,6 @@ describe('no emoji anywhere on the site', () => {
     [0x2022, 'bullet'],
     [0x2026, 'ellipsis'],
     [0x2192, 'rightwards arrow'],
-    [0x2194, 'left right arrow, the convert and sheet titles'],
     [0x21c6, 'the swap page direction button'],
     [0x2212, 'minus sign, the mail client collapse marker'],
     [0x25ba, 'the Start menu submenu arrow, and NOT U+25B6 which is an emoji'],

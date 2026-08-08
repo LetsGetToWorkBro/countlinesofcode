@@ -65,3 +65,23 @@ describe('the pages that draw shortcuts', () => {
     }
   });
 });
+
+describe('a label is text, not markup', () => {
+  /* The labels are lifted out of index.html, which is hand-written HTML and
+   * uses entities where it must: an ASCII <-> has to be written &lt;-&gt; or
+   * it is not valid markup. start.js escapes a label before inserting it, so
+   * an entity carried through verbatim would be escaped a second time and
+   * printed as its own source: a shortcut reading `PDF &lt;-&gt; Word`. */
+  const built = readFileSync('public/icons.js', 'utf8');
+
+  it('carries no HTML entity through to the script', () => {
+    for (const match of built.matchAll(/"label":"([^"]*)"/g)) {
+      expect(match[1], `${match[1]} still holds an entity`).not.toMatch(/&[a-z]+;|&#\d+;/);
+    }
+  });
+
+  it('kept the arrows the two converter names use', () => {
+    expect(built).toContain('PDF <-> Word');
+    expect(built).toContain('Excel <-> CSV');
+  });
+});
