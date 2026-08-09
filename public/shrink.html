@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Shrink a PDF in Your Browser | 1999.LOC</title>
-<meta name="description" content="Make a heavy PDF smaller by re-rendering its pages, best for scanned documents. Runs entirely in your browser. The file is never uploaded. Shows the before and after and lets you keep whichever is smaller.">
+<title>Shrink a File in Your Browser: PDFs and Images | 1999.LOC</title>
+<meta name="description" content="Make a heavy PDF or an oversized photograph smaller. Pages are re-rendered, pictures are scaled and re-encoded, and it all happens in your browser: the file is never uploaded. Shows the before and after and lets you keep whichever is smaller.">
 <link rel="canonical" href="https://1999loc.com/shrink.html">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Shrink a PDF in Your Browser | 1999.LOC">
-<meta property="og:description" content="Make a heavy scanned PDF smaller, in your browser. Nothing is uploaded, and it shows you the before and after before you keep it.">
+<meta property="og:title" content="Shrink a File in Your Browser: PDFs and Images | 1999.LOC">
+<meta property="og:description" content="Make a heavy PDF or an oversized picture smaller, in your browser. Nothing is uploaded, and it shows you the before and after before you keep it.">
 <meta property="og:url" content="https://1999loc.com/shrink.html">
 <meta property="og:site_name" content="1999.LOC">
 <meta name="twitter:card" content="summary">
@@ -26,8 +26,8 @@
     ------------------------------------------------------------
     count code | golf | pdf | images | delete posts
     ------------------------------------------------------------
-    SHRINK A PDF
-    [ Open a PDF... ]
+    SHRINK A FILE
+    [ Open a PDF or a picture... ]
     How hard: ( ) Light ( ) Medium ( ) Strong  [x] keep text selectable
     [ Shrink ]
     was 8.4 MB -> now 1.2 MB (86% smaller)   [ download ]
@@ -55,9 +55,9 @@
 <span class="nav-group"><span class="nav-label">documents</span>
 <a href="/sign.html">pdf editor</a>
 &middot;
-<a href="/convert.html">pdf &lt;-&gt; word</a>
+<a href="/convert.html">pdf &lt;=&gt; word</a>
 &middot;
-<a href="/sheet.html">excel &lt;-&gt; csv</a>
+<a href="/sheet.html">excel &lt;=&gt; csv</a>
 &middot;
 <a href="/zip.html">zip</a></span>
 <span class="nav-group"><span class="nav-label">media</span>
@@ -73,7 +73,7 @@
 
 <div class="desk-shell">
 <div class="app-window" id="app">
-<div class="client-title"><h2>Shrink a PDF</h2><a class="win-min" href="#" aria-label="Minimise Shrink a PDF">_</a></div>
+<div class="client-title"><h2>Shrink a file</h2><a class="win-min" href="#" aria-label="Minimise Shrink a file">_</a></div>
 <p class="dl menubar" role="menubar">
 <span class="menu"><button type="button" class="menu-title">File</button>
   <span class="menu-drop">
@@ -92,17 +92,17 @@
 </p>
 <div class="app-body">
 <p class="dl-hint"><span class="dl-hint-mark">i</span>
-Open a heavy PDF and choose how hard to squeeze it. The pages are re-rendered in this tab; nothing is uploaded.</p>
+Open a heavy PDF or an oversized photograph and choose how hard to squeeze it. It is re-encoded in this tab, the before and after sizes are measured, and nothing is uploaded.</p>
 
 
 <hr>
 
-<h3>1. Open a PDF</h3>
+<h3>1. Open a file</h3>
 
-<div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open a PDF">
-  <strong>Drop a PDF here, or click to choose</strong>
-  <span>Nothing is uploaded; it is opened inside this tab</span>
-  <input type="file" id="file-input" accept="application/pdf" hidden>
+<div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open a file to shrink">
+  <strong>Drop a PDF or a picture here, or click to choose</strong>
+  <span>PDF, JPEG, PNG, WebP or BMP. Nothing is uploaded; it is opened inside this tab</span>
+  <input type="file" id="file-input" accept="application/pdf,image/jpeg,image/png,image/webp,image/bmp" hidden>
 </div>
 
 <p id="status" class="status" role="status" aria-live="polite"></p>
@@ -113,10 +113,10 @@ Open a heavy PDF and choose how hard to squeeze it. The pages are re-rendered in
   <h3>2. How hard to squeeze</h3>
   <p id="strengths">
     <label class="wide"><input type="radio" name="strength" value="light"> Light: barely visible, modest saving</label>
-    <label class="wide"><input type="radio" name="strength" value="medium" checked> Medium: a good default for scans</label>
-    <label class="wide"><input type="radio" name="strength" value="strong"> Strong: smallest, softer pages</label>
+    <label class="wide"><input type="radio" name="strength" value="medium" checked> Medium: a good default</label>
+    <label class="wide"><input type="radio" name="strength" value="strong"> Strong: smallest, and you can see it</label>
   </p>
-  <p class="note">
+  <p class="note" id="keep-text-row">
     <label class="inline"><input type="checkbox" id="keep-text" checked> Keep the text selectable</label>.
     Leave this on unless the PDF is a pure scan with no real text anyway.
   </p>
@@ -136,8 +136,9 @@ Open a heavy PDF and choose how hard to squeeze it. The pages are re-rendered in
      firstrun.js as a dialog on the first visit, and from Help after that. -->
 <div id="first-run" hidden>
 
-<section data-step="Making a PDF small enough to send">
-<p><strong>A heavy PDF in, a lighter one out.</strong></p>
+<section data-step="Making a file small enough to send">
+<p><strong>A heavy file in, a lighter one out.</strong> A PDF or a picture; the
+same three settings either way.</p>
 <p class="note">
 The usual reason a PDF is enormous is that it is a scan: big photographs
 of pages at a far higher resolution than anyone needs. This re-renders each page
@@ -146,10 +147,20 @@ times. The text is laid back over each page invisibly, so you can still select
 and search it.
 </p>
 <p class="note">
-On a PDF that is <em>already</em> mostly crisp vector text, this will help little
-or may even make it larger, because there is nothing oversized to shrink. So it
-shows you the before and after and lets you keep the original if it won. It never
-overwrites anything; you download a new file.
+The usual reason a photograph is enormous is the same thing wearing a different
+hat: a 12 megapixel picture of a receipt. A picture is scaled down to a sensible
+longest side and re-encoded, which is the whole of it.
+</p>
+<p class="note">
+On a PDF that is <em>already</em> mostly crisp vector text, or a picture that is
+already small, this will help little or may even make it larger, because there is
+nothing oversized to shrink. So it shows you the before and after and lets you
+keep the original if it won. It never overwrites anything; you download a new file.
+</p>
+<p class="note">
+If you want to choose the exact dimensions, the format and the quality yourself,
+that is <a href="/image.html">image tools</a>. This screen is the other kind of
+tool: you say smaller, it decides.
 </p>
 </section>
 
@@ -160,7 +171,9 @@ overwrites anything; you download a new file.
 
 <section data-step="The honest notes">
 <ul class="plain">
-  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The PDF is rendered and rewritten in your browser.</li>
+  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The file is rendered and rewritten in your browser.</li>
+  <li><strong>A picture is scaled and re-encoded, and it says which.</strong> Light, Medium and Strong are a longest side and a JPEG quality: 2600px, 1800px and 1200px. A picture already smaller than that is not enlarged to meet it. Something with transparency comes back as WebP so the transparency survives, or as PNG where the browser cannot write WebP; anything opaque comes back as JPEG, which is what makes it small.</li>
+  <li><strong>An animated GIF is turned away rather than flattened.</strong> Re-encoding one here would hand back a single frame, which is not a smaller version of what you gave it. <a href="/video.html">Video tools</a> is where a GIF belongs.</li>
   <li><strong>It re-renders; it does not optimise in place.</strong> Every page becomes a re-compressed image with an invisible text layer over it. That is what shrinks a scan dramatically, and what makes it the wrong tool for a document that was already efficient vector text, where it will show no gain and you keep the original.</li>
   <li><strong>Nothing is thrown away silently.</strong> It reports the before and after size, and if the result is not smaller it says so. You choose which to download.</li>
   <li><strong>Fonts and vector art become pixels.</strong> A shrunk page is an image, so zooming in far enough shows softness a vector PDF would not. At Light strength on a normal document that is hard to notice; at Strong on a dense page it is visible.</li>
@@ -195,7 +208,7 @@ You can
 
 <div class="taskbar">
 <a class="start" href="/">Start</a>
-<a class="task-btn is-open" href="#app">Shrink a PDF</a>
+<a class="task-btn is-open" href="#app">Shrink a file</a>
 <span class="task-clock">1999</span>
 </div>
 </div>

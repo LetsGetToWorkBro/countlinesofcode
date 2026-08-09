@@ -19,6 +19,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { BUNDLES, MONERO_LIB } from '../scripts/build-client.mjs';
 import { describe, expect, it } from 'vitest';
+import { SITE_TOOLS } from '../src/worker/html';
 
 const EM_DASH = /—|&mdash;/;
 
@@ -111,7 +112,7 @@ describe('page copy has no em dashes', () => {
  * arrow, it was used for the PDF and Excel converter titles, and it is also
  * an emoji: iOS draws it as a blue-and-white cartoon. Exactly the failure
  * this rule exists to catch, waved through by the list that was supposed to
- * catch it. Those titles use an ASCII <-> now, which no platform can colour
+ * catch it. Those titles use an ASCII <=> now, which no platform can colour
  * in, and the codepoint is gone from here so it cannot come back.
  *
  * The built bundles are exempt for the same reason the em dash rule exempts
@@ -1505,5 +1506,102 @@ describe('the keyring is a keychain window', () => {
     // Block, not flex: as flex siblings the headings wrapped into whatever
     // gap the previous row of buttons left, so Files sat beside Verify.
     expect(narrow).toMatch(/\.kc-rail \{[^}]*display: block/);
+  });
+});
+
+describe('shrink takes a file, not only a PDF', () => {
+  /* It was a PDF tool with a PDF name. The same idea covers a photograph —
+   * something stored at a far higher resolution than anyone needs — so it
+   * takes pictures too, and the name says file. These guard the parts that
+   * would quietly revert to PDF-only while still looking finished. */
+  const html = readFileSync('public/shrink.html', 'utf8');
+  const js = readFileSync('public/shrink.js', 'utf8');
+
+  it('is called what it now does, in the title bar and on the taskbar', () => {
+    expect(html).toContain('<h2>Shrink a file</h2>');
+    expect(html).toContain('<a class="task-btn is-open" href="#app">Shrink a file</a>');
+    expect(html, 'the window still calls itself a PDF tool').not.toContain('<h2>Shrink a PDF</h2>');
+  });
+
+  it('offers the file picker more than one kind of file', () => {
+    const accept = /id="file-input"[^>]*accept="([^"]+)"/.exec(html);
+    expect(accept, 'the picker lost its accept list').not.toBeNull();
+    for (const type of ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']) {
+      expect(accept![1], `the picker turns ${type} away`).toContain(type);
+    }
+  });
+
+  it('decides what a file is from its bytes, not its name', () => {
+    // A picture off a phone routinely arrives as .jpg holding a PNG, and a
+    // wrong guess here is a confusing error three steps later.
+    expect(js).toMatch(/function sniff/);
+    expect(js).toMatch(/0x25 && b\[1\] === 0x50/);       // %PDF
+    expect(js).toMatch(/0xff && b\[1\] === 0xd8/);       // JPEG
+    expect(js).toMatch(/0x89 && b\[1\] === 0x50/);       // PNG
+    expect(js, 'WebP is claimed but not recognised').toMatch(/0x57 && b\[9\] === 0x45/);
+  });
+
+  it('turns a GIF away rather than handing back one frame of it', () => {
+    expect(js).toMatch(/kind === 'gif'/);
+    expect(js).toMatch(/single frame/);
+  });
+
+  it('never enlarges a picture to meet the setting', () => {
+    // A picture blown up to reach the longest side would be bigger in both
+    // senses, which is the opposite of the one thing this does.
+    expect(js).toMatch(/longest > s\.maxSide \? s\.maxSide \/ longest : 1/);
+  });
+
+  it('keeps transparency by choosing a format that can hold it', () => {
+    expect(js).toMatch(/hasAlpha/);
+    expect(js).toMatch(/seeThrough \? 'image\/webp' : 'image\/jpeg'/);
+    // toBlob hands back a PNG under another name where WebP cannot be
+    // written, so what came out is read rather than assumed.
+    expect(js).toMatch(/blob\.type\]/);
+  });
+
+  it('puts the text-layer question away when there is no text layer', () => {
+    expect(html).toContain('id="keep-text-row"');
+    expect(js).toMatch(/\$\('keep-text-row'\)\.className = 'note hidden'/);
+    expect(js).toMatch(/\$\('keep-text-row'\)\.className = 'note'/);
+  });
+
+  it('still measures both ends and says so when it failed to help', () => {
+    expect(js).toMatch(/function report/);
+    expect(js).toMatch(/No smaller/);
+    // One place that reports a result, not one per kind of file: two copies
+    // of that sentence is two places for the honesty to drift.
+    expect((js.match(/<strong>No smaller\.<\/strong>/g) || []).length).toBe(1);
+  });
+});
+
+describe('a name that has to wrap cannot break in the middle of its arrow', () => {
+  /* A desktop caption is 54px wide on a phone, so "PDF <-> Word" wraps. A
+   * hyphen is a legal place to break a line — UAX #14 class HY — and Safari
+   * takes it, which is how "Excel <-" ended up on one line and "> CSV" on the
+   * next. None of <, = or > offers a break, so the arrow is <=> everywhere. */
+  it('spells both converter names with an arrow that cannot come apart', () => {
+    const convert = SITE_TOOLS.find((t) => t.id === 'convert');
+    const sheets = SITE_TOOLS.find((t) => t.id === 'sheets');
+    expect(convert!.label).toBe('pdf <=> word');
+    expect(sheets!.label).toBe('excel <=> csv');
+  });
+
+  it('leaves no breakable arrow anywhere a label is written', () => {
+    for (const tool of SITE_TOOLS) {
+      expect(tool.label, `${tool.label} has an arrow that can break`).not.toMatch(/<-|->/);
+    }
+    const landing = readFileSync('public/index.html', 'utf8');
+    for (const m of landing.matchAll(/<a class="desk-icon"[\s\S]*?<span>([^<]*)<\/span>/g)) {
+      expect(m[1], `the ${m[1]} caption has an arrow that can break`).not.toMatch(/&lt;-|-&gt;/);
+    }
+  });
+
+  it('binds the arrow to the word after it, so both captions break alike', () => {
+    // Without this "Excel <=> CSV" breaks after the arrow and "PDF <=> Word"
+    // before it, and two icons side by side read as two different captions.
+    const landing = readFileSync('public/index.html', 'utf8');
+    expect(landing).toContain('<span>PDF &lt;=&gt;&nbsp;Word</span>');
+    expect(landing).toContain('<span>Excel &lt;=&gt;&nbsp;CSV</span>');
   });
 });

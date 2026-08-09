@@ -40,13 +40,19 @@ const BANNER =
  *
  * The label ends up in a JavaScript string that start.js escapes before
  * inserting, so an entity carried through verbatim would be escaped a second
- * time and printed as its own source: a shortcut reading `PDF &lt;-&gt; Word`
- * rather than `PDF <-> Word`.
+ * time and printed as its own source: a shortcut reading `PDF &lt;=&gt; Word`
+ * rather than `PDF <=> Word`.
+ *
+ * &nbsp; is in the list for a different reason. A desktop caption is 54px
+ * wide on a phone and has to wrap, and the non-breaking space is what
+ * decides where: without it "Excel <=> CSV" breaks after the arrow and
+ * "PDF <=> Word" before it, which reads as two captions rather than a pair.
  */
 function decodeEntities(text) {
   return text
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, '\u00a0')
     .replace(/&middot;/g, '\u00b7')
     .replace(/&rsquo;/g, '\u2019')
     .replace(/&amp;/g, '&');   // last, so &amp;lt; does not become <
@@ -66,7 +72,8 @@ export function iconsFromLanding(html) {
 
 export function renderIcons(icons) {
   const entries = Object.entries(icons)
-    .map(([href, { svg, label }]) => `  ${JSON.stringify(href)}: ${JSON.stringify({ svg, label })},`)
+    .map(([href, { svg, label }]) =>
+      `  ${JSON.stringify(href)}: ${JSON.stringify({ svg, label }).replace(/\u00a0/g, '\\u00a0')},`)
     .join('\n');
   return `${BANNER}window.LOC1999_ICONS = {\n${entries}\n};\n`;
 }

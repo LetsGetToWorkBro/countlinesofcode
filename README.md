@@ -82,7 +82,7 @@ so `/email.html#inbox` opens the right tab; the retired URLs 301 to it).
 | **Excel ↔ CSV** | `/sheet.html` | Semicolon-aware, quote-honouring, won't turn `007` into `7`. | your browser |
 | **ZIP** | `/zip.html` | Look inside an archive without unpacking it, extract only what you want, or build one. | your browser |
 | **Unlock a PDF** | `/unlock.html` | Strip "no printing / no copying" from a PDF that opens without a password. | your browser |
-| **Shrink a PDF** | `/shrink.html` | Make a heavy PDF smaller, mostly by shrinking oversized scans. | your browser |
+| **Shrink a file** | `/shrink.html` | Make a heavy PDF or an oversized picture smaller. | your browser |
 
 ### Media
 
@@ -236,8 +236,8 @@ public/            every tool page (index/how/code/sign/convert/sheet/zip/
 src/client/        the in-browser tool engines, built to public/ bundles:
   bigcount.ts      browser-side line counting (shares the counter's core)
   pdfedit.ts       PDF edit / sign / redact + page ops (pdfpages.ts)
-  convert.ts       PDF <-> Word, with docmodel.ts and OCR
-  sheet.ts         Excel <-> CSV        zipkit.ts   read / write ZIP
+  convert.ts       PDF <=> Word, with docmodel.ts and OCR
+  sheet.ts         Excel <=> CSV        zipkit.ts   read / write ZIP
   email.ts         SPF/DKIM/DMARC + tracker parser (reused server-side)
   pgpkit.ts        OpenPGP: password locking and full PGP
   monero.ts        address check + offline paper-wallet derivation

@@ -68,10 +68,10 @@ describe('the pages that draw shortcuts', () => {
 
 describe('a label is text, not markup', () => {
   /* The labels are lifted out of index.html, which is hand-written HTML and
-   * uses entities where it must: an ASCII <-> has to be written &lt;-&gt; or
+   * uses entities where it must: an ASCII <=> has to be written &lt;=&gt; or
    * it is not valid markup. start.js escapes a label before inserting it, so
    * an entity carried through verbatim would be escaped a second time and
-   * printed as its own source: a shortcut reading `PDF &lt;-&gt; Word`. */
+   * printed as its own source: a shortcut reading `PDF &lt;=&gt; Word`. */
   const built = readFileSync('public/icons.js', 'utf8');
 
   it('carries no HTML entity through to the script', () => {
@@ -80,8 +80,19 @@ describe('a label is text, not markup', () => {
     }
   });
 
-  it('kept the arrows the two converter names use', () => {
-    expect(built).toContain('PDF <-> Word');
-    expect(built).toContain('Excel <-> CSV');
+  it('kept the arrows the two converter names use, and the space that holds them', () => {
+    /* An equals rather than a hyphen, because a hyphen is a legal place to
+     * break a line and Safari takes it: "Excel <-" on one line and "> CSV"
+     * on the next, which is what a 54px desktop caption on a phone gives you.
+     * Nothing may break inside <=>, on any engine, because none of the three
+     * characters offers a break.
+     *
+     * The non-breaking space then decides where it does break, so both
+     * captions break in the same place instead of one before the arrow and
+     * one after. Written as an escape in the generated file so it is not an
+     * invisible character in somebody's editor. */
+    expect(built).toContain('PDF <=>\\u00a0Word');
+    expect(built).toContain('Excel <=>\\u00a0CSV');
+    expect(built, 'a hyphen is back in an arrow that has to wrap').not.toMatch(/label":"[^"]*<-/);
   });
 });
