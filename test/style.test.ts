@@ -1605,3 +1605,55 @@ describe('a name that has to wrap cannot break in the middle of its arrow', () =
     expect(landing).toContain('<span>Excel &lt;=&gt;&nbsp;CSV</span>');
   });
 });
+
+describe('a control that has been pressed looks pressed', () => {
+  /* The chin's controls all had an :active state and on a phone you could
+   * not see it, which is the whole population that uses them. iOS applies
+   * :active only while something is listening for a touch, and the
+   * stylesheet gives up -webkit-tap-highlight-color so stepping through the
+   * icons does not flash a blue box every time. Between them, a button that
+   * did its job looked dead. */
+  const css = readFileSync('public/style.css', 'utf8');
+  const js = readFileSync('public/start.js', 'utf8');
+
+  it('states the pressed look for the class as well as the pseudo-class', () => {
+    for (const control of ['chin-dir', 'chin-key', 'chin-power']) {
+      expect(css, `${control} has no :active state at all`).toMatch(new RegExp(`\\.${control}:active`));
+      expect(css, `${control} only goes down for a mouse`).toMatch(new RegExp(`\\.${control}\\.is-down`));
+    }
+  });
+
+  it('holds the press long enough to be seen', () => {
+    // A tap is frequently shorter than the two frames it takes to notice
+    // one, so the class outlives the finger.
+    expect(js).toMatch(/function pressable/);
+    expect(js).toMatch(/addEventListener\('pointerdown', down\)/);
+    expect(js).toMatch(/HELD = \d+/);
+    expect(Number(/HELD = (\d+)/.exec(js)![1]), 'the press is held too briefly to register')
+      .toBeGreaterThanOrEqual(100);
+  });
+
+  it('lets go when the press is cancelled, not only when it ends', () => {
+    // Dragging off a button is a press you changed your mind about, and it
+    // has to stop looking pressed when you do.
+    expect(js).toMatch(/'pointerup', 'pointercancel', 'pointerleave'/);
+    expect(js, 'a keyboard press does not show').toMatch(/event\.key === ' ' \|\| event\.key === 'Enter'/);
+  });
+
+  it('binds every control on the chin, in one place', () => {
+    expect(js).toMatch(/chin\.querySelectorAll\('\.chin-dir, \.chin-key, \.chin-power'\), pressable/);
+  });
+
+  it('darkens enough to register, rather than by a shade', () => {
+    /* The old pressed gradient moved the lightness by about a tenth, which
+     * is a change you can find if you are looking for it and not one you
+     * notice mid-tap. */
+    const rule = /#page \.chin-dir:active[\s\S]*?background: linear-gradient\(180deg, (#[0-9a-f]{6}) 0%, (#[0-9a-f]{6})/.exec(css);
+    expect(rule, 'the pressed gradient is gone').not.toBeNull();
+    const lum = (hex: string) =>
+      [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).reduce((a, b) => a + b) / 3;
+    const rest = 0xcb / 255;   // the top stop of the resting gradient
+    expect(lum(rule![1]!), 'the pressed state is barely darker than the resting one')
+      .toBeLessThan(rest - 0.15);
+  });
+});

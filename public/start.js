@@ -719,6 +719,54 @@
     chin.setAttribute('role', 'group');
     chin.setAttribute('aria-label', 'Machine controls');
 
+    /* --- feedback you can see ----------------------------------------
+     *
+     * Every control on this chin has an :active state and on a phone you
+     * could not see it. iOS only applies :active while something is
+     * listening for a touch, and the stylesheet gives up the default tap
+     * highlight so the pad does not flash a blue box every time you step
+     * through the icons — which between them left a button that did its job
+     * and looked completely dead.
+     *
+     * So the press is held rather than left to the pseudo-class. It is also
+     * held for a beat after release: a tap is frequently shorter than the
+     * two frames it takes to notice one, and a highlight nobody saw is the
+     * same as no highlight. */
+    var HELD = 130;
+    function pressable(node) {
+      var since = 0;
+      var timer = null;
+
+      function down() {
+        if (timer) { clearTimeout(timer); timer = null; }
+        since = Date.now();
+        node.classList.add('is-down');
+      }
+      function up() {
+        if (!node.classList.contains('is-down')) return;
+        var left = HELD - (Date.now() - since);
+        if (left <= 0) { node.classList.remove('is-down'); return; }
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(function () {
+          node.classList.remove('is-down');
+          timer = null;
+        }, left);
+      }
+
+      node.addEventListener('pointerdown', down);
+      // pointerleave as well as up: dragging off a button is a cancelled
+      // press, and it has to stop looking pressed when you do it.
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (name) {
+        node.addEventListener(name, up);
+      });
+      // A button pressed with the keyboard is pressed too.
+      node.addEventListener('keydown', function (event) {
+        if (event.key === ' ' || event.key === 'Enter') down();
+      });
+      node.addEventListener('keyup', up);
+      node.addEventListener('blur', up);
+    }
+
     /* --- the power button, on both machines --------------------------
      * It turns the screen off, the way the button on the front of a
      * monitor does: the picture collapses to a line and goes, the light
@@ -976,6 +1024,12 @@
     chin.appendChild(pad);
     chin.appendChild(power);
     chin.appendChild(led);
+
+    // One place, after the cluster is whole, so a control added later cannot
+    // be the one that forgot to say it had been pressed.
+    Array.prototype.forEach.call(
+      chin.querySelectorAll('.chin-dir, .chin-key, .chin-power'), pressable);
+
     page.appendChild(chin);
     page.classList.add('has-chin');
   }

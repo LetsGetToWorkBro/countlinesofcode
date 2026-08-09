@@ -2387,12 +2387,13 @@ body {
     inset 0 -2px 3px rgba(0, 0, 0, 0.3),
     0 2px 3px rgba(0, 0, 0, 0.45);
 }
-#page .chin-power:active {
+#page .chin-power:active, #page .chin-power.is-down {
   /* Pressed in, and the shadow under it goes with it. A button that
      changes colour but does not move has not been pressed. */
   transform: translateY(1px);
+  background: radial-gradient(circle at 36% 30%, #b8b2a2 0%, #97917f 46%, #746e5e 100%);
   box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.45),
+    inset 0 2px 5px rgba(0, 0, 0, 0.55),
     0 1px 1px rgba(0, 0, 0, 0.4);
 }
 #page .chin-power:focus-visible { outline: 2px solid #7fd3ff; outline-offset: 2px; }
@@ -2478,11 +2479,30 @@ body {
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
-#page .chin-dir:active, #page .chin-key:active {
-  background: linear-gradient(180deg, #9a9381 0%, #837c6b 100%);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+/* PRESSED, and visibly so.
+ *
+ * :active alone was enough on a desktop and not on a phone, which is where
+ * these controls actually are. Two things were against it. iOS applies
+ * :active only while something is listening for a touch, and the rule above
+ * gives up -webkit-tap-highlight-color, which is the one cue the platform
+ * supplies for nothing — so a tap on the pad did exactly what it was asked
+ * and looked like the machine had ignored it. start.js therefore puts an
+ * .is-down class on and holds it for a moment, and both spellings land here.
+ *
+ * The pressed state is also a good deal darker than it was. The old one
+ * moved the gradient by about 12% of its lightness, which is a change you
+ * can find if you are looking for it and not one you notice mid-tap. */
+#page .chin-dir:active, #page .chin-key:active,
+#page .chin-dir.is-down, #page .chin-key.is-down {
+  background: linear-gradient(180deg, #6f6858 0%, #524c3f 100%);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.65),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.12);
   transform: translateY(1px);
 }
+/* The i on the Info key is dark ink on a light key, and the key just went
+   dark. Both ends stated rather than one of them inherited. */
+#page .chin-key.is-info:active, #page .chin-key.is-info.is-down { color: #f2eee2; }
 #page .chin-key:disabled { opacity: 0.5; cursor: default; }
 #page .chin-dir:focus-visible, #page .chin-key:focus-visible { outline: 2px solid #7fd3ff; outline-offset: 1px; }
 
