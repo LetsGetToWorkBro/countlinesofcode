@@ -743,20 +743,22 @@
      * hard-wired to one program. These are wired to what this machine
      * actually runs: the menu, and the windows the taskbar carries. */
     var pad = el('div', 'chin-keys');
-    var targets = [{ label: 'Menu', start: true }];
+    var targets = [{ label: 'Menu', start: true }, { label: 'Info', info: true }];
     Array.prototype.forEach.call(bar.querySelectorAll('.task-btn'), function (btn) {
       if (targets.length < 4) targets.push({ label: btn.textContent.trim(), el: btn });
     });
     while (targets.length < 4) targets.push({ label: '', dead: true });
 
     targets.forEach(function (target) {
-      var key = el('button', 'chin-key');
+      var key = el('button', 'chin-key' + (target.info ? ' is-info' : ''));
       key.type = 'button';
       key.setAttribute('aria-label', target.label || 'Unassigned');
+      if (target.info) key.textContent = 'i';
       if (target.dead) key.disabled = true;
       key.addEventListener('click', function () {
         if (page.classList.contains('is-off')) return;   // nothing runs with the screen off
         if (target.start) startBtn.click();
+        else if (target.info) showInfo();
         else if (target.el) target.el.click();
       });
       pad.appendChild(key);
@@ -769,8 +771,29 @@
     var DIRS = [['up', 'Up'], ['right', 'Right'], ['down', 'Down'], ['left', 'Left']];
     var pressed = [];
 
+    /* What there is to move between.
+     *
+     * The landing page has an icon field; a tool page has the shortcut strip
+     * instead, and the pad used to look only for .desk-icon, so on every tool
+     * page it moved nothing and read as broken. Both, then, and whichever of
+     * them is actually on the glass. */
     function icons() {
-      return Array.prototype.slice.call(desk.querySelectorAll('.desk-icon'));
+      var found = Array.prototype.slice.call(desk.querySelectorAll('.desk-icon, .desk-shortcut'));
+      return found.filter(function (node) { return node.offsetParent !== null; });
+    }
+
+    /* An open application covers the desk, so there is nothing to walk. Rather
+       than have the pad do nothing — which is what it looked like — the first
+       press puts the application down, the way pressing a direction on a
+       device with a launcher brings the launcher up. The taskbar button still
+       has it, and nothing it was holding is lost. */
+    function revealDesk() {
+      if (icons().length) return false;
+      var open = desk.querySelector('.app-window.is-open');
+      var button = document.querySelector('.taskbar .task-btn.is-open');
+      if (!open || !button) return false;
+      button.click();
+      return true;
     }
 
     /* The pad keeps its own cursor rather than reading document.activeElement,
@@ -805,6 +828,109 @@
       pick(dir === 'down' ? cursor + perRow : cursor - perRow);
     }
 
+    /* ---- Info -------------------------------------------------------
+     *
+     * Pick an icon — with a finger or with the pad — and press i, and the
+     * machine says what that program is for before you open it. The
+     * sentences are the ones the landing page already prints beside each
+     * tool, lifted into icons.js by the same build step that lifts the
+     * pictures, so there is one copy of them.
+     *
+     * With nothing picked it falls back to this program's own Help, which
+     * is the right answer on a tool page: the thing you want told about is
+     * the window that is open. */
+    function pickedNow() {
+      return desk.querySelector('.desk-icon.is-picked, .desk-shortcut.is-picked') ||
+             desk.querySelector('.desk-icon:focus, .desk-shortcut:focus');
+    }
+
+    function showInfo() {
+      var node = pickedNow();
+      if (!node) {
+        var help = document.querySelector('[data-help]');
+        if (help) { help.click(); return; }
+        var first = icons()[0];
+        if (revealDesk() || first) { pick(0); return; }
+        return;
+      }
+      var href = node.getAttribute('href') || '';
+      var entry = ICONS[href] || null;
+      var label = (node.querySelector('span') || node).textContent.trim();
+      // The picture is already on the glass in front of you; take that one
+      // rather than the copy in icons.js, which the landing page does not load.
+      var art = node.querySelector('svg');
+      openInfo(label, noteFor(href, entry), href,
+        art ? art.outerHTML : (entry && entry.svg ? entry.svg : ''));
+    }
+
+    /* Where the sentence comes from, in the order the page can supply it.
+     *
+     * A tool page loads icons.js and has it there. The landing page does
+     * not load icons.js at all — it draws its own desktop with no script,
+     * which is the whole point of it — but it is the page the sentences are
+     * written on, so on that page it reads them straight out of the
+     * directory table underneath the icons. Same words either way. */
+    function noteFor(href, entry) {
+      if (entry && entry.note) return entry.note;
+      var link = document.querySelector('.tool-dir a[href="' + href.replace(/"/g, '\\"') + '"]');
+      var cell = link && link.closest ? link.closest('td') : null;
+      var next = cell && cell.nextElementSibling;
+      if (!next) return '';
+      var text = next.cloneNode(true);
+      // The server badge is a note about hosting, not about the program.
+      Array.prototype.forEach.call(text.querySelectorAll('.srv'), function (b) { b.remove(); });
+      return text.textContent.replace(/\s+/g, ' ').trim();
+    }
+
+    /* The era's About box: a title bar, the icon, a sentence, and one button
+       that opens the thing you were asking about. */
+    function openInfo(label, note, href, svg) {
+      var back = el('div', 'fr-back');
+      var box = el('div', 'fr-box info-box');
+      var title = el('div', 'fr-title');
+      title.appendChild(el('span', null, label));
+      var x = el('button', 'fr-x', 'x');
+      x.type = 'button';
+      x.setAttribute('aria-label', 'Close');
+      title.appendChild(x);
+      box.appendChild(title);
+
+      var body = el('div', 'fr-body');
+      var row = el('div', 'info-row');
+      if (svg) {
+        var art = el('span', 'info-art');
+        art.innerHTML = svg;
+        row.appendChild(art);
+      }
+      row.appendChild(el('p', 'info-note', note || 'No description was written for this one.'));
+      body.appendChild(row);
+      box.appendChild(body);
+
+      var foot = el('div', 'fr-foot');
+      foot.appendChild(el('span', 'fr-count', 'Select an icon and press i for any of them.'));
+      var go = el('a', 'fr-next', 'Open');
+      go.href = href || '#';
+      foot.appendChild(go);
+      var close = el('button', 'fr-back-btn', 'Close');
+      close.type = 'button';
+      foot.appendChild(close);
+      box.appendChild(foot);
+
+      back.appendChild(box);
+      document.body.appendChild(back);
+
+      function shut() { back.remove(); }
+      x.addEventListener('click', shut);
+      close.addEventListener('click', shut);
+      back.addEventListener('click', function (e) { if (e.target === back) shut(); });
+      document.addEventListener('keydown', function once(e) {
+        if (e.key !== 'Escape') return;
+        document.removeEventListener('keydown', once);
+        shut();
+      });
+      go.focus();
+    }
+
     /* The cheat code, on the pad this time. Up up down down left right
      * left right, then any two of the application buttons. */
     var CODE = 'up,up,down,down,left,right,left,right';
@@ -829,6 +955,7 @@
       arrow.addEventListener('click', function () {
         if (page.classList.contains('is-off')) return;
         note(pair[0]);
+        if (revealDesk()) { pick(0); return; }
         move(pair[0]);
       });
       dpad.appendChild(arrow);
@@ -838,6 +965,7 @@
     enter.setAttribute('aria-label', 'Open');
     enter.addEventListener('click', function () {
       if (page.classList.contains('is-off')) return;
+      if (revealDesk()) { pick(0); return; }
       var all = icons();
       if (cursor >= 0 && all[cursor]) all[cursor].click();
       else pick(0);

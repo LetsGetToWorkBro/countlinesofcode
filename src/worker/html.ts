@@ -80,7 +80,7 @@ ${body}
  * no template engine, deliberately, and `test/integration.test.ts` checks the
  * two stay in step.
  */
-export type ToolGroup = 'documents' | 'media' | 'privacy' | 'communications' | 'money' | 'code';
+export type ToolGroup = 'documents' | 'media' | 'privacy' | 'money' | 'code';
 
 /**
  * The order the groups appear in, and what each is called.
@@ -90,11 +90,19 @@ export type ToolGroup = 'documents' | 'media' | 'privacy' | 'communications' | '
  * name what the visitor is working on, not how the tools are built.
  */
 export const TOOL_GROUPS: { id: ToolGroup; label: string }[] = [
-  // Ordered by what the site leads with: the wallet, then privacy (PGP first),
-  // then communications (the disposable inbox), then the workaday tools.
-  { id: 'money', label: 'monero' },
+  // Ordered by what the site leads with: the wallets, then privacy, then the
+  // workaday tools.
+  //
+  // "monero" stopped being the name of the first group when the Bitcoin
+  // wallet landed: a category named after one of the two coins in it is a
+  // category that will be wrong again the next time one is added.
+  //
+  // The disposable inbox had a category to itself, called communications,
+  // holding one tool. A group of one is not a grouping, and the reason
+  // somebody wants an address that expires is the same reason they want the
+  // rest of the privacy group, so it sits there instead.
+  { id: 'money', label: 'crypto' },
   { id: 'privacy', label: 'privacy' },
-  { id: 'communications', label: 'communications' },
   { id: 'documents', label: 'documents' },
   { id: 'media', label: 'media' },
   { id: 'code', label: 'code' },
@@ -123,16 +131,17 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
   { href: '/lock.html', label: 'pgp', id: 'lock', group: 'privacy' },
   { href: '/inspect.html', label: 'inspect file', id: 'inspect', group: 'privacy' },
   { href: 'https://delete.1999loc.com/', label: 'delete posts', id: 'delete', group: 'privacy' },
+  { href: '/email.html', label: 'temporary email', id: 'email', group: 'privacy' },
 
   // 'email' is two tools on one page: the disposable inbox and the message
   // checker (tabs). /mail.html redirects to /email.html#inbox. Its own group,
   // with room beside it if disposable numbers ever join it.
-  { href: '/email.html', label: 'email', id: 'email', group: 'communications' },
 
   // One page for money: the wallet leads, the address checker / paper wallet
   // is its second tab. /monero.html redirects to /wallet.html#addresses.
   { href: '/wallet.html', label: 'wallet', id: 'wallet', group: 'money' },
   { href: '/swap.html', label: 'swap', id: 'swap', group: 'money' },
+  { href: '/wallet.html#addresses', label: 'paper wallet', id: 'paper', group: 'money' },
 
   { href: '/code.html', label: 'count code', id: 'count', group: 'code' },
   { href: '/golf', label: 'golf', id: 'golf', group: 'code' },

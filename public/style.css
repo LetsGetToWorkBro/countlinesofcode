@@ -722,8 +722,8 @@ fieldset.tool-group table.tool-dir { margin: 0; }
        sixteen icons in a line 1856px wide and pushed the desktop sideways
        out of the case. Four rows is the count that fits the shortest
        window this layout supports; more icons make more columns. */
-    grid-template-rows: repeat(4, 116px);
-    grid-auto-columns: 116px;
+    grid-template-rows: repeat(4, 140px);
+    grid-auto-columns: 140px;
     justify-content: start;
     align-content: start;
     align-items: center;
@@ -736,18 +736,37 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   .desk-groups .desk-group { display: contents; }
   .desk-groups .desk-group-label { display: none; }
 
-  /* Icons at the size they actually were on a desktop of this age. */
-  .desk-groups .desk-icon svg { width: 64px; height: 64px; }
-  .desk-groups .desk-icon span { font-size: 15px; }
+  /* Icons at the size they actually were on a desktop of this age, and then
+     some: the glass is the whole display now, and 48px pictures on it read
+     as a phone's home screen stretched rather than a desktop. */
+  .desk-groups .desk-icon { width: 140px; }
+  .desk-groups .desk-icon svg { width: 80px; height: 80px; }
+  .desk-groups .desk-icon span { font-size: 16px; }
 }
 
-/* Four rows of 116 need about 700px of window once the wordmark, the
+/* Four rows of 140 need about 840px of window once the wordmark, the
    taskbar and the bezel have taken theirs. Below that the count drops
    rather than the case overflowing: a laptop with a short viewport gets
    three rows and one more column, which is what a real desktop does when
-   you make its window shorter. */
-@media (min-width: 900px) and (max-height: 780px) {
-  .desk-groups { grid-template-rows: repeat(3, 116px); }
+   you make its window shorter. Two thresholds because the icons grew:
+   under 620px of window even three rows of 140 do not fit. */
+@media (min-width: 900px) and (max-height: 900px) {
+  .desk-groups { grid-template-rows: repeat(3, 140px); }
+}
+/* Below this even three rows of 140 do not fit down the glass, and dropping
+   to two rows is the wrong lever: fewer rows means more columns, and
+   seventeen icons in two rows is nine columns of 140, which is wider than
+   the desk and pushes five of them off the side. That is what "some of the
+   icons are missing" looks like from the outside. So the row count stays at
+   three and the icons get smaller, which costs nothing but pixels. */
+@media (min-width: 900px) and (max-height: 660px) {
+  .desk-groups {
+    grid-template-rows: repeat(3, 112px);
+    grid-auto-columns: 112px;
+  }
+  .desk-groups .desk-icon { width: 112px; }
+  .desk-groups .desk-icon svg { width: 60px; height: 60px; }
+  .desk-groups .desk-icon span { font-size: 14px; }
 }
 .desk-group {
   break-inside: avoid;
@@ -2306,11 +2325,11 @@ body {
      six fit across and all sixteen, their six headings, the wordmark and
      the taskbar are on the screen at once, the way they are on the
      device this is drawn from. Nothing here scrolls. */
-  .desk-icon, .desk-shortcut { width: 54px; gap: 2px; padding: 2px 1px 2px 1px; }
-  .desk-icon svg { width: 30px; height: 30px; }
-  .desk-icon span { font-size: 10.5px; padding: 0 1px; }
+  .desk-icon, .desk-shortcut { width: 58px; gap: 2px; padding: 2px 1px 2px 1px; }
+  .desk-icon svg { width: 36px; height: 36px; }
+  .desk-icon span { font-size: 11px; padding: 0 1px; }
   .desk-groups { padding: 2px 4px 0 4px; }
-  .desk-group { grid-template-columns: repeat(auto-fill, 54px); gap: 0 1px; margin-bottom: 2px; }
+  .desk-group { grid-template-columns: repeat(auto-fill, 58px); gap: 0 1px; margin-bottom: 2px; }
   .desk-group-label { font-size: 9.5px; gap: 6px; margin-bottom: 1px; letter-spacing: 0.07em; }
 
   /* A phone has no stand to leave room for and a much smaller screen to
@@ -2480,10 +2499,20 @@ body {
    case. With the desk gone they had nothing to attach to. */
 
 @media (max-width: 700px) {
-  /* The chin is deeper here and carries the whole cluster. */
-  .chin { bottom: -76px; height: 76px; }
+  /* The chin is deeper here and carries the whole cluster.
+   *
+   * Everything below is written #page .chin-* rather than .chin-*, and that
+   * is not decoration. The base rules are at id weight so no app face can
+   * reach them — an app stylesheet says [data-app="x"] button, which is an
+   * attribute plus an element plus a class and beats a bare class. A media
+   * query does not add weight, so the plain-class versions of these rules
+   * lost to the desktop geometry they were meant to replace, and the phone
+   * quietly went back to a 22px power button with the lamp still positioned
+   * for a 27px one. That is the bug this comment exists to stop repeating:
+   * once a rule is stated at id weight, every override of it has to be. */
+  #page .chin { bottom: -76px; height: 76px; }
 
-  .chin-dpad {
+  #page .chin-dpad {
     display: block;
     position: absolute;
     left: 12px;
@@ -2495,14 +2524,14 @@ body {
     box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.3), inset 0 -3px 5px rgba(0, 0, 0, 0.45);
   }
   /* Four arms and a centre, cut out of the dish. */
-  .chin-dir { position: absolute; border-radius: 2px; }
-  .chin-dir.is-up    { left: 16px; top: 3px;    width: 16px; height: 15px; }
-  .chin-dir.is-down  { left: 16px; bottom: 3px; width: 16px; height: 15px; }
-  .chin-dir.is-left  { top: 16px; left: 3px;    width: 15px; height: 16px; }
-  .chin-dir.is-right { top: 16px; right: 3px;   width: 15px; height: 16px; }
-  .chin-dir.is-enter { top: 16px; left: 16px;   width: 16px; height: 16px; border-radius: 3px; }
+  #page .chin-dir { position: absolute; border-radius: 2px; }
+  #page .chin-dir.is-up    { left: 16px; top: 3px;    width: 16px; height: 15px; }
+  #page .chin-dir.is-down  { left: 16px; bottom: 3px; width: 16px; height: 15px; }
+  #page .chin-dir.is-left  { top: 16px; left: 3px;    width: 15px; height: 16px; }
+  #page .chin-dir.is-right { top: 16px; right: 3px;   width: 15px; height: 16px; }
+  #page .chin-dir.is-enter { top: 16px; left: 16px;   width: 16px; height: 16px; border-radius: 3px; }
 
-  .chin-keys {
+  #page .chin-keys {
     display: flex;
     gap: 5px;
     position: absolute;
@@ -2510,16 +2539,16 @@ body {
     transform: translateX(-50%);
     bottom: 20px;
   }
-  .chin-key { width: 29px; height: 17px; border-radius: 9px; }
+  #page .chin-key { width: 29px; height: 17px; border-radius: 9px; }
 
-  .chin-power { right: 12px; bottom: 12px; width: 27px; height: 27px; }
+  #page .chin-power { right: 12px; bottom: 12px; width: 27px; height: 27px; }
   /* Directly over the button, not beside it: on the desktop machine the
      lamp is a separate indicator sitting next to the switch, but here it
      sits above it and reads as that button's light, so it has to line up
      with it. Written as the arithmetic rather than the answer so it stays
      centred if either size changes: the button's own inset, plus half the
      difference between the two widths. */
-  .chin-led {
+  #page .chin-led {
     right: calc(12px + (27px - 7px) / 2);
     bottom: 44px;
     width: 7px;
@@ -2884,3 +2913,54 @@ body[data-first-run] #first-run[hidden] { display: block; }
 [data-app] .notice-box > summary > .notice-x { padding: 0; }
 .notice-x:active { border-style: inset; }
 .notice-x:focus-visible { outline: 1px dotted #000000; outline-offset: 1px; }
+
+/* ---- the Info key ---------------------------------------------------
+   The machine's chin has four application keys; the second is marked i and
+   says what the selected program is for before you open it. Pick an icon
+   with a finger or with the d-pad, press i, and the sentence the landing
+   page prints beside that tool comes up in an About box.
+
+   It reuses the first-run dialog's furniture, because it is the same kind
+   of thing: a title bar, a body, and a row of buttons along the bottom. */
+#page .chin-key.is-info {
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: bold;
+  font-size: 12px;
+  line-height: 1;
+  color: #2a2417;
+  text-align: center;
+}
+
+.info-box .fr-body { padding: 14px 16px; }
+.info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.info-art { flex: 0 0 auto; }
+.info-art svg { width: 48px; height: 48px; }
+.info-note {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #000000;
+}
+/* An anchor, not a button: this one leaves the page. It still has to look
+   like the default action sitting where Next sits, and .fr-foot button
+   cannot dress an <a>. */
+.info-box .fr-foot a.fr-next {
+  min-width: 76px;
+  padding: 4px 12px;
+  border: 2px outset #c0c0c0;
+  background: #c0c0c0;
+  color: #000000;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  cursor: pointer;
+}
+.info-box .fr-foot a.fr-next:active { border-style: inset; }

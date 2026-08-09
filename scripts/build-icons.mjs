@@ -58,22 +58,51 @@ function decodeEntities(text) {
     .replace(/&amp;/g, '&');   // last, so &amp;lt; does not become <
 }
 
+/**
+ * The one-line description printed beside each tool in the landing page's
+ * directory, keyed by where it points.
+ *
+ * The Info key on the machine's chin says what the selected program is for,
+ * and that sentence has to come from somewhere. Writing it twice is how the
+ * two copies end up disagreeing, so it is lifted from the table that already
+ * prints it rather than kept in a second list.
+ */
+export function notesFromLanding(html) {
+  const notes = {};
+  const re = /<tr><td><a href="([^"]+)">[^<]*<\/a><\/td><td>([\s\S]*?)<\/td><\/tr>/g;
+  let match;
+  while ((match = re.exec(html)) !== null) {
+    const [, href, cell] = match;
+    // The cell carries a <span class="srv">server</span> badge on the two
+    // tools that talk to one. That is a note about hosting, not about what
+    // the program does, so it does not travel.
+    const plain = cell.replace(/<span class="srv">[\s\S]*?<\/span>/g, '').replace(/<[^>]+>/g, '');
+    notes[href] = decodeEntities(plain.replace(/\s+/g, ' ').trim());
+  }
+  return notes;
+}
+
 /** Every `<a class="desk-icon" href="...">` on the landing page. */
 export function iconsFromLanding(html) {
   const icons = {};
+  const notes = notesFromLanding(html);
   const re = /<a class="desk-icon" href="([^"]+)">\s*(<svg[\s\S]*?<\/svg>)\s*<span>([^<]*)<\/span>\s*<\/a>/g;
   let match;
   while ((match = re.exec(html)) !== null) {
     const [, href, svg, label] = match;
-    icons[href] = { svg: svg.replace(/\s+/g, ' ').trim(), label: decodeEntities(label) };
+    icons[href] = {
+      svg: svg.replace(/\s+/g, ' ').trim(),
+      label: decodeEntities(label),
+      note: notes[href] || '',
+    };
   }
   return icons;
 }
 
 export function renderIcons(icons) {
   const entries = Object.entries(icons)
-    .map(([href, { svg, label }]) =>
-      `  ${JSON.stringify(href)}: ${JSON.stringify({ svg, label }).replace(/\u00a0/g, '\\u00a0')},`)
+    .map(([href, { svg, label, note }]) =>
+      `  ${JSON.stringify(href)}: ${JSON.stringify({ svg, label, note }).replace(/\u00a0/g, '\\u00a0')},`)
     .join('\n');
   return `${BANNER}window.LOC1999_ICONS = {\n${entries}\n};\n`;
 }
