@@ -1394,3 +1394,116 @@ describe('the wallets get out of their own way', () => {
     expect(css).toMatch(/\[data-app="wallet"\] \.app-body > \[data-panel\] \{ flex: 1 1 auto; \}/);
   });
 });
+
+describe('the keyring is a keychain window', () => {
+  /* The PGP tool borrows Keychain Access's arrangement, and the value of it
+   * is entirely structural: a source list saying which of three jobs you are
+   * doing, a detail pane describing the one item you picked, a list with
+   * column headings, and one set of actions in a status bar rather than four
+   * buttons on every row. Any of those quietly reverting leaves the face
+   * looking the same and the window working the way it did before. */
+  const html = readFileSync('public/lock.html', 'utf8');
+  const css = readFileSync('public/app-pgp.css', 'utf8');
+  const js = readFileSync('public/pgp-page.js', 'utf8');
+
+  it('puts the operations in a source list, not a row of buttons', () => {
+    expect(html).toContain('class="kc-rail"');
+    expect(html, 'the operations row came back').not.toMatch(/class="tool-tabs"/);
+    expect(html, 'the rail entries are drawn as tabs again').not.toMatch(/class="sheet-tab/);
+    // Three labelled sections, which is what stops it being a list of nine.
+    const heads = [...html.matchAll(/<p class="kc-rail-head"[^>]*>([^<]+)</g)].map((m) => m[1]!.trim());
+    expect(heads).toEqual(['Keyring', 'Messages', 'Files']);
+  });
+
+  it('gives every rail entry a screen, and every screen a rail entry', () => {
+    const items = [...html.matchAll(/<button type="button" id="tab-([a-z]+)" class="kc-item/g)].map((m) => m[1]!);
+    const panes = [...html.matchAll(/<div id="mode-([a-z]+)" class="kc-pane/g)].map((m) => m[1]!);
+    expect(items.length).toBe(9);
+    expect([...items].sort()).toEqual([...panes].sort());
+    // Both halves of the program have to know the whole list or one of them
+    // cannot put the other's screen away.
+    for (const file of ['public/pgp-page.js', 'public/lock-page.js']) {
+      const source = readFileSync(file, 'utf8');
+      const all = /var ALL = \[([^\]]+)\]/.exec(source);
+      expect(all, `${file} has no list of screens`).not.toBeNull();
+      const named = [...all![1]!.matchAll(/'([a-z]+)'/g)].map((m) => m[1]!);
+      expect([...named].sort(), `${file} disagrees about which screens exist`).toEqual([...panes].sort());
+    }
+  });
+
+  it('tells you what to do on every one of them', () => {
+    // Nine screens, nine hints. A screen that arrived without one is a screen
+    // somebody lands on with no idea what it wants.
+    const panes = html.split('<div id="mode-').slice(1);
+    expect(panes.length).toBe(9);
+    for (const pane of panes) {
+      const name = /^([a-z]+)/.exec(pane)![1];
+      expect(pane.slice(0, pane.indexOf('</div>')), `the ${name} screen has no hint strip`)
+        .toContain('class="pgp-hint"');
+    }
+  });
+
+  it('does not print the name of the screen you are already on', () => {
+    // The highlighted rail entry is the title. Repeating it as a heading is
+    // the duplication Keychain does not have.
+    for (const gone of ['<h3>Encrypt</h3>', '<h3>Decrypt</h3>', '<h3>Sign</h3>', '<h3>Verify</h3>',
+                        '<h3>Import a key</h3>']) {
+      expect(html, `${gone} repeats the rail`).not.toContain(gone);
+    }
+    // Named instead, so the screens are still regions with names.
+    expect(html).toMatch(/role="region" aria-labelledby="tab-keys"/);
+  });
+
+  it('acts on the key you picked, once, instead of on every row', () => {
+    for (const id of ['key-copy', 'key-save', 'key-pair', 'key-drop']) {
+      expect(html, `the ${id} action left the status bar`).toContain(`id="${id}"`);
+    }
+    expect(html, 'the actions do not start disabled, so they act on nothing')
+      .toMatch(/id="key-copy"[^>]*disabled/);
+    expect(js, 'the per-row buttons are back').not.toMatch(/class="small key-copy"/);
+    expect(js, 'nothing disables the actions when no key is picked').toMatch(/function setActions/);
+    // And the count, which is the other half of a status bar.
+    expect(html).toContain('id="key-count"');
+  });
+
+  it('draws the list as a list, with headings that stay put', () => {
+    expect(js).toContain('<table class="kc-list">');
+    expect(js).toMatch(/<th scope="col">Name<\/th>/);
+    expect(css, 'the column headings scroll away with the rows')
+      .toMatch(/\.kc-list thead th \{[^}]*position: sticky/);
+    expect(js, 'the rows cannot be reached from the keyboard').toMatch(/tabindex="0"/);
+    expect(js, 'the arrow keys do not walk the list').toMatch(/ArrowDown/);
+  });
+
+  it('says what a key is in words rather than in library identifiers', () => {
+    // "eddsaLegacy on ed25519Legacy" is what OpenPGP.js calls it and is not
+    // something anybody should read off a detail pane.
+    expect(js).toMatch(/function plainAlgorithm/);
+    expect(js).toMatch(/eddsaLegacy: 'EdDSA'/);
+  });
+
+  it('states what a hidden screen does, at a weight that can win', () => {
+    /* The trap this file keeps falling into: .hidden is one class, and a rule
+     * that gives .kc-pane a display is an attribute plus a class, so the
+     * screen stays on the glass with another one drawn over it. */
+    expect(css).toMatch(/\[data-app="pgp"\] \.kc-pane\.hidden \{ display: none; \}/);
+    expect(css).toMatch(/\[data-app="pgp"\] \.kc-foot-all\.hidden \{ display: none; \}/);
+  });
+
+  it('lets the list grow into the window instead of stopping halfway down', () => {
+    expect(css).toMatch(/\[data-app="pgp"\] #keyring \{[^}]*flex: 1 1 auto/);
+    expect(css, 'the window no longer fills the machine').toMatch(/\.kc-window \{[^}]*flex: 1 1 auto/);
+    // The tube frame is painted over the glass; anything flush to it runs under.
+    const window = /\.kc-window \{([^}]*)\}/.exec(css)![1]!;
+    const padding = Number(/padding:\s*(\d+)px/.exec(window)![1]);
+    expect(padding, 'the window runs under the tube frame').toBeGreaterThan(8);
+  });
+
+  it('lays the source list down rather than keeping it on a phone', () => {
+    const narrow = css.slice(css.indexOf('@media (max-width: 760px)'));
+    expect(narrow).toMatch(/\.kc-window \{ flex-direction: column/);
+    // Block, not flex: as flex siblings the headings wrapped into whatever
+    // gap the previous row of buttons left, so Files sat beside Verify.
+    expect(narrow).toMatch(/\.kc-rail \{[^}]*display: block/);
+  });
+});

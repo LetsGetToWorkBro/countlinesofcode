@@ -243,13 +243,15 @@
    * pgp-page.js: the password half and the key half are one row of
    * operations now, so each file has to know how to put the other's modes
    * away even though it cannot open them. */
-  var ALL = ['keys', 'encrypt', 'decrypt', 'sign', 'verify', 'lock', 'unlock'];
+  var ALL = ['keys', 'newkey', 'import', 'encrypt', 'decrypt', 'sign', 'verify', 'lock', 'unlock'];
 
   function switchMode(locking) {
     var showing = locking ? 'lock' : 'unlock';
     ALL.forEach(function (name) {
       $('mode-' + name).classList.toggle('hidden', name !== showing);
-      $('tab-' + name).classList.toggle('is-active', name === showing);
+      var item = $('tab-' + name);
+      item.classList.toggle('is-active', name === showing);
+      item.setAttribute('aria-pressed', name === showing ? 'true' : 'false');
     });
     // Loading early means the meter works before a file is chosen.
     loadEngines().then(updateWordsNote).catch(function () {});

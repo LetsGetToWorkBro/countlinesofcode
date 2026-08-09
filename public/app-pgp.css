@@ -1,19 +1,23 @@
 /* 1999.LOC — the encryption tool's face.
  *
- * PGP 6.0, and specifically PGPtools, which was the shape of that product:
- * not a document window with menus, but a small tray of operations you
- * pressed one of. Encrypt, Sign, Encrypt & Sign, Decrypt/Verify, Wipe. You
- * chose the verb first and the program showed you the form for it.
+ * KEYCHAIN ACCESS, translated into the chrome this site is built out of.
  *
- * This page already had that shape and was drawing it as a tab strip, which
- * said "these are seven views of one document" when what it means is "these
- * are seven things you can do". So the strip is drawn as PGP's tray: raised
- * square-ish buttons in a sunken well, the chosen one pressed in.
+ * The shape is Apple's and has barely changed in twenty years: a source list
+ * down the left in labelled sections, the thing you picked filling the right,
+ * a detail pane sitting over the item list rather than beside it, and a status
+ * bar along the bottom saying how many there are. That is a genuinely good
+ * layout for a keyring — it separates "which pile am I looking in" from "which
+ * item is it" from "what do I do to it" — and it is what this program was
+ * missing. Before this it was a row of seven buttons above one very long
+ * scroll, with the keyring drawn as a stack of rows each carrying four of its
+ * own buttons.
  *
- * The colours are PGP 6's: grey chrome, and the one accent a deep blue-teal
- * that the lock and key icons were drawn in. It is used on the pressed
- * operation and nowhere else, because a program that shouts everywhere is a
- * program you stop reading.
+ * What is NOT borrowed is Aqua. Pinstripes and lozenges on one page of a site
+ * built out of grey bevels would read as a mistake rather than a homage, and
+ * the same layout was drawn in platinum on Mac OS 9 anyway. So: Keychain's
+ * bones, this site's materials. Grey chrome, inset wells, Tahoma, and the one
+ * accent this page already had — the deep blue-teal PGP 6 drew its lock and
+ * key icons in — used for the selected row and nowhere else.
  *
  * Scoped entirely under [data-app="pgp"] like every other app face here.
  */
@@ -59,14 +63,125 @@
 [data-app="pgp"] .app-body p,
 [data-app="pgp"] .app-body label,
 [data-app="pgp"] .app-body li,
-[data-app="pgp"] .app-body legend {
+[data-app="pgp"] .app-body legend,
+[data-app="pgp"] .app-body dt,
+[data-app="pgp"] .app-body dd {
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 11px;
 }
-[data-app="pgp"] .app-body > p,
-[data-app="pgp"] .app-body > div > p { max-width: 620px; }
 
-/* What to do on this screen. */
+/* ---- THE WINDOW ----------------------------------------------------
+   Source list, then content. The 9px of padding is not decoration: the
+   machine paints an 8px black tube frame over the top of the glass, and
+   anything flush to the edge runs underneath it. */
+[data-app="pgp"] .kc-window {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  padding: 9px;
+  background: #d4d0c8;
+}
+
+[data-app="pgp"] .kc-rail {
+  flex: 0 0 auto;
+  width: 172px;
+  min-height: 0;
+  overflow: auto;
+  margin: 0 9px 0 0;
+  padding: 4px 0 8px 0;
+  background: #e4e2dc;
+  border: 2px inset #d4d0c8;
+}
+
+/* The section headings. Keychain has two — Keychains and Category — and
+   they are the reason its sidebar reads as a structure rather than a list
+   of ten things. Here they say which of three jobs you are doing. */
+[data-app="pgp"] .kc-rail-head {
+  margin: 9px 0 3px 0;
+  padding: 0 9px;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  /* 5.4:1 on the rail. A heading you cannot read is a heading that is not
+     there, and this one is small enough already. */
+  color: #4f4b45;
+}
+[data-app="pgp"] .kc-rail-head:first-child { margin-top: 2px; }
+
+[data-app="pgp"] .kc-rail-group {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+/* An entry in the source list: no bevel, full width, selected by being
+   filled rather than by being pressed. The button reset further down has
+   to exclude these or they come out as seven raised keys again. */
+[data-app="pgp"] .kc-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  border: 1px solid transparent;
+  background: none;
+  color: #000000;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 5px 9px;
+  /* A thumb needs a target. */
+  min-height: 27px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+/* The small mark Keychain puts at the left of every row. Drawn rather than
+   fetched, because this site does not fetch pictures. */
+[data-app="pgp"] .kc-item::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6a665e;
+}
+[data-app="pgp"] .kc-item:hover:not(.is-active) { background: #d6d4ce; }
+[data-app="pgp"] .kc-item.is-active {
+  background: #12525c;
+  color: #ffffff;
+  font-weight: bold;
+}
+[data-app="pgp"] .kc-item.is-active::before { background: #ffffff; }
+[data-app="pgp"] .kc-item:focus-visible { outline: 1px dotted #000000; outline-offset: -3px; }
+
+[data-app="pgp"] .kc-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* A screen, filling what is left of the window so the item list can grow
+   into it and the status bar can sit at the bottom — which is the whole
+   reason a keychain window looks settled and a stack of forms does not.
+   The rule below it says what a hidden screen does, in its own voice: the
+   class that puts one away is a single class and would otherwise lose to
+   the display here. This file has lost that race before. */
+[data-app="pgp"] .kc-pane {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+[data-app="pgp"] .kc-pane.hidden { display: none; }
+[data-app="pgp"] .kc-pane > p:not(.kc-foot):not(.pgp-hint) { max-width: 640px; }
+[data-app="pgp"] .kc-pane > h3:first-of-type { margin-top: 0; }
+
+/* What to do on this screen — one per screen, so it can say something. */
 [data-app="pgp"] .app-body .pgp-hint {
   display: flex;
   align-items: flex-start;
@@ -97,50 +212,154 @@
   text-align: center;
 }
 
-/* ---- PGPTOOLS: the tray of operations ------------------------------
-   The whole identity. A sunken well with raised buttons in it, and the
-   one you are in pressed down and coloured. Not a tab strip: these are
-   seven verbs, not seven views. */
-[data-app="pgp"] .tool-tabs {
+/* ---- THE DETAIL PANE ----------------------------------------------
+   Keychain's, almost exactly: a large icon on the left and a two-column
+   grid of label-and-value on the right, labels right-aligned against the
+   values so the colons line up. It sits above the list, not beside it,
+   which is what lets the list stay full width. */
+[data-app="pgp"] .kc-detail {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-  margin: 0 0 12px 0;
-  padding: 6px;
-  background: #c8c4bc;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 0 8px 0;
+  padding: 10px 12px;
+  min-height: 58px;
+  background: #f2f1ec;
   border: 2px inset #d4d0c8;
 }
-[data-app="pgp"] .tool-tabs-sep {
-  align-self: stretch;
-  width: 0;
-  margin: 0 6px;
-  border-left: 1px solid #808080;
-  border-right: 1px solid #ffffff;
+[data-app="pgp"] .kc-detail-icon { flex: 0 0 auto; }
+[data-app="pgp"] .kc-detail-body { min-width: 0; }
+[data-app="pgp"] .kc-detail-name {
+  display: block;
+  margin: 0 0 5px 0;
+  font-size: 12px;
+  font-weight: bold;
+  color: #000000;
+  overflow-wrap: anywhere;
 }
-[data-app="pgp"] .tool-tabs .sheet-tab {
-  border: 2px outset #d4d0c8;
+[data-app="pgp"] .kc-facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 10px;
+  margin: 0;
+}
+[data-app="pgp"] .kc-facts dt {
+  text-align: right;
+  color: #4a463f;
+  white-space: nowrap;
+}
+[data-app="pgp"] .kc-facts dd {
+  margin: 0;
+  color: #000000;
+  overflow-wrap: anywhere;
+}
+[data-app="pgp"] .kc-facts .kc-mono {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+}
+/* Nothing picked yet. */
+[data-app="pgp"] .kc-detail-empty { color: #4a463f; font-style: italic; }
+
+/* ---- THE ITEM LIST -------------------------------------------------
+   Column headings that stay put while the rows scroll under them, which
+   is the other half of why a keychain window reads as a list of records
+   rather than a wall of controls. */
+[data-app="pgp"] #keyring {
+  flex: 1 1 auto;
+  min-height: 120px;
+  background: #ffffff;
+  border: 2px inset #d4d0c8;
+  overflow: auto;
+}
+[data-app="pgp"] .kc-list {
+  width: 100%;
+  border-collapse: collapse;
+  border: none;
+  font-size: 11px;
+}
+[data-app="pgp"] .kc-list thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   background: #d4d0c8;
   color: #000000;
-  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
-  font-size: 11px;
-  font-weight: bold;
-  padding: 6px 14px;
-  cursor: pointer;
-  touch-action: manipulation;
-  /* A thumb needs a target, and this row is the first thing anybody presses. */
-  min-height: 30px;
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  font-weight: normal;
+  text-align: left;
+  white-space: nowrap;
+  padding: 3px 7px;
 }
-[data-app="pgp"] .tool-tabs .sheet-tab:hover:not(.is-active) { background: #dcd8d0; }
-[data-app="pgp"] .tool-tabs .sheet-tab.is-active {
-  border-style: inset;
+[data-app="pgp"] .kc-list td {
+  background: #ffffff;
+  color: #000000;
+  border: none;
+  border-bottom: 1px solid #e8e6e0;
+  padding: 4px 7px;
+  vertical-align: top;
+}
+/* Keychain stripes its rows, and a fingerprint is read across a row. */
+[data-app="pgp"] .kc-list tbody tr:nth-child(even) td { background: #f7f6f2; }
+[data-app="pgp"] .kc-list tbody tr:hover td { background: #e8f0f1; }
+[data-app="pgp"] .kc-list tbody tr.is-selected td,
+[data-app="pgp"] .kc-list tbody tr.is-selected:hover td {
   background: #12525c;
   color: #ffffff;
 }
-[data-app="pgp"] .tool-tabs .sheet-tab:focus-visible { outline: 1px dotted #000000; outline-offset: -4px; }
+[data-app="pgp"] .kc-list tbody tr { cursor: pointer; }
+[data-app="pgp"] .kc-list tbody tr:focus-visible { outline: 1px dotted #000000; outline-offset: -2px; }
+[data-app="pgp"] .kc-list .kc-print {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  white-space: nowrap;
+}
+[data-app="pgp"] .kc-list .kc-name { overflow-wrap: anywhere; }
+/* A private key is the one row where it matters which row it is. */
+[data-app="pgp"] .kc-list .kc-mine { font-weight: bold; }
+[data-app="pgp"] .kc-empty {
+  margin: 0;
+  padding: 14px 12px;
+  color: #4a463f;
+}
+
+/* ---- THE STATUS BAR ------------------------------------------------
+   Actions on the selected item at the left, how many there are at the
+   right. Every one of these buttons used to be repeated on every row. */
+[data-app="pgp"] .kc-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  margin: 7px 0 0 0;
+  padding: 5px 6px;
+  background: #d4d0c8;
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+}
+/* Deliberately sets no display: the script puts this away with .hidden,
+   which is one class and would lose to anything here. Both ends stated. */
+[data-app="pgp"] .kc-foot-all {
+  margin-left: 14px;
+  padding-left: 14px;
+  border-left: 1px solid #a8a498;
+}
+[data-app="pgp"] .kc-foot-all.hidden { display: none; }
+[data-app="pgp"] .kc-foot-count {
+  margin-left: auto;
+  padding-left: 10px;
+  color: #3d3a34;
+}
+/* 4.5:1 on the chrome. A disabled control is exempt from the contrast rule
+   and this one still carries meaning — greyed out is how the window says
+   "not to this key" — so it is stated at a weight that can be read. */
+[data-app="pgp"] .kc-foot button[disabled] {
+  color: #5c5952;
+  cursor: default;
+}
 
 /* ---- controls ------------------------------------------------------ */
-[data-app="pgp"] button:not(.notice-x):not(.menu-title):not(.win-min):not(.sheet-tab) {
+[data-app="pgp"] button:not(.notice-x):not(.menu-title):not(.win-min):not(.kc-item) {
   border: 2px outset #d4d0c8;
   background: #d4d0c8;
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
@@ -148,9 +367,10 @@
   padding: 3px 12px;
   cursor: pointer;
 }
-[data-app="pgp"] button:not(.notice-x):not(.sheet-tab):active { border-style: inset; }
+[data-app="pgp"] button:not(.notice-x):not(.kc-item):active { border-style: inset; }
 [data-app="pgp"] select,
 [data-app="pgp"] input[type="text"],
+[data-app="pgp"] input[type="email"],
 [data-app="pgp"] input[type="password"],
 [data-app="pgp"] textarea {
   border: 2px inset #d4d0c8;
@@ -158,6 +378,57 @@
   font-family: "Courier New", Courier, monospace;
   font-size: 12px;
 }
+/* A form row. Keychain lines its labels up on a right edge and starts every
+   control at the same x, which is most of why a settings pane reads as
+   designed rather than as a stack of paragraphs that happen to have labels.
+   Anything after the control — a strength meter, a note — follows it. */
+[data-app="pgp"] .kc-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 8px;
+  margin: 0 0 7px 0;
+}
+[data-app="pgp"] .kc-field > label.inline:first-child {
+  flex: 0 0 84px;
+  text-align: right;
+  color: #3d3a34;
+}
+/* A meter or a verdict that belongs to the box above it. Given its own line
+   on purpose rather than left to wrap into one: wrapped, it started at the
+   label column and read as a sentence about nothing. */
+[data-app="pgp"] .kc-field > #key-meter,
+[data-app="pgp"] .kc-field > #match {
+  flex: 1 1 100%;
+  margin-left: 92px;
+}
+/* Secondary actions line up under the control they fill in, not under the
+   labels. */
+[data-app="pgp"] .kc-under { margin-left: 92px; }
+
+@media (max-width: 520px) {
+  /* Too little width to give 84px of it to a label. */
+  [data-app="pgp"] .kc-field > label.inline:first-child { flex: 0 0 auto; text-align: left; }
+  [data-app="pgp"] .kc-field > #key-meter,
+  [data-app="pgp"] .kc-field > #match,
+  [data-app="pgp"] .kc-under { margin-left: 0; }
+}
+
+/* A label and the control it belongs to, kept on the same line as each
+   other when the row wraps. Without this the second dropdown on the Encrypt
+   screen wrapped away from "and sign it as" and read as a stray control. */
+[data-app="pgp"] .kc-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+/* A user ID plus a key ID is a long option, and a select sized to its
+   longest option pushes everything after it off the line. */
+[data-app="pgp"] #enc-to,
+[data-app="pgp"] #enc-as,
+[data-app="pgp"] #dec-key,
+[data-app="pgp"] #sign-key { max-width: min(100%, 340px); }
+
 [data-app="pgp"] fieldset {
   border: 2px groove #ffffff;
   margin: 0 0 10px 0;
@@ -167,7 +438,7 @@
 
 /* A key block is armour text, and armour text is monospaced or it is
    unreadable. The sunken well is where PGP put one. */
-[data-app="pgp"] textarea { min-height: 90px; width: 100%; box-sizing: border-box; }
+[data-app="pgp"] textarea { min-height: 90px; width: 100%; max-width: 680px; box-sizing: border-box; }
 [data-app="pgp"] code, [data-app="pgp"] pre {
   font-family: "Courier New", Courier, monospace;
 }
@@ -175,12 +446,8 @@
   background: #ffffff;
   border: 2px inset #d4d0c8;
   color: #000000;
+  max-width: 680px;
 }
-
-/* The keyring list, as the report a key manager showed. */
-[data-app="pgp"] #keyring table,
-[data-app="pgp"] .keyring table { width: 100%; font-size: 11px; }
-[data-app="pgp"] #keyring th[scope="row"] { background: #ece9d8; }
 
 [data-app="pgp"] .notice-box,
 [data-app="pgp"] .app-body details {
@@ -190,11 +457,54 @@
 }
 [data-app="pgp"] .status { color: #12525c; }
 [data-app="pgp"] .error { color: #a01010; }
+/* Two live regions that are empty most of the time; an empty paragraph in
+   the flow is a gap nobody can account for. */
+[data-app="pgp"] .kc-main > .status:empty,
+[data-app="pgp"] .kc-main > .error:empty { display: none; }
 
-/* ---- responsive ---------------------------------------------------- */
-@media (max-width: 700px) {
-  [data-app="pgp"] .app-body { padding: 6px; }
-  [data-app="pgp"] .tool-tabs { padding: 4px; gap: 3px; }
-  [data-app="pgp"] .tool-tabs .sheet-tab { padding: 6px 10px; }
+/* ---- responsive ----------------------------------------------------
+   A source list needs width, and a phone has none to give. Below this the
+   rail lies down: the section headings stay, so the grouping survives,
+   and the entries become the raised keys they were before, which is what
+   a thumb wants anyway. */
+@media (max-width: 760px) {
+  [data-app="pgp"] .kc-window { flex-direction: column; padding: 8px; }
+  [data-app="pgp"] .kc-rail {
+    width: auto;
+    flex: 0 0 auto;
+    display: block;
+    margin: 0 0 8px 0;
+    padding: 6px;
+    overflow: visible;
+  }
+  /* Each heading owns its own line. As flex siblings the headings wrapped
+     into whatever gap the previous row of buttons left, so Files sat beside
+     Verify and looked like a label for it. */
+  [data-app="pgp"] .kc-rail-head { margin: 8px 0 4px 0; padding: 0 2px; }
+  [data-app="pgp"] .kc-rail-head:first-child { margin-top: 0; }
+  [data-app="pgp"] .kc-rail-group { flex-direction: row; flex-wrap: wrap; gap: 4px; }
+  [data-app="pgp"] .kc-item {
+    width: auto;
+    border: 2px outset #d4d0c8;
+    background: #d4d0c8;
+    padding: 6px 10px;
+    min-height: 30px;
+    font-weight: bold;
+  }
+  [data-app="pgp"] .kc-item::before { display: none; }
+  [data-app="pgp"] .kc-item.is-active { border-style: inset; }
+  [data-app="pgp"] .kc-main { overflow: visible; display: block; }
+  [data-app="pgp"] .kc-pane { display: block; }
+  [data-app="pgp"] .kc-pane.hidden { display: none; }
+  [data-app="pgp"] #keyring { max-height: 50vh; }
   [data-app="pgp"] .app-window > .pgp-menu span { padding: 2px 5px; }
+}
+
+/* The fingerprint is what you compare, so it is the last column to go. */
+@media (max-width: 620px) {
+  [data-app="pgp"] .kc-list .kc-col-added { display: none; }
+  [data-app="pgp"] .kc-detail { flex-direction: column; gap: 8px; }
+}
+@media (max-width: 460px) {
+  [data-app="pgp"] .kc-list .kc-col-print { display: none; }
 }

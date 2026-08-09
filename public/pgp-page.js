@@ -68,31 +68,212 @@
     };
   }
 
+  /* ------------------------------------------------------------- the list
+
+     Keychain's arrangement: a list of records with column headings, one of
+     them selected, a detail pane over it describing that one, and the
+     actions in a status bar underneath. What was here before put four
+     buttons on every row, which is fine with two keys and a wall with ten,
+     and left nowhere to say anything about a key beyond its fingerprint.
+
+     A key is identified by fingerprint AND kind, because the public and
+     private halves of one key share a fingerprint and are two rows. */
+  var selected = null;
+  var detailToken = 0;
+
+  var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+                'August', 'September', 'October', 'November', 'December'];
+
+  function longDate(value) {
+    var d = value instanceof Date ? value : new Date(Number(value) || 0);
+    if (!value || isNaN(d.getTime())) return 'unknown';
+    return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+  }
+  function shortDate(value) {
+    var d = new Date(Number(value) || 0);
+    if (!value || isNaN(d.getTime())) return '';
+    return d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3) + ' ' + d.getFullYear();
+  }
+
+  function isSelected(key) {
+    return !!selected && key.fingerprint === selected.fingerprint && key.kind === selected.kind;
+  }
+  function currentKey() {
+    return selected ? keys.find(isSelected) : undefined;
+  }
+
+  /* Drawn rather than fetched, like every other picture on this site. Brass
+     for a key that is yours, grey for one that is somebody else's, which is
+     the distinction Keychain drew too. */
+  function keyGlyph(kind) {
+    var ink = kind === 'private' ? '#a8761a' : '#6b6760';
+    return '<svg class="kc-detail-icon" width="40" height="40" viewBox="0 0 40 40" ' +
+      'aria-hidden="true" focusable="false">' +
+      '<circle cx="20" cy="11" r="7" fill="none" stroke="' + ink + '" stroke-width="4"/>' +
+      '<path d="M20 18 L20 35" stroke="' + ink + '" stroke-width="4" stroke-linecap="round"/>' +
+      '<path d="M20 26 L28 26" stroke="' + ink + '" stroke-width="4" stroke-linecap="round"/>' +
+      '<path d="M20 31 L26 31" stroke="' + ink + '" stroke-width="3" stroke-linecap="round"/>' +
+      '</svg>';
+  }
+
+  /* What OpenPGP.js calls these and what a person calls them are not the
+     same thing. "eddsaLegacy on ed25519Legacy" is accurate and is also not a
+     sentence anybody should have to read off a detail pane. */
+  var ALGOS = {
+    eddsaLegacy: 'EdDSA', ed25519Legacy: 'Curve25519',
+    ed25519: 'Ed25519', x25519: 'X25519', curve25519: 'Curve25519',
+    ecdh: 'ECDH', ecdsa: 'ECDSA', eddsa: 'EdDSA',
+    rsaEncryptSign: 'RSA', rsaSign: 'RSA', rsaEncrypt: 'RSA',
+    dsa: 'DSA', elgamal: 'ElGamal',
+    nistP256: 'NIST P-256', nistP384: 'NIST P-384', nistP521: 'NIST P-521',
+  };
+
+  function plainAlgorithm(info) {
+    var name = ALGOS[info.algorithm] || info.algorithm || 'unknown';
+    var body = info.bits
+      ? name + ' ' + info.bits
+      : (info.curve ? name + ' on ' + (ALGOS[info.curve] || info.curve) : name);
+    // The page makes a point of the two packet encodings, so a key says
+    // which one it is in rather than leaving "Legacy" hanging off a word.
+    var legacy = /Legacy$/.test(info.algorithm || '') || /Legacy$/.test(info.curve || '');
+    return body + (legacy ? ', in the compatible encoding' : '');
+  }
+
+  /* The order the list is drawn in. Storage order puts a key's two halves
+     wherever they happened to arrive; a keychain window shows them together,
+     with the half that is yours first. */
+  function ordered() {
+    return keys.map(function (key, index) { return { key: key, index: index }; })
+      .sort(function (a, b) {
+        var byName = a.key.name.toLowerCase() < b.key.name.toLowerCase() ? -1
+          : (a.key.name.toLowerCase() > b.key.name.toLowerCase() ? 1 : 0);
+        if (byName) return byName;
+        if (a.key.fingerprint !== b.key.fingerprint) return a.key.fingerprint < b.key.fingerprint ? -1 : 1;
+        if (a.key.kind !== b.key.kind) return a.key.kind === 'private' ? -1 : 1;
+        return 0;
+      });
+  }
+
+  function fact(label, value, cls) {
+    return '<dt>' + esc(label) + '</dt><dd' + (cls ? ' class="' + cls + '"' : '') + '>' + value + '</dd>';
+  }
+
   function renderKeyring() {
-    if (!keys.length) {
-      $('keyring').innerHTML = '<p class="note">No keys yet. Make one below, or import someone else\'s.</p>';
-      fillPickers();
-      return;
+    // A key that was forgotten cannot stay selected, and an empty list with
+    // an enabled Forget button is a trap.
+    if (selected && !currentKey()) selected = null;
+    if (!selected && keys.length) {
+      var first = ordered()[0].key;
+      selected = { fingerprint: first.fingerprint, kind: first.kind };
     }
-    $('keyring').innerHTML = '<div class="key-list">' + keys.map(function (k, i) {
-      return '<div class="key-row' + (k.kind === 'private' ? ' is-private' : '') + '">' +
-        '<span class="key-kind">' + (k.kind === 'private' ? 'yours' : 'public') + '</span>' +
-        '<span class="key-name">' + esc(k.name) + '</span>' +
-        '<span class="key-print">' + esc(kit.formatFingerprint(k.fingerprint)) + '</span>' +
-        '<span class="key-acts">' +
-          '<button type="button" class="small key-copy" data-index="' + i + '">copy</button>' +
-          '<button type="button" class="small key-save" data-index="' + i + '">save</button>' +
-          (hasBothHalves(k.fingerprint)
-            ? '<button type="button" class="small key-pair" data-index="' + i + '">save the pair</button>'
-            : '') +
-          '<button type="button" class="small key-drop" data-index="' + i + '">forget</button>' +
-        '</span>' +
-        '</div>';
-    }).join('') + '</div>';
+
+    $('keyring').innerHTML = keys.length ? listMarkup() :
+      '<p class="kc-empty">No keys yet. Make one, or import somebody else\'s.</p>';
     $('keyring-actions').classList.toggle('hidden', keys.length === 0);
+    $('key-count').textContent = keys.length
+      ? keys.length + (keys.length === 1 ? ' key' : ' keys')
+      : 'no keys';
+    renderDetail();
     fillPickers();
   }
 
+  function listMarkup() {
+    return '<table class="kc-list"><thead><tr>' +
+      '<th scope="col">Name</th>' +
+      '<th scope="col">Kind</th>' +
+      '<th scope="col" class="kc-col-print">Key ID</th>' +
+      '<th scope="col" class="kc-col-added">Added</th>' +
+      '</tr></thead><tbody>' +
+      ordered().map(function (entry) {
+        var k = entry.key;
+        return '<tr class="kc-row' + (isSelected(k) ? ' is-selected' : '') + '" data-index="' + entry.index +
+            '" tabindex="0" aria-selected="' + (isSelected(k) ? 'true' : 'false') + '">' +
+          '<td class="kc-name' + (k.kind === 'private' ? ' kc-mine' : '') + '">' + esc(k.name) + '</td>' +
+          '<td>' + (k.kind === 'private' ? 'private key' : 'public key') + '</td>' +
+          '<td class="kc-print kc-col-print">' + esc(kit.shortId(k.fingerprint)) + '</td>' +
+          '<td class="kc-col-added">' + esc(shortDate(k.added)) + '</td>' +
+          '</tr>';
+      }).join('') +
+      '</tbody></table>';
+  }
+
+  function renderDetail() {
+    var key = currentKey();
+    var box = $('key-detail');
+    detailToken += 1;
+
+    if (!key) {
+      box.innerHTML = '<span class="kc-detail-empty">' +
+        (keys.length ? 'Pick a key from the list to read it.' : 'Nothing to show until there is a key.') +
+        '</span>';
+      setActions(null, false);
+      return;
+    }
+
+    var pair = hasBothHalves(key.fingerprint);
+    box.innerHTML =
+      keyGlyph(key.kind) +
+      '<span class="kc-detail-body">' +
+        '<span class="kc-detail-name">' + esc(key.name) + '</span>' +
+        '<dl class="kc-facts">' +
+          fact('Kind', key.kind === 'private'
+            ? 'private key, yours' + (pair ? ', with its public half' : '')
+            : 'public key, somebody else&#39;s') +
+          fact('Fingerprint', esc(kit.formatFingerprint(key.fingerprint)), 'kc-mono') +
+          fact('Added', esc(longDate(key.added))) +
+        '</dl>' +
+      '</span>';
+    setActions(key, pair);
+    describeLater(key, detailToken);
+  }
+
+  /* What the key itself says, as opposed to what was recorded when it was
+     stored. Read from the packets, and appended when it arrives, because a
+     detail pane that waits for a parse is a detail pane that flickers. */
+  function describeLater(key, token) {
+    if (!pgp) return;
+    pgp.readKey({ armoredKey: key.armored }).then(function (parsed) {
+      return parsed.getExpirationTime()
+        .catch(function () { return null; })
+        .then(function (until) { return { parsed: parsed, until: until }; });
+    }).then(function (read) {
+      // Somebody clicked another row while that was parsing.
+      if (token !== detailToken) return;
+      var facts = $('key-detail').querySelector('.kc-facts');
+      if (!facts) return;
+
+      var until = read.until;
+      var expiry = until === Infinity || until === null ? 'never'
+        : (until instanceof Date ? longDate(until) : 'unknown');
+
+      facts.insertAdjacentHTML('beforeend',
+        fact('Algorithm', esc(plainAlgorithm(read.parsed.getAlgorithmInfo()))) +
+        fact('Created', esc(longDate(read.parsed.getCreationTime()))) +
+        fact('Expires', esc(expiry)));
+    }).catch(function () {
+      /* A key that will not parse is still a key you can save or forget, so
+         the detail pane keeps what it has rather than reporting a failure
+         about a row you only clicked on. */
+    });
+  }
+
+  function setActions(key, pair) {
+    $('key-copy').disabled = !key;
+    $('key-save').disabled = !key;
+    $('key-pair').disabled = !key || !pair;
+    $('key-drop').disabled = !key;
+  }
+
+  function select(index) {
+    var key = keys[index];
+    if (!key) return;
+    selected = { fingerprint: key.fingerprint, kind: key.kind };
+    renderKeyring();
+  }
+
+  /* Whether both halves of one key are here, which is what makes "Save the
+     pair" a thing you can do. The two halves share a fingerprint and are two
+     separate rows. */
   function hasBothHalves(fingerprint) {
     var kinds = keys.filter(function (k) { return k.fingerprint === fingerprint; })
       .map(function (k) { return k.kind; });
@@ -254,6 +435,8 @@
             (kept
               ? 'Kept in this browser, locked with your passphrase. Save the pair somewhere else too; a browser is not a backup.'
               : '<strong>Downloaded, and not kept here</strong>, because it has no passphrase. That file is the only copy.');
+          selected = { fingerprint: about.fingerprint, kind: kept ? 'private' : 'public' };
+          show('keys');
           $('key-name').value = '';
           $('key-email').value = '';
           $('key-pass').value = '';
@@ -356,7 +539,8 @@
         (relocked ? ' <strong>' + relocked + ' had no passphrase and was locked with the one you gave</strong> before being stored.' : '') +
         (failures.length ? ' ' + failures.length + ' block in that file could not be read: ' + esc(failures[0]) : '');
       $('import-pass').value = '';
-      renderKeyring();
+      selected = { fingerprint: done[0].fingerprint, kind: 'public' };
+      show('keys');
     });
   }
 
@@ -608,56 +792,100 @@
 
   // ---------------------------------------------------------------- wiring
 
-  /* The whole row, and the half of it this file owns.
+  /* The source list, and the part of it this file owns.
    *
    * Encrypting to a key and locking with a password used to be two tabs with
    * a second row of tabs inside each, which is two programs in one window
-   * pretending to be one. They are one row of operations now, and this file
-   * still only implements five of them, so it has to know the names of the
+   * pretending to be one. They are one rail of screens now, and this file
+   * still only implements seven of them, so it has to know the names of the
    * other two in order to put them away. lock-page.js does the same in
-   * reverse. Neither can show a mode the other owns; both can hide one. */
-  var ALL = ['keys', 'encrypt', 'decrypt', 'sign', 'verify', 'lock', 'unlock'];
-  var OWN = ['keys', 'encrypt', 'decrypt', 'sign', 'verify'];
-  OWN.forEach(function (name) {
-    $('tab-' + name).addEventListener('click', function () {
-      clearError();
-      ALL.forEach(function (other) {
-        $('mode-' + other).classList.toggle('hidden', other !== name);
-        $('tab-' + other).classList.toggle('is-active', other === name);
-      });
-      ready().then(renderKeyring).catch(function (err) { fail(err.message); });
+   * reverse. Neither can show a screen the other owns; both can hide one. */
+  var ALL = ['keys', 'newkey', 'import', 'encrypt', 'decrypt', 'sign', 'verify', 'lock', 'unlock'];
+  var OWN = ['keys', 'newkey', 'import', 'encrypt', 'decrypt', 'sign', 'verify'];
+
+  function show(name) {
+    clearError();
+    ALL.forEach(function (other) {
+      $('mode-' + other).classList.toggle('hidden', other !== name);
+      var item = $('tab-' + other);
+      item.classList.toggle('is-active', other === name);
+      item.setAttribute('aria-pressed', other === name ? 'true' : 'false');
     });
+    ready().then(renderKeyring).catch(function (err) { fail(err.message); });
+  }
+
+  OWN.forEach(function (name) {
+    $('tab-' + name).addEventListener('click', function () { show(name); });
   });
 
+  /* Clicking a row picks it; the arrow keys walk the list, because a list
+     you can only use with a mouse is a list half the people cannot use. */
   $('keyring').addEventListener('click', function (event) {
-    var button = event.target.closest ? event.target.closest('button') : null;
-    if (!button) return;
-    var key = keys[Number(button.dataset.index)];
-    if (!key) return;
+    var row = event.target.closest ? event.target.closest('tr[data-index]') : null;
+    if (row) select(Number(row.dataset.index));
+  });
 
-    if (button.classList.contains('key-copy')) {
-      // Putting a private key on the clipboard means every other page on this
-      // machine that reads it gets the key. Worth one deliberate click.
-      if (key.kind === 'private' &&
-          !confirm('Copy the PRIVATE key "' + key.name + '" to the clipboard?\n\nAnything that reads your clipboard can then take it. Saving it to a file is usually what you want.')) {
-        return;
-      }
-      copy(key.armored, button);
-    } else if (button.classList.contains('key-save')) {
-      download(key.armored, kit.backupName(key.name, key.kind));
-    } else if (button.classList.contains('key-pair')) {
-      var pub = halfOf(key.fingerprint, 'public');
-      var priv = halfOf(key.fingerprint, 'private');
-      download(kit.keyPairArmor(pub.armored, priv.armored), kit.backupName(key.name, 'pair'));
-    } else if (button.classList.contains('key-drop')) {
-      // A private key is the one thing here that cannot be recovered.
-      var warning = key.kind === 'private'
-        ? 'Forget the private key "' + key.name + '"? Anything encrypted to it becomes unreadable unless you have it saved elsewhere.'
-        : 'Forget the public key "' + key.name + '"?';
-      if (!confirm(warning)) return;
-      keys = kit.forgetKey(key.fingerprint, key.kind);
-      renderKeyring();
+  $('keyring').addEventListener('keydown', function (event) {
+    var row = event.target.closest ? event.target.closest('tr[data-index]') : null;
+    if (!row) return;
+    var index = Number(row.dataset.index);
+
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      // Down means the next row you can see, which is not keys[index + 1]
+      // once the list is sorted into pairs.
+      var rows = ordered();
+      var here = rows.findIndex(function (entry) { return entry.index === index; });
+      var step = here + (event.key === 'ArrowDown' ? 1 : -1);
+      if (here === -1 || step < 0 || step >= rows.length) return;
+      var next = rows[step].index;
+      event.preventDefault();
+      select(next);
+      var moved = $('keyring').querySelector('tr[data-index="' + next + '"]');
+      if (moved) moved.focus();
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      select(index);
     }
+  });
+
+  /* The four things you can do to the key you picked. They were on every row
+     before, which is the same four buttons N times over. */
+  $('key-copy').addEventListener('click', function () {
+    var key = currentKey();
+    if (!key) return;
+    // Putting a private key on the clipboard means every other page on this
+    // machine that reads it gets the key. Worth one deliberate click.
+    if (key.kind === 'private' &&
+        !confirm('Copy the PRIVATE key "' + key.name + '" to the clipboard?\n\nAnything that reads your clipboard can then take it. Saving it to a file is usually what you want.')) {
+      return;
+    }
+    copy(key.armored, $('key-copy'));
+  });
+
+  $('key-save').addEventListener('click', function () {
+    var key = currentKey();
+    if (key) download(key.armored, kit.backupName(key.name, key.kind));
+  });
+
+  $('key-pair').addEventListener('click', function () {
+    var key = currentKey();
+    if (!key) return;
+    var pub = halfOf(key.fingerprint, 'public');
+    var priv = halfOf(key.fingerprint, 'private');
+    if (pub && priv) download(kit.keyPairArmor(pub.armored, priv.armored), kit.backupName(key.name, 'pair'));
+  });
+
+  $('key-drop').addEventListener('click', function () {
+    var key = currentKey();
+    if (!key) return;
+    // A private key is the one thing here that cannot be recovered.
+    var warning = key.kind === 'private'
+      ? 'Forget the private key "' + key.name + '"? Anything encrypted to it becomes unreadable unless you have it saved elsewhere.'
+      : 'Forget the public key "' + key.name + '"?';
+    if (!confirm(warning)) return;
+    keys = kit.forgetKey(key.fingerprint, key.kind);
+    selected = null;
+    renderKeyring();
   });
 
   document.addEventListener('click', function (event) {

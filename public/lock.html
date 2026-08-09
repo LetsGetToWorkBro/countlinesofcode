@@ -19,20 +19,27 @@
 </head>
 <body data-app="pgp">
 <!--
-  EXPECTED LAYOUT (single column, ~680px, left aligned):
+  EXPECTED LAYOUT (the window fills the machine; Keychain Access's shape):
 
-    1999.LOC
-    ------------------------------------------------------------
-    ... | inspect | email | encrypt | delete posts
-    ------------------------------------------------------------
-    PGP
-    ( Messages & keys )  ( Password-lock a file )
-    ------------------------------------------------------------
-    -- PGP --                            -- Password --
-    [ Drop a file here... ]              ( Keys )( Encrypt )...
-    Password [________] [ suggest ]      Ada Lovelace <ada@...>
-    [ Lock it ]  Download report.pdf.gpg [ Make a new key ]
-    ------------------------------------------------------------
+    +--------------------------------------------------------------+
+    | PGP                                                        _  |
+    | File   Keys   Help                                            |
+    +------------------+-------------------------------------------+
+    | Keyring          | (i) what to do on this screen              |
+    |  All keys        | +---+  Ada Lovelace <ada@example.com>      |
+    |  Make a key      | |key|  Kind:        private key, yours     |
+    |  Import a key    | +---+  Fingerprint: 714C 1706 20AB ...     |
+    |                  +-------------------------------------------+
+    | Messages         | Name          | Kind   | Fingerprint | Add |
+    |  Encrypt         |---------------+--------+-------------+-----|
+    |  Decrypt         | Ada Lovelace  | yours  | 714C ...    | ... |
+    |  Sign            | Bob           | public | 91AF ...    | ... |
+    |  Verify          +-------------------------------------------+
+    |                  | [Copy][Save][Save the pair][Forget] 2 keys |
+    | Files            |                                           |
+    |  Lock ...        |                                           |
+    |  Unlock a file   |                                           |
+    +------------------+-------------------------------------------+
 -->
 <div id="page">
 
@@ -88,7 +95,12 @@
   </span></span>
 <span class="menu"><button type="button" class="menu-title">Keys</button>
   <span class="menu-drop">
-    <button type="button" data-cmd="tab-keys">Keyring</button>
+    <button type="button" data-cmd="tab-keys">All keys</button>
+    <button type="button" data-cmd="tab-newkey">Make a key</button>
+    <button type="button" data-cmd="tab-import">Import a key</button>
+    <span class="menu-rule"></span>
+    <button type="button" data-cmd="backup-all">Back up everything</button>
+    <button type="button" data-cmd="forget-all">Forget every key</button>
   </span></span>
 <span class="menu"><button type="button" class="menu-title">Help</button>
   <span class="menu-drop">
@@ -96,66 +108,85 @@
   </span></span>
 </p>
 <div class="app-body">
-<p class="pgp-hint"><span class="pgp-hint-mark">i</span>
-Pick an operation from the row below. Encrypt and Sign need a key, which Keys makes; Lock with a password needs nothing but the password. Your private key never leaves this tab.</p>
 
+<!-- KEYCHAIN ACCESS, translated.
+     A source list down the left, the thing you picked on the right, and a
+     status bar along the bottom of the list saying how many there are. The
+     operations used to be a row of seven buttons above a very long scroll;
+     they are a rail now, and the keyring is a real list with a detail pane
+     over it rather than a stack of rows each carrying four buttons. -->
+<div class="kc-window">
 
-<p class="note">
-PGP is what journalists and security teams have used for thirty years to send
-things nobody else can read. People paste their private keys into unknown
-websites to do it; this page has no server to paste them to.
-</p>
+<div class="kc-rail" role="group" aria-label="Pick what to do">
+  <p class="kc-rail-head" id="rail-keyring">Keyring</p>
+  <p class="kc-rail-group" role="group" aria-labelledby="rail-keyring">
+    <button type="button" id="tab-keys" class="kc-item is-active" aria-pressed="true">All keys</button>
+    <button type="button" id="tab-newkey" class="kc-item" aria-pressed="false">Make a key</button>
+    <button type="button" id="tab-import" class="kc-item" aria-pressed="false">Import a key</button>
+  </p>
+  <p class="kc-rail-head" id="rail-messages">Messages</p>
+  <p class="kc-rail-group" role="group" aria-labelledby="rail-messages">
+    <button type="button" id="tab-encrypt" class="kc-item" aria-pressed="false">Encrypt</button>
+    <button type="button" id="tab-decrypt" class="kc-item" aria-pressed="false">Decrypt</button>
+    <button type="button" id="tab-sign" class="kc-item" aria-pressed="false">Sign</button>
+    <button type="button" id="tab-verify" class="kc-item" aria-pressed="false">Verify</button>
+  </p>
+  <p class="kc-rail-head" id="rail-files">Files</p>
+  <p class="kc-rail-group" role="group" aria-labelledby="rail-files">
+    <button type="button" id="tab-lock" class="kc-item" aria-pressed="false">Lock with a password</button>
+    <button type="button" id="tab-unlock" class="kc-item" aria-pressed="false">Unlock a file</button>
+  </p>
+</div>
 
-
-<!-- One row of operations, which is what PGP's own toolbox was: a window
-     with Encrypt, Sign, Decrypt/Verify in it, not two programs behind
-     tabs with a second set of tabs inside each. -->
-<p class="tool-tabs" role="tablist" aria-label="What to do">
-<button type="button" id="tab-keys" class="sheet-tab is-active">Keys</button>
-<button type="button" id="tab-encrypt" class="sheet-tab">Encrypt</button>
-<button type="button" id="tab-decrypt" class="sheet-tab">Decrypt</button>
-<button type="button" id="tab-sign" class="sheet-tab">Sign</button>
-<button type="button" id="tab-verify" class="sheet-tab">Verify</button>
-<span class="tool-tabs-sep"></span>
-<button type="button" id="tab-lock" class="sheet-tab">Lock with a password</button>
-<button type="button" id="tab-unlock" class="sheet-tab">Unlock</button>
-</p>
+<div class="kc-main">
 
 <p id="error" class="error" role="alert"></p>
 <p id="status" class="status" role="status" aria-live="polite"></p>
 
-<hr>
-
 <!-- ------------------------------------------------------------ keys -->
-<div id="mode-keys">
-  <h3>Your keys</h3>
-  <p class="note">
-    Kept in this browser only, in its local storage. Not synced, not uploaded,
-    and gone if you clear your browsing data, so export anything you want
-    to keep.
-  </p>
-  <div id="keyring"></div>
-  <p id="keyring-actions" class="hidden">
-    <button type="button" id="backup-all" class="small">Back up everything to one file</button>
-    <button type="button" id="forget-all" class="small">Forget every key</button>
-  </p>
+<div id="mode-keys" class="kc-pane" role="region" aria-labelledby="tab-keys">
+  <p class="pgp-hint"><span class="pgp-hint-mark">i</span>
+  Every key this browser is holding. Click one to read it; the buttons under
+  the list act on the one you picked. Nothing here is uploaded and nothing is
+  synced, so export anything you would mind losing.</p>
 
-  <hr>
-  <h3>Make a new key pair</h3>
-  <p>
+  <div id="key-detail" class="kc-detail"></div>
+  <div id="keyring"></div>
+
+  <p class="kc-foot">
+    <button type="button" id="key-copy" class="small" disabled>Copy</button>
+    <button type="button" id="key-save" class="small" disabled>Save</button>
+    <button type="button" id="key-pair" class="small" disabled>Save the pair</button>
+    <button type="button" id="key-drop" class="small" disabled>Forget</button>
+    <span id="keyring-actions" class="kc-foot-all hidden">
+      <button type="button" id="backup-all" class="small">Back up everything</button>
+      <button type="button" id="forget-all" class="small">Forget every key</button>
+    </span>
+    <span id="key-count" class="kc-foot-count">no keys</span>
+  </p>
+</div>
+
+<!-- -------------------------------------------------------- make a key -->
+<div id="mode-newkey" class="kc-pane hidden" role="region" aria-labelledby="tab-newkey">
+  <p class="pgp-hint"><span class="pgp-hint-mark">i</span>
+  A name or an email so the key can be told apart from others, a passphrase,
+  then Make the key. The private half is generated in this tab and only kept
+  here if it has a passphrase on it.</p>
+
+    <p class="kc-field">
     <label for="key-name" class="inline">Name</label>
     <input type="text" id="key-name" size="24" placeholder="Ada Lovelace" spellcheck="false">
   </p>
-  <p>
+  <p class="kc-field">
     <label for="key-email" class="inline">Email</label>
     <input type="email" id="key-email" size="24" placeholder="ada@example.com" spellcheck="false">
   </p>
-  <p>
+  <p class="kc-field">
     <label for="key-pass" class="inline">Passphrase</label>
     <input type="password" id="key-pass" size="28" autocomplete="new-password" spellcheck="false">
     <span id="key-meter" class="note"></span>
   </p>
-  <p class="note">
+  <p class="note kc-under">
     <button type="button" id="key-suggest" class="small">Suggest one</button>
     <span id="key-suggested"></span>
   </p>
@@ -170,21 +201,21 @@ websites to do it; this page has no server to paste them to.
   </p>
   </details>
 
-  <p>
+  <p class="kc-field">
     <label for="key-type" class="inline">Kind</label>
     <select id="key-type">
       <option value="curve25519">Curve25519: small, fast, and what to use</option>
       <option value="rsa4096">RSA 4096: older, slower, accepted everywhere</option>
     </select>
   </p>
-  <p>
+  <p class="kc-field">
     <label for="key-profile" class="inline">Format</label>
     <select id="key-profile">
       <option value="compatible">Compatible: everything can read it</option>
       <option value="modern">Modern (RFC 9580): stronger, newer software only</option>
     </select>
   </p>
-  <p>
+  <p class="kc-field">
     <label for="key-expiry" class="inline">Expires</label>
     <select id="key-expiry">
       <option value="0">never</option>
@@ -201,16 +232,16 @@ websites to do it; this page has no server to paste them to.
     <button type="button" id="generate">Make the key</button>
     <span id="generate-note" class="note"></span>
   </p>
+</div>
 
-  <hr>
-  <h3>Import a key</h3>
-  <p class="note">
-    Anyone's public key to send them things, or your own private key to use it
-    here. A file holding both halves, or a whole exported keyring, is read in
-    one go.
-  </p>
+<!-- ---------------------------------------------------------- import -->
+<div id="mode-import" class="kc-pane hidden" role="region" aria-labelledby="tab-import">
+  <p class="pgp-hint"><span class="pgp-hint-mark">i</span>
+  Anyone's public key so you can write to them, or your own private key so you
+  can use it here. A file holding both halves, or a whole exported keyring,
+  is read in one go.</p>
 
-  <div id="import-drop" class="dropzone" tabindex="0" role="button" aria-label="Open a key file">
+    <div id="import-drop" class="dropzone" tabindex="0" role="button" aria-label="Open a key file">
     <strong>Drop a key file here, or click to choose</strong>
     <span>.asc, .gpg, .pgp or .key, read in this tab and never uploaded</span>
     <input type="file" id="import-file" accept=".asc,.gpg,.pgp,.key,.txt" multiple hidden>
@@ -218,7 +249,7 @@ websites to do it; this page has no server to paste them to.
 
   <p class="note">Or paste it:</p>
   <p><textarea id="import-text" rows="6" spellcheck="false" placeholder="-----BEGIN PGP PUBLIC KEY BLOCK-----"></textarea></p>
-  <p>
+  <p class="kc-field">
     <label for="import-pass" class="inline">Passphrase</label>
     <input type="password" id="import-pass" size="28" autocomplete="new-password" spellcheck="false">
     <span class="note">Only needed if the private key you are importing has none. It will be locked with this before it is stored.</span>
@@ -227,16 +258,19 @@ websites to do it; this page has no server to paste them to.
 </div>
 
 <!-- --------------------------------------------------------- encrypt -->
-<div id="mode-encrypt" class="hidden">
-  <h3>Encrypt</h3>
-  <p>
+<div id="mode-encrypt" class="kc-pane hidden" role="region" aria-labelledby="tab-encrypt">
+  <p class="pgp-hint"><span class="pgp-hint-mark">i</span>
+  Pick whose key it is for, type the message or choose a file, and press
+  Encrypt. Only their private key opens what comes out.</p>
+
+    <p class="kc-field">
     <label for="enc-to" class="inline">To</label>
     <select id="enc-to"></select>
-    <label class="inline"><input type="checkbox" id="enc-sign"> and sign it as</label>
-    <select id="enc-as"></select>
+    <span class="kc-inline"><label class="inline"><input type="checkbox" id="enc-sign"> and sign it as</label>
+    <select id="enc-as"></select></span>
   </p>
   <p><textarea id="enc-text" rows="7" spellcheck="false" placeholder="Type the message here, or choose a file below."></textarea></p>
-  <p>
+  <p class="kc-field">
     <label for="enc-file" class="inline">Or a file</label>
     <input type="file" id="enc-file">
   </p>
@@ -245,16 +279,19 @@ websites to do it; this page has no server to paste them to.
 </div>
 
 <!-- --------------------------------------------------------- decrypt -->
-<div id="mode-decrypt" class="hidden">
-  <h3>Decrypt</h3>
-  <p>
+<div id="mode-decrypt" class="kc-pane hidden" role="region" aria-labelledby="tab-decrypt">
+  <p class="pgp-hint"><span class="pgp-hint-mark">i</span>
+  Paste the message or choose the file, pick the key it was sent to, and give
+  that key's passphrase.</p>
+
+    <p class="kc-field">
     <label for="dec-key" class="inline">With</label>
     <select id="dec-key"></select>
-    <label for="dec-pass" class="inline">Passphrase</label>
-    <input type="password" id="dec-pass" size="18" autocomplete="off">
+    <span class="kc-inline"><label for="dec-pass" class="inline">Passphrase</label>
+    <input type="password" id="dec-pass" size="18" autocomplete="off"></span>
   </p>
   <p><textarea id="dec-text" rows="7" spellcheck="false" placeholder="-----BEGIN PGP MESSAGE-----"></textarea></p>
-  <p>
+  <p class="kc-field">
     <label for="dec-file" class="inline">Or a file</label>
     <input type="file" id="dec-file" accept=".gpg,.pgp,.asc">
   </p>
@@ -263,17 +300,16 @@ websites to do it; this page has no server to paste them to.
 </div>
 
 <!-- ------------------------------------------------------------ sign -->
-<div id="mode-sign" class="hidden">
-  <h3>Sign</h3>
-  <p class="note">
-    A signature proves the text came from you and has not been altered. It does
-    not hide anything: the message stays readable.
-  </p>
-  <p>
+<div id="mode-sign" class="kc-pane hidden" role="region" aria-labelledby="tab-sign">
+  <p class="pgp-hint"><span class="pgp-hint-mark">i</span>
+  A signature proves the text came from you and has not been altered. It does
+  not hide anything: the message stays readable to everyone.</p>
+
+    <p class="kc-field">
     <label for="sign-key" class="inline">As</label>
     <select id="sign-key"></select>
-    <label for="sign-pass" class="inline">Passphrase</label>
-    <input type="password" id="sign-pass" size="18" autocomplete="off">
+    <span class="kc-inline"><label for="sign-pass" class="inline">Passphrase</label>
+    <input type="password" id="sign-pass" size="18" autocomplete="off"></span>
   </p>
   <p><textarea id="sign-text" rows="7" spellcheck="false" placeholder="What you want to sign."></textarea></p>
   <p><button type="button" id="sign">Sign it</button></p>
@@ -281,41 +317,23 @@ websites to do it; this page has no server to paste them to.
 </div>
 
 <!-- ---------------------------------------------------------- verify -->
-<div id="mode-verify" class="hidden">
-  <h3>Verify</h3>
-  <p class="note">Paste a signed message. The signer's public key has to be in your keys above.</p>
-  <p><textarea id="verify-text" rows="8" spellcheck="false" placeholder="-----BEGIN PGP SIGNED MESSAGE-----"></textarea></p>
+<div id="mode-verify" class="kc-pane hidden" role="region" aria-labelledby="tab-verify">
+  <p class="pgp-hint"><span class="pgp-hint-mark">i</span>
+  Paste a signed message. The signer's public key has to be in your keyring
+  already, or there is nothing to check it against.</p>
+
+    <p><textarea id="verify-text" rows="8" spellcheck="false" placeholder="-----BEGIN PGP SIGNED MESSAGE-----"></textarea></p>
   <p><button type="button" id="verify">Check the signature</button></p>
   <div id="verify-output"></div>
 </div>
 
+<!-- ------------------------------------------------------------ lock -->
+<div id="mode-lock" class="kc-pane hidden" role="region" aria-labelledby="tab-lock">
+  <p class="pgp-hint"><span class="pgp-hint-mark">i</span>
+  No keys involved on this screen: a password locks the file and the same
+  password opens it. What comes out is standard OpenPGP, so
+  <code>gpg -d</code> can read it.</p>
 
-
-<!-- ============================== PASSWORD ============================== -->
-
-<p class="note">
-Every other &ldquo;encrypt a file online&rdquo; service asks you to upload the
-private thing, and the password, to their machine. This one has no endpoint;
-turn off your wifi after it loads and it still works.
-</p>
-
-<details class="notice-box">
-<summary><strong>It writes a standard file, not a format of our own.</strong></summary>
-<p class="note">
-The obvious way to build this is our own container: a header, a salt, a
-block of ciphertext. It would work, and it would be a trap: the person you send
-the file to could only open it by coming back to this page, and if this page is
-gone in five years so is their file.
-</p>
-<p class="note">
-So the output is OpenPGP, the format <code>gpg</code> has written since 1997.
-Anyone can open it with <code>gpg -d yourfile.gpg</code>, or with Kleopatra on
-Windows or GPG Suite on a Mac, whether or not they have ever heard of this site.
-Nothing here is a lock only we hold the key to.
-</p>
-</details>
-
-<div id="mode-lock" class="hidden">
   <h3>1. Choose a file</h3>
 
   <div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Choose a file to encrypt">
@@ -328,19 +346,19 @@ Nothing here is a lock only we hold the key to.
 
   <h3>2. Choose a password</h3>
 
-  <p>
+  <p class="kc-field">
     <label for="password" class="inline">Password</label>
     <input type="password" id="password" size="34" autocomplete="new-password" spellcheck="false">
     <button type="button" id="show" class="small">show</button>
   </p>
-  <p>
+  <p class="kc-field">
     <label for="confirm" class="inline">Again</label>
     <input type="password" id="confirm" size="34" autocomplete="new-password" spellcheck="false">
     <span id="match" class="note"></span>
   </p>
   <p id="meter" class="note"></p>
 
-  <p class="note">
+  <p class="note kc-under">
     <button type="button" id="suggest" class="small">Suggest a passphrase</button>
     <label for="words" class="inline">of</label>
     <select id="words">
@@ -363,6 +381,22 @@ Nothing here is a lock only we hold the key to.
   </p>
   </details>
 
+  <details class="notice-box">
+  <summary><strong>It writes a standard file, not a format of our own.</strong></summary>
+  <p class="note">
+  The obvious way to build this is our own container: a header, a salt, a
+  block of ciphertext. It would work, and it would be a trap: the person you send
+  the file to could only open it by coming back to this page, and if this page is
+  gone in five years so is their file.
+  </p>
+  <p class="note">
+  So the output is OpenPGP, the format <code>gpg</code> has written since 1997.
+  Anyone can open it with <code>gpg -d yourfile.gpg</code>, or with Kleopatra on
+  Windows or GPG Suite on a Mac, whether or not they have ever heard of this site.
+  Nothing here is a lock only we hold the key to.
+  </p>
+  </details>
+
   <h3>3. Lock it</h3>
   <p>
     <button type="button" id="lock">Lock the file</button>
@@ -374,7 +408,12 @@ Nothing here is a lock only we hold the key to.
   <div id="lock-output"></div>
 </div>
 
-<div id="mode-unlock" class="hidden">
+<!-- ---------------------------------------------------------- unlock -->
+<div id="mode-unlock" class="kc-pane hidden" role="region" aria-labelledby="tab-unlock">
+  <p class="pgp-hint"><span class="pgp-hint-mark">i</span>
+  Choose the locked file and give the password it was locked with. It opens in
+  this tab, whether this page locked it or <code>gpg</code> did.</p>
+
   <h3>1. Choose the locked file</h3>
 
   <div id="undrop" class="dropzone" tabindex="0" role="button" aria-label="Choose a file to decrypt">
@@ -386,7 +425,7 @@ Nothing here is a lock only we hold the key to.
   <p id="unchosen" class="note"></p>
 
   <h3>2. The password</h3>
-  <p>
+  <p class="kc-field">
     <label for="unpassword" class="inline">Password</label>
     <input type="password" id="unpassword" size="34" autocomplete="off" spellcheck="false">
     <button type="button" id="unshow" class="small">show</button>
@@ -399,16 +438,25 @@ Nothing here is a lock only we hold the key to.
   <div id="unlock-output"></div>
 </div>
 
-
-
+</div>
+</div>
 
 
 <!-- What this program has to say for itself. Hidden here and shown by
      firstrun.js as a dialog on the first visit, and from Help after that. -->
 <div id="first-run" hidden>
 
-<section data-step="One program, seven operations">
-<p><strong>Encrypt a message or a file to someone\u2019s key, or lock a file with a password.</strong> Both write the same OpenPGP; nothing is uploaded.</p>\n<p class="note">
+<section data-step="One program, nine screens">
+<p class="note">
+PGP is what journalists and security teams have used for thirty years to send
+things nobody else can read. People paste their private keys into unknown
+websites to do it; this page has no server to paste them to. Every other
+&ldquo;encrypt a file online&rdquo; service asks you to upload the private thing,
+and the password, to their machine. Turn off your wifi after this page loads
+and it still works.
+</p>
+<p><strong>Encrypt a message or a file to someone&rsquo;s key, or lock a file with a password.</strong> Both write the same OpenPGP; nothing is uploaded.</p>
+<p class="note">
 This is real OpenPGP, done properly, in your browser. But a browser tab is not a
 hardware token and this page is not <a href="https://gnupg.org/">GnuPG</a>. If
 you are protecting a source, a disclosure, or anything where being wrong has
@@ -439,10 +487,11 @@ any of it works without handing your key to a stranger.
   <li><strong>Take your keys with you.</strong> Any key saves out as a <code>.asc</code>, a pair saves as one file with the public half first, and the whole keyring saves in one go. Import works the other way: paste a key, or open a file, and a file holding several keys imports all of them rather than the first. Nothing here is a place your keys have to live.</li>
   <li><strong>What it does not do:</strong> keyservers, the web of trust, revocation certificates, subkey editing, and encrypting to more than one recipient at a time. An expiry can be set when a key is made but not changed afterwards. Those are real PGP features and this is deliberately the small end of it.</li>
   <li><strong>It downloads about 390&nbsp;KB</strong> the first time you open this tab: <a href="https://github.com/openpgpjs/openpgpjs">OpenPGP.js</a>, LGPL, served unmodified from this domain. The one library here that exists because writing it ourselves would be reckless.</li>
-</ul>\n<ul class="plain">
+</ul>
+<ul class="plain">
   <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. Neither the file nor the password leaves the tab, and there is nowhere for them to go.</li>
   <li><strong>The output is OpenPGP, symmetric mode.</strong> The same thing <code>gpg --symmetric</code> produces: your password is stretched into a key, a random session key encrypts the data, and the result is a file any OpenPGP implementation can read. AES-256, and a file that has been tampered with fails to open rather than decrypting into something subtly wrong.</li>
-  <li><strong>It is the older format, and that is the choice.</strong> This tab used to say &ldquo;an authenticated mode&rdquo;, which was not accurate and has been corrected. What it writes is AES-256 in CFB with a modification-detection code appended, and your password stretched through 16,777,216 rounds of SHA-256. Tampering is caught either way, but the check happens after decrypting rather than as part of it. OpenPGP has had genuine authenticated encryption since RFC 9580 in 2024, along with Argon2 in place of that SHA-256 loop, and both are better. Neither is written here, because a great deal of installed software cannot read them yet and a file the recipient cannot open is not a stronger file. The <a href="#pgp">PGP tab</a> offers the newer format as a deliberate choice, where you know who is opening it.</li>
+  <li><strong>It is the older format, and that is the choice.</strong> This tab used to say &ldquo;an authenticated mode&rdquo;, which was not accurate and has been corrected. What it writes is AES-256 in CFB with a modification-detection code appended, and your password stretched through 16,777,216 rounds of SHA-256. Tampering is caught either way, but the check happens after decrypting rather than as part of it. OpenPGP has had genuine authenticated encryption since RFC 9580 in 2024, along with Argon2 in place of that SHA-256 loop, and both are better. Neither is written here, because a great deal of installed software cannot read them yet and a file the recipient cannot open is not a stronger file. Make a key offers the newer format as a deliberate choice, where you know who is opening it.</li>
   <li><strong>The password is the whole of the security.</strong> There is no key file, no second factor and no server-side rate limit, so an attacker with the file can guess at it as fast as their hardware allows. That is why the meter above is pessimistic and why a suggested passphrase is worth taking. Eight words from the list is 64 bits, which nobody is guessing. The list is published on this page, so those are its real bits, not the flattering number you get by counting the letters.</li>
   <li><strong>There is no recovery.</strong> Nothing here stores the password, so nothing here can help you if it is forgotten. This is not a policy that could be relaxed; it is what the encryption <em>is</em>.</li>
   <li><strong>The filename is kept inside the file, not on it.</strong> Locking <code>report.pdf</code> gives <code>report.pdf.gpg</code>, and unlocking gives <code>report.pdf</code> back even if somebody renamed the locked file on the way. The name is <em>inside</em> the encryption, so a person who intercepts it does not learn what you sent.</li>
