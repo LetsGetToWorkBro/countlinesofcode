@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audio Tools in Your Browser: Cut, Convert, Boost and Join MP3s | 1999.LOC</title>
+<meta name="description" content="An audio cutter and converter that runs entirely in your browser: trim a song to a ringtone, convert to MP3 or WAV, boost or normalise the volume, fade in and out, join files. Nothing is uploaded, and the MP3 encoder is LAME.">
+<link rel="canonical" href="https://1999loc.com/audio.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Audio Tools in Your Browser: Cut, Convert, Boost and Join | 1999.LOC">
+<meta property="og:description" content="Trim, convert, boost, fade and join audio without uploading it anywhere. MP3 out via LAME, WAV out for editors. The file never leaves your browser.">
+<meta property="og:url" content="https://1999loc.com/audio.html">
+<meta property="og:site_name" content="1999.LOC">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/app-audio.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body data-app="audio">
+<!--
+  EXPECTED LAYOUT (the window fills the machine; Winamp's shape):
+
+    +----------------------------------------------------------------+
+    | AUDIO TOOLS                                                  _ |
+    | File   Playback   Edit   Help                                  |
+    +----------------------------------------------------------------+
+    | (i) what to do on this screen                                   |
+    |  +----------------------------------------------------------+  |
+    |  |  0:42        |mmmm.  spectrum  .mmmm|   128 kbps  44 khz |  |
+    |  |  song-name.mp3 (3:25) ***  scrolling  ***      MONO STEREO|  |
+    |  |  [|<] [>] [||] [[]] [>|]  ==========o============  vol -=  |  |
+    |  +----------------------------------------------------------+  |
+    |  2. CUT AND SHAPE   start [====o------] 0:00  [use playhead]   |
+    |                     end   [---------o=] 3:25  [use playhead]   |
+    |                     volume / normalise / fades / speed         |
+    |  3. SAVE IT         ( MP3 128|192|320 ) ( WAV )  [ Save ]      |
+    |  4. PLAYLIST        1. song.mp3        3:25  [up][down][x]     |
+    |                     2. voicemail.m4a   0:12  ...   [ Join ]    |
+    +----------------------------------------------------------------+
+-->
+<div id="page">
+
+<h1><a href="/">1999.LOC</a></h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<span class="nav-group"><span class="nav-label">crypto</span>
+<a href="/wallet.html">wallet</a>
+&middot;
+<a href="/swap.html">swap</a>
+&middot;
+<a href="/wallet.html#addresses">paper wallet</a></span>
+<span class="nav-group"><span class="nav-label">privacy</span>
+<a href="/lock.html">pgp</a>
+&middot;
+<a href="/inspect.html">inspect file</a>
+&middot;
+<a href="https://delete.1999loc.com/">delete posts</a>
+&middot;
+<a href="/email.html">temporary email</a></span>
+<span class="nav-group"><span class="nav-label">documents</span>
+<a href="/sign.html">pdf editor</a>
+&middot;
+<a href="/convert.html">pdf &lt;=&gt; word</a>
+&middot;
+<a href="/sheet.html">excel &lt;=&gt; csv</a>
+&middot;
+<a href="/zip.html">zip</a></span>
+<span class="nav-group"><span class="nav-label">media</span>
+<a href="/image.html">image tools</a>
+&middot;
+<a href="/video.html">video tools</a>
+&middot;
+<strong>audio tools</strong></span>
+<span class="nav-group"><span class="nav-label">code</span>
+<a href="/code.html">count code</a>
+&middot;
+<a href="/golf">golf</a></span>
+</p>
+<hr>
+
+<div class="desk-shell">
+<div class="app-window" id="app">
+<div class="client-title"><h2>Audio tools</h2><a class="win-min" href="#" aria-label="Minimise Audio tools">_</a></div>
+<p class="wa-menu menubar" role="menubar">
+<span class="menu"><button type="button" class="menu-title">File</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="drop">Open...</button>
+    <button type="button" data-cmd="save">Save</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Playback</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="play">Play</button>
+    <button type="button" data-cmd="pause">Pause</button>
+    <button type="button" data-cmd="stop">Stop</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Edit</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="start-here">Start here</button>
+    <button type="button" data-cmd="end-here">End here</button>
+    <span class="menu-rule"></span>
+    <button type="button" data-cmd="reset-edits">Reset the edits</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Help</button>
+  <span class="menu-drop">
+    <button type="button" data-help>What this program does</button>
+  </span></span>
+</p>
+<div class="app-body">
+<p class="wa-hint"><span class="wa-hint-mark">i</span>
+Open a song or a recording, cut the piece you want, shape the volume, and save
+it as MP3 or WAV. Everything happens in this tab; nothing is uploaded.</p>
+
+<p class="note">
+Every online audio cutter and converter uploads your file to somebody's
+server first. This one has no endpoint: turn off your wifi after it loads and
+it still works.
+</p>
+
+<h3>1. Open a file</h3>
+
+<div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open an audio file">
+  <strong>Drop audio here, or click to choose</strong>
+  <span>MP3, WAV, OGG, FLAC or M4A. Several at once go to the playlist. Nothing is uploaded</span>
+  <input type="file" id="file-input" accept="audio/*,.mp3,.wav,.ogg,.oga,.opus,.flac,.m4a,.aac,.webm" multiple hidden>
+</div>
+
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<p id="error" class="error" role="alert"></p>
+
+<div id="loaded" class="hidden">
+
+<!-- THE DECK. Winamp's main window: the time in green LCD digits, the
+     spectrum, the scrolling title, the kbps/kHz readouts, the mono and
+     stereo lamps, and the transport under it with the gold seek bar. -->
+<div class="wa-main">
+  <div class="wa-display">
+    <button type="button" id="time-lcd" class="wa-time" aria-label="Time elapsed; press to show time remaining">0:00</button>
+    <canvas id="spectrum" class="wa-vis" width="152" height="44" aria-hidden="true"></canvas>
+    <div class="wa-read">
+      <span><span id="wa-kbps">0</span> kbps</span>
+      <span><span id="wa-khz">0</span> khz</span>
+      <span class="wa-lamps"><span id="lamp-mono" class="wa-lamp">mono</span><span id="lamp-stereo" class="wa-lamp">stereo</span></span>
+    </div>
+  </div>
+
+  <div class="wa-titlebox" aria-hidden="true"><span id="wa-title" class="wa-titletext">no file loaded</span></div>
+
+  <div class="wa-transport">
+    <button type="button" id="prev-track" class="wa-btn" aria-label="Previous in the playlist"><svg viewBox="0 0 12 10" width="12" height="10"><path d="M2 1v8h1.6V1zM10 1L4.4 5 10 9z" fill="currentColor"/></svg></button>
+    <button type="button" id="play" class="wa-btn" aria-label="Play"><svg viewBox="0 0 12 10" width="12" height="10"><path d="M2.5 0.5l8 4.5-8 4.5z" fill="currentColor"/></svg></button>
+    <button type="button" id="pause" class="wa-btn" aria-label="Pause"><svg viewBox="0 0 12 10" width="12" height="10"><path d="M2.5 1h2.6v8H2.5zM6.9 1h2.6v8H6.9z" fill="currentColor"/></svg></button>
+    <button type="button" id="stop" class="wa-btn" aria-label="Stop"><svg viewBox="0 0 12 10" width="12" height="10"><path d="M2 1h8v8H2z" fill="currentColor"/></svg></button>
+    <button type="button" id="next-track" class="wa-btn" aria-label="Next in the playlist"><svg viewBox="0 0 12 10" width="12" height="10"><path d="M8.4 1v8H10V1zM2 1l5.6 4L2 9z" fill="currentColor"/></svg></button>
+    <input type="range" id="seek" class="wa-seek" min="0" max="1000" value="0" step="1" aria-label="Seek">
+    <label for="volume" class="wa-vol-label">vol</label>
+    <input type="range" id="volume" class="wa-volume" min="0" max="100" value="90" step="1">
+  </div>
+</div>
+
+<hr>
+<h3>2. Cut and shape it</h3>
+
+<div class="trim-row">
+  <label for="start-range">Start</label>
+  <input type="range" id="start-range" min="0" max="1000" value="0" step="1">
+  <input type="text" id="start-time" class="time-field" value="0:00" size="8" inputmode="numeric" aria-label="Start time">
+  <button type="button" id="start-here" class="small">use playhead</button>
+</div>
+<div class="trim-row">
+  <label for="end-range">End</label>
+  <input type="range" id="end-range" min="0" max="1000" value="1000" step="1">
+  <input type="text" id="end-time" class="time-field" value="0:00" size="8" inputmode="numeric" aria-label="End time">
+  <button type="button" id="end-here" class="small">use playhead</button>
+</div>
+<p class="note">
+  <button type="button" id="play-clip" class="small">Play the selection</button>
+  <button type="button" id="reset-edits" class="small">Reset the edits</button>
+  <span id="trim-summary"></span>
+</p>
+
+<p class="wa-field">
+  <label for="gain" class="inline">Volume</label>
+  <input type="range" id="gain" min="-12" max="12" value="0" step="1">
+  <span id="gain-value" class="wa-lcd-small">+0 dB</span>
+  <label class="inline"><input type="checkbox" id="normalize"> normalise instead</label>
+  <span class="note">as loud as it can be without clipping</span>
+</p>
+<p class="wa-field">
+  <label for="fade-in" class="inline">Fade in</label>
+  <input type="number" id="fade-in" min="0" max="30" step="0.5" value="0" class="narrow"> s
+  <label for="fade-out" class="inline">Fade out</label>
+  <input type="number" id="fade-out" min="0" max="30" step="0.5" value="0" class="narrow"> s
+</p>
+<p class="wa-field">
+  <label for="speed" class="inline">Speed</label>
+  <select id="speed">
+    <option value="0.5">0.5x</option>
+    <option value="0.75">0.75x</option>
+    <option value="1" selected>1x</option>
+    <option value="1.25">1.25x</option>
+    <option value="1.5">1.5x</option>
+    <option value="2">2x</option>
+  </select>
+  <span class="note">changes the pitch with it, the way tape does</span>
+</p>
+
+<hr>
+<h3>3. Save it</h3>
+
+<p class="wa-field">
+  <label for="format" class="inline">Format</label>
+  <select id="format">
+    <option value="mp3" selected>MP3: plays everywhere</option>
+    <option value="wav">WAV: lossless, for editing</option>
+  </select>
+  <span id="bitrate-box"><label for="bitrate" class="inline">at</label>
+  <select id="bitrate">
+    <option value="128">128 kbps: small, fine for speech</option>
+    <option value="192" selected>192 kbps: the sensible default</option>
+    <option value="320">320 kbps: as good as MP3 gets</option>
+  </select></span>
+</p>
+<p>
+  <button type="button" id="save">Save the file</button>
+  <span id="save-note" class="note"></span>
+</p>
+<p id="progress" class="note" role="status" aria-live="polite"></p>
+<div id="output"></div>
+
+<hr>
+<h3>4. The playlist</h3>
+<p class="note">
+Open more files and they line up here. Join stitches them into one file, in
+this order, each one whole. Click a row to put it in the player.
+</p>
+<div id="playlist" class="wa-playlist"></div>
+<p>
+  <button type="button" id="add-files" class="small">Add files</button>
+  <button type="button" id="join" class="small">Join everything into one file</button>
+  <span id="join-note" class="note"></span>
+</p>
+
+</div>
+
+<!-- What this program has to say for itself. Hidden here and shown by
+     firstrun.js as a dialog on the first visit, and from Help after that. -->
+<div id="first-run" hidden>
+
+<section data-step="Cut, convert, boost and join">
+<p><strong>A song or a recording in; a trimmed, louder, faded or joined one out, as MP3 or WAV.</strong></p>
+<p class="note">
+The face is drawn after the player everyone actually had in 1999, and the jobs
+are the ones people still search for every day: cut a song down to a ringtone,
+convert a recording to MP3, make a quiet file louder, fade the ends, stitch
+two recordings together. Each one is a couple of clicks, and the before and
+after never leave this tab.
+</p>
+</section>
+
+<section data-step="Is this actually private?">
+<h3>Is this actually private?</h3>
+<div id="proof"></div>
+</section>
+
+<section data-step="The honest notes">
+<ul class="plain">
+  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The file is decoded in this tab and the result is written back out of it.</li>
+  <li><strong>Decoding is the browser's, so what opens depends on it.</strong> MP3, WAV, OGG, FLAC and M4A open everywhere current; WMA and AIFF mostly do not, and the error will say what the file was. Everything is decoded at the machine's own rate, usually 44.1 or 48 kHz, which is also what gets written back out.</li>
+  <li><strong>The MP3 encoder is LAME.</strong> The real one, as the lamejs port, about 165&nbsp;KB served from this domain the first time you save, and pinned byte-for-byte by a test in the repository. Writing our own psychoacoustic model would be exactly the kind of reckless this site exists to avoid.</li>
+  <li><strong>WAV out is lossless; MP3 out is not, and re-encoding an MP3 costs a generation.</strong> Trimming an MP3 here decodes it and encodes it again, so the result is a copy of a copy. At 192 kbps and above almost nobody can hear it, but if you plan to edit further, save WAV and encode once at the end.</li>
+  <li><strong>No Opus or AAC out, on purpose.</strong> The browser can only record those in real time, so a thirty-minute file would take thirty minutes to save. A tool that quietly did that would be wasting your afternoon to look modern; MP3 and WAV cover what people actually come for.</li>
+  <li><strong>Normalise is peak, not loudness.</strong> It scales the file so its loudest sample sits just under full scale. Proper loudness matching (LUFS) is a different, heavier measurement, and calling a peak scale that would be a lie. Peak is still what most people reaching for the word want: as loud as it goes without clipping.</li>
+  <li><strong>Speed changes pitch.</strong> 1.5x here is a tape played fast: shorter and higher. Stretching time while keeping pitch is real signal surgery with real artefacts, and this page does not pretend to it.</li>
+  <li><strong>The join takes each file whole,</strong> in playlist order, resampled to one rate, with a mono file lent to both sides of a stereo one. The cut-and-shape settings apply to the single file in the player, not to the join.</li>
+  <li><strong>Whole files sit decoded in memory.</strong> Decoded audio is about 20&nbsp;MB a minute in stereo, so songs are nothing and a three-hour recording is real memory. If a tab dies on a huge file, that is where it went.</li>
+  <li><strong>Tags do not survive.</strong> A decoded buffer has no idea what album it came from, so the output carries no ID3 tags. What you keep is the sound.</li>
+  <li><strong>The spectrum is decoration with a pedigree.</strong> It is a real analyser on the playing audio, drawn the way the original drew it, and it does nothing to the file. With animations reduced in your system settings it stays dark.</li>
+</ul>
+</section>
+
+<section data-step="The rest of the site">
+<p class="footer">
+Hosted on Cloudflare &middot; Made with spite for bloat<br>
+<a href="/video.html">video tools</a> |
+<a href="/image.html">image tools</a> |
+<a href="/inspect.html">inspect a file</a> |
+<a href="/zip.html">open a zip</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+<p class="footer support">
+Nothing here is for sale, nothing is tracked, and there is no account to make.
+If something saved you an hour:<br>
+<code class="xmr">83TQcTwusSQ4WKbPQE5osrF3cR4GWe2zmcNWeozK6BSqHSaeLvjUVe476ouVwLKn1uVwEFcbJQvnme7W6dTV5SB93x45DEy</code><br>
+You can
+<a href="/wallet.html#addresses">check that address here</a> before sending anything.
+</p>
+</section>
+
+</div>
+</div>
+</div>
+</div>
+
+
+<div class="taskbar">
+<a class="start" href="/">Start</a>
+<a class="task-btn is-open" href="#app">Audio tools</a>
+<span class="task-clock">1999</span>
+</div>
+</div>
+<script src="/audio-page.js"></script>
+<script src="/desk.js"></script>
+<script src="/icons.js"></script>
+<script src="/start.js"></script>
+<script src="/menubar.js"></script>
+<script src="/proof-panel.js"></script>
+<script src="/firstrun.js"></script>
+<script src="/dismiss.js"></script>
+</body>
+</html>

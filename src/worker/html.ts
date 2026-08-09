@@ -124,6 +124,7 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
 
   { href: '/image.html', label: 'image tools', id: 'images', group: 'media' },
   { href: '/video.html', label: 'video tools', id: 'video', group: 'media' },
+  { href: '/audio.html', label: 'audio tools', id: 'audio', group: 'media' },
 
   // 'pgp' is the honest name for the whole page: the password lock writes
   // OpenPGP too. Messages & keys lead; password-locking a file is the second

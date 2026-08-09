@@ -62,6 +62,11 @@ export const BUNDLES = [
     banner: '/* 1999.LOC encryption helpers. Built from src/client/pgpkit.ts. Do not edit. The cryptography itself is OpenPGP.js, served from /vendor. */',
   },
   {
+    entry: 'src/client/audiokit.ts',
+    outfile: 'public/audiokit.js',
+    banner: '/* 1999.LOC audio engine. Built from src/client/audiokit.ts. Do not edit. The MP3 encoder itself is LAME (lamejs), served from /vendor. */',
+  },
+  {
     entry: 'src/client/zipkit.ts',
     outfile: 'public/zipkit.js',
     banner: '/* 1999.LOC archive engine. Built from src/client/zipkit.ts. Do not edit. */',

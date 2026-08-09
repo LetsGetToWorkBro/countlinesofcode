@@ -1,9 +1,9 @@
 /**
  * What the vendored libraries are, byte for byte.
  *
- * Five third-party libraries are served from this origin, and between them they
- * are the largest thing here that nobody on this project wrote: pdf.js,
- * OpenPGP.js, mediabunny, Tesseract and libheif. The security policy forbids
+ * The third-party libraries served from this origin are the largest thing
+ * here that nobody on this project wrote: pdf.js, OpenPGP.js, mediabunny,
+ * Tesseract, libheif, libarchive, the Monero worker, and LAME. The security policy forbids
  * loading a script from anywhere else precisely so that these are the only
  * outside code that runs, which makes them the place worth watching.
  *
@@ -19,6 +19,8 @@
 export const VENDORED_HASHES: Record<string, string> = {
   'public/vendor/libarchive/libarchive.wasm':
     '99889a4e7c3d1968303ef334a0ca89efffaf8867eb7cbd7c265602d8e0b50e63',
+  'public/vendor/lame/lame.min.js':
+    '0be202ec162aa3042d5c5c4e6288ad326cff8cec7312c2894a0a91ad2f9aeda1',
   'public/vendor/libheif/libheif-bundle.js':
     '793b36c913689784b2bfba60456fd87c14ed49e2d13f3b4d2611baaf05148f81',
   'public/vendor/mediabunny/mediabunny.min.mjs':

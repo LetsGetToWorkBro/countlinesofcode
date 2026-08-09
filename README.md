@@ -83,6 +83,7 @@ so `/email.html#inbox` opens the right tab; the retired URLs 301 to it).
 | **ZIP** | `/zip.html` | Look inside an archive without unpacking it, extract only what you want, or build one. | your browser |
 | **Unlock a PDF** | `/unlock.html` | Strip "no printing / no copying" from a PDF that opens without a password. | your browser |
 | **Shrink a file** | `/shrink.html` | Make a heavy PDF or an oversized picture smaller. | your browser |
+| **Audio tools** | `/audio.html` | Cut a ringtone, convert to MP3 or WAV, boost or normalise, fade, join. MP3 out is LAME. | your browser |
 
 ### Media
 

@@ -182,3 +182,19 @@ describe('what the pages can actually reach', () => {
     expect(checked, 'no page/global pairs were examined at all').toBeGreaterThan(20);
   });
 });
+
+describe('public/audiokit.js', () => {
+  it('matches a fresh build of src/client/audiokit.ts', async () => {
+    const fresh = await freshBuild('public/audiokit.js');
+    const committed = readFileSync('public/audiokit.js', 'utf8');
+    expect(fresh.length).toBeGreaterThan(1000);
+    expect(committed, 'public/audiokit.js is stale — run `npm run build:client`').toBe(fresh);
+  });
+
+  it('stays a kit, not a second copy of LAME', () => {
+    // The encoder is vendored and hash-pinned separately; the kit bundling
+    // it would mean two copies with one pin.
+    expect(readFileSync('public/audiokit.js').length).toBeLessThan(30 * 1024);
+    expect(readFileSync('public/audiokit.js', 'utf8')).toContain('LOC1999_AUDIO');
+  });
+});

@@ -224,6 +224,7 @@ export const SOURCES: Record<string, string[]> = {
   '/image.html': ['public/image.js'],
   '/unlock.html': ['public/unlock.js', 'public/pdfrender.js', 'src/client/pdfedit.ts'],
   '/shrink.html': ['public/shrink.js', 'public/pdfrender.js', 'src/client/pdfedit.ts'],
+  '/audio.html': ['public/audio-page.js', 'src/client/audiokit.ts', 'public/vendor/lame/lame.min.js'],
   '/code.html': ['public/app.js', 'src/client/bigcount.ts', 'src/lib/counter.ts'],
 };
 

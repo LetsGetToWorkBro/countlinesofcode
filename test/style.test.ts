@@ -604,6 +604,11 @@ describe('an app may have its own face, and it must stay in its own lane', () =>
       const css = readFileSync(`public/${face.file}`, 'utf8');
       const selectors = css
         .replace(/\/\*[\s\S]*?\*\//g, '')
+        /* A @keyframes body holds offsets (from, to, 40%), not selectors:
+         * they cannot reach anything, because the animation only runs where
+         * a scoped rule applies it. Stripped before splitting, or the audio
+         * face's marquee reads as a leak called "to". */
+        .replace(/@keyframes[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, '')
         .split('}')
         .flatMap((block) => block.split('{')[0]!.split(','))
         .map((s2) => s2.trim())
@@ -1655,5 +1660,72 @@ describe('a control that has been pressed looks pressed', () => {
     const rest = 0xcb / 255;   // the top stop of the resting gradient
     expect(lum(rule![1]!), 'the pressed state is barely darker than the resting one')
       .toBeLessThan(rest - 0.15);
+  });
+});
+
+describe('the audio tool is the player it claims to be', () => {
+  /* The deck is the identity: the LCD, the spectrum, the marquee, the
+   * playlist. These pin the parts that would quietly fall off while the
+   * page went on looking plausible. */
+  const html = readFileSync('public/audio.html', 'utf8');
+  const css = readFileSync('public/app-audio.css', 'utf8');
+  const js = readFileSync('public/audio-page.js', 'utf8');
+
+  it('has the deck: time, spectrum, readouts, marquee, transport', () => {
+    for (const piece of ['id="time-lcd"', 'id="spectrum"', 'id="wa-kbps"', 'id="wa-khz"',
+                         'id="lamp-mono"', 'id="lamp-stereo"', 'id="wa-title"', 'id="seek"']) {
+      expect(html, `the deck lost ${piece}`).toContain(piece);
+    }
+    // Five transport keys, drawn, not written as characters.
+    for (const key of ['id="prev-track"', 'id="play"', 'id="pause"', 'id="stop"', 'id="next-track"']) {
+      expect(html).toContain(key);
+    }
+  });
+
+  it('holds the marquee still when the system asks for less motion', () => {
+    expect(css).toMatch(/@keyframes wa-marquee/);
+    const reduced = css.slice(css.indexOf('prefers-reduced-motion'));
+    expect(reduced, 'the marquee ignores reduced motion').toMatch(/\.wa-titletext \{ animation: none; \}/);
+    // And the spectrum is skipped in script for the same setting.
+    expect(js).toMatch(/prefers-reduced-motion/);
+    expect(js).toMatch(/if \(REDUCED\) return;/);
+  });
+
+  it('loads LAME only when an MP3 is actually saved', () => {
+    // 165 KB that a person who only trims WAVs never needs. An eager script
+    // tag would hand it to everyone who opened the page.
+    expect(html, 'lame.min.js is loaded eagerly').not.toContain('vendor/lame');
+    expect(js).toMatch(/readyLame/);
+    expect(js).toMatch(/\/vendor\/lame\/lame\.min\.js/);
+  });
+
+  it('offers exactly the bitrates the engine names', () => {
+    // Two lists that must agree: the <option>s and MP3_BITRATES.
+    const offered = [...html.matchAll(/<option value="(\d+)"[^>]*>\d+ kbps/g)].map((m) => Number(m[1]));
+    expect(offered).toEqual([128, 192, 320]);
+  });
+
+  it('says what failed to open instead of shrugging', () => {
+    expect(js).toMatch(/sniffAudio/);
+    expect(js).toMatch(/WMA file, which browsers do not decode/);
+  });
+
+  it('keeps one lever for loudness at a time', () => {
+    // Normalise decides the level; a gain slider pretending to matter
+    // alongside it would be a lie.
+    expect(js).toMatch(/\$\('gain'\)\.disabled = \$\('normalize'\)\.checked/);
+  });
+
+  it('is the one dark face, and its hint strip stays in daylight', () => {
+    expect(css).toMatch(/\[data-app="audio"\] \.app-body \{[^}]*background: #1d2025/);
+    // The strip is the same yellow every program uses, both ends stated,
+    // past the dark ink rules that would otherwise paint it pale-on-pale.
+    expect(css).toMatch(/\.wa-hint,\n\[data-app="audio"\] \.app-body \.wa-hint \* \{ color: #000000; \}/);
+    expect(css).toMatch(/\.wa-hint \{[\s\S]{0,200}?background: #ffffe1/);
+  });
+
+  it('keeps the playlist a real list with the selection in the blue', () => {
+    expect(js).toMatch(/wa-pl-row/);
+    expect(css).toMatch(/\.wa-pl-row\.is-current \{ background: #0000c6; color: #ffffff; \}/);
   });
 });
