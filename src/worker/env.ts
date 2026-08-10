@@ -8,7 +8,8 @@ export interface Env {
   /** The domain throwaway addresses are handed out on. */
   MAIL_DOMAIN?: string;
   /** Free partner key from changenow.io; unset means the swap page quotes
-   *  Exolix alone. Set with `npx wrangler secret put CHANGENOW_API_KEY`. */
+   *  the two keyless desks, Exolix and Godex. Set with
+   *  `npx wrangler secret put CHANGENOW_API_KEY`. */
   CHANGENOW_API_KEY?: string;
 
   APP_BASE_URL?: string;

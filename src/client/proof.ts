@@ -285,7 +285,7 @@ export const SERVER_PAGES: Record<string, string> = {
   '/board': 'The standings are held on our server.',
   '/email.html': 'The disposable-inbox tab asks this site’s server for mail sent to your address, and the server stores it for an hour. The message-checker tab makes no network request at all; it reads what you paste, in the tab.',
   '/wallet.html': 'The Monero tab talks to a Monero node, and the Bitcoin tab to a block explorer, both through this site’s server, which is what syncing a wallet is; neither ever sees your IP, and no key ever crosses the wire. The address-checker tab makes no network request at all.',
-  '/swap.html': 'Quotes and orders go to the exchange services (Exolix, ChangeNOW) through this site’s server, so they see Cloudflare rather than you. The server stores nothing about a swap; the order id lives in this tab alone.',
+  '/swap.html': 'Quotes and orders go to the exchange services (Exolix, Godex, ChangeNOW) through this site’s server, so they see Cloudflare rather than you. The server stores nothing about a swap; the order id lives in this tab alone.',
 };
 
 export function networkNote(path: string): string | null {

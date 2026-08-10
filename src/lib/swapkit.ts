@@ -39,6 +39,11 @@ export interface Coin {
   network: string;
   /** Network as ChangeNOW names it. */
   cnNetwork: string;
+  /** Network as Godex names it. Godex happens to use the same codes Exolix
+   *  does, but stated rather than shared: two providers agreeing today is not
+   *  a promise, and the coin that breaks the coincidence would send somebody's
+   *  USDT down the wrong chain. */
+  gxNetwork: string;
   family: AddressFamily;
 }
 
@@ -53,13 +58,13 @@ export interface Coin {
  * wanting.
  */
 export const COINS: Coin[] = [
-  { id: 'xmr', ticker: 'xmr', label: 'Monero', network: 'XMR', cnNetwork: 'xmr', family: 'xmr' },
-  { id: 'btc', ticker: 'btc', label: 'Bitcoin', network: 'BTC', cnNetwork: 'btc', family: 'btc' },
-  { id: 'usdttrc', ticker: 'usdt', label: 'USDT (Tron)', network: 'TRX', cnNetwork: 'trx', family: 'tron' },
-  { id: 'usdteth', ticker: 'usdt', label: 'USDT (Ethereum)', network: 'ETH', cnNetwork: 'eth', family: 'evm' },
-  { id: 'eth', ticker: 'eth', label: 'Ethereum', network: 'ETH', cnNetwork: 'eth', family: 'evm' },
-  { id: 'usdc', ticker: 'usdc', label: 'USDC (Ethereum)', network: 'ETH', cnNetwork: 'eth', family: 'evm' },
-  { id: 'usdcsol', ticker: 'usdc', label: 'USDC (Solana)', network: 'SOL', cnNetwork: 'sol', family: 'sol' },
+  { id: 'xmr', ticker: 'xmr', label: 'Monero', network: 'XMR', cnNetwork: 'xmr', gxNetwork: 'XMR', family: 'xmr' },
+  { id: 'btc', ticker: 'btc', label: 'Bitcoin', network: 'BTC', cnNetwork: 'btc', gxNetwork: 'BTC', family: 'btc' },
+  { id: 'usdttrc', ticker: 'usdt', label: 'USDT (Tron)', network: 'TRX', cnNetwork: 'trx', gxNetwork: 'TRX', family: 'tron' },
+  { id: 'usdteth', ticker: 'usdt', label: 'USDT (Ethereum)', network: 'ETH', cnNetwork: 'eth', gxNetwork: 'ETH', family: 'evm' },
+  { id: 'eth', ticker: 'eth', label: 'Ethereum', network: 'ETH', cnNetwork: 'eth', gxNetwork: 'ETH', family: 'evm' },
+  { id: 'usdc', ticker: 'usdc', label: 'USDC (Ethereum)', network: 'ETH', cnNetwork: 'eth', gxNetwork: 'ETH', family: 'evm' },
+  { id: 'usdcsol', ticker: 'usdc', label: 'USDC (Solana)', network: 'SOL', cnNetwork: 'sol', gxNetwork: 'SOL', family: 'sol' },
 ];
 
 export const XMR: Coin = COINS[0]!;
@@ -71,10 +76,11 @@ export function coin(id: string): Coin | null {
   return COINS.find((c) => c.id === id) ?? null;
 }
 
-export type ProviderId = 'exolix' | 'changenow';
+export type ProviderId = 'exolix' | 'changenow' | 'godex';
 
 export const PROVIDERS: { id: ProviderId; label: string; note: string; needsKey: boolean }[] = [
   { id: 'exolix', label: 'Exolix', note: 'exolix.com', needsKey: false },
+  { id: 'godex', label: 'Godex', note: 'godex.io', needsKey: false },
   { id: 'changenow', label: 'ChangeNOW', note: 'changenow.io', needsKey: true },
 ];
 
@@ -413,6 +419,112 @@ export function parseChangeNowStatus(json: unknown): SwapStatus {
   const raw = String(j['status'] ?? 'unknown');
   const status: SwapStatus = { stage: CHANGENOW_STAGES[raw] ?? 'failed', raw };
   if (j['payoutHash']) status.txId = String(j['payoutHash']);
+  return status;
+}
+
+// ---------------------------------------------------------------------------
+// Godex. https://godex.io/api
+// Rates, order creation and status all answer without an API key, which is why
+// it is here: it makes the board a comparison rather than a single price on
+// the machines of visitors who never set a secret.
+
+const GODEX = 'https://api.godex.io/api/v1';
+
+/** Godex takes its rate query as a POST body rather than a query string. */
+export function godexRateBody(pair: Pair, amount: number): { url: string; body: Record<string, unknown> } {
+  return {
+    url: `${GODEX}/info`,
+    body: {
+      from: pair.from.ticker.toUpperCase(),
+      to: pair.to.ticker.toUpperCase(),
+      amount: String(amount),
+      network_from: pair.from.gxNetwork,
+      network_to: pair.to.gxNetwork,
+    },
+  };
+}
+
+export function parseGodexRate(json: unknown): SwapQuote {
+  const j = (json ?? {}) as Record<string, unknown>;
+  const toAmount = Number(j['amount']);
+  const minAmount = Number(j['min_amount']);
+  const maxAmount = Number(j['max_amount']);
+  if (Number.isFinite(toAmount) && toAmount > 0) {
+    const quote: SwapQuote = { provider: 'godex', ok: true, toAmount };
+    if (Number.isFinite(minAmount) && minAmount > 0) quote.minAmount = minAmount;
+    if (Number.isFinite(maxAmount) && maxAmount > 0) quote.maxAmount = maxAmount;
+    return quote;
+  }
+  /* Under the minimum, Godex answers 200 with amount "0" and the minimum
+   * filled in rather than an error, so a zero is a refusal and the reason has
+   * to be built here. */
+  const stated = j['error'] ?? j['message'];
+  const reason = stated ? String(stated) : 'No quote at this amount.';
+  const quote: SwapQuote = { provider: 'godex', ok: false, reason };
+  if (Number.isFinite(minAmount) && minAmount > 0) quote.minAmount = minAmount;
+  if (Number.isFinite(maxAmount) && maxAmount > 0) quote.maxAmount = maxAmount;
+  return quote;
+}
+
+export function godexCreateBody(req: CreateRequest): { url: string; body: Record<string, unknown> } {
+  return {
+    url: `${GODEX}/transaction`,
+    body: {
+      coin_from: req.from.ticker.toUpperCase(),
+      coin_to: req.to.ticker.toUpperCase(),
+      deposit_amount: String(req.amount),
+      withdrawal: req.address,
+      return: req.refund ?? '',
+      coin_from_network: req.from.gxNetwork,
+      coin_to_network: req.to.gxNetwork,
+      /* Both extra-id fields must be *present* or Godex rejects the call with a
+       * validation error, even for chains that have no such thing. Empty is
+       * fine; absent is not. */
+      withdrawal_extra_id: '',
+      return_extra_id: '',
+    },
+  };
+}
+
+export function parseGodexCreate(json: unknown): SwapOrder | null {
+  const j = (json ?? {}) as Record<string, unknown>;
+  const id = String(j['transaction_id'] ?? '');
+  const payinAddress = String(j['deposit'] ?? '');
+  const payinAmount = Number(j['deposit_amount']);
+  const toAmount = Number(j['withdrawal_amount']);
+  if (!id || !payinAddress || !Number.isFinite(payinAmount)) return null;
+  return {
+    provider: 'godex',
+    id,
+    payinAddress,
+    payinExtra: j['deposit_extra_id'] ? String(j['deposit_extra_id']) : null,
+    payinAmount,
+    toAmount: Number.isFinite(toAmount) ? toAmount : 0,
+    payoutAddress: String(j['withdrawal'] ?? ''),
+  };
+}
+
+export function godexStatusUrl(id: string): string {
+  return `${GODEX}/transaction/${encodeURIComponent(id)}`;
+}
+
+const GODEX_STAGES: Record<string, SwapStage> = {
+  wait: 'waiting',
+  confirmation: 'confirming',
+  confirmed: 'confirming',
+  exchanging: 'exchanging',
+  sending: 'sending',
+  success: 'done',
+  overdue: 'expired',
+  refunded: 'refunded',
+  error: 'failed',
+};
+
+export function parseGodexStatus(json: unknown): SwapStatus {
+  const j = (json ?? {}) as Record<string, unknown>;
+  const raw = String(j['status'] ?? 'unknown');
+  const status: SwapStatus = { stage: GODEX_STAGES[raw] ?? 'failed', raw };
+  if (j['hash_out']) status.txId = String(j['hash_out']);
   return status;
 }
 

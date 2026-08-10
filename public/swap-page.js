@@ -24,9 +24,10 @@
     usdc:    { ticker: 'USDC', name: 'USDC (Ethereum)',  hint: '0x..., an Ethereum address' },
     usdcsol: { ticker: 'USDC', name: 'USDC (Solana)',    hint: 'a Solana address' },
   };
-  var PROVIDER_LABELS = { exolix: 'Exolix', changenow: 'ChangeNOW' };
+  var PROVIDER_LABELS = { exolix: 'Exolix', godex: 'Godex', changenow: 'ChangeNOW' };
   var PROVIDER_SITES = {
     exolix: 'https://exolix.com/transaction/',
+    godex: 'https://godex.io/exchange/waiting/',
     changenow: 'https://changenow.io/exchange/txs/',
   };
 

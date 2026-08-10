@@ -31,6 +31,9 @@ import {
   exolixCreateBody,
   exolixRateUrl,
   exolixStatusUrl,
+  godexCreateBody,
+  godexRateBody,
+  godexStatusUrl,
   isPlausibleOrderId,
   parseAmount,
   parseChangeNowCreate,
@@ -40,6 +43,9 @@ import {
   parseExolixCreate,
   parseExolixRate,
   parseExolixStatus,
+  parseGodexCreate,
+  parseGodexRate,
+  parseGodexStatus,
   parsePair,
   STAGE_LINES,
   type SwapQuote,
@@ -106,10 +112,18 @@ async function quote(request: Request, env: Env): Promise<SwapReply> {
   const amount = parseAmount(url.searchParams.get('amount'));
   if (amount === null) return bad(400, 'That amount is not a number this can send.');
 
+  const godexRate = godexRateBody(pair, amount);
   const asks: Promise<SwapQuote>[] = [
     upstream(exolixRateUrl(pair, amount))
       .then((r) => parseExolixRate(r.json))
       .catch(() => ({ provider: 'exolix', ok: false, reason: 'Exolix did not answer.' }) as SwapQuote),
+    upstream(godexRate.url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify(godexRate.body),
+    })
+      .then((r) => parseGodexRate(r.json))
+      .catch(() => ({ provider: 'godex', ok: false, reason: 'Godex did not answer.' }) as SwapQuote),
   ];
 
   const key = env.CHANGENOW_API_KEY;
@@ -153,6 +167,18 @@ async function create(request: Request, env: Env): Promise<SwapReply> {
     return { status: 200, body: order };
   }
 
+  if (req.provider === 'godex') {
+    const { url, body: gxBody } = godexCreateBody(req);
+    const reply = await upstream(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify(gxBody),
+    });
+    const order = parseGodexCreate(reply.json);
+    if (!order) return bad(502, upstreamProblem(reply.json, 'Godex'));
+    return { status: 200, body: order };
+  }
+
   const { url, body: exBody } = exolixCreateBody(req);
   const reply = await upstream(url, {
     method: 'POST',
@@ -182,6 +208,15 @@ async function status(request: Request, env: Env): Promise<SwapReply> {
     const reply = await upstream(exolixStatusUrl(id));
     if (reply.status === 404) return bad(404, 'Exolix does not know that order.');
     return { status: 200, body: narrated(parseExolixStatus(reply.json)) };
+  }
+  if (provider === 'godex') {
+    const reply = await upstream(godexStatusUrl(id));
+    /* An order Godex has never heard of comes back 200 with an empty object
+     * rather than a 404, which would otherwise be narrated as a failed swap.
+     * No status field means no such order. */
+    const body = (reply.json ?? {}) as Record<string, unknown>;
+    if (reply.status === 404 || !body['status']) return bad(404, 'Godex does not know that order.');
+    return { status: 200, body: narrated(parseGodexStatus(reply.json)) };
   }
   if (provider === 'changenow') {
     const key = env.CHANGENOW_API_KEY;

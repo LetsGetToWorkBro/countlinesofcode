@@ -21,6 +21,12 @@ import {
   exolixCreateBody,
   exolixRateUrl,
   exolixStatusUrl,
+  godexCreateBody,
+  godexRateBody,
+  godexStatusUrl,
+  parseGodexCreate,
+  parseGodexRate,
+  parseGodexStatus,
   addressHint,
   addressLooksRight,
   coin,
@@ -397,6 +403,89 @@ describe('ChangeNOW', () => {
     ] as const) {
       expect(parseChangeNowStatus({ status: raw }).stage, raw).toBe(stage);
     }
+  });
+});
+
+describe('Godex', () => {
+  it('asks for a quote with both networks named', () => {
+    // The networks are the whole safety question on a multi-network coin, and
+    // Godex takes its query as a POST body rather than a query string.
+    const { url, body } = godexRateBody({ from: usdtTrc, to: xmr }, 200);
+    expect(url).toBe('https://api.godex.io/api/v1/info');
+    expect(body).toEqual({
+      from: 'USDT', to: 'XMR', amount: '200', network_from: 'TRX', network_to: 'XMR',
+    });
+  });
+
+  it('reads a quote, with the minimum and maximum it came with', () => {
+    const quote = parseGodexRate({ amount: '8.0261', min_amount: '0.0007', max_amount: '10' });
+    expect(quote).toEqual({ provider: 'godex', ok: true, toAmount: 8.0261, minAmount: 0.0007, maxAmount: 10 });
+  });
+
+  it('treats a zero amount as a refusal, because that is how Godex says no', () => {
+    /* Under the minimum it answers 200 with amount "0" and the minimum filled
+     * in, rather than an error. Read as a quote that would be a swap paying
+     * out nothing. */
+    const quote = parseGodexRate({ amount: '0', min_amount: '160' });
+    expect(quote.ok).toBe(false);
+    expect(quote.minAmount).toBe(160);
+    expect(quote.reason).toMatch(/no quote/i);
+    expect(parseGodexRate({ error: 'Pair is disabled' }).reason).toBe('Pair is disabled');
+  });
+
+  it('sends both extra-id fields, which Godex rejects the order without', () => {
+    const { url, body } = godexCreateBody(request({ provider: 'godex', refund: BTC_ADDR }));
+    expect(url).toBe('https://api.godex.io/api/v1/transaction');
+    expect(body['coin_from']).toBe('BTC');
+    expect(body['coin_to']).toBe('XMR');
+    expect(body['coin_from_network']).toBe('BTC');
+    expect(body['coin_to_network']).toBe('XMR');
+    expect(body['withdrawal']).toBe(XMR_ADDR);
+    expect(body['return']).toBe(BTC_ADDR);
+    // Present-but-empty is the requirement; absent is a validation error.
+    expect(body).toHaveProperty('withdrawal_extra_id', '');
+    expect(body).toHaveProperty('return_extra_id', '');
+  });
+
+  it('reads a created order into the common shape', () => {
+    const order = parseGodexCreate({
+      transaction_id: 'c6a79d666b28a7',
+      status: 'wait',
+      deposit: 'bc1qmpxvnu9ewncd274az5arzvdgrzwq0yzselsswn',
+      deposit_amount: '0.05',
+      withdrawal: XMR_ADDR,
+      withdrawal_amount: '8.02612525',
+      deposit_extra_id: null,
+    });
+    expect(order).toEqual({
+      provider: 'godex',
+      id: 'c6a79d666b28a7',
+      payinAddress: 'bc1qmpxvnu9ewncd274az5arzvdgrzwq0yzselsswn',
+      payinExtra: null,
+      payinAmount: 0.05,
+      toAmount: 8.02612525,
+      payoutAddress: XMR_ADDR,
+    });
+    // No deposit address is no order, however cheerful the rest of it looks.
+    expect(parseGodexCreate({ transaction_id: 'x', deposit_amount: '1' })).toBeNull();
+  });
+
+  it('builds a status url and maps every stage it reports', () => {
+    expect(godexStatusUrl('c6a79d')).toBe('https://api.godex.io/api/v1/transaction/c6a79d');
+    for (const [raw, stage] of [
+      ['wait', 'waiting'],
+      ['confirmation', 'confirming'],
+      ['exchanging', 'exchanging'],
+      ['sending', 'sending'],
+      ['success', 'done'],
+      ['overdue', 'expired'],
+      ['refunded', 'refunded'],
+      ['error', 'failed'],
+      ['who-knows', 'failed'],
+    ] as const) {
+      expect(parseGodexStatus({ status: raw }).stage, raw).toBe(stage);
+    }
+    expect(parseGodexStatus({ status: 'success', hash_out: 'abc' }).txId).toBe('abc');
   });
 });
 
