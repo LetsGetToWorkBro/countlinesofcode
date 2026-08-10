@@ -1,10 +1,12 @@
-/* 1999.LOC - the video tool's face.
+/* 1999.LOC - the video tool's face: a media player that grew a timeline.
  *
- * WINDOWS MEDIA PLAYER 6.4, the small grey-blue one that came before the
- * skinned era: a dark panel around the picture, a strip of transport controls
- * under it, and a seek bar that was the widest thing in the window. Trimming a
- * clip is scrubbing and marking, so the program it should look like is the one
- * you scrubbed in.
+ * WINDOWS MEDIA PLAYER 6.4 is still the heritage: grey chrome, a black monitor,
+ * a seek bar as the widest thing in the window. On top of that this adds the
+ * two things trimming actually needs and the old player never had: a toolbar
+ * of the functions, and a real timeline under the picture with a handle at each
+ * end of the clip and a playhead running through it. The chrome stays light and
+ * classic; the editing surface is dark, the way every editor since has been.
+ * Scoped under [data-app="video"].
  */
 
 /* ---- the menu bar, pinned to the window --------------------------- */
@@ -16,8 +18,6 @@
   padding: 2px 4px;
   background: #d4d0c8;
   border-bottom: 1px solid #808080;
-  /* Stated rather than inherited: this sits outside the panels, so it would
-     otherwise come out in the page's serif. */
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 11px;
   line-height: 1.3;
@@ -26,10 +26,54 @@
 [data-app="video"] .app-window > .mp-menu .menu-title {
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 11px;
-  /* A thumb needs a target. */
   min-height: 26px;
 }
 [data-app="video"] .client-title { background: linear-gradient(90deg,#0a2a4a 0%,#1a4a7a 60%,#3a8fd0 100%); color: #ffffff; }
+
+/* ---- the toolbar -------------------------------------------------- */
+[data-app="video"] .app-window > .mp-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 7px;
+  background: #d4d0c8;
+  border-bottom: 1px solid #808080;
+  box-shadow: inset 0 1px 0 #ffffff;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+}
+[data-app="video"] .mp-tb {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 3px 10px;
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  background: #d4d0c8;
+  color: #101010;
+  cursor: pointer;
+}
+[data-app="video"] .mp-tb svg { width: 15px; height: 15px; }
+[data-app="video"] .mp-tb:active:not(:disabled) { border-color: #808080 #ffffff #ffffff #808080; }
+[data-app="video"] .mp-tb:disabled { opacity: 0.45; cursor: default; }
+[data-app="video"] .mp-tb-go { background: #1a5a8a; border-color: #4a9fd8 #0a3a5a #0a3a5a #4a9fd8; color: #ffffff; font-weight: bold; }
+[data-app="video"] .mp-tb-sep { width: 0; height: 22px; border-left: 1px solid #808080; border-right: 1px solid #ffffff; margin: 0 1px; }
+[data-app="video"] .mp-tb-spacer { flex: 1 1 auto; }
+[data-app="video"] .mp-modes { display: inline-flex; }
+[data-app="video"] .mp-mode {
+  min-height: 26px;
+  padding: 3px 12px;
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  background: #d4d0c8;
+  color: #101010;
+  cursor: pointer;
+  font-weight: bold;
+}
+[data-app="video"] .mp-mode + .mp-mode { border-left: none; }
+[data-app="video"] .mp-mode.is-on { background: #1a5a8a; border-color: #0a3a5a; color: #ffffff; box-shadow: inset 0 1px 3px rgba(0,0,0,0.4); }
+[data-app="video"] .mp-mode:disabled { opacity: 0.45; cursor: default; }
 
 /* ---- the body ------------------------------------------------------ */
 [data-app="video"] .app-body {
@@ -37,12 +81,11 @@
   color: #d8d8d8;
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 11px;
-  padding: 8px;
+  padding: 10px;
 }
 [data-app="video"] .app-body h3 {
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 12px;
-  /* #5aa6e0 is 5.2:1 on the #2b2b2b body; the darker #3a8fd0 was 4.06:1. */
   color: #5aa6e0;
   margin: 12px 0 6px 0;
 }
@@ -55,8 +98,7 @@
   color: #d8d8d8;
 }
 [data-app="video"] .app-body .note { color: #9a9a9a; }
-[data-app="video"] .app-body > p,
-[data-app="video"] .app-body > div > p { max-width: 620px; }
+[data-app="video"] .app-body > p { max-width: 820px; }
 
 /* What to do on this screen. */
 [data-app="video"] .app-body .mp-hint {
@@ -70,140 +112,208 @@
   color: #000000;
   font-size: 11.5px;
   line-height: 1.45;
-  max-width: 820px;
+  max-width: 860px;
 }
 [data-app="video"] .app-body .mp-hint,
 [data-app="video"] .app-body .mp-hint * { color: #000000; }
 [data-app="video"] .app-body .mp-hint > .mp-hint-mark {
   flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
+  width: 16px; height: 16px;
   border-radius: 50%;
-  /* #1a5a8a keeps white ink at 5:1; the lighter #3a8fd0 was 3.49:1. */
   background: #1a5a8a;
   color: #ffffff;
-  font-weight: bold;
-  font-style: italic;
-  font-size: 11px;
-  line-height: 16px;
-  text-align: center;
+  font-weight: bold; font-style: italic; font-size: 11px; line-height: 16px; text-align: center;
+}
+[data-app="video"] .mp-media {
+  font-family: "Courier New", Courier, monospace;
+  color: #8fd0ff;
+  margin: 6px 0;
 }
 
 /* ---- controls ------------------------------------------------------ */
-[data-app="video"] button:not(.notice-x):not(.menu-title):not(.win-min) {
-  border: 2px outset #d4d0c8;
-  background: #d4d0c8;
-  color: #000000;
+[data-app="video"] button:not(.notice-x):not(.menu-title):not(.win-min):not(.mp-tb):not(.mp-mode) {
+  border: 1px solid #4a4a4a;
+  background: #3a3a3a;
+  color: #e8e8e8;
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 11px;
   padding: 3px 12px;
   cursor: pointer;
 }
-[data-app="video"] button:not(.notice-x):active { border-style: inset; }
+[data-app="video"] button:not(.notice-x):not(.mp-tb):not(.mp-mode):hover:not(:disabled) { background: #464646; }
+[data-app="video"] button:not(.notice-x):not(.mp-tb):not(.mp-mode):active { background: #2e2e2e; }
+[data-app="video"] button:not(.notice-x):disabled { opacity: 0.45; cursor: default; }
+[data-app="video"] .mp-mini { padding: 2px 8px; font-size: 10.5px; }
+[data-app="video"] .mp-primary { background: #1a5a8a; border-color: #0a3a5a; color: #ffffff; font-weight: bold; padding: 5px 18px; }
+[data-app="video"] .mp-primary:hover:not(:disabled) { background: #216ba3; }
+
 [data-app="video"] select,
 [data-app="video"] input[type="text"],
-[data-app="video"] input[type="number"],
-[data-app="video"] textarea {
+[data-app="video"] input[type="number"] {
   border: 2px inset #d4d0c8;
   background: #ffffff;
   color: #000000;
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 11px;
+  padding: 1px 2px;
 }
 [data-app="video"] .dropzone {
   background: #ffffff;
   border: 2px inset #d4d0c8;
   color: #000000;
+  padding: 22px 12px;
+  text-align: center;
+  cursor: pointer;
 }
-[data-app="video"] fieldset {
-  border: 2px groove #ffffff;
-  background: #d4d0c8;
-  color: #000000;
-  margin: 0 0 10px 0;
-  padding: 8px 10px;
-  max-width: 620px;
-}
-/* A fieldset is a light tray, even in a program whose chrome is dark, so
-   everything inside it goes back to black. Said with .app-body in the
-   selector on purpose: the body rule above sets a light ink for the dark
-   chrome and is an attribute plus a class plus an element, so a plainer
-   `fieldset label` loses to it and the tray comes out grey on grey. */
-[data-app="video"] .app-body fieldset p,
-[data-app="video"] .app-body fieldset label,
-[data-app="video"] .app-body fieldset legend,
-[data-app="video"] .app-body fieldset span,
-[data-app="video"] .app-body fieldset li,
-[data-app="video"] .app-body fieldset .note { color: #000000; }
+[data-app="video"] .dropzone.is-over { outline: 2px dashed #3a8fd0; outline-offset: -6px; }
+[data-app="video"] .dropzone strong { display: block; color: #000; }
+[data-app="video"] .dropzone span { color: #555; }
+/* Once a file is open the big target is redundant, so it collapses to a slim
+   "open another" bar. It stays in the DOM (not display:none) so File > Open,
+   which the menubar disables when its target is hidden, keeps working. */
+[data-app="video"] .dropzone.mp-drop-slim { padding: 6px 12px; }
+[data-app="video"] .dropzone.mp-drop-slim strong { display: inline; font-weight: normal; }
+[data-app="video"] .dropzone.mp-drop-slim span { display: none; }
 
-/* The boxes the tool draws into. */
-[data-app="video"] .notice-box,
-[data-app="video"] .app-body details {
-  background: #ffffe1;
-  border: 1px solid #808080;
-  max-width: 820px;
-}
-[data-app="video"] .notice-box *,
-[data-app="video"] .app-body details * { color: #000000; }
-
-/* ---- THE PLAYER ----------------------------------------------------
-   A dark panel around the picture, transport controls under it, and the
-   seek bar as the widest thing in the window. Trimming is scrubbing and
-   marking, so it should look like the thing you scrubbed in. */
-[data-app="video"] #preview,
+/* ---- the monitor --------------------------------------------------- */
 [data-app="video"] .video-stage {
   background: #000000;
   border: 2px inset #1a1a1a;
   padding: 6px;
   text-align: center;
-  max-height: 55vh;
+  max-height: 52vh;
   overflow: hidden;
 }
 [data-app="video"] video,
-[data-app="video"] #preview video,
+[data-app="video"] #preview,
 [data-app="video"] canvas {
   display: block;
   margin: 0 auto;
   max-width: 100%;
-  max-height: 50vh;
+  max-height: 48vh;
   background: #000000;
 }
-/* The seek and trim range, drawn as the player's own slider rather than
-   the browser's. */
-[data-app="video"] input[type="range"] {
-  width: 100%;
-  max-width: 620px;
-  accent-color: #3a8fd0;
-  background: transparent;
+
+/* ---- THE TIMELINE -------------------------------------------------- */
+[data-app="video"] .mp-timeline { margin: 10px 0 6px; }
+[data-app="video"] .tl-raw { display: none; }
+[data-app="video"] .tl-track {
+  position: relative;
+  height: 46px;
+  border: 1px solid #0a0a0a;
+  border-radius: 3px;
+  background: linear-gradient(#3a3a3a, #232323);
+  box-shadow: inset 0 1px 0 #4a4a4a, inset 0 0 0 1px #1a1a1a;
+  cursor: pointer;
+  touch-action: none;
+  overflow: hidden;
 }
-[data-app="video"] #start-time,
-[data-app="video"] #end-time,
-[data-app="video"] #estimate {
-  font-family: "Courier New", Courier, monospace;
-  color: #8fd0ff;
+[data-app="video"] .tl-sel {
+  position: absolute; top: 0; bottom: 0;
+  background: rgba(58, 143, 208, 0.28);
+  border-left: 1px solid #3a8fd0;
+  border-right: 1px solid #3a8fd0;
+  pointer-events: none;
 }
-[data-app="video"] button:not(.notice-x):not(.menu-title):not(.win-min) {
+[data-app="video"] .tl-handle {
+  position: absolute; top: 0; bottom: 0;
+  width: 14px;
+  background: linear-gradient(#5ab0f0, #2a7fc0);
+  border: 1px solid #0a3a5a;
+  cursor: ew-resize;
+  z-index: 3;
+  touch-action: none;
+}
+/* The in-handle's left edge sits on the start, the out-handle's right edge on
+   the end, so both stay fully inside the clipped track even at 0% and 100%
+   where a centred handle would be half-hidden and impossible to grab. */
+[data-app="video"] .tl-in { border-radius: 3px 0 0 3px; }
+[data-app="video"] .tl-out { margin-left: -14px; border-radius: 0 3px 3px 0; }
+[data-app="video"] .tl-handle::after {
+  content: "";
+  position: absolute; left: 5px; top: 50%; width: 2px; height: 18px;
+  margin-top: -9px;
+  border-left: 1px solid #cfeaff; border-right: 1px solid #cfeaff;
+}
+[data-app="video"] .tl-handle:focus { outline: 2px solid #ffd23a; outline-offset: -2px; }
+[data-app="video"] .tl-playhead {
+  position: absolute; top: 0; bottom: 0; width: 2px;
+  margin-left: -1px;
+  background: #ff5a3c;
+  box-shadow: 0 0 4px rgba(255, 90, 60, 0.8);
+  pointer-events: none;
+  z-index: 2;
+}
+[data-app="video"] .tl-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+[data-app="video"] .tl-field { display: inline-flex; align-items: center; gap: 5px; color: #b8b8b8; }
+[data-app="video"] .tl-mid { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+[data-app="video"] .tl-summary { color: #9a9a9a; }
+[data-app="video"] .time-field { font-family: "Courier New", Courier, monospace; color: #063; width: 62px; }
+[data-app="video"] #start-time, [data-app="video"] #end-time { color: #000; }
+
+/* .app-body p sets a light ink for the dark chrome and outranks a bare
+   .mp-convert-note, so the tray's black text is stated with the same weight. */
+[data-app="video"] .app-body .mp-convert-note {
+  margin: 10px 0;
+  padding: 8px 10px;
+  background: #ffffe1;
+  border: 1px solid #808080;
+  color: #000000;
+}
+[data-app="video"] .app-body .mp-convert-note strong { color: #000; }
+
+/* ---- the output options -------------------------------------------- */
+[data-app="video"] .mp-options {
+  margin: 10px 0;
+  padding: 8px 10px;
+  background: #363636;
   border: 1px solid #4a4a4a;
-  background: #3a3a3a;
-  color: #e8e8e8;
+  border-radius: 3px;
 }
-[data-app="video"] button:not(.notice-x):hover:not(:disabled) { background: #464646; }
-[data-app="video"] button:not(.notice-x):disabled { opacity: 0.45; }
-/* The player's trays stay dark, unlike every other program here, so this
-   restates the ink at the same weight as the shared rule below rather than
-   losing to it and printing black on charcoal. */
-[data-app="video"] .app-body fieldset { background: #363636; border-color: #4a4a4a; }
-[data-app="video"] .app-body fieldset p,
-[data-app="video"] .app-body fieldset label,
-[data-app="video"] .app-body fieldset legend,
-[data-app="video"] .app-body fieldset span,
-[data-app="video"] .app-body fieldset .note { color: #e0e0e0; }
+[data-app="video"] .opt-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin: 6px 0;
+}
+/* .opt-row sets a display, so it outranks the global .hidden; gif-box and any
+   other row toggled hidden needs this to actually disappear. */
+[data-app="video"] .opt-row.hidden { display: none; }
+[data-app="video"] .opt-row label.inline { color: #d8d8d8; }
+[data-app="video"] .opt-row .note { color: #a0a0a0; }
+[data-app="video"] .opt-row:first-child label[for="format"] { font-weight: bold; color: #8fd0ff; }
+[data-app="video"] .narrow { width: 70px; }
+
+[data-app="video"] .mp-run { display: flex; align-items: center; gap: 10px; margin: 12px 0 6px; }
+
+/* The boxes the tool draws into stay light trays even in the dark chrome. */
+[data-app="video"] .notice-box {
+  background: #ffffe1;
+  border: 1px solid #808080;
+  max-width: 860px;
+  padding: 8px 10px;
+}
+[data-app="video"] .notice-box * { color: #000000; }
+[data-app="video"] #estimate { font-family: "Courier New", Courier, monospace; color: #8fd0ff; }
 [data-app="video"] .status { color: #8fd08f; }
 [data-app="video"] .error { color: #ff9a9a; }
 [data-app="video"] a { color: #8fd0ff; }
+[data-app="video"] .gif-result { max-width: 100%; }
 
 /* ---- responsive ---------------------------------------------------- */
 @media (max-width: 700px) {
   [data-app="video"] .app-body { padding: 6px; }
   [data-app="video"] .app-window > .mp-menu span { padding: 2px 5px; }
+  [data-app="video"] .app-window > .mp-toolbar { flex-wrap: wrap; }
+  [data-app="video"] .mp-tb-spacer { flex-basis: 100%; height: 0; }
+  [data-app="video"] .tl-bar { font-size: 10.5px; }
+  [data-app="video"] .tl-field, [data-app="video"] .tl-mid { gap: 4px; }
 }
-

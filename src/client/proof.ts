@@ -214,7 +214,7 @@ export const REPO = 'https://github.com/letsgettoworkbro/countlinesofcode';
  * makes sense: the page, then the engine behind it.
  */
 export const SOURCES: Record<string, string[]> = {
-  '/video.html': ['public/video-page.js', 'src/client/video.ts', 'src/client/gif.ts'],
+  '/video.html': ['public/video-page.js', 'public/video-timeline.js', 'src/client/video.ts', 'src/client/gif.ts'],
   '/zip.html': ['public/zip-page.js', 'src/client/zipkit.ts', 'src/client/zip.ts'],
   // 'encrypt' page: password locking and PGP keys, on tabs, over one engine.
   '/lock.html': ['public/lock-page.js', 'public/pgp-page.js', 'public/tabs.js', 'src/client/pgpkit.ts'],
