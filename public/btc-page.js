@@ -223,9 +223,17 @@
     });
   }
 
+  /* The dollar line under the balance. Shared with the other tab through
+     fiat.js so both say it the same way; absent, or switched off, it is
+     simply nothing. */
+  function paintBalanceFiat() {
+    if (window.LOC1999_FIAT) window.LOC1999_FIAT.paintBalances();
+  }
+
   function renderView() {
     if (!view) return;
     $('btc-balance').textContent = kit.formatBtc(view.balance);
+    paintBalanceFiat();
     $('btc-pending-line').textContent = view.pending !== 0n
       ? '(' + kit.formatBtc(view.pending) + ' of that still unconfirmed)' : '';
     $('btc-coins-line').textContent = view.utxos.length

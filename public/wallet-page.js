@@ -392,10 +392,18 @@
     return Promise.all([refreshBalance(), refreshHistory()]).then(function () {});
   }
 
+  /* The dollar line under the balance. Shared with the other tab through
+     fiat.js so both say it the same way; absent, or switched off, it is
+     simply nothing. */
+  function paintBalanceFiat() {
+    if (window.LOC1999_FIAT) window.LOC1999_FIAT.paintBalances();
+  }
+
   function refreshBalance() {
     return Promise.all([wallet.getBalance(), wallet.getUnlockedBalance()]).then(function (b) {
       $('balance').textContent = kit.formatXmr(BigInt(b[0]));
       $('unlocked').textContent = kit.formatXmr(BigInt(b[1]));
+      paintBalanceFiat();
     }).catch(function () {});
   }
 

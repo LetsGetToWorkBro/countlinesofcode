@@ -262,8 +262,10 @@ Secrets holds the seed phrase. Transactions are logged beside the wallet.</p>
       <p>
         <strong id="balance" class="xmr-balance">0</strong> XMR
         <span class="note">(<span id="unlocked">0</span> unlocked)</span>
+        <span class="note" id="xmr-usd"></span>
       </p>
       <p class="note" id="height-line"></p>
+      <p class="note"><label class="inline"><input type="checkbox" class="fiat-toggle" checked> Show what it is worth in dollars</label></p>
       <p class="note">Receiving and sending live on their own tabs above. The seed phrase is under Secrets; write it down if you have not.</p>
     </div>
 
@@ -451,8 +453,10 @@ Secrets holds the seed words. Transactions are logged beside the wallet.</p>
     <p>
       <strong id="btc-balance" class="xmr-balance">0</strong> BTC
       <span class="note" id="btc-pending-line"></span>
+      <span class="note" id="btc-usd"></span>
     </p>
     <p class="note" id="btc-coins-line"></p>
+    <p class="note"><label class="inline"><input type="checkbox" class="fiat-toggle" checked> Show what it is worth in dollars</label></p>
     <p><button type="button" id="btc-refresh" class="small">Refresh</button></p>
   </div>
 
@@ -990,6 +994,7 @@ You can
 <span class="task-clock">1999</span>
 </div>
 </div>
+<script src="/fiat.js"></script>
 <script src="/wallet-page.js"></script>
 <script src="/monero-page.js"></script>
 <script src="/btc-page.js"></script>
