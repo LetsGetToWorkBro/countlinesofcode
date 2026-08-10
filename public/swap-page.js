@@ -210,12 +210,96 @@
 
   // ---------------------------------------------------------------- order
 
-  var STORE_KEY = 'loc1999-swap-order';
-  function remember() { try { sessionStorage.setItem(STORE_KEY, JSON.stringify(order)); } catch (e) { /* private browsing */ } }
-  function forget() { try { sessionStorage.removeItem(STORE_KEY); } catch (e) { /* ignore */ } }
-  function recall() {
-    try { return JSON.parse(sessionStorage.getItem(STORE_KEY)); } catch (e) { return null; }
+  /* Every swap started in this tab, newest first.
+   *
+   * A list rather than the single order this used to hold, because a swap runs
+   * for twenty minutes and people start a second one while the first is still
+   * settling, and because the deposit address of the one you started ten
+   * minutes ago is not something to lose by clicking Get quotes again.
+   *
+   * Still sessionStorage, deliberately. localStorage would survive the tab and
+   * make this far more forgiving, and it would also leave a list of every coin
+   * you have ever swapped sitting on the disk of the machine, which is not a
+   * trade this page gets to make on somebody's behalf. Closing the tab forgets,
+   * which is the promise the page already prints, and it is why it also says to
+   * keep the order id somewhere of your own.
+   */
+  var STORE_KEY = 'loc1999-swap-orders';
+  var OLD_KEY = 'loc1999-swap-order';
+  var swaps = [];
+
+  function remember() {
+    try { sessionStorage.setItem(STORE_KEY, JSON.stringify(swaps)); } catch (e) { /* private browsing */ }
   }
+  function recall() {
+    var list = [];
+    try { list = JSON.parse(sessionStorage.getItem(STORE_KEY)) || []; } catch (e) { list = []; }
+    if (!list.length) {
+      // A swap started before this page kept a list is still a live swap.
+      try {
+        var one = JSON.parse(sessionStorage.getItem(OLD_KEY));
+        if (one && one.o) list = [one];
+        sessionStorage.removeItem(OLD_KEY);
+      } catch (e) { /* ignore */ }
+    }
+    return list.filter(function (s) { return s && s.o && s.o.id; });
+  }
+
+  function entryFor(o) {
+    for (var i = 0; i < swaps.length; i++) {
+      if (swaps[i].o.id === o.id && swaps[i].o.provider === o.provider) return swaps[i];
+    }
+    return null;
+  }
+
+  /* Local time, hours and minutes. No date: this list cannot outlive the tab,
+     so the day is always today, and a date is one more thing to leak. */
+  function clockOf(ms) {
+    var d = new Date(ms);
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+
+  var STAGE_WORDS = {
+    waiting: 'Waiting', confirming: 'Confirming', exchanging: 'Exchanging',
+    sending: 'Sending', done: 'Done', refunded: 'Refunded',
+    expired: 'Expired', failed: 'Failed',
+  };
+  /* Three states worth telling apart at a glance: still going, finished well,
+     finished badly. */
+  function stageClass(stage) {
+    if (stage === 'done') return 'is-done';
+    if (stage === 'refunded' || stage === 'expired' || stage === 'failed') return 'is-bad';
+    return 'is-live';
+  }
+
+  function renderSwapList() {
+    if (!swaps.length) { $('swaps-block').classList.add('hidden'); return; }
+    var open = order && order.o;
+    var rows = swaps.map(function (s, i) {
+      var stage = s.stage || 'waiting';
+      var here = open && s.o.id === open.id && s.o.provider === open.provider;
+      return '<button type="button" class="tick-swap' + (here ? ' is-open' : '') + '" data-swap="' + i + '">' +
+        '<span class="tick-stage ' + stageClass(stage) + '">' + esc(STAGE_WORDS[stage] || stage) + '</span>' +
+        '<span class="tick-swap-pair">' + esc(coinOf(s.from).ticker) + ' &#8594; ' + esc(coinOf(s.to).ticker) + '</span>' +
+        '<span class="tick-swap-amt">' + esc(trim(s.o.payinAmount)) + ' ' + esc(coinOf(s.from).ticker) + '</span>' +
+        '<span class="tick-swap-meta">' + esc(PROVIDER_LABELS[s.o.provider] || s.o.provider) +
+        ' &middot; ' + esc(clockOf(s.at)) + '</span>' +
+        '</button>';
+    }).join('');
+    $('swap-list').innerHTML = rows;
+    $('swaps-block').classList.remove('hidden');
+  }
+
+  $('swap-list').addEventListener('click', function (event) {
+    var row = event.target.closest ? event.target.closest('[data-swap]') : null;
+    if (!row) return;
+    var picked = swaps[Number(row.getAttribute('data-swap'))];
+    if (!picked) return;
+    order = picked;
+    renderOrder();
+    checkStatus();
+    $('order-block').scrollIntoView({ block: 'nearest' });
+  });
 
   function startSwap() {
     clearMessages();
@@ -241,9 +325,11 @@
     })
       .then(function (data) {
         note('');
-        order = { o: data, from: fromId(), to: toId() };
+        order = { o: data, from: fromId(), to: toId(), at: Date.now(), stage: 'waiting' };
+        swaps.unshift(order);
         remember();
         renderOrder();
+        renderSwapList();
         checkStatus();
       })
       .catch(function (err) { note(''); fail(err.message); })
@@ -300,11 +386,24 @@
     $('pay-line').innerHTML = 'Send exactly <strong>' + esc(o.payinAmount) + ' ' + esc(sent) + '</strong>';
     groupAddress($('pay-address'), o.payinAddress);
     drawQr(o.payinAddress);
+    /* The details, as a list of facts rather than a paragraph: the id is the
+     * only handle on the swap, and a paragraph is where an id goes to hide. */
+    var track = (PROVIDER_SITES[o.provider] || '') + o.id;
     $('order-meta').innerHTML =
-      'Order <code>' + esc(o.id) + '</code> at ' + esc(PROVIDER_LABELS[o.provider] || o.provider) +
-      ' &middot; about ' + esc(o.toAmount) + ' ' + esc(got) + ' to <code>' + esc(shorten(o.payoutAddress)) + '</code>' +
-      ' &middot; <a href="' + esc((PROVIDER_SITES[o.provider] || '#') + o.id) + '" rel="noreferrer">view it on their site</a>.' +
-      ' Keep the order id; it is the only handle on this swap.';
+      '<span class="tick-fact"><span class="tick-fact-k">Order</span>' +
+      '<code class="tick-fact-v">' + esc(o.id) + '</code></span>' +
+      '<span class="tick-fact"><span class="tick-fact-k">Started</span>' +
+      '<span class="tick-fact-v">' + esc(clockOf(order.at || Date.now())) + '</span></span>' +
+      '<span class="tick-fact"><span class="tick-fact-k">Pair</span>' +
+      '<span class="tick-fact-v">' + esc(sent) + ' &#8594; ' + esc(got) + '</span></span>' +
+      '<span class="tick-fact"><span class="tick-fact-k">Desk</span>' +
+      '<span class="tick-fact-v">' + esc(PROVIDER_LABELS[o.provider] || o.provider) + '</span></span>' +
+      '<span class="tick-fact"><span class="tick-fact-k">You get</span>' +
+      '<span class="tick-fact-v">about ' + esc(trim(o.toAmount)) + ' ' + esc(got) +
+      ' to <code>' + esc(shorten(o.payoutAddress)) + '</code></span></span>' +
+      '<span class="tick-fact"><span class="tick-fact-k">Track</span>' +
+      '<span class="tick-fact-v"><a href="' + esc(track) + '" rel="noreferrer">' + esc(track) + '</a></span></span>';
+    setStage(order.stage || 'waiting');
     $('order-block').classList.remove('hidden');
     startPolling();
   }
@@ -314,13 +413,31 @@
     return a.length > 20 ? a.slice(0, 10) + '...' + a.slice(-6) : a;
   }
 
+  function setStage(stage) {
+    var pill = $('order-stage');
+    pill.textContent = STAGE_WORDS[stage] || stage;
+    pill.className = 'tick-stage ' + stageClass(stage);
+  }
+
   function checkStatus() {
     if (!order) return;
     var o = order.o;
+    var asked = order;
     api('status?provider=' + encodeURIComponent(o.provider) + '&id=' + encodeURIComponent(o.id))
       .then(function (s) {
         var line = s.line || s.stage;
-        $('order-status').textContent = line + (s.txId ? ' Transaction: ' + s.txId : '');
+        /* Record it against the swap that was asked about, not against
+         * whatever is on screen now: the answer can land after somebody has
+         * clicked a different row in the list. */
+        var entry = entryFor(asked.o) || asked;
+        entry.stage = s.stage;
+        entry.line = line;
+        remember();
+        renderSwapList();
+        if (order === asked || (order && order.o.id === asked.o.id)) {
+          $('order-status').textContent = line + (s.txId ? ' Transaction: ' + s.txId : '');
+          setStage(s.stage);
+        }
         if (s.stage === 'done' || s.stage === 'refunded' || s.stage === 'expired' || s.stage === 'failed') {
           stopPolling();
         }
@@ -347,15 +464,18 @@
     checkStatus();
   });
 
+  /* Start another one. The swap you were looking at is not cancelled and not
+     forgotten: it goes on running at the exchange, and it stays in the list so
+     you can come back to its address. This only clears the screen. */
   $('new-swap').addEventListener('click', function () {
     stopPolling();
     order = null;
-    forget();
     $('order-block').classList.add('hidden');
     $('order-status').textContent = '';
-    // The old code is a picture of a dead address; it does not outlive the order.
+    // The old code is a picture of a dead address; it does not outlive the view.
     $('pay-qr').textContent = '';
     $('pay-address').textContent = '';
+    renderSwapList();
     clearMessages();
   });
 
@@ -412,10 +532,12 @@
 
   syncPair('from');
 
-  // A refresh mid-swap lands here: the order comes back and polling resumes.
-  var kept = recall();
-  if (kept && kept.o && kept.o.id) {
-    order = kept;
+  // A refresh mid-swap lands here: the swaps come back, the newest one opens,
+  // and polling resumes on it.
+  swaps = recall();
+  if (swaps.length) {
+    renderSwapList();
+    order = swaps[0];
     renderOrder();
     checkStatus();
   }
