@@ -37,6 +37,28 @@
     return pick ? document.querySelector(pick) : null;
   }
 
+  /* Reaching a menu item means whatever its control is. A button or a link,
+   * or a div dressed as one, is pressed. A checkbox or radio is toggled,
+   * which is a press too. A field you fill in is brought into view and given
+   * the cursor instead, because "Quality..." should land you in the quality
+   * box: clicking at a text box or a select does nothing, which is most of
+   * why the menus read as dead. Help has no control and firstrun listens for
+   * it directly, so a missing one is simply left alone. */
+  function activate(control) {
+    if (!control) return;
+    var tag = control.tagName;
+    var type = (control.type || '').toLowerCase();
+    var isField = (tag === 'INPUT' && type !== 'checkbox' && type !== 'radio' &&
+                   type !== 'button' && type !== 'submit' && type !== 'reset' && type !== 'file') ||
+                  tag === 'SELECT' || tag === 'TEXTAREA';
+    if (isField) {
+      if (control.scrollIntoView) control.scrollIntoView({ block: 'nearest' });
+      if (control.focus) control.focus();
+    } else {
+      control.click();
+    }
+  }
+
   function closeAll(except) {
     menus.forEach(function (menu) {
       if (menu === except) return;
@@ -75,9 +97,7 @@
       var item = event.target.closest ? event.target.closest('[data-cmd], [data-pick], [data-help]') : null;
       if (!item || item.classList.contains('menu-title')) return;
       closeAll();
-      var control = target(item);
-      // A Help item has no control; firstrun.js is listening to it directly.
-      if (control) control.click();
+      activate(target(item));
     });
   });
 

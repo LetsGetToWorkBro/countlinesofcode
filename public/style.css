@@ -690,6 +690,46 @@ fieldset.tool-group table.tool-dir { margin: 0; }
 .app-body > .tagline:first-child { margin-top: 2px; }
 .app-body p.tool-tabs { margin-top: 6px; }
 
+/* A function toolbar: the row of buttons under the menu bar that a Windows
+   program of the era put its common commands on, so the first thing you reach
+   for is a button and not a submenu. Grey like the menu bar above it on every
+   face, because it is the window's chrome, not the program's canvas; the
+   coloured body starts below it. toolbar.js wires each button to the control
+   it names and greys it out when that control is not yet usable, the same way
+   the menu items grey out. */
+.app-window > .app-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin: 0;
+  padding: 3px 5px;
+  background: #d4d0c8;
+  border-bottom: 1px solid #808080;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+}
+.app-toolbar button {
+  min-height: 26px;
+  padding: 2px 12px;
+  border: 2px outset #f4f2ef;
+  background: #d4d0c8;
+  color: #000000;
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.app-toolbar button:hover:not(:disabled) { background: #dcd8d0; }
+.app-toolbar button:active:not(:disabled) { border-style: inset; }
+.app-toolbar button:disabled { color: #808080; cursor: default; }
+.app-toolbar .tb-sep {
+  align-self: stretch;
+  width: 0;
+  margin: 2px 3px;
+  border-left: 1px solid #808080;
+  border-right: 1px solid #ffffff;
+}
+
 /* The desktop: every app as a shortcut on the classic teal, grouped the way
    the nav groups them, with a taskbar along the bottom. Inline SVG icons, so
    nothing is fetched and nothing can be. */

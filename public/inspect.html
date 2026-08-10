@@ -92,13 +92,15 @@
 <span class="menu"><button type="button" class="menu-title">File</button>
   <span class="menu-drop">
     <button type="button" data-cmd="drop">Open...</button>
-    <button type="button" data-cmd="clean">Save a clean copy</button>
   </span></span>
 <span class="menu"><button type="button" class="menu-title">Help</button>
   <span class="menu-drop">
     <button type="button" data-help>What this program does</button>
   </span></span>
 </p>
+<div class="app-toolbar" role="toolbar" aria-label="Inspector">
+<button type="button" data-acts="drop">Open</button>
+</div>
 <div class="app-body">
 <p class="nu-hint"><span class="nu-hint-mark">i</span>
 Open a document to see what it is carrying that you cannot see: authors, the software and dates it was made, revision history, tracked changes. Nothing is uploaded.</p>
@@ -212,6 +214,7 @@ You can
 <script src="/pdf-compat.js"></script>
 <script src="/inspect-page.js"></script>
 <script src="/dropzone.js"></script>
+<script src="/toolbar.js"></script>
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
 <script src="/start.js"></script>

@@ -15,7 +15,8 @@
   var statusEl = $('status');
   var errorEl = $('error');
   var resultEl = $('result');
-  var outputEl = $('output');
+  var resultBox = $('result-box');
+  var dlEl = $('unlock-dl');
 
   var liveUrls = [];
   // High enough that text stays crisp when it becomes an image; JPEG keeps the
@@ -37,7 +38,9 @@
   function resetOutput() {
     liveUrls.forEach(URL.revokeObjectURL);
     liveUrls = [];
-    outputEl.innerHTML = '';
+    resultBox.classList.add('hidden');
+    dlEl.removeAttribute('href');
+    dlEl.textContent = 'the unlocked copy';
     resultEl.textContent = '';
     $('perms').innerHTML = '';
   }
@@ -134,8 +137,10 @@
       resultEl.innerHTML = '<strong>Unlocked.</strong> ' + total + ' page' + (total === 1 ? '' : 's') +
         ', ' + bytesLabel(blob.size) + '. No restrictions; Latin text stays selectable.';
       $('perms').innerHTML = permissionsTable(flags);
-      outputEl.innerHTML = '<ul class="plain"><li><a href="' + url + '" download="' + esc(outName) + '">' +
-        esc(outName) + '</a></li></ul>';
+      dlEl.href = url;
+      dlEl.setAttribute('download', outName);
+      dlEl.textContent = outName;
+      resultBox.classList.remove('hidden');
     });
   }
 
