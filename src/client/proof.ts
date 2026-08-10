@@ -252,6 +252,8 @@ export const SOURCES: Record<string, string[]> = {
   '/unlock.html': ['public/unlock.js', 'public/pdfrender.js', 'src/client/pdfedit.ts'],
   '/shrink.html': ['public/shrink.js', 'public/pdfrender.js', 'src/client/pdfedit.ts'],
   '/audio.html': ['public/audio-page.js', 'src/client/audiokit.ts', 'public/vendor/lame/lame.min.js'],
+  // The QR page: the in-house encoder and reader are both in one module.
+  '/qr.html': ['public/qr-page.js', 'src/client/qrkit.ts'],
   '/code.html': ['public/app.js', 'src/client/bigcount.ts', 'src/lib/counter.ts'],
 };
 

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Make and Read QR Codes in Your Browser | 1999.LOC</title>
+<meta name="description" content="Make a QR code from any text, link or address, and read one back out of an image or your camera. The encoder and the reader both run in your browser; nothing is uploaded and no service draws the code for you.">
+<link rel="canonical" href="https://1999loc.com/qr.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Make and Read QR Codes in Your Browser | 1999.LOC">
+<meta property="og:description" content="Type text, get a QR code; point it at an image, read one back. Both halves run in the tab, and nothing is uploaded.">
+<meta property="og:url" content="https://1999loc.com/qr.html">
+<meta property="og:site_name" content="1999.LOC">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/app-qr.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body data-app="qr">
+<!--
+  EXPECTED LAYOUT (a handheld label printer, single column):
+
+    1999.LOC
+    ------------------------------------------------------------
+    ... | qr code | ...
+    ------------------------------------------------------------
+    +====================================+
+    |  QR LABEL                    ( o )  |   brand plate + power lamp
+    |  +------------------------------+   |
+    |  | LCD: type your label here    |   |   green LCD (the input)
+    |  +------------------------------+   |
+    |  [ MAKE ]   [ READ ]                |   mode keys
+    |  correction  (L)(M)(Q)(H)          |
+    |            [  PRINT  ]              |   the big key
+    |  === tape ==========================|
+    |   [##QR##]  your label here         |   the label that prints
+    |  ===================================|
+    |  [ Save SVG ]  [ Save PNG ]        |
+    +====================================+
+    ------------------------------------------------------------
+-->
+<div id="page">
+
+<h1><a href="/">1999.LOC</a></h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<span class="nav-group"><span class="nav-label">crypto</span>
+<a href="/wallet.html">wallet</a>
+&middot;
+<a href="/swap.html">swap</a>
+&middot;
+<a href="/wallet.html#addresses">paper wallet</a></span>
+<span class="nav-group"><span class="nav-label">privacy</span>
+<a href="/lock.html">pgp</a>
+&middot;
+<a href="/inspect.html">inspect file</a>
+&middot;
+<a href="https://delete.1999loc.com/">delete posts</a>
+&middot;
+<a href="/email.html">temporary email</a></span>
+<span class="nav-group"><span class="nav-label">documents</span>
+<a href="/sign.html">pdf editor</a>
+&middot;
+<a href="/convert.html">pdf &lt;=&gt; word</a>
+&middot;
+<a href="/sheet.html">excel &lt;=&gt; csv</a>
+&middot;
+<a href="/zip.html">zip</a></span>
+<span class="nav-group"><span class="nav-label">media</span>
+<a href="/image.html">image tools</a>
+&middot;
+<a href="/video.html">video tools</a>
+&middot;
+<a href="/audio.html">audio tools</a></span>
+<span class="nav-group"><span class="nav-label">utilities</span>
+<a href="/compare.html">compare</a>
+&middot;
+<strong>qr code</strong></span>
+<span class="nav-group"><span class="nav-label">code</span>
+<a href="/code.html">count code</a>
+&middot;
+<a href="/golf">golf</a></span>
+</p>
+<hr>
+
+<div class="desk-shell">
+<div class="app-window" id="app">
+<div class="client-title"><h2>QR Labels</h2><a class="win-min" href="#" aria-label="Minimise QR Labels">_</a></div>
+<p class="pt-menu menubar" role="menubar">
+<span class="menu"><button type="button" class="menu-title">File</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="pt-make">Print the code</button>
+    <button type="button" data-cmd="pt-svg">Save as SVG...</button>
+    <button type="button" data-cmd="pt-png">Save as PNG...</button>
+    <span class="menu-rule"></span>
+    <button type="button" data-cmd="pt-open">Open an image to read...</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Mode</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="pt-mode-make">Make a code</button>
+    <button type="button" data-cmd="pt-mode-read">Read a code</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Help</button>
+  <span class="menu-drop">
+    <button type="button" data-help>What this program does</button>
+  </span></span>
+</p>
+<div class="app-body">
+
+<div class="pt-machine">
+  <div class="pt-head">
+    <span class="pt-brand">QR&nbsp;LABEL</span>
+    <span class="pt-lamp" aria-hidden="true"></span>
+  </div>
+
+  <!-- The screen. In Make mode it is where you type; in Read mode it reads
+       back what was decoded. -->
+  <div class="pt-screen">
+    <label class="pt-scr-line" id="pt-make-scr">
+      <span class="pt-scr-label">label</span>
+      <textarea id="pt-text" spellcheck="false" rows="2" aria-label="The text to turn into a QR code" placeholder="Type text, a link, or an address"></textarea>
+    </label>
+    <div class="pt-scr-line pt-readout hidden" id="pt-read-scr" role="status" aria-live="polite">
+      <span class="pt-scr-label">read</span>
+      <output id="pt-decoded" class="pt-decoded">Point the reader at a QR code.</output>
+    </div>
+  </div>
+
+  <!-- The two mode keys. -->
+  <div class="pt-mode" role="group" aria-label="Mode">
+    <button type="button" id="pt-mode-make" class="pt-modebtn is-on" aria-pressed="true">Make</button>
+    <button type="button" id="pt-mode-read" class="pt-modebtn" aria-pressed="false">Read</button>
+  </div>
+
+  <!-- MAKE controls -->
+  <div class="pt-panel" data-panel="make">
+    <div class="pt-row">
+      <span class="pt-row-label">correction</span>
+      <span class="pt-ec" role="radiogroup" aria-label="Error correction level">
+        <button type="button" class="pt-ecbtn" data-ec="L" role="radio" aria-checked="false" title="Low: about 7 percent recoverable">L</button>
+        <button type="button" class="pt-ecbtn is-on" data-ec="M" role="radio" aria-checked="true" title="Medium: about 15 percent recoverable">M</button>
+        <button type="button" class="pt-ecbtn" data-ec="Q" role="radio" aria-checked="false" title="Quartile: about 25 percent recoverable">Q</button>
+        <button type="button" class="pt-ecbtn" data-ec="H" role="radio" aria-checked="false" title="High: about 30 percent recoverable">H</button>
+      </span>
+    </div>
+    <button type="button" id="pt-make" class="pt-print">Print</button>
+
+    <!-- The tape the label prints onto. -->
+    <div class="pt-tape hidden" id="pt-tape">
+      <div class="pt-tape-inner">
+        <div class="pt-qr" id="pt-qr"></div>
+        <div class="pt-caption" id="pt-caption"></div>
+      </div>
+    </div>
+    <div class="pt-saverow hidden" id="pt-saverow">
+      <button type="button" id="pt-svg">Save SVG</button>
+      <button type="button" id="pt-png">Save PNG</button>
+      <span class="pt-meta" id="pt-meta"></span>
+    </div>
+  </div>
+
+  <!-- READ controls -->
+  <div class="pt-panel hidden" data-panel="read">
+    <div class="pt-row pt-readbtns">
+      <button type="button" id="pt-open">Open an image</button>
+      <button type="button" id="pt-cam">Scan with camera</button>
+    </div>
+    <input type="file" id="pt-file" accept="image/*" hidden>
+
+    <div class="pt-drop" id="pt-drop">
+      <p class="pt-drop-hint">Drop a QR image here, paste one, or open a file.</p>
+      <div class="pt-cam-wrap hidden" id="pt-cam-wrap">
+        <video id="pt-video" playsinline muted aria-label="Camera preview"></video>
+        <div class="pt-reticle" aria-hidden="true"></div>
+        <button type="button" id="pt-cam-stop" class="pt-cam-stop">Stop</button>
+      </div>
+      <img id="pt-preview" class="pt-preview hidden" alt="The image being read">
+    </div>
+
+    <div class="pt-result hidden" id="pt-result">
+      <div class="pt-result-head">Decoded</div>
+      <div class="pt-result-text" id="pt-result-text"></div>
+      <div class="pt-result-actions">
+        <button type="button" id="pt-copy">Copy</button>
+        <a id="pt-openlink" class="pt-openlink hidden" target="_blank" rel="noopener noreferrer nofollow">Open link</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p id="error" class="error" role="alert"></p>
+
+<hr>
+
+<!-- What this program has to say for itself. Hidden here and shown by
+     firstrun.js as a dialog on the first visit, and from Help after that. -->
+<div id="first-run" hidden>
+
+<section data-step="Type it, or read it">
+<p><strong>Turn any text into a QR code, or read one back out of a picture.</strong></p>
+<p class="note">
+A QR code is just a picture of some text: a link, a wifi password, a wallet
+address, a phone number. Type the text and this draws the square; point the
+reader at a photo or a screenshot of one and it tells you what the square says.
+Both halves happen in this tab. No website draws the code for you and no
+website is told what you scanned, which matters more than it sounds, because a
+QR generator that phones home has seen every address and secret anyone made a
+code of.
+</p>
+</section>
+
+<section data-step="Is this actually private?">
+<h3>Is this actually private?</h3>
+<div id="proof"></div>
+</section>
+
+<section data-step="The honest notes">
+<ul class="plain">
+  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. The text you encode and the image you read are both handled in this tab; there is no server to send them to, which is a rule your browser enforces here, not a promise.</li>
+  <li><strong>The encoder is the real standard.</strong> It is the whole of ISO/IEC 18004: the three data modes, Reed-Solomon error correction over GF(256), the version and block tables, the finder and alignment patterns, and the eight masks scored by the standard's own rules. It is written here, a few hundred lines, rather than pulled from a library or a web service.</li>
+  <li><strong>The reader is written here too, so it works in every browser.</strong> Some browsers ship a barcode reader and most do not, so leaning on that would mean the reader worked for some visitors and quietly failed for the rest. Instead it decodes the pixels itself, the way any scanner does: find the three corner squares, read the grid, undo the mask, and let the error correction repair what a photograph smudges.</li>
+  <li><strong>Error correction is a real choice.</strong> L through H trade size for damage tolerance: a higher level makes a denser code that still reads with more of it obscured, which is why a code with a logo in the middle uses one. M is a sensible default.</li>
+  <li><strong>The camera never leaves the tab.</strong> If you scan with the camera, the video is read frame by frame here and nothing is recorded or sent. You can turn off your wifi and watch it keep working.</li>
+  <li><strong>A clear image reads best.</strong> The reader is tuned for a code shown straight on: a screenshot, a scan, or a steady photo. A blurry one at a steep angle may not read, the same as any scanner.</li>
+</ul>
+</section>
+
+<section data-step="The rest of the site">
+<p class="footer">
+Hosted on Cloudflare &middot; Made with spite for bloat<br>
+<a href="/code.html">count code</a> |
+<a href="/compare.html">compare two texts</a> |
+<a href="/inspect.html">inspect a file</a> |
+<a href="/wallet.html">wallet</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+<p class="footer support">
+Nothing here is for sale, nothing is tracked, and there is no account to make.
+If something saved you an hour:<br>
+<code class="xmr">83TQcTwusSQ4WKbPQE5osrF3cR4GWe2zmcNWeozK6BSqHSaeLvjUVe476ouVwLKn1uVwEFcbJQvnme7W6dTV5SB93x45DEy</code><br>
+You can
+<a href="/wallet.html#addresses">check that address here</a> before sending anything.
+</p>
+</section>
+
+</div>
+</div>
+</div>
+</div>
+
+
+<div class="taskbar">
+<a class="start" href="/">Start</a>
+<a class="task-btn is-open" href="#app">QR Labels</a>
+<span class="task-clock">1999</span>
+</div>
+</div>
+<script src="/qr-page.js"></script>
+<script src="/desk.js"></script>
+<script src="/icons.js"></script>
+<script src="/start.js"></script>
+<script src="/menubar.js"></script>
+<script src="/proof-panel.js"></script>
+<script src="/firstrun.js"></script>
+<script src="/dismiss.js"></script>
+</body>
+</html>

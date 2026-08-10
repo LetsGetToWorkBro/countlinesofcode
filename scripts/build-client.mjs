@@ -113,6 +113,11 @@ export const BUNDLES = [
     outfile: 'public/diffkit.js',
     banner: '/* 1999.LOC text-compare engine (Myers diff). Built from src/client/diffkit.ts. Do not edit. */',
   },
+  {
+    entry: 'src/client/qrkit.ts',
+    outfile: 'public/qrkit.js',
+    banner: '/* 1999.LOC QR encoder (ISO/IEC 18004, in-house). Built from src/client/qrkit.ts. Do not edit. */',
+  },
 ];
 
 /**
