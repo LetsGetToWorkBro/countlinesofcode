@@ -156,6 +156,32 @@ describe('POST /api/swap/create', () => {
     expect((fetched[0]!.init?.headers as Record<string, string>)['x-changenow-api-key']).toBe('k');
   });
 
+  it('refuses to create on Trocador when the server has no key', async () => {
+    const response = await post('/api/swap/create', { ...good, provider: 'trocador' });
+    expect(response.status).toBe(503);
+    expect(fetched).toHaveLength(0);
+  });
+
+  it('creates on Trocador with the key, and refuses a deposit address off-chain', async () => {
+    const trade = {
+      trade_id: 'TRC123456', address_provider: 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq',
+      amount_from: '0.05', amount_to: '8.19', address_user: XMR_ADDR,
+    };
+    responses['https://trocador.app/api/new_trade'] = () => json(trade);
+    const env = makeEnv({ TROCADOR_API_KEY: 'tk' });
+    const ok = await post('/api/swap/create', { ...good, provider: 'trocador' }, env);
+    expect(ok.status).toBe(200);
+    expect(await ok.json()).toMatchObject({ provider: 'trocador', id: 'TRC123456' });
+    expect((fetched[0]!.init?.headers as Record<string, string>)['API-Key']).toBe('tk');
+
+    /* The safety net at the boundary: a deposit address that is not on the
+     * chain being sent is a 502, never an order with an address on it. */
+    fetched = [];
+    responses['https://trocador.app/api/new_trade'] = () => json({ ...trade, address_provider: XMR_ADDR });
+    const bad502 = await post('/api/swap/create', { ...good, provider: 'trocador' }, env);
+    expect(bad502.status).toBe(502);
+  });
+
   it('creates on Godex, which needs no key at all', async () => {
     responses['https://api.godex.io/api/v1/transaction'] = () =>
       json({

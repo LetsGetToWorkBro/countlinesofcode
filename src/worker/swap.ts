@@ -47,6 +47,12 @@ import {
   parseGodexRate,
   parseGodexStatus,
   parsePair,
+  parseTrocadorCreate,
+  parseTrocadorRate,
+  parseTrocadorStatus,
+  trocadorCreateUrl,
+  trocadorRateUrl,
+  trocadorStatusUrl,
   STAGE_LINES,
   type SwapQuote,
   type SwapStatus,
@@ -94,6 +100,7 @@ async function upstream(
 }
 
 const cnHeaders = (key: string): Record<string, string> => ({ 'x-changenow-api-key': key });
+const trHeaders = (key: string): Record<string, string> => ({ 'API-Key': key });
 
 export async function swapApi(request: Request, env: Env, path: string): Promise<SwapReply> {
   if (path === '/api/swap/quote' && request.method === 'GET') return quote(request, env);
@@ -138,6 +145,15 @@ async function quote(request: Request, env: Env): Promise<SwapReply> {
     );
   }
 
+  const trKey = env.TROCADOR_API_KEY;
+  if (trKey) {
+    asks.push(
+      upstream(trocadorRateUrl(pair, amount), { headers: trHeaders(trKey) })
+        .then((r) => parseTrocadorRate(r.json))
+        .catch(() => ({ provider: 'trocador', ok: false, reason: 'Trocador did not answer.' }) as SwapQuote),
+    );
+  }
+
   const quotes = await Promise.all(asks);
   return { status: 200, body: { from: pair.from.id, to: pair.to.id, amount, quotes } };
 }
@@ -164,6 +180,17 @@ async function create(request: Request, env: Env): Promise<SwapReply> {
     });
     const order = parseChangeNowCreate(reply.json);
     if (!order) return bad(502, upstreamProblem(reply.json, 'ChangeNOW'));
+    return { status: 200, body: order };
+  }
+
+  if (req.provider === 'trocador') {
+    const key = env.TROCADOR_API_KEY;
+    if (!key) return bad(503, 'Trocador is not configured on this server.');
+    const reply = await upstream(trocadorCreateUrl(req), { headers: trHeaders(key) });
+    /* The coin being spent is handed in so the parser can refuse a deposit
+     * address that is not on that chain. See the note in swapkit. */
+    const order = parseTrocadorCreate(reply.json, req.from);
+    if (!order) return bad(502, upstreamProblem(reply.json, 'Trocador'));
     return { status: 200, body: order };
   }
 
@@ -217,6 +244,14 @@ async function status(request: Request, env: Env): Promise<SwapReply> {
     const body = (reply.json ?? {}) as Record<string, unknown>;
     if (reply.status === 404 || !body['status']) return bad(404, 'Godex does not know that order.');
     return { status: 200, body: narrated(parseGodexStatus(reply.json)) };
+  }
+  if (provider === 'trocador') {
+    const key = env.TROCADOR_API_KEY;
+    if (!key) return bad(503, 'Trocador is not configured on this server.');
+    const reply = await upstream(trocadorStatusUrl(id), { headers: trHeaders(key) });
+    const body = (reply.json ?? {}) as Record<string, unknown>;
+    if (reply.status === 404 || !body['status']) return bad(404, 'Trocador does not know that order.');
+    return { status: 200, body: narrated(parseTrocadorStatus(reply.json)) };
   }
   if (provider === 'changenow') {
     const key = env.CHANGENOW_API_KEY;

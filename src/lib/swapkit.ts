@@ -44,6 +44,9 @@ export interface Coin {
    *  a promise, and the coin that breaks the coincidence would send somebody's
    *  USDT down the wrong chain. */
   gxNetwork: string;
+  /** Network as Trocador names it: the chain's own name rather than a ticker,
+   *  and "Mainnet" for the coins that are their own chain. */
+  trNetwork: string;
   family: AddressFamily;
 }
 
@@ -58,13 +61,13 @@ export interface Coin {
  * wanting.
  */
 export const COINS: Coin[] = [
-  { id: 'xmr', ticker: 'xmr', label: 'Monero', network: 'XMR', cnNetwork: 'xmr', gxNetwork: 'XMR', family: 'xmr' },
-  { id: 'btc', ticker: 'btc', label: 'Bitcoin', network: 'BTC', cnNetwork: 'btc', gxNetwork: 'BTC', family: 'btc' },
-  { id: 'usdttrc', ticker: 'usdt', label: 'USDT (Tron)', network: 'TRX', cnNetwork: 'trx', gxNetwork: 'TRX', family: 'tron' },
-  { id: 'usdteth', ticker: 'usdt', label: 'USDT (Ethereum)', network: 'ETH', cnNetwork: 'eth', gxNetwork: 'ETH', family: 'evm' },
-  { id: 'eth', ticker: 'eth', label: 'Ethereum', network: 'ETH', cnNetwork: 'eth', gxNetwork: 'ETH', family: 'evm' },
-  { id: 'usdc', ticker: 'usdc', label: 'USDC (Ethereum)', network: 'ETH', cnNetwork: 'eth', gxNetwork: 'ETH', family: 'evm' },
-  { id: 'usdcsol', ticker: 'usdc', label: 'USDC (Solana)', network: 'SOL', cnNetwork: 'sol', gxNetwork: 'SOL', family: 'sol' },
+  { id: 'xmr', ticker: 'xmr', label: 'Monero', network: 'XMR', cnNetwork: 'xmr', gxNetwork: 'XMR', trNetwork: 'Mainnet', family: 'xmr' },
+  { id: 'btc', ticker: 'btc', label: 'Bitcoin', network: 'BTC', cnNetwork: 'btc', gxNetwork: 'BTC', trNetwork: 'Mainnet', family: 'btc' },
+  { id: 'usdttrc', ticker: 'usdt', label: 'USDT (Tron)', network: 'TRX', cnNetwork: 'trx', gxNetwork: 'TRX', trNetwork: 'TRC20', family: 'tron' },
+  { id: 'usdteth', ticker: 'usdt', label: 'USDT (Ethereum)', network: 'ETH', cnNetwork: 'eth', gxNetwork: 'ETH', trNetwork: 'ERC20', family: 'evm' },
+  { id: 'eth', ticker: 'eth', label: 'Ethereum', network: 'ETH', cnNetwork: 'eth', gxNetwork: 'ETH', trNetwork: 'Mainnet', family: 'evm' },
+  { id: 'usdc', ticker: 'usdc', label: 'USDC (Ethereum)', network: 'ETH', cnNetwork: 'eth', gxNetwork: 'ETH', trNetwork: 'ERC20', family: 'evm' },
+  { id: 'usdcsol', ticker: 'usdc', label: 'USDC (Solana)', network: 'SOL', cnNetwork: 'sol', gxNetwork: 'SOL', trNetwork: 'Solana', family: 'sol' },
 ];
 
 export const XMR: Coin = COINS[0]!;
@@ -76,12 +79,13 @@ export function coin(id: string): Coin | null {
   return COINS.find((c) => c.id === id) ?? null;
 }
 
-export type ProviderId = 'exolix' | 'changenow' | 'godex';
+export type ProviderId = 'exolix' | 'changenow' | 'godex' | 'trocador';
 
 export const PROVIDERS: { id: ProviderId; label: string; note: string; needsKey: boolean }[] = [
   { id: 'exolix', label: 'Exolix', note: 'exolix.com', needsKey: false },
   { id: 'godex', label: 'Godex', note: 'godex.io', needsKey: false },
   { id: 'changenow', label: 'ChangeNOW', note: 'changenow.io', needsKey: true },
+  { id: 'trocador', label: 'Trocador', note: 'trocador.app, an aggregator', needsKey: true },
 ];
 
 /** One provider's answer to "how much of that for this much of this". */
@@ -524,6 +528,125 @@ export function parseGodexStatus(json: unknown): SwapStatus {
   const j = (json ?? {}) as Record<string, unknown>;
   const raw = String(j['status'] ?? 'unknown');
   const status: SwapStatus = { stage: GODEX_STAGES[raw] ?? 'failed', raw };
+  if (j['hash_out']) status.txId = String(j['hash_out']);
+  return status;
+}
+
+// ---------------------------------------------------------------------------
+// Trocador. https://trocador.app
+//
+// Not an exchange: an aggregator that shops one pair around roughly fifteen
+// no-KYC desks and hands back the best of them, which is why one adapter here
+// is worth more than one exchange. It is also the one the Monero community
+// actually uses, and it publishes a KYC rating per desk, which is the reason
+// to prefer it over shopping the same desks individually.
+//
+// READ THIS BEFORE TRUSTING IT. Every Trocador endpoint, and its API
+// documentation, is behind an API key, so unlike the other three adapters here
+// this one could not be checked against the live service while it was written.
+// The endpoint names, the `API-Key` header and the three response fields the
+// order depends on are confirmed; the rest, including the network spellings
+// above, is reconstruction. It is therefore built to fail closed rather than
+// to guess: `parseTrocadorCreate` refuses an order whose deposit address is
+// not a valid address on the chain the visitor is about to send, so a field
+// this code has misread cannot become an address somebody pays into. Nothing
+// here runs at all until TROCADOR_API_KEY is set.
+
+const TROCADOR = 'https://trocador.app/api';
+
+export function trocadorRateUrl(pair: Pair, amount: number): string {
+  const q = new URLSearchParams({
+    ticker_from: pair.from.ticker,
+    network_from: pair.from.trNetwork,
+    ticker_to: pair.to.ticker,
+    network_to: pair.to.trNetwork,
+    amount_from: String(amount),
+    payment: 'False',
+  });
+  return `${TROCADOR}/new_rate?${q}`;
+}
+
+export function parseTrocadorRate(json: unknown): SwapQuote {
+  const j = (json ?? {}) as Record<string, unknown>;
+  const toAmount = Number(j['amount_to']);
+  const minAmount = Number(j['min_amount']);
+  const maxAmount = Number(j['max_amount']);
+  if (Number.isFinite(toAmount) && toAmount > 0) {
+    const quote: SwapQuote = { provider: 'trocador', ok: true, toAmount };
+    if (Number.isFinite(minAmount) && minAmount > 0) quote.minAmount = minAmount;
+    if (Number.isFinite(maxAmount) && maxAmount > 0) quote.maxAmount = maxAmount;
+    return quote;
+  }
+  const stated = j['error'] ?? j['message'] ?? j['detail'];
+  const quote: SwapQuote = { provider: 'trocador', ok: false, reason: stated ? String(stated) : 'No quote.' };
+  if (Number.isFinite(minAmount) && minAmount > 0) quote.minAmount = minAmount;
+  return quote;
+}
+
+export function trocadorCreateUrl(req: CreateRequest): string {
+  const q = new URLSearchParams({
+    ticker_from: req.from.ticker,
+    network_from: req.from.trNetwork,
+    ticker_to: req.to.ticker,
+    network_to: req.to.trNetwork,
+    amount_from: String(req.amount),
+    address: req.address,
+    payment: 'False',
+  });
+  if (req.refund) q.set('refund', req.refund);
+  return `${TROCADOR}/new_trade?${q}`;
+}
+
+/**
+ * Read a created trade, and refuse it unless the deposit address is an address
+ * on the chain being sent.
+ *
+ * That check is the safety net described above, and it is not decoration: it is
+ * the difference between this adapter having misread a field and this adapter
+ * printing somebody else's address for a visitor to pay into. `from` is the
+ * coin being spent, so its family is the chain the deposit belongs on.
+ */
+export function parseTrocadorCreate(json: unknown, from: Coin): SwapOrder | null {
+  const j = (json ?? {}) as Record<string, unknown>;
+  const id = String(j['trade_id'] ?? '');
+  const payinAddress = String(j['address_provider'] ?? '');
+  const payinAmount = Number(j['amount_from']);
+  const toAmount = Number(j['amount_to']);
+  if (!id || !payinAddress || !Number.isFinite(payinAmount)) return null;
+  if (!addressLooksRight(from.family, payinAddress)) return null;
+  return {
+    provider: 'trocador',
+    id,
+    payinAddress,
+    payinExtra: j['address_provider_memo'] ? String(j['address_provider_memo']) : null,
+    payinAmount,
+    toAmount: Number.isFinite(toAmount) ? toAmount : 0,
+    payoutAddress: String(j['address_user'] ?? ''),
+  };
+}
+
+export function trocadorStatusUrl(id: string): string {
+  return `${TROCADOR}/trade?id=${encodeURIComponent(id)}`;
+}
+
+const TROCADOR_STAGES: Record<string, SwapStage> = {
+  new: 'waiting',
+  waiting: 'waiting',
+  confirming: 'confirming',
+  confirmation: 'confirming',
+  sending: 'sending',
+  exchanging: 'exchanging',
+  finished: 'done',
+  expired: 'expired',
+  refunded: 'refunded',
+  halted: 'failed',
+  failed: 'failed',
+};
+
+export function parseTrocadorStatus(json: unknown): SwapStatus {
+  const j = (json ?? {}) as Record<string, unknown>;
+  const raw = String(j['status'] ?? 'unknown');
+  const status: SwapStatus = { stage: TROCADOR_STAGES[raw.toLowerCase()] ?? 'failed', raw };
   if (j['hash_out']) status.txId = String(j['hash_out']);
   return status;
 }
