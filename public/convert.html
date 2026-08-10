@@ -211,6 +211,7 @@ afterwards.
   <li><strong>What it does not carry across:</strong> headers and footers, footnotes, comments, embedded images, columns, and text boxes. Those are dropped rather than mangled. <strong>Tracked changes are accepted, not preserved:</strong> an insertion is kept and a deletion removed, as if you had clicked Accept All, so a redlined draft converts to its final text rather than its markup.</li>
   <li><strong>It learns locally, and only locally.</strong> Correcting the heading detection stores a number in <em>this browser</em>, against the software that produced the PDF. Nothing is collected, because nothing is sent anywhere, which is also why it cannot learn from anyone else's documents.</li>
   <li><strong>It downloads about 700&nbsp;KB</strong> the first time, to read PDFs (<a href="https://mozilla.github.io/pdf.js/">pdf.js</a>) and write them (<a href="https://github.com/Hopding/pdf-lib">pdf-lib</a>). The Word half needs nothing extra: a .docx is a ZIP of XML, and the browser already has a ZIP engine.</li>
+  <li><strong>It wants a current browser.</strong> The PDF engine reads its pages the modern way, which a Safari older than 18.4 could not do until this page taught it how; older versions than that, or a browser more than a couple of years stale, may still fall short. If a conversion stops with a message about an iterator, that is what it means: update the browser, or open the file somewhere newer.</li>
 </ul>
 </section>
 
@@ -246,6 +247,7 @@ You can
 <span class="task-clock">1999</span>
 </div>
 </div>
+<script src="/pdf-compat.js"></script>
 <script src="/convert-page.js"></script>
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
