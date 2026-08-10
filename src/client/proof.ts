@@ -116,6 +116,8 @@ export const KNOWN_STORAGE: Record<string, string> = {
     'Signatures you chose to save on the PDF editor, as images. Only ones you explicitly saved.',
   'loc1999:pgp-keys':
     'PGP keys you made or imported. Private keys are here if you made one, protected by their passphrase if you set one.',
+  'loc1999:fiat':
+    'Whether the swap and wallet pages show what an amount is worth in dollars. The word on or off, nothing else.',
 };
 
 /**
@@ -230,9 +232,19 @@ export const SOURCES: Record<string, string[]> = {
     'public/tabs.js',
     'src/lib/xmrproxy.ts',
     'src/lib/btcproxy.ts',
+    'public/fiat.js',
+    'src/lib/pricekit.ts',
+    'src/worker/price.ts',
   ],
   // The swap page: a thin client over the Worker's relay to the exchanges.
-  '/swap.html': ['public/swap-page.js', 'src/worker/swap.ts', 'src/lib/swapkit.ts'],
+  '/swap.html': [
+    'public/swap-page.js',
+    'src/worker/swap.ts',
+    'src/lib/swapkit.ts',
+    'public/fiat.js',
+    'src/lib/pricekit.ts',
+    'src/worker/price.ts',
+  ],
   // The payment-request page: the address checks and URI builder, and the QR
   // encoder it shares with the code tool. No server half; it makes no request.
   '/pay.html': ['public/pay-page.js', 'src/client/paykit.ts', 'src/client/qrkit.ts'],
@@ -284,8 +296,8 @@ export const SERVER_PAGES: Record<string, string> = {
   '/golf': 'Submitting a score records it on our server, which is what a leaderboard is.',
   '/board': 'The standings are held on our server.',
   '/email.html': 'The disposable-inbox tab asks this site’s server for mail sent to your address, and the server stores it for an hour. The message-checker tab makes no network request at all; it reads what you paste, in the tab.',
-  '/wallet.html': 'The Monero tab talks to a Monero node, and the Bitcoin tab to a block explorer, both through this site’s server, which is what syncing a wallet is; neither ever sees your IP, and no key ever crosses the wire. The address-checker tab makes no network request at all.',
-  '/swap.html': 'Quotes and orders go to the exchange services (Exolix, Godex, and ChangeNOW or Trocador where configured) through this site’s server, so they see Cloudflare rather than you. The server stores nothing about a swap; the order id lives in this tab alone.',
+  '/wallet.html': 'The Monero tab talks to a Monero node, and the Bitcoin tab to a block explorer, both through this site’s server, which is what syncing a wallet is; neither ever sees your IP, and no key ever crosses the wire. The dollar line under a balance is worked out here from a price table this site fetches once for everybody and caches, so no balance, amount or address is ever sent to price anything, and it can be switched off. The address-checker tab makes no network request at all.',
+  '/swap.html': 'Quotes and orders go to the exchange services (Exolix, Godex, and ChangeNOW or Trocador where configured) through this site’s server, so they see Cloudflare rather than you. The server stores nothing about a swap; the order id lives in this tab alone. The dollar figures are worked out here from a price table this site fetches once for everybody and caches, so no amount is ever sent to price it, and they can be switched off.',
 };
 
 export function networkNote(path: string): string | null {

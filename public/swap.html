@@ -137,7 +137,7 @@ Pick what you are sending and what you want back, take a quote, and send to the 
         <option value="xmr">Monero</option>
       </select>
     </p>
-    <p class="note tick-side-foot">in <span id="amount-unit">BTC</span>, from any wallet you control</p>
+    <p class="note tick-side-foot"><span id="send-usd" class="tick-usd"></span> in <span id="amount-unit">BTC</span>, from any wallet you control</p>
     <p class="tick-dest-row">
       <input id="refund" type="text" spellcheck="false" autocomplete="off" aria-label="Refund address" placeholder="an address of the coin you are sending">
     </p>
@@ -166,7 +166,7 @@ Pick what you are sending and what you want back, take a quote, and send to the 
       <input id="xmr-address" type="text" spellcheck="false" autocomplete="off" aria-labelledby="dest-heading" aria-describedby="dest-note" placeholder="4... or 8..., a mainnet Monero address">
       <button type="button" id="paste-dest" class="tick-paste" title="Paste from the clipboard">Paste</button>
     </p>
-    <p class="note tick-side-foot" id="dest-heading">Where the <span id="dest-coin-name">Monero</span> goes</p>
+    <p class="note tick-side-foot" id="dest-heading"><span id="recv-usd" class="tick-usd"></span> Where the <span id="dest-coin-name">Monero</span> goes</p>
   </div>
 </div>
 
@@ -179,6 +179,10 @@ pasted is really an address before anything moves.
 </p>
 <p class="note hidden" id="pair-note">Every swap here has Monero on one side. Picking Monero on both is the one thing it will not do.</p>
 <p><button type="button" id="get-quotes">Get quotes</button></p>
+<p class="note">
+  <label class="inline"><input type="checkbox" id="fiat-toggle" class="fiat-toggle" checked> Show what it is worth in dollars</label>
+  <span id="fiat-source" class="note"></span>
+</p>
 
 <p id="swap-error" class="error" role="alert"></p>
 <p id="swap-status" class="status" role="status" aria-live="polite"></p>
@@ -312,6 +316,7 @@ You can
 <span class="task-clock">1999</span>
 </div>
 </div>
+<script src="/fiat.js"></script>
 <script src="/swap-page.js"></script>
 <script src="/toolbar.js"></script>
 <script src="/desk.js"></script>

@@ -26,6 +26,7 @@ import { resolveBtcTarget } from '../lib/btcproxy';
 import { withOnionLocation } from '../lib/onion';
 import { handleIncomingEmail, mailApi, purgeExpired } from './mail';
 import { swapApi } from './swap';
+import { priceApi } from './price';
 import { COUNTER_VERSION } from '../lib/version';
 import { handleCallback, handleLogin, handleLogout, handleMe, handleMyRepos, loadSession, oauthConfigured, scopesFor } from './auth';
 import { limitsFromEnv, proxyRateLimitPerMinute, rateLimitPerMinute, swapRateLimitPerMinute, type Env } from './env';
@@ -185,6 +186,13 @@ const routes = {
         const reply = await mailApi(request, env, path);
         // A throwaway inbox is private and ephemeral; never let a reply cache.
         return jsonResponse(reply.body, reply.status, { 'cache-control': 'no-store' });
+      }
+
+      /* No rate limit and no key, on purpose: the answer is the same for
+         everybody, it is served from the edge cache, and a flood costs one
+         upstream call a minute however hard anybody leans on it. */
+      if (path === '/api/price' && request.method === 'GET') {
+        return withSecurityHeaders(await priceApi(request, Date.now()));
       }
 
       if (path.startsWith('/api/swap/')) {

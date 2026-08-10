@@ -170,6 +170,30 @@
     $('recv-amount').textContent = picked
       ? trim(picked.toAmount) + ' ' + coinOf(toId()).ticker
       : 'no quote';
+    paintFiat();
+  }
+
+  // ------------------------------------------------------------------ fiat
+  /* Dollars beside both halves of the ticket. The number is indicative and
+   * says so: it comes from a public price table, not from the desk, and the
+   * desk's own quote is the one that settles. Nothing about the amount is sent
+   * anywhere to work it out. */
+  var fiat = window.LOC1999_FIAT;
+
+  function paintFiat() {
+    if (!fiat) return;
+    var picked = quotes.filter(function (q) { return q.ok && q.provider === chosen; })[0];
+    fiat.paint($('send-usd'), amountTyped(), coinOf(fromId()).ticker);
+    fiat.paint($('recv-usd'), picked ? picked.toAmount : null, coinOf(toId()).ticker);
+    var src = fiat.source();
+    $('fiat-source').textContent = src ? '(' + src.source + ', indicative)' : '';
+  }
+
+  if (fiat) {
+    fiat.mountToggle($('fiat-toggle'), paintFiat);
+    fiat.onChange(paintFiat);
+    fiat.load().then(paintFiat);
+    $('amount').addEventListener('input', paintFiat);
   }
 
   $('quotes').addEventListener('change', function (event) {
