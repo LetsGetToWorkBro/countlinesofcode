@@ -134,7 +134,7 @@ describe('every committed bundle is a current build of its source', () => {
     // This loop covers all fourteen in BUNDLES; xmrlib is the fifteenth and has
     // its own eval-patched freshness check above. If the build list grows, the
     // loop grows with it — this asserts it has not silently shrunk.
-    expect(BUNDLES.length).toBeGreaterThanOrEqual(14);
+    expect(BUNDLES.length).toBeGreaterThanOrEqual(15);
   });
 });
 

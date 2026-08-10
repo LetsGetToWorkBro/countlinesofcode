@@ -108,6 +108,26 @@ export const BUNDLES = [
     outfile: 'public/btcwallet.js',
     banner: '/* 1999.LOC Bitcoin wallet engine. Built from src/client/btcwallet.ts. Do not edit. Bundles @scure/bip39, @scure/bip32 and @scure/btc-signer (MIT). */',
   },
+  {
+    entry: 'src/client/diffkit.ts',
+    outfile: 'public/diffkit.js',
+    banner: '/* 1999.LOC text-compare engine (Myers diff). Built from src/client/diffkit.ts. Do not edit. */',
+  },
+  {
+    entry: 'src/client/qrkit.ts',
+    outfile: 'public/qrkit.js',
+    banner: '/* 1999.LOC QR encoder (ISO/IEC 18004, in-house). Built from src/client/qrkit.ts. Do not edit. */',
+  },
+  {
+    entry: 'src/client/paykit.ts',
+    outfile: 'public/paykit.js',
+    banner: '/* 1999.LOC payment-request helpers. Built from src/client/paykit.ts. Do not edit. Bundles @noble/hashes (MIT) for the address checksums. */',
+  },
+  {
+    entry: 'src/client/invoicekit.ts',
+    outfile: 'public/invoicekit.js',
+    banner: '/* 1999.LOC invoice engine. Built from src/client/invoicekit.ts. Do not edit. Bundles pdf-lib (MIT). */',
+  },
 ];
 
 /**

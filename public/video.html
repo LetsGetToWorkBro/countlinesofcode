@@ -54,6 +54,8 @@
 &middot;
 <a href="/swap.html">swap</a>
 &middot;
+<a href="/pay.html">payment</a>
+&middot;
 <a href="/wallet.html#addresses">paper wallet</a></span>
 <span class="nav-group"><span class="nav-label">privacy</span>
 <a href="/lock.html">pgp</a>
@@ -77,6 +79,12 @@
 <strong>video tools</strong>
 &middot;
 <a href="/audio.html">audio tools</a></span>
+<span class="nav-group"><span class="nav-label">utilities</span>
+<a href="/compare.html">compare</a>
+&middot;
+<a href="/qr.html">qr code</a>
+&middot;
+<a href="/invoice.html">invoice</a></span>
 <span class="nav-group"><span class="nav-label">code</span>
 <a href="/code.html">count code</a>
 &middot;
@@ -93,30 +101,45 @@
     <button type="button" data-cmd="drop">Open...</button>
     <button type="button" data-cmd="run">Save</button>
   </span></span>
+<span class="menu"><button type="button" class="menu-title">Mode</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="mode-clip">Clip</button>
+    <button type="button" data-cmd="mode-convert">Convert</button>
+    <button type="button" data-cmd="mode-gif">GIF</button>
+  </span></span>
 <span class="menu"><button type="button" class="menu-title">Clip</button>
   <span class="menu-drop">
     <button type="button" data-cmd="start-here">Start here</button>
     <button type="button" data-cmd="end-here">End here</button>
-    <button type="button" data-cmd="format">Format...</button>
+    <button type="button" data-cmd="play-clip">Play the clip</button>
+    <button type="button" data-cmd="reset-trim">Whole video</button>
   </span></span>
 <span class="menu"><button type="button" class="menu-title">Help</button>
   <span class="menu-drop">
     <button type="button" data-help>What this program does</button>
   </span></span>
 </p>
+<div class="mp-toolbar" role="toolbar" aria-label="Video">
+  <button type="button" id="mp-open" class="mp-tb">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 3.5h4l1.2 1.4h7.8v7.6a1 1 0 0 1-1 1H2.5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>Open</button>
+  <span class="mp-tb-sep"></span>
+  <span class="mp-modes" role="radiogroup" aria-label="What to do">
+    <button type="button" id="mode-clip" class="mp-mode is-on" data-mode="clip" role="radio" aria-checked="true" disabled>Clip</button>
+    <button type="button" id="mode-convert" class="mp-mode" data-mode="convert" role="radio" aria-checked="false" disabled>Convert</button>
+    <button type="button" id="mode-gif" class="mp-mode" data-mode="gif" role="radio" aria-checked="false" disabled>GIF</button>
+  </span>
+  <span class="mp-tb-sep"></span>
+  <button type="button" id="mp-play" class="mp-tb" disabled>
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 3l9 5-9 5z" fill="currentColor"/></svg>Play</button>
+  <button type="button" id="mp-whole" class="mp-tb" disabled>
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3v10M14 3v10M4 8h8M4 8l2-2M4 8l2 2M12 8l-2-2M12 8l-2 2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Whole</button>
+  <span class="mp-tb-spacer"></span>
+  <button type="button" id="mp-export" class="mp-tb mp-tb-go" disabled>
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8M8 10l-3-3M8 10l3-3M2.5 13h11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Export</button>
+</div>
 <div class="app-body">
-<p class="mp-hint"><span class="mp-hint-mark">i</span>
-Open a video, trim it, change its format or turn a piece of it into a GIF. A two gigabyte holiday video never leaves your laptop.</p>
-
-<p class="note">
-Every online video converter uploads your file to somebody's server. This one
-has no endpoint; turn off your wifi after it loads and it still works.
-</p>
-
-
-<hr>
-
-<h3>1. Open a video</h3>
+<p class="mp-hint" id="mp-hint"><span class="mp-hint-mark">i</span>
+Open a video, then <strong>clip</strong> it, <strong>convert</strong> it, or make a <strong>GIF</strong>. Nothing is uploaded; a two gigabyte holiday video never leaves your laptop.</p>
 
 <div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Open a video file">
   <strong>Drop a video here, or click to choose</strong>
@@ -127,8 +150,8 @@ has no endpoint; turn off your wifi after it loads and it still works.
 <p id="status" class="status" role="status" aria-live="polite"></p>
 <p id="error" class="error" role="alert"></p>
 
-<div id="loaded" class="hidden">
-  <p id="media-line" class="note"></p>
+<div id="loaded" class="hidden" data-mode="clip">
+  <p id="media-line" class="mp-media"></p>
   <div id="decode-warning" class="hidden notice-box">
     <p><strong>This browser cannot decode this video.</strong></p>
     <p class="note" id="decode-detail"></p>
@@ -138,83 +161,88 @@ has no endpoint; turn off your wifi after it loads and it still works.
     <video id="preview" controls playsinline preload="metadata"></video>
   </div>
 
-  <hr>
-  <h3>2. Choose the part you want</h3>
-
-  <div class="trim-row">
-    <label for="start-range">Start</label>
-    <input type="range" id="start-range" min="0" max="1000" value="0" step="1">
-    <input type="text" id="start-time" class="time-field" value="0:00" size="8" inputmode="numeric" aria-label="Start time">
-    <button type="button" id="start-here" class="small">use playhead</button>
+  <!-- The timeline: the clip control, shown for Clip and GIF. Dragging the
+       handles drives the hidden range inputs the engine already listens to. -->
+  <div class="mp-timeline" id="timeline-wrap" data-modes="clip gif">
+    <div class="tl-track" id="timeline">
+      <div class="tl-sel" id="tl-sel"></div>
+      <div class="tl-handle tl-in" id="tl-in" tabindex="0" role="slider" aria-label="Clip start" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+      <div class="tl-handle tl-out" id="tl-out" tabindex="0" role="slider" aria-label="Clip end" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"></div>
+      <div class="tl-playhead" id="tl-play"></div>
+    </div>
+    <div class="tl-bar">
+      <span class="tl-field">In
+        <input type="text" id="start-time" class="time-field" value="0:00" size="7" inputmode="numeric" aria-label="Start time">
+        <button type="button" id="start-here" class="mp-mini">set</button></span>
+      <span class="tl-mid">
+        <button type="button" id="play-clip" class="mp-mini">Play the clip</button>
+        <button type="button" id="reset-trim" class="mp-mini">Whole video</button>
+        <span id="trim-summary" class="tl-summary"></span></span>
+      <span class="tl-field"><button type="button" id="end-here" class="mp-mini">set</button>
+        Out <input type="text" id="end-time" class="time-field" value="0:00" size="7" inputmode="numeric" aria-label="End time"></span>
+    </div>
+    <input type="range" id="start-range" class="tl-raw" min="0" max="1000" value="0" step="1" tabindex="-1" aria-hidden="true">
+    <input type="range" id="end-range" class="tl-raw" min="0" max="1000" value="1000" step="1" tabindex="-1" aria-hidden="true">
   </div>
-  <div class="trim-row">
-    <label for="end-range">End</label>
-    <input type="range" id="end-range" min="0" max="1000" value="1000" step="1">
-    <input type="text" id="end-time" class="time-field" value="0:00" size="8" inputmode="numeric" aria-label="End time">
-    <button type="button" id="end-here" class="small">use playhead</button>
+
+  <p class="mp-convert-note" data-modes="convert">Converting the <strong>whole file</strong>. Switch to Clip to take just a piece.</p>
+
+  <!-- What comes out. -->
+  <div class="mp-options">
+    <div class="opt-row">
+      <label for="format" class="inline">Convert to</label>
+      <select id="format"></select>
+      <span id="format-note" class="note"></span>
+    </div>
+    <div class="opt-row">
+      <label for="size" class="inline">Size</label>
+      <select id="size"></select>
+      <label for="quality" class="inline">Quality</label>
+      <select id="quality">
+        <option value="">unchanged</option>
+        <option value="very-high">very high</option>
+        <option value="high">high</option>
+        <option value="medium">medium</option>
+        <option value="low">low</option>
+        <option value="very-low">very low</option>
+      </select>
+      <label for="rotate" class="inline">Rotate</label>
+      <select id="rotate">
+        <option value="0">none</option>
+        <option value="90">90&deg;</option>
+        <option value="180">180&deg;</option>
+        <option value="270">270&deg;</option>
+      </select>
+    </div>
+    <p id="gif-box" class="opt-row hidden">
+      <label for="gif-fps" class="inline">Frames a second</label>
+      <select id="gif-fps"></select>
+      <label class="inline"><input type="checkbox" id="gif-dither" checked> Dither</label>
+      <span class="note">trades banding for a fine speckle, which the eye much prefers.</span>
+    </p>
+    <div class="opt-row">
+      <label for="target" class="inline">Fit under</label>
+      <select id="target">
+        <option value="">no size limit</option>
+        <option value="10">10 MB (Discord)</option>
+        <option value="16">16 MB (WhatsApp)</option>
+        <option value="25">25 MB (email attachment)</option>
+        <option value="50">50 MB</option>
+        <option value="100">100 MB</option>
+        <option value="custom">a size I&rsquo;ll type&hellip;</option>
+      </select>
+      <input type="number" id="target-mb" class="narrow hidden" min="1" max="4000" step="1" value="25" aria-label="Target size in megabytes">
+      <span id="target-mb-unit" class="hidden note">MB</span>
+    </div>
+    <div class="opt-row">
+      <label class="inline"><input type="checkbox" id="mute"> Remove the sound</label>
+    </div>
   </div>
-  <p class="note">
-    <button type="button" id="play-clip" class="small">Play just the clip</button>
-    <button type="button" id="reset-trim" class="small">Whole video</button>
-    <span id="trim-summary"></span>
-  </p>
-
-  <hr>
-  <h3>3. Choose what comes out</h3>
-
-  <p>
-    <label for="format" class="inline">Format</label>
-    <select id="format"></select>
-    <span id="format-note" class="note"></span>
-  </p>
-  <p>
-    <label for="size" class="inline">Size</label>
-    <select id="size"></select>
-    <label for="quality" class="inline">Quality</label>
-    <select id="quality">
-      <option value="">unchanged</option>
-      <option value="very-high">very high</option>
-      <option value="high">high</option>
-      <option value="medium">medium</option>
-      <option value="low">low</option>
-      <option value="very-low">very low</option>
-    </select>
-    <label for="rotate" class="inline">Rotate</label>
-    <select id="rotate">
-      <option value="0">none</option>
-      <option value="90">90°</option>
-      <option value="180">180°</option>
-      <option value="270">270°</option>
-    </select>
-  </p>
-  <p id="gif-box" class="hidden">
-    <label for="gif-fps" class="inline">Frames a second</label>
-    <select id="gif-fps"></select>
-    <label class="inline"><input type="checkbox" id="gif-dither" checked> Dither</label>
-    <span class="note">trades banding for a fine speckle, which the eye much prefers.</span>
-  </p>
-  <p>
-    <label for="target" class="inline">Fit under</label>
-    <select id="target">
-      <option value="">no size limit</option>
-      <option value="10">10 MB (Discord)</option>
-      <option value="16">16 MB (WhatsApp)</option>
-      <option value="25">25 MB (email attachment)</option>
-      <option value="50">50 MB</option>
-      <option value="100">100 MB</option>
-      <option value="custom">a size I&rsquo;ll type&hellip;</option>
-    </select>
-    <input type="number" id="target-mb" class="narrow hidden" min="1" max="4000" step="1" value="25" aria-label="Target size in megabytes">
-    <span id="target-mb-unit" class="hidden note">MB</span>
-  </p>
-  <p>
-    <label class="inline"><input type="checkbox" id="mute"> Remove the sound</label>
-  </p>
 
   <div id="plan" class="notice-box"></div>
 
   <p id="suggest-box" class="hidden note">
-    <button type="button" id="apply-suggestion" class="small">Use that size</button>
+    <button type="button" id="apply-suggestion" class="mp-mini">Use that size</button>
   </p>
 
   <p id="exact-box" class="hidden note">
@@ -222,8 +250,8 @@ has no endpoint; turn off your wifi after it loads and it still works.
     Precise to the frame, but the picture has to be re-encoded to get there.
   </p>
 
-  <p>
-    <button type="button" id="run">Make the file</button>
+  <p class="mp-run">
+    <button type="button" id="run" class="mp-primary">Make the file</button>
     <button type="button" id="cancel" class="hidden">Stop</button>
     <span id="estimate" class="note"></span>
   </p>
@@ -315,6 +343,7 @@ You can
 </div>
 <script src="/pdf-compat.js"></script>
 <script src="/video-page.js"></script>
+<script src="/video-timeline.js"></script>
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
 <script src="/start.js"></script>

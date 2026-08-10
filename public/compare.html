@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compare Two Texts or Files in Your Browser | 1999.LOC</title>
+<meta name="description" content="A side-by-side diff of two texts or files, line by line and character by character, in your browser. Paste or drop them in; nothing is uploaded. The classic WinMerge view, in a tab.">
+<link rel="canonical" href="https://1999loc.com/compare.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Compare Two Texts or Files in Your Browser | 1999.LOC">
+<meta property="og:description" content="Diff two texts side by side, line and character, without uploading either. The WinMerge view, in a tab.">
+<meta property="og:url" content="https://1999loc.com/compare.html">
+<meta property="og:site_name" content="1999.LOC">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/app-compare.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body data-app="compare">
+<!--
+  EXPECTED LAYOUT (single column, ~680px, left aligned):
+
+    1999.LOC
+    ------------------------------------------------------------
+    ... | compare | ...
+    ------------------------------------------------------------
+    COMPARE
+    [ left text        ] | [ right text       ]
+    [ Compare ]  [x] ignore whitespace  [x] ignore case
+    verdict: 3 lines changed, 1 added, 0 removed
+    +----------------------+----------------------+
+    | 1  the same line     | 1  the same line     |
+    | 2  a changed WORD    | 2  a changed word    |
+    +----------------------+----------------------+
+    ------------------------------------------------------------
+-->
+<div id="page">
+
+<h1><a href="/">1999.LOC</a></h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<span class="nav-group"><span class="nav-label">crypto</span>
+<a href="/wallet.html">wallet</a>
+&middot;
+<a href="/swap.html">swap</a>
+&middot;
+<a href="/pay.html">payment</a>
+&middot;
+<a href="/wallet.html#addresses">paper wallet</a></span>
+<span class="nav-group"><span class="nav-label">privacy</span>
+<a href="/lock.html">pgp</a>
+&middot;
+<a href="/inspect.html">inspect file</a>
+&middot;
+<a href="https://delete.1999loc.com/">delete posts</a>
+&middot;
+<a href="/email.html">temporary email</a></span>
+<span class="nav-group"><span class="nav-label">documents</span>
+<a href="/sign.html">pdf editor</a>
+&middot;
+<a href="/convert.html">pdf &lt;=&gt; word</a>
+&middot;
+<a href="/sheet.html">excel &lt;=&gt; csv</a>
+&middot;
+<a href="/zip.html">zip</a></span>
+<span class="nav-group"><span class="nav-label">media</span>
+<a href="/image.html">image tools</a>
+&middot;
+<a href="/video.html">video tools</a>
+&middot;
+<a href="/audio.html">audio tools</a></span>
+<span class="nav-group"><span class="nav-label">utilities</span>
+<strong>compare</strong>
+&middot;
+<a href="/qr.html">qr code</a>
+&middot;
+<a href="/invoice.html">invoice</a></span>
+<span class="nav-group"><span class="nav-label">code</span>
+<a href="/code.html">count code</a>
+&middot;
+<a href="/golf">golf</a></span>
+</p>
+<hr>
+
+<div class="desk-shell">
+<div class="app-window" id="app">
+<div class="client-title"><h2>Compare</h2><a class="win-min" href="#" aria-label="Minimise Compare">_</a></div>
+<p class="wm-menu menubar" role="menubar">
+<span class="menu"><button type="button" class="menu-title">File</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="wm-open-left">Open the left side...</button>
+    <button type="button" data-cmd="wm-open-right">Open the right side...</button>
+    <span class="menu-rule"></span>
+    <button type="button" data-cmd="wm-swap">Swap the two sides</button>
+    <button type="button" data-cmd="wm-clear">Clear both</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Compare</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="wm-run">Compare now</button>
+    <button type="button" data-cmd="wm-ws">Ignore whitespace</button>
+    <button type="button" data-cmd="wm-case">Ignore case</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Help</button>
+  <span class="menu-drop">
+    <button type="button" data-help>What this program does</button>
+  </span></span>
+</p>
+<div class="wm-bar" role="toolbar" aria-label="Compare">
+  <button type="button" id="wm-run">Compare</button>
+  <span class="wm-sep"></span>
+  <label><input type="checkbox" id="wm-ws"> ignore whitespace</label>
+  <label><input type="checkbox" id="wm-case"> ignore case</label>
+  <span class="wm-sep"></span>
+  <button type="button" id="wm-swap">Swap</button>
+  <button type="button" id="wm-clear">Clear</button>
+</div>
+<div class="app-body">
+
+<div class="wm-inputs">
+  <div class="wm-input">
+    <div class="wm-input-head"><span>Left</span>
+      <button type="button" id="wm-open-left" aria-label="Open a file for the left side">Open a file</button></div>
+    <textarea id="wm-left" spellcheck="false" aria-label="The left text" placeholder="Paste or drop the first text here"></textarea>
+    <input type="file" id="wm-file-left" hidden>
+  </div>
+  <div class="wm-input">
+    <div class="wm-input-head"><span>Right</span>
+      <button type="button" id="wm-open-right" aria-label="Open a file for the right side">Open a file</button></div>
+    <textarea id="wm-right" spellcheck="false" aria-label="The right text" placeholder="Paste or drop the second text here"></textarea>
+    <input type="file" id="wm-file-right" hidden>
+  </div>
+</div>
+
+<p id="wm-verdict" class="hidden" role="status" aria-live="polite"></p>
+<p id="error" class="error" role="alert"></p>
+
+<div id="wm-result"></div>
+
+<hr>
+
+
+
+
+<!-- What this program has to say for itself. Hidden here and shown by
+     firstrun.js as a dialog on the first visit, and from Help after that. -->
+<div id="first-run" hidden>
+
+<section data-step="Two things, side by side">
+<p><strong>Paste or drop two texts, and see exactly where they differ.</strong></p>
+<p class="note">
+It is the view WinMerge made familiar: the two side by side, a changed line
+tinted, and inside a changed line the actual words that moved a stronger
+shade, so the eye lands on the one character that matters instead of a wall of
+red. Contracts with a clause quietly reworded, two config files that should
+match, a paragraph before and after an edit: this is for telling whether two
+things really are the same.
+</p>
+</section>
+
+<section data-step="Is this actually private?">
+<h3>Is this actually private?</h3>
+<div id="proof"></div>
+</section>
+
+<section data-step="The honest notes">
+<ul class="plain">
+  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. Both texts are compared in this tab and never leave it; there is no server to send them to, which is a rule your browser enforces here, not a promise.</li>
+  <li><strong>It compares text, not layout.</strong> A file is read as text. Two PDFs or two Word documents will not compare usefully here, because their bytes are not their words; convert them to text first, or use the <a href="/convert.html">converter</a>. Plain text, code, CSV, configuration, Markdown: those are what this is for.</li>
+  <li><strong>The algorithm is the real one.</strong> It is Myers' diff, the shortest-edit-script method that git and the <code>diff</code> command use, run first over the lines and then over the characters of a line that changed. It is written here, in a few hundred lines, rather than pulled from a library, and the tests check it against known cases.</li>
+  <li><strong>Ignore whitespace and ignore case change the comparison, not your text.</strong> They decide what counts as a difference; the lines shown are always your originals. Ignore whitespace treats runs of spaces and tabs as equal and trims the ends, which is what you want when two files differ only in indentation.</li>
+  <li><strong>Very large files are real work.</strong> The whole of both sits in memory and the diff is quadratic in the worst case, so two ten-thousand-line files are fine and two enormous logs may make a phone think. It is a comparison tool, not a big-data one.</li>
+  <li><strong>Line endings are normalised.</strong> A file saved on Windows (CRLF) and one saved on a Mac or Linux (LF) are not reported as different on every single line; the endings are levelled before comparing, because that difference is almost never the one you are looking for.</li>
+</ul>
+</section>
+
+<section data-step="The rest of the site">
+<p class="footer">
+Hosted on Cloudflare &middot; Made with spite for bloat<br>
+<a href="/code.html">count code</a> |
+<a href="/convert.html">pdf &lt;=&gt; word</a> |
+<a href="/inspect.html">inspect a file</a> |
+<a href="/zip.html">open a zip</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+<p class="footer support">
+Nothing here is for sale, nothing is tracked, and there is no account to make.
+If something saved you an hour:<br>
+<code class="xmr">83TQcTwusSQ4WKbPQE5osrF3cR4GWe2zmcNWeozK6BSqHSaeLvjUVe476ouVwLKn1uVwEFcbJQvnme7W6dTV5SB93x45DEy</code><br>
+You can
+<a href="/wallet.html#addresses">check that address here</a> before sending anything.
+</p>
+</section>
+
+</div>
+</div>
+</div>
+</div>
+
+
+<div class="taskbar">
+<a class="start" href="/">Start</a>
+<a class="task-btn is-open" href="#app">Compare</a>
+<span class="task-clock">1999</span>
+</div>
+</div>
+<script src="/compare-page.js"></script>
+<script src="/desk.js"></script>
+<script src="/icons.js"></script>
+<script src="/start.js"></script>
+<script src="/menubar.js"></script>
+<script src="/proof-panel.js"></script>
+<script src="/firstrun.js"></script>
+<script src="/dismiss.js"></script>
+</body>
+</html>

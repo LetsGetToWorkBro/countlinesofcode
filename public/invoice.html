@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Make an Invoice PDF in Your Browser | 1999.LOC</title>
+<meta name="description" content="Fill in an invoice and get a clean PDF, in one of three plain templates. The maths and the document are both built in your browser; nothing is uploaded and no invoicing service keeps a copy of who owes whom.">
+<link rel="canonical" href="https://1999loc.com/invoice.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Make an Invoice PDF in Your Browser | 1999.LOC">
+<meta property="og:description" content="Fill in the lines, pick a template, get a PDF. The totals and the document are built in the tab, and nothing is uploaded.">
+<meta property="og:url" content="https://1999loc.com/invoice.html">
+<meta property="og:site_name" content="1999.LOC">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/app-invoice.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body data-app="invoice">
+<!--
+  EXPECTED LAYOUT (an accounting form):
+
+    1999.LOC
+    ------------------------------------------------------------
+    ... | invoice | ...
+    ------------------------------------------------------------
+    +== Create Invoice =====================================+
+    | File  Template  Help                                  |
+    | [ Save as PDF ]  template: (Classic)(Modern)(Minimal) |
+    |  From                    | Bill To                    |
+    |  [name/address/email]    | [name/address/email]       |
+    |  Invoice #[__] Date[__] Due[__] Currency[$]           |
+    |  +-- green-bar ledger ------------------------------+ |
+    |  | Description        | Qty | Rate  | Amount |  x   | |
+    |  | [__]               |[_]  |[__]   |  0.00  |      | |
+    |  +--------------------------------------------------+ |
+    |  [ + Add a line ]        Tax % [__]                   |
+    |                          Subtotal / Tax / Total       |
+    |  Notes [______]                                       |
+    +======================================================+
+    ------------------------------------------------------------
+-->
+<div id="page">
+
+<h1><a href="/">1999.LOC</a></h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<span class="nav-group"><span class="nav-label">crypto</span>
+<a href="/wallet.html">wallet</a>
+&middot;
+<a href="/swap.html">swap</a>
+&middot;
+<a href="/pay.html">payment</a>
+&middot;
+<a href="/wallet.html#addresses">paper wallet</a></span>
+<span class="nav-group"><span class="nav-label">privacy</span>
+<a href="/lock.html">pgp</a>
+&middot;
+<a href="/inspect.html">inspect file</a>
+&middot;
+<a href="https://delete.1999loc.com/">delete posts</a>
+&middot;
+<a href="/email.html">temporary email</a></span>
+<span class="nav-group"><span class="nav-label">documents</span>
+<a href="/sign.html">pdf editor</a>
+&middot;
+<a href="/convert.html">pdf &lt;=&gt; word</a>
+&middot;
+<a href="/sheet.html">excel &lt;=&gt; csv</a>
+&middot;
+<a href="/zip.html">zip</a></span>
+<span class="nav-group"><span class="nav-label">media</span>
+<a href="/image.html">image tools</a>
+&middot;
+<a href="/video.html">video tools</a>
+&middot;
+<a href="/audio.html">audio tools</a></span>
+<span class="nav-group"><span class="nav-label">utilities</span>
+<a href="/compare.html">compare</a>
+&middot;
+<a href="/qr.html">qr code</a>
+&middot;
+<strong>invoice</strong></span>
+<span class="nav-group"><span class="nav-label">code</span>
+<a href="/code.html">count code</a>
+&middot;
+<a href="/golf">golf</a></span>
+</p>
+<hr>
+
+<div class="desk-shell">
+<div class="app-window" id="app">
+<div class="client-title"><h2>Create Invoice</h2><a class="win-min" href="#" aria-label="Minimise Create Invoice">_</a></div>
+<p class="qb-menu menubar" role="menubar">
+<span class="menu"><button type="button" class="menu-title">File</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="inv-make">Save as PDF...</button>
+    <button type="button" data-cmd="inv-add">Add a line</button>
+    <span class="menu-rule"></span>
+    <button type="button" data-cmd="inv-clear">Clear the form</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Template</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="inv-tpl-classic">Classic</button>
+    <button type="button" data-cmd="inv-tpl-modern">Modern</button>
+    <button type="button" data-cmd="inv-tpl-minimal">Minimal</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Help</button>
+  <span class="menu-drop">
+    <button type="button" data-help>What this program does</button>
+  </span></span>
+</p>
+<div class="qb-toolbar" role="toolbar" aria-label="Invoice">
+  <button type="button" id="inv-make" class="qb-save">Save as PDF</button>
+  <span class="qb-sep"></span>
+  <span class="qb-tpl-label">Template</span>
+  <span class="qb-tpls" role="radiogroup" aria-label="Template">
+    <button type="button" id="inv-tpl-classic" class="qb-tpl is-on" data-tpl="classic" role="radio" aria-checked="true">Classic</button>
+    <button type="button" id="inv-tpl-modern" class="qb-tpl" data-tpl="modern" role="radio" aria-checked="false">Modern</button>
+    <button type="button" id="inv-tpl-minimal" class="qb-tpl" data-tpl="minimal" role="radio" aria-checked="false">Minimal</button>
+  </span>
+  <span class="qb-sep"></span>
+  <button type="button" id="inv-clear" class="qb-clear">Clear</button>
+</div>
+<div class="app-body">
+
+<div class="qb-sheet">
+  <div class="qb-parties">
+    <fieldset class="qb-party">
+      <legend>From</legend>
+      <input id="inv-biz-name" type="text" placeholder="Your business name" autocomplete="off">
+      <textarea id="inv-biz-addr" rows="2" placeholder="Address"></textarea>
+      <input id="inv-biz-email" type="text" placeholder="Email or phone" autocomplete="off">
+    </fieldset>
+    <fieldset class="qb-party">
+      <legend>Bill to</legend>
+      <input id="inv-cli-name" type="text" placeholder="Client name" autocomplete="off">
+      <textarea id="inv-cli-addr" rows="2" placeholder="Address"></textarea>
+      <input id="inv-cli-email" type="text" placeholder="Email" autocomplete="off">
+    </fieldset>
+  </div>
+
+  <div class="qb-meta">
+    <label>Invoice # <input id="inv-number" type="text" value="INV-001" autocomplete="off"></label>
+    <label>Date <input id="inv-date" type="date"></label>
+    <label>Due <input id="inv-due" type="date"></label>
+    <label>Currency <input id="inv-currency" type="text" value="$" maxlength="4" class="qb-cur" autocomplete="off"></label>
+  </div>
+
+  <table class="qb-ledger">
+    <thead>
+      <tr>
+        <th scope="col" class="qb-c-desc">Description</th>
+        <th scope="col" class="qb-c-qty">Qty</th>
+        <th scope="col" class="qb-c-rate">Rate</th>
+        <th scope="col" class="qb-c-amt">Amount</th>
+        <th scope="col" class="qb-c-del"><span class="sr-only">Remove</span></th>
+      </tr>
+    </thead>
+    <tbody id="inv-items"></tbody>
+  </table>
+
+  <div class="qb-below">
+    <button type="button" id="inv-add" class="qb-add">+ Add a line</button>
+    <div class="qb-totals">
+      <div class="qb-trow"><span>Subtotal</span><span id="inv-subtotal">0.00</span></div>
+      <div class="qb-trow qb-taxrow"><span>Tax <input id="inv-tax" type="text" inputmode="decimal" value="0" class="qb-taxin" autocomplete="off">%</span><span id="inv-tax-amt">0.00</span></div>
+      <div class="qb-trow qb-grand"><span>Total</span><span id="inv-total">0.00</span></div>
+    </div>
+  </div>
+
+  <div class="qb-notes">
+    <label for="inv-notes">Notes</label>
+    <textarea id="inv-notes" rows="2" placeholder="Payment terms, thank-you, a reference"></textarea>
+  </div>
+</div>
+
+<p id="error" class="error" role="alert"></p>
+
+<hr>
+
+<!-- What this program has to say for itself. Hidden here and shown by
+     firstrun.js as a dialog on the first visit, and from Help after that. -->
+<div id="first-run" hidden>
+
+<section data-step="Fill it in, get a PDF">
+<p><strong>Fill in the lines and get a clean invoice PDF, in one of three templates.</strong></p>
+<p class="note">
+It is the boring, useful half of an accounting program: who it is from, who it
+is to, a list of lines with a quantity and a rate, the tax, and the total it
+adds up to. Pick a template, press Save, and it writes the PDF here in the tab.
+No account, no monthly fee, and no invoicing service that keeps its own ledger
+of everyone you have billed and everyone who has paid.
+</p>
+</section>
+
+<section data-step="Is this actually private?">
+<h3>Is this actually private?</h3>
+<div id="proof"></div>
+</section>
+
+<section data-step="The honest notes">
+<ul class="plain">
+  <li><strong>Nothing is uploaded.</strong> Static page, no endpoint, no account. What you type and the PDF it makes stay in this tab; there is no server to send them to, which is a rule your browser enforces here, not a promise.</li>
+  <li><strong>The maths is checked on its own.</strong> Each line is a quantity times a rate, rounded to the cent; the subtotal adds them; the tax is a percentage of that; the total is the two together. That arithmetic is written here and the tests check it against worked examples, because a total that is a cent off is the sort of thing that starts an argument.</li>
+  <li><strong>The PDF is built here, not fetched.</strong> It is drawn with pdf-lib, the same library the PDF editor uses, bundled into the page. No template is downloaded and no document is rendered on someone's server and handed back.</li>
+  <li><strong>The three templates are three faces of the same numbers.</strong> Classic is a ruled ledger in a serif face; Modern is a sans-serif sheet with a colour band; Minimal is thin lines and white space. The words and the totals are identical; only the look changes.</li>
+  <li><strong>It uses the standard PDF fonts.</strong> Those cover the Latin alphabet and the common symbols, which is what most invoices need. A character they cannot draw, like a non-Latin script, comes out as a question mark rather than breaking the document; if you need those, that is the honest limit here.</li>
+  <li><strong>Nothing is saved between visits.</strong> Close the tab and the form is gone; there is no draft kept in your browser and none kept anywhere else. Save the PDF, because it is the only copy.</li>
+</ul>
+</section>
+
+<section data-step="The rest of the site">
+<p class="footer">
+Hosted on Cloudflare &middot; Made with spite for bloat<br>
+<a href="/sign.html">pdf editor</a> |
+<a href="/convert.html">pdf &lt;=&gt; word</a> |
+<a href="/pay.html">payment request</a> |
+<a href="/sheet.html">excel &lt;=&gt; csv</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+<p class="footer support">
+Nothing here is for sale, nothing is tracked, and there is no account to make.
+If something saved you an hour:<br>
+<code class="xmr">83TQcTwusSQ4WKbPQE5osrF3cR4GWe2zmcNWeozK6BSqHSaeLvjUVe476ouVwLKn1uVwEFcbJQvnme7W6dTV5SB93x45DEy</code><br>
+You can
+<a href="/wallet.html#addresses">check that address here</a> before sending anything.
+</p>
+</section>
+
+</div>
+</div>
+</div>
+</div>
+
+
+<div class="taskbar">
+<a class="start" href="/">Start</a>
+<a class="task-btn is-open" href="#app">Create Invoice</a>
+<span class="task-clock">1999</span>
+</div>
+</div>
+<script src="/invoice-page.js"></script>
+<script src="/desk.js"></script>
+<script src="/icons.js"></script>
+<script src="/start.js"></script>
+<script src="/menubar.js"></script>
+<script src="/proof-panel.js"></script>
+<script src="/firstrun.js"></script>
+<script src="/dismiss.js"></script>
+</body>
+</html>

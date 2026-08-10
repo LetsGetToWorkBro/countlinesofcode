@@ -30,6 +30,7 @@ import {
   normalize,
   outName,
   peakOf,
+  removeCentre,
   sniffAudio,
   toInt16,
 } from '../src/client/audiokit';
@@ -243,5 +244,50 @@ describe('the words on the display', () => {
     expect(outName('song.mp3', 'edit', 'wav')).toBe('song-edit.wav');
     expect(outName('a.very.long.name.flac', 'edit', 'mp3')).toBe('a.very.long.name-edit.mp3');
     expect(outName('', 'join', 'mp3')).toBe('audio-join.mp3');
+  });
+});
+
+describe('removeCentre', () => {
+  it('cancels exactly what both channels share and keeps what they do not', () => {
+    // L = unique + vocal, R = vocal: the karaoke trick must erase the vocal
+    // completely (it is arithmetic, not an estimate) and keep the unique
+    // part at half level in both output channels.
+    const n = 512;
+    const unique = new Float32Array(n);
+    const vocal = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      unique[i] = Math.sin((2 * Math.PI * 7 * i) / n) * 0.4;
+      vocal[i] = Math.sin((2 * Math.PI * 23 * i) / n) * 0.5;
+    }
+    const left = new Float32Array(n);
+    const right = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      left[i] = unique[i]! + vocal[i]!;
+      right[i] = vocal[i]!;
+    }
+    const out = removeCentre([left, right], 44100, 0);
+    expect(out).toHaveLength(2);
+    for (let i = 0; i < n; i++) {
+      expect(Math.abs(out[0]![i]! - unique[i]! / 2)).toBeLessThan(1e-6);
+      expect(out[1]![i]).toBe(out[0]![i]);
+    }
+  });
+
+  it('leaves a mono file alone, because it has no centre', () => {
+    const mono = [new Float32Array([0.1, 0.2, 0.3])];
+    expect(removeCentre(mono, 44100, 60)).toBe(mono);
+  });
+
+  it('mixes the low end back when asked, and not otherwise', () => {
+    // A shared constant is the lowest frequency there is: pure centre, pure
+    // bass. Without keep-the-bass it cancels to silence; with it, the
+    // low-pass converges the output back toward the shared level.
+    const n = 4096;
+    const left = new Float32Array(n).fill(0.5);
+    const right = new Float32Array(n).fill(0.5);
+    const dry = removeCentre([left, right], 44100, 0);
+    expect(Math.max(...dry[0]!.map(Math.abs))).toBe(0);
+    const wet = removeCentre([left, right], 44100, 120);
+    expect(wet[0]![n - 1]!).toBeGreaterThan(0.45);
   });
 });

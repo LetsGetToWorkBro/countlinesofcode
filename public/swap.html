@@ -51,6 +51,8 @@
 &middot;
 <strong>swap</strong>
 &middot;
+<a href="/pay.html">payment</a>
+&middot;
 <a href="/wallet.html#addresses">paper wallet</a></span>
 <span class="nav-group"><span class="nav-label">privacy</span>
 <a href="/lock.html">pgp</a>
@@ -74,6 +76,12 @@
 <a href="/video.html">video tools</a>
 &middot;
 <a href="/audio.html">audio tools</a></span>
+<span class="nav-group"><span class="nav-label">utilities</span>
+<a href="/compare.html">compare</a>
+&middot;
+<a href="/qr.html">qr code</a>
+&middot;
+<a href="/invoice.html">invoice</a></span>
 <span class="nav-group"><span class="nav-label">code</span>
 <a href="/code.html">count code</a>
 &middot;
@@ -100,6 +108,15 @@
     <button type="button" data-help>What this program does</button>
   </span></span>
 </p>
+<div class="tick-toolbar" role="toolbar" aria-label="Swap">
+  <button type="button" class="tick-tb tick-tb-go" data-acts="get-quotes">Get quotes</button>
+  <button type="button" class="tick-tb" data-acts="flip">Flip</button>
+  <span class="tick-tb-sep"></span>
+  <button type="button" class="tick-tb" data-acts="start-swap">Start swap</button>
+  <button type="button" class="tick-tb" data-acts="check-status">Check status</button>
+  <span class="tick-tb-spacer"></span>
+  <button type="button" class="tick-tb" data-acts="new-swap">New swap</button>
+</div>
 <div class="app-body">
 <p class="tick-hint"><span class="tick-hint-mark">i</span>
 Pick what you are sending and what you want back, take a quote, and send to the address it gives you. No account here, and none at the exchange.</p>
@@ -268,6 +285,7 @@ You can
 </div>
 </div>
 <script src="/swap-page.js"></script>
+<script src="/toolbar.js"></script>
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
 <script src="/start.js"></script>

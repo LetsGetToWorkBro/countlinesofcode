@@ -436,6 +436,40 @@
 [data-app="audio"] .app-body details,
 [data-app="audio"] .app-body details * { color: #000000; }
 
+/* ---- the recorder --------------------------------------------------
+   A red dot on the button, solid at rest and blinking while the machine is
+   actually taking sound in, which is the one state a recorder must never be
+   ambiguous about. With animations reduced it stays solid red instead. */
+[data-app="audio"] .wa-rec-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 3px;
+  border-radius: 50%;
+  background: #c40000;
+  vertical-align: -1px;
+}
+[data-app="audio"] #rec-row.is-recording #rec-note { color: #ff6a6a; }
+/* The Record button is hidden while recording, so the live dot sits on the
+   note line, in front of the running clock. */
+[data-app="audio"] #rec-row.is-recording #rec-note::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: #c40000;
+  vertical-align: -1px;
+  animation: wa-rec-blink 1s steps(1) infinite;
+}
+@keyframes wa-rec-blink {
+  50% { background: #4a0000; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-app="audio"] #rec-row.is-recording #rec-note::before { animation: none; }
+}
+
 /* Legible on the dark ground, measured: 7.4:1 and 5.7:1. */
 [data-app="audio"] .status { color: #7de37d; }
 [data-app="audio"] .error { color: #ff9c9c; }

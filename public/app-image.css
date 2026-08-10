@@ -111,6 +111,9 @@
   color: #000000;
   font-weight: bold;
   padding: 0 4px;
+  /* Its own ground, so the 2px raised border does not run through the top of
+     the letters. */
+  background: #d4d0c8;
 }
 /* .app-body in the selector because the body rule sets white ink for the
    grey mat, and a plainer `fieldset label` loses to it: the tray would come

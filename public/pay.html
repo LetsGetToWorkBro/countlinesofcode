@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Make a Bitcoin or Monero Payment Request | 1999.LOC</title>
+<meta name="description" content="Turn an address and an amount into a payment request a wallet understands: a BIP-21 bitcoin: link or a monero: link, and the QR code a customer scans. The address is checked with its real checksum, and nothing is uploaded.">
+<link rel="canonical" href="https://1999loc.com/pay.html">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Make a Bitcoin or Monero Payment Request | 1999.LOC">
+<meta property="og:description" content="An address and an amount, turned into the payment link and QR a wallet reads. Checksum-checked, nothing uploaded.">
+<meta property="og:url" content="https://1999loc.com/pay.html">
+<meta property="og:site_name" content="1999.LOC">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/app-pay.css">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body data-app="pay">
+<!--
+  EXPECTED LAYOUT (a card payment terminal):
+
+    1999.LOC
+    ------------------------------------------------------------
+    ... | payment | ...
+    ------------------------------------------------------------
+    +== terminal ============================+
+    |  PAY TERMINAL                   ||||    |
+    |  +----------------------------------+  |
+    |  | BTC              0.005           |  |   backlit LCD
+    |  | Coffee Shop                      |  |
+    |  +----------------------------------+  |
+    |  [ BTC ] [ XMR ]                       |
+    |  pay to [ address..............] (ok)  |
+    |  for    [ note.................]       |
+    |  [1][2][3]                             |
+    |  [4][5][6]                             |
+    |  [7][8][9]                             |
+    |  [.][0][<]                             |
+    |  [ CLEAR ]        [ CHARGE ]           |
+    +========================================+
+    ---- the customer scans this ----
+    [##QR##]   scan to pay 0.005 BTC
+    bitcoin:...?amount=0.005
+    ------------------------------------------------------------
+-->
+<div id="page">
+
+<h1><a href="/">1999.LOC</a></h1>
+<p class="tagline">Small tools. No accounts. Nothing leaves your browser.</p>
+
+<hr>
+<p class="nav">
+<span class="nav-group"><span class="nav-label">crypto</span>
+<a href="/wallet.html">wallet</a>
+&middot;
+<a href="/swap.html">swap</a>
+&middot;
+<strong>payment</strong>
+&middot;
+<a href="/wallet.html#addresses">paper wallet</a></span>
+<span class="nav-group"><span class="nav-label">privacy</span>
+<a href="/lock.html">pgp</a>
+&middot;
+<a href="/inspect.html">inspect file</a>
+&middot;
+<a href="https://delete.1999loc.com/">delete posts</a>
+&middot;
+<a href="/email.html">temporary email</a></span>
+<span class="nav-group"><span class="nav-label">documents</span>
+<a href="/sign.html">pdf editor</a>
+&middot;
+<a href="/convert.html">pdf &lt;=&gt; word</a>
+&middot;
+<a href="/sheet.html">excel &lt;=&gt; csv</a>
+&middot;
+<a href="/zip.html">zip</a></span>
+<span class="nav-group"><span class="nav-label">media</span>
+<a href="/image.html">image tools</a>
+&middot;
+<a href="/video.html">video tools</a>
+&middot;
+<a href="/audio.html">audio tools</a></span>
+<span class="nav-group"><span class="nav-label">utilities</span>
+<a href="/compare.html">compare</a>
+&middot;
+<a href="/qr.html">qr code</a>
+&middot;
+<a href="/invoice.html">invoice</a></span>
+<span class="nav-group"><span class="nav-label">code</span>
+<a href="/code.html">count code</a>
+&middot;
+<a href="/golf">golf</a></span>
+</p>
+<hr>
+
+<div class="desk-shell">
+<div class="app-window" id="app">
+<div class="client-title"><h2>Payment Terminal</h2><a class="win-min" href="#" aria-label="Minimise Payment Terminal">_</a></div>
+<p class="pos-menu menubar" role="menubar">
+<span class="menu"><button type="button" class="menu-title">File</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="pay-charge">Make the request</button>
+    <button type="button" data-cmd="pay-copy">Copy the payment link</button>
+    <button type="button" data-cmd="pay-svg">Save the code as SVG...</button>
+    <button type="button" data-cmd="pay-png">Save the code as PNG...</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Coin</button>
+  <span class="menu-drop">
+    <button type="button" data-cmd="pay-coin-btc">Bitcoin</button>
+    <button type="button" data-cmd="pay-coin-xmr">Monero</button>
+  </span></span>
+<span class="menu"><button type="button" class="menu-title">Help</button>
+  <span class="menu-drop">
+    <button type="button" data-help>What this program does</button>
+  </span></span>
+</p>
+<div class="app-body">
+
+<div class="pos-machine">
+  <div class="pos-head">
+    <span class="pos-brand">PAY TERMINAL</span>
+    <span class="pos-grip" aria-hidden="true"></span>
+  </div>
+
+  <!-- The backlit display: coin, amount, and the note under it. -->
+  <div class="pos-screen">
+    <div class="pos-scr-top">
+      <span class="pos-ticker" id="pay-ticker">BTC</span>
+      <input id="pay-amount" class="pos-amount" inputmode="decimal" autocomplete="off" spellcheck="false" value="" placeholder="0.00" aria-label="Amount to charge">
+    </div>
+    <div class="pos-scr-sub" id="pay-sub">Enter an amount, or leave it for the payer to choose.</div>
+  </div>
+
+  <!-- Which coin. -->
+  <div class="pos-coins" role="group" aria-label="Coin">
+    <button type="button" id="pay-coin-btc" class="pos-coin is-on" aria-pressed="true">BTC</button>
+    <button type="button" id="pay-coin-xmr" class="pos-coin" aria-pressed="false">XMR</button>
+  </div>
+
+  <!-- Where the money goes, and what it is for. -->
+  <div class="pos-field">
+    <label for="pay-address">Pay to</label>
+    <div class="pos-addr-wrap">
+      <input id="pay-address" type="text" autocomplete="off" spellcheck="false" placeholder="Your receiving address" aria-describedby="pay-addr-mark">
+      <span id="pay-addr-mark" class="pos-mark" aria-live="polite"></span>
+    </div>
+  </div>
+  <div class="pos-field">
+    <label for="pay-label">Label</label>
+    <input id="pay-label" type="text" autocomplete="off" maxlength="120" placeholder="Your name or a reference (optional)">
+  </div>
+
+  <!-- The keypad. -->
+  <div class="pos-keypad" role="group" aria-label="Keypad">
+    <button type="button" class="pos-key" data-key="1">1</button>
+    <button type="button" class="pos-key" data-key="2">2</button>
+    <button type="button" class="pos-key" data-key="3">3</button>
+    <button type="button" class="pos-key" data-key="4">4</button>
+    <button type="button" class="pos-key" data-key="5">5</button>
+    <button type="button" class="pos-key" data-key="6">6</button>
+    <button type="button" class="pos-key" data-key="7">7</button>
+    <button type="button" class="pos-key" data-key="8">8</button>
+    <button type="button" class="pos-key" data-key="9">9</button>
+    <button type="button" class="pos-key" data-key=".">.</button>
+    <button type="button" class="pos-key" data-key="0">0</button>
+    <button type="button" class="pos-key pos-key-back" data-key="back" aria-label="Delete the last digit"><svg viewBox="0 0 24 16" aria-hidden="true" class="pos-back-ico"><path d="M8 1.2h13a2 2 0 0 1 2 2v9.6a2 2 0 0 1-2 2H8L1 8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 5.2l6 5.6M18 5.2l-6 5.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+  </div>
+
+  <div class="pos-actions">
+    <button type="button" id="pay-clear" class="pos-clear">Clear</button>
+    <button type="button" id="pay-charge" class="pos-charge">Charge</button>
+  </div>
+</div>
+
+<p id="error" class="error" role="alert"></p>
+
+<!-- The customer-facing side: the QR and the link they scan or tap. -->
+<div class="pos-ticket hidden" id="pay-ticket">
+  <div class="pos-ticket-head" id="pay-ticket-head">Scan to pay</div>
+  <div class="pos-qr" id="pay-qr"></div>
+  <div class="pos-uri" id="pay-uri"></div>
+  <div class="pos-ticket-actions">
+    <button type="button" id="pay-copy">Copy link</button>
+    <button type="button" id="pay-svg">Save SVG</button>
+    <button type="button" id="pay-png">Save PNG</button>
+  </div>
+</div>
+
+<hr>
+
+<!-- What this program has to say for itself. Hidden here and shown by
+     firstrun.js as a dialog on the first visit, and from Help after that. -->
+<div id="first-run" hidden>
+
+<section data-step="An address and an amount">
+<p><strong>Turn a receiving address and an amount into the link and QR a wallet reads.</strong></p>
+<p class="note">
+This is the counter side of a payment: you set the coin, the address the money
+should land in, and the amount, and it makes the standard request a wallet
+understands, both as a link to tap and as a QR code to scan. It is the same
+thing a card terminal does, without the card, the terminal, or anyone in the
+middle. Nothing is uploaded and no payment processor is involved; the request
+is built here and the coins go straight from the payer to your address.
+</p>
+</section>
+
+<section data-step="Is this actually private?">
+<h3>Is this actually private?</h3>
+<div id="proof"></div>
+</section>
+
+<section data-step="The honest notes">
+<ul class="plain">
+  <li><strong>Nothing is uploaded, and no processor sits in the middle.</strong> The link and the code are built in this tab; the address you type is the address that goes in, unchanged. When someone pays, their wallet sends the coins to that address directly. This page never sees the money and takes no cut.</li>
+  <li><strong>The address is checked the way the wallet checker checks it.</strong> Bitcoin addresses are verified by their real checksum, base58check for the old ones and bech32 or bech32m for the bc1 ones; Monero addresses by their block base58 and Keccak checksum. A mistyped address is caught here rather than after the money is gone. It only accepts mainnet addresses, because a payment request is a mainnet thing.</li>
+  <li><strong>A valid checksum is not the same as the right address.</strong> The check proves the address was not corrupted in typing or pasting. It cannot prove it is your address and not one that malware swapped onto your clipboard, so read it back before you print it on a sign.</li>
+  <li><strong>The links are the published standards.</strong> Bitcoin uses BIP-21 (the amount, a label, a message); Monero uses its own scheme with the same three ideas. Any conforming wallet fills its send screen in from the code, amount and all.</li>
+  <li><strong>The amount is a request, not a lock.</strong> A payer's wallet shows the amount and they confirm it; nothing here can force it. Leave the amount blank and the request simply lets them choose how much, which is what a tip jar or a donation code is.</li>
+  <li><strong>The QR is the one from the code tool.</strong> It is the same in-house encoder, so the request is drawn here too, not fetched from a service that would then have seen every address you asked to be paid at.</li>
+</ul>
+</section>
+
+<section data-step="The rest of the site">
+<p class="footer">
+Hosted on Cloudflare &middot; Made with spite for bloat<br>
+<a href="/wallet.html">wallet</a> |
+<a href="/swap.html">swap coins</a> |
+<a href="/qr.html">qr codes</a> |
+<a href="/wallet.html#addresses">check an address</a> |
+<a href="https://github.com/letsgettoworkbro/countlinesofcode">source</a>
+</p>
+
+<p class="footer support">
+Nothing here is for sale, nothing is tracked, and there is no account to make.
+If something saved you an hour:<br>
+<code class="xmr">83TQcTwusSQ4WKbPQE5osrF3cR4GWe2zmcNWeozK6BSqHSaeLvjUVe476ouVwLKn1uVwEFcbJQvnme7W6dTV5SB93x45DEy</code><br>
+You can
+<a href="/wallet.html#addresses">check that address here</a> before sending anything.
+</p>
+</section>
+
+</div>
+</div>
+</div>
+</div>
+
+
+<div class="taskbar">
+<a class="start" href="/">Start</a>
+<a class="task-btn is-open" href="#app">Payment Terminal</a>
+<span class="task-clock">1999</span>
+</div>
+</div>
+<script src="/pay-page.js"></script>
+<script src="/desk.js"></script>
+<script src="/icons.js"></script>
+<script src="/start.js"></script>
+<script src="/menubar.js"></script>
+<script src="/proof-panel.js"></script>
+<script src="/firstrun.js"></script>
+<script src="/dismiss.js"></script>
+</body>
+</html>

@@ -132,6 +132,10 @@
 [data-app="code"] .app-body fieldset span,
 [data-app="code"] .app-body fieldset li,
 [data-app="code"] .app-body fieldset .note { color: #000000; }
+/* The groove border is 2px, and a legend with no ground of its own lets that
+   line run through the top of the letters. Its own background sits it cleanly
+   on the border, the way a labelled frame is drawn. */
+[data-app="code"] .app-body fieldset legend { background: #d4d0c8; }
 
 /* The boxes the tool draws into. */
 [data-app="code"] .notice-box,

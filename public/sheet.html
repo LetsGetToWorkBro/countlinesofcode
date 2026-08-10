@@ -46,6 +46,8 @@
 &middot;
 <a href="/swap.html">swap</a>
 &middot;
+<a href="/pay.html">payment</a>
+&middot;
 <a href="/wallet.html#addresses">paper wallet</a></span>
 <span class="nav-group"><span class="nav-label">privacy</span>
 <a href="/lock.html">pgp</a>
@@ -69,6 +71,12 @@
 <a href="/video.html">video tools</a>
 &middot;
 <a href="/audio.html">audio tools</a></span>
+<span class="nav-group"><span class="nav-label">utilities</span>
+<a href="/compare.html">compare</a>
+&middot;
+<a href="/qr.html">qr code</a>
+&middot;
+<a href="/invoice.html">invoice</a></span>
 <span class="nav-group"><span class="nav-label">code</span>
 <a href="/code.html">count code</a>
 &middot;
@@ -94,6 +102,11 @@
     <button type="button" data-help>What this program does</button>
   </span></span>
 </p>
+<div class="app-toolbar" role="toolbar" aria-label="Spreadsheet tools">
+<button type="button" data-acts="drop">Open</button>
+<span class="tb-sep"></span>
+<button type="button" data-acts="save">Download</button>
+</div>
 <div class="app-body">
 <p class="xl-hint"><span class="xl-hint-mark">i</span>
 Open an .xlsx or a .csv and it converts to the other. Nothing is uploaded: an .xlsx is a ZIP of XML and the browser already has a ZIP engine.</p>
@@ -207,6 +220,8 @@ You can
 </div>
 </div>
 <script src="/sheet-page.js"></script>
+<script src="/dropzone.js"></script>
+<script src="/toolbar.js"></script>
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
 <script src="/start.js"></script>

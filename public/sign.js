@@ -252,7 +252,7 @@
   /* The toolbar is dead until there is a document to act on. A row of buttons
    * that do nothing is the thing that made the old page feel broken. */
   function enableChrome(on) {
-    ['t-save', 't-save-split', 't-undo', 't-rot-l', 't-rot-r', 't-zoom-in', 't-zoom-out',
+    ['t-save', 't-save-split', 't-ocr', 't-undo', 't-rot-l', 't-rot-r', 't-zoom-in', 't-zoom-out',
       't-prev', 't-next', 'page-num', 'p-insert'].forEach(function (id) { $(id).disabled = !on; });
     Array.prototype.forEach.call(document.querySelectorAll('.tbtn.tool'), function (b) {
       b.disabled = !on;
@@ -788,6 +788,7 @@
      * reasons to save that leave none of the counters above above zero. */
     $('t-save').disabled = !order.length;
     $('t-save-split').disabled = !order.length;
+    $('t-ocr').disabled = !order.length || ocrRunning;
   }
 
   // ------------------------------------------------------------- the caret
@@ -1739,6 +1740,159 @@
       '">' + esc(name) + '</a></li></ul>';
   }
 
+  // ---------------------------------------------------------------- OCR
+  /* Make a scan searchable. A scanned PDF is a photograph of a page with no
+   * text in it; the only way to give it a text layer is to read the letters
+   * off the picture. Tesseract does that here, vendored rather than fetched
+   * from a CDN — telling a third party someone is OCR'ing their contract is
+   * exactly what this site exists not to do — and loaded only when asked,
+   * because it is eight megabytes.
+   *
+   * The output is built the same way unlock and shrink build theirs: each
+   * page becomes an image with the recognised words drawn back over it at
+   * zero opacity, positioned where they were read. Selectable and searchable,
+   * a picture underneath. */
+  var OCR_SCALE = 2.2;
+  var tess = null;
+
+  function loadOcrScript() {
+    if (window.Tesseract) return Promise.resolve(window.Tesseract);
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = '/vendor/tesseract/tesseract.min.js';
+      s.onload = function () { resolve(window.Tesseract); };
+      s.onerror = function () { reject(new Error('Could not load the text reader.')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function ocrWorker() {
+    if (tess) return Promise.resolve(tess);
+    return loadOcrScript().then(function (T) {
+      // workerBlobURL:false matters: Tesseract builds its worker from a blob:
+      // URL by default, and this site's policy refuses that; pointing it at
+      // the real file is the fix, not widening the policy.
+      return T.createWorker('eng', 1, {
+        workerPath: '/vendor/tesseract/worker.min.js',
+        corePath: '/vendor/tesseract/tesseract-core-simd-lstm.wasm.js',
+        langPath: '/vendor/tesseract/',
+        gzip: false,
+        workerBlobURL: false,
+      }).then(function (w) { tess = w; return w; });
+    });
+  }
+
+  /* One page: rendered to a canvas at the page's shown rotation, read, and
+   * turned into a RenderedPage for buildPdfFromPages. Tesseract reports each
+   * word's box in image pixels from the top-left; a PDF wants points from the
+   * bottom-left, so the box is divided by the render scale and flipped. */
+  function ocrPage(pos) {
+    var r = order[pos];
+    var source = docOf(r);
+    return source.doc.getPage(r.page + 1).then(function (page) {
+      var rotation = totalRotation(pos);
+      var viewport = page.getViewport({ scale: OCR_SCALE, rotation: rotation });
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+      var ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // The block output carries the word boxes; older builds put words at the
+      // top level, newer ones nest them under blocks, so both are gathered.
+      return page.render({ canvasContext: ctx, viewport: viewport }).promise
+        .then(function () { return tess.recognize(canvas, {}, { blocks: true, text: false }); })
+        .then(function (result) {
+          var pw = canvas.width / OCR_SCALE;
+          var ph = canvas.height / OCR_SCALE;
+          var words = [];
+          collectWords(result.data).forEach(function (w) {
+            var text = (w.text || '').trim();
+            var box = w.bbox;
+            if (!text || !box) return;
+            var size = (box.y1 - box.y0) / OCR_SCALE;
+            words.push({
+              str: text,
+              x: box.x0 / OCR_SCALE,
+              y: ph - box.y1 / OCR_SCALE,   // baseline at the box's bottom
+              size: size > 0 ? size : 1,
+            });
+          });
+          var jpeg = dataUrlToBytes(canvas.toDataURL('image/jpeg', 0.85));
+          return { width: pw, height: ph, jpeg: jpeg, words: words };
+        });
+    });
+  }
+
+  /* Every word Tesseract found, whichever shape this build returns them in:
+   * a flat data.words on older versions, or blocks -> paragraphs -> lines ->
+   * words on newer ones. */
+  function collectWords(data) {
+    if (data.words && data.words.length) return data.words;
+    var out = [];
+    (data.blocks || []).forEach(function (block) {
+      (block.paragraphs || []).forEach(function (para) {
+        (para.lines || []).forEach(function (line) {
+          (line.words || []).forEach(function (w) { out.push(w); });
+        });
+      });
+    });
+    return out;
+  }
+
+  function dataUrlToBytes(url) {
+    var base64 = url.slice(url.indexOf(',') + 1);
+    var binary = atob(base64);
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+
+  var ocrRunning = false;
+  function makeSearchable() {
+    if (ocrRunning) return;
+    commitCaret();
+    clearError();
+    resetOutput();
+    if (!order.length) return fail('Open a PDF first.');
+    ocrRunning = true;
+    $('t-ocr').disabled = true;
+    $('t-save').disabled = true;
+    var total = order.length;
+    statusEl.textContent = 'Loading the text reader (about 8 MB, once)…';
+    ocrWorker().then(function () {
+      var pages = [];
+      var chain = Promise.resolve();
+      for (var i = 0; i < total; i++) {
+        (function (pos) {
+          chain = chain.then(function () {
+            statusEl.textContent = 'Reading page ' + (pos + 1) + ' of ' + total +
+              '… this is slower than it looks';
+            return ocrPage(pos).then(function (p) { pages.push(p); });
+          });
+        })(i);
+      }
+      return chain.then(function () {
+        statusEl.textContent = 'Writing the searchable PDF…';
+        return window.LOC1999_SIGN.buildPdfFromPages(pages);
+      });
+    }).then(function (out) {
+      statusEl.textContent = '';
+      var blob = new Blob([out], { type: 'application/pdf' });
+      summaryEl.textContent = 'Searchable. ' + total + ' page' + (total === 1 ? '' : 's') +
+        ' read and rebuilt as images with a text layer over them, ' + bytesLabel(blob.size) +
+        '. Proofread it: every word came from optical recognition.';
+      offer(window.LOC1999_PAGES.outputName(sources.map(function (s2) { return s2.name; }), 'searchable'), blob);
+      ocrRunning = false;
+      syncStatus();
+    }).catch(function (err) {
+      statusEl.textContent = '';
+      ocrRunning = false;
+      syncStatus();
+      fail((err && err.message) || 'Could not read that document.');
+    });
+  }
+
   function save() {
     commitCaret();
     clearError();
@@ -2039,6 +2193,7 @@
     draw();
   });
   $('t-save').addEventListener('click', save);
+  $('t-ocr').addEventListener('click', makeSearchable);
 
   $('sig-width').addEventListener('input', function () {
     $('sig-mm').textContent = Math.round((Number($('sig-width').value) || 0) / 72 * 25.4);

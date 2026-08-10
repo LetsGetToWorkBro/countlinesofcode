@@ -44,6 +44,8 @@
 &middot;
 <a href="/swap.html">swap</a>
 &middot;
+<a href="/pay.html">payment</a>
+&middot;
 <a href="/wallet.html#addresses">paper wallet</a></span>
 <span class="nav-group"><span class="nav-label">privacy</span>
 <a href="/lock.html">pgp</a>
@@ -67,6 +69,12 @@
 <a href="/video.html">video tools</a>
 &middot;
 <a href="/audio.html">audio tools</a></span>
+<span class="nav-group"><span class="nav-label">utilities</span>
+<a href="/compare.html">compare</a>
+&middot;
+<a href="/qr.html">qr code</a>
+&middot;
+<a href="/invoice.html">invoice</a></span>
 <span class="nav-group"><span class="nav-label">code</span>
 <a href="/code.html">count code</a>
 &middot;
@@ -81,13 +89,18 @@
 <span class="menu"><button type="button" class="menu-title">File</button>
   <span class="menu-drop">
     <button type="button" data-cmd="drop">Open...</button>
-    <button type="button" data-cmd="result">Save the unlocked copy</button>
+    <button type="button" data-cmd="unlock-dl">Save the unlocked copy</button>
   </span></span>
 <span class="menu"><button type="button" class="menu-title">Help</button>
   <span class="menu-drop">
     <button type="button" data-help>What this program does</button>
   </span></span>
 </p>
+<div class="app-toolbar" role="toolbar" aria-label="Unlock tools">
+<button type="button" data-acts="drop">Open</button>
+<span class="tb-sep"></span>
+<button type="button" data-acts="unlock-dl">Save copy</button>
+</div>
 <div class="app-body">
 <p class="sec-hint"><span class="sec-hint-mark">i</span>
 Open a PDF that refuses to print or copy, and get one that does not. It removes a restriction, not a password you do not have.</p>
@@ -106,10 +119,10 @@ Open a PDF that refuses to print or copy, and get one that does not. It removes 
 <p id="status" class="status" role="status" aria-live="polite"></p>
 <p id="error" class="error" role="alert"></p>
 
-<div id="result-box">
+<div id="result-box" class="hidden">
   <p id="result" class="note"></p>
   <div id="perms"></div>
-  <div id="output"></div>
+  <ul id="output" class="plain"><li><a id="unlock-dl" download>the unlocked copy</a></li></ul>
 </div>
 
 <hr>
@@ -186,6 +199,8 @@ You can
 <script src="/pdf-compat.js"></script>
 <script src="/pdfrender.js"></script>
 <script src="/unlock.js"></script>
+<script src="/dropzone.js"></script>
+<script src="/toolbar.js"></script>
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
 <script src="/start.js"></script>

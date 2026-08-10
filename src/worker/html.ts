@@ -80,7 +80,7 @@ ${body}
  * no template engine, deliberately, and `test/integration.test.ts` checks the
  * two stay in step.
  */
-export type ToolGroup = 'documents' | 'media' | 'privacy' | 'money' | 'code';
+export type ToolGroup = 'documents' | 'media' | 'privacy' | 'money' | 'utilities' | 'code';
 
 /**
  * The order the groups appear in, and what each is called.
@@ -105,6 +105,10 @@ export const TOOL_GROUPS: { id: ToolGroup; label: string }[] = [
   { id: 'privacy', label: 'privacy' },
   { id: 'documents', label: 'documents' },
   { id: 'media', label: 'media' },
+  // The odd-jobs drawer, added so a new small tool has a home that is not one
+  // of the categories above stretched to fit: compare two things, make or read
+  // a QR code, write an invoice.
+  { id: 'utilities', label: 'utilities' },
   { id: 'code', label: 'code' },
 ];
 
@@ -142,7 +146,12 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
   // is its second tab. /monero.html redirects to /wallet.html#addresses.
   { href: '/wallet.html', label: 'wallet', id: 'wallet', group: 'money' },
   { href: '/swap.html', label: 'swap', id: 'swap', group: 'money' },
+  { href: '/pay.html', label: 'payment', id: 'pay', group: 'money' },
   { href: '/wallet.html#addresses', label: 'paper wallet', id: 'paper', group: 'money' },
+
+  { href: '/compare.html', label: 'compare', id: 'compare', group: 'utilities' },
+  { href: '/qr.html', label: 'qr code', id: 'qr', group: 'utilities' },
+  { href: '/invoice.html', label: 'invoice', id: 'invoice', group: 'utilities' },
 
   { href: '/code.html', label: 'count code', id: 'count', group: 'code' },
   { href: '/golf', label: 'golf', id: 'golf', group: 'code' },

@@ -85,3 +85,15 @@ describe('security headers', () => {
     expect(csp).not.toContain("'unsafe-inline'");
   });
 });
+
+describe('the one page that needs the microphone', () => {
+  it('opens microphone to self only for /audio.html, and nowhere in the global block', () => {
+    const raw = readFileSync(new URL('../public/_headers', import.meta.url), 'utf8');
+    // The global /* block still denies it.
+    const globalPP = staticHeaders()['permissions-policy'] ?? '';
+    expect(globalPP).toContain('microphone=()');
+    // A per-path override for /audio.html grants microphone=(self).
+    const audioBlock = raw.slice(raw.indexOf('/audio.html'));
+    expect(audioBlock).toMatch(/Permissions-Policy:[^\n]*microphone=\(self\)/);
+  });
+});

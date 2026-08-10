@@ -214,7 +214,7 @@ export const REPO = 'https://github.com/letsgettoworkbro/countlinesofcode';
  * makes sense: the page, then the engine behind it.
  */
 export const SOURCES: Record<string, string[]> = {
-  '/video.html': ['public/video-page.js', 'src/client/video.ts', 'src/client/gif.ts'],
+  '/video.html': ['public/video-page.js', 'public/video-timeline.js', 'src/client/video.ts', 'src/client/gif.ts'],
   '/zip.html': ['public/zip-page.js', 'src/client/zipkit.ts', 'src/client/zip.ts'],
   // 'encrypt' page: password locking and PGP keys, on tabs, over one engine.
   '/lock.html': ['public/lock-page.js', 'public/pgp-page.js', 'public/tabs.js', 'src/client/pgpkit.ts'],
@@ -233,6 +233,9 @@ export const SOURCES: Record<string, string[]> = {
   ],
   // The swap page: a thin client over the Worker's relay to the exchanges.
   '/swap.html': ['public/swap-page.js', 'src/worker/swap.ts', 'src/lib/swapkit.ts'],
+  // The payment-request page: the address checks and URI builder, and the QR
+  // encoder it shares with the code tool. No server half; it makes no request.
+  '/pay.html': ['public/pay-page.js', 'src/client/paykit.ts', 'src/client/qrkit.ts'],
   // Two tools on one page: the message checker, and the throwaway inbox (its
   // server half stores incoming mail for an hour).
   '/email.html': [
@@ -252,6 +255,10 @@ export const SOURCES: Record<string, string[]> = {
   '/unlock.html': ['public/unlock.js', 'public/pdfrender.js', 'src/client/pdfedit.ts'],
   '/shrink.html': ['public/shrink.js', 'public/pdfrender.js', 'src/client/pdfedit.ts'],
   '/audio.html': ['public/audio-page.js', 'src/client/audiokit.ts', 'public/vendor/lame/lame.min.js'],
+  // The QR page: the in-house encoder and reader are both in one module.
+  '/qr.html': ['public/qr-page.js', 'src/client/qrkit.ts'],
+  // The invoice page: the totals and the three PDF templates.
+  '/invoice.html': ['public/invoice-page.js', 'src/client/invoicekit.ts'],
   '/code.html': ['public/app.js', 'src/client/bigcount.ts', 'src/lib/counter.ts'],
 };
 

@@ -11,3 +11,17 @@
   Permissions-Policy: accelerometer=(), autoplay=(), browsing-topics=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), payment=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), usb=(), xr-spatial-tracking=()
   Content-Security-Policy: default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; media-src blob:; worker-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'
   # Onion-Location: set by `npm run onion:set <address>.onion`
+
+# The one page with a recorder gets the one permission it needs: microphone,
+# and only for this origin. Everything else in the policy stays denied, and
+# every other page keeps the full lockdown above.
+/audio.html
+  ! Permissions-Policy
+  Permissions-Policy: accelerometer=(), autoplay=(), browsing-topics=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), local-fonts=(), magnetometer=(), microphone=(self), midi=(), payment=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), usb=(), xr-spatial-tracking=()
+
+# The QR reader can scan with the camera, so that one page gets camera=(self)
+# and nothing else. Reading an image file needs no permission at all; this is
+# only for the live-scan option, and every other page keeps camera denied.
+/qr.html
+  ! Permissions-Policy
+  Permissions-Policy: accelerometer=(), autoplay=(), browsing-topics=(), camera=(self), display-capture=(), encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), payment=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), usb=(), xr-spatial-tracking=()

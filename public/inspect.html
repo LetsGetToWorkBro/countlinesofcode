@@ -47,6 +47,8 @@
 &middot;
 <a href="/swap.html">swap</a>
 &middot;
+<a href="/pay.html">payment</a>
+&middot;
 <a href="/wallet.html#addresses">paper wallet</a></span>
 <span class="nav-group"><span class="nav-label">privacy</span>
 <a href="/lock.html">pgp</a>
@@ -70,6 +72,12 @@
 <a href="/video.html">video tools</a>
 &middot;
 <a href="/audio.html">audio tools</a></span>
+<span class="nav-group"><span class="nav-label">utilities</span>
+<a href="/compare.html">compare</a>
+&middot;
+<a href="/qr.html">qr code</a>
+&middot;
+<a href="/invoice.html">invoice</a></span>
 <span class="nav-group"><span class="nav-label">code</span>
 <a href="/code.html">count code</a>
 &middot;
@@ -84,13 +92,15 @@
 <span class="menu"><button type="button" class="menu-title">File</button>
   <span class="menu-drop">
     <button type="button" data-cmd="drop">Open...</button>
-    <button type="button" data-cmd="clean">Save a clean copy</button>
   </span></span>
 <span class="menu"><button type="button" class="menu-title">Help</button>
   <span class="menu-drop">
     <button type="button" data-help>What this program does</button>
   </span></span>
 </p>
+<div class="app-toolbar" role="toolbar" aria-label="Inspector">
+<button type="button" data-acts="drop">Open</button>
+</div>
 <div class="app-body">
 <p class="nu-hint"><span class="nu-hint-mark">i</span>
 Open a document to see what it is carrying that you cannot see: authors, the software and dates it was made, revision history, tracked changes. Nothing is uploaded.</p>
@@ -203,6 +213,8 @@ You can
 </div>
 <script src="/pdf-compat.js"></script>
 <script src="/inspect-page.js"></script>
+<script src="/dropzone.js"></script>
+<script src="/toolbar.js"></script>
 <script src="/desk.js"></script>
 <script src="/icons.js"></script>
 <script src="/start.js"></script>

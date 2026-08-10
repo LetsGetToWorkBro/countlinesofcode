@@ -61,6 +61,8 @@
 &middot;
 <a href="/swap.html">swap</a>
 &middot;
+<a href="/pay.html">payment</a>
+&middot;
 <a href="/wallet.html#addresses">paper wallet</a></span>
 <span class="nav-group"><span class="nav-label">privacy</span>
 <a href="/lock.html">pgp</a>
@@ -84,6 +86,12 @@
 <a href="/video.html">video tools</a>
 &middot;
 <a href="/audio.html">audio tools</a></span>
+<span class="nav-group"><span class="nav-label">utilities</span>
+<a href="/compare.html">compare</a>
+&middot;
+<a href="/qr.html">qr code</a>
+&middot;
+<a href="/invoice.html">invoice</a></span>
 <span class="nav-group"><span class="nav-label">code</span>
 <a href="/code.html">count code</a>
 &middot;
@@ -130,6 +138,7 @@
     <button type="button" data-cmd="t-rot-l">Turn page left</button>
     <button type="button" data-cmd="t-rot-r">Turn page right</button>
     <span class="menu-rule"></span>
+    <button type="button" data-cmd="t-ocr">Make searchable (read a scan)</button>
     <button type="button" data-pick=".tbtn.tool[data-tool=&quot;form&quot;]">Fill the form</button>
   </span></span>
 <span class="menu menu-optional"><button type="button" class="menu-title">Pages</button>
@@ -163,6 +172,10 @@
     <button type="button" class="tbtn" id="t-save" title="Save the edited PDF" disabled>
       <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="13" fill="#5d6f8a" stroke="#28323f"/><rect x="4" y="2" width="8" height="5" fill="#e8eaee" stroke="#28323f"/><rect x="9" y="3" width="2" height="3" fill="#28323f"/><rect x="4" y="9" width="8" height="5" fill="#e8eaee" stroke="#28323f"/></svg>
       <span class="tbtn-label">Save</span>
+    </button>
+    <button type="button" class="tbtn" id="t-ocr" title="Read the text off a scan and save a searchable PDF" disabled>
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="9" height="12" fill="#e8eaee" stroke="#28323f"/><path d="M3.5 4.5h5M3.5 6.5h5M3.5 8.5h3" stroke="#28323f" stroke-width="1"/><circle cx="10.5" cy="10.5" r="3.2" fill="#fff" stroke="#1d7a3f" stroke-width="1.5"/><path d="M12.8 12.8l2 2" stroke="#1d7a3f" stroke-width="1.6"/></svg>
+      <span class="tbtn-label">Searchable</span>
     </button>
     <span class="tbar-sep"></span>
     <button type="button" class="tbtn" id="t-undo" title="Undo the last thing added" disabled>
@@ -437,6 +450,7 @@ character, because what your box misses is still readable as pixels.
   <li><strong>Deleting is surgical; replacing is not re-flowing.</strong> Deleting removes the drawing instruction, so those characters leave the file. Replacing deletes the old and places new text at the same spot and size, which is what you want on a form or a name or a date. What it does not do is re-flow a paragraph: a PDF stores glyphs at positions, not sentences, so if your replacement is much longer than what it replaced it will run past where the old line ended instead of pushing the rest of the paragraph along. Nothing can honestly do that to an arbitrary PDF, and tools that claim to are usually rebuilding your layout and getting it wrong.</li>
   <li><strong>Pictures go in at full resolution.</strong> A PNG or a JPEG is embedded exactly as it is, and nothing is re-compressed behind your back, so a photo straight off a phone makes a PDF the size of a photo straight off a phone. Anything else your browser can open (WebP, GIF, BMP) has to be repainted as a PNG first, which is lossless but throws away the original compression and usually makes it larger. The same picture placed twenty times is still stored once. HEIC from an iPhone will not open: browsers cannot decode it, and this page has nothing else to ask.</li>
   <li><strong>Black out flattens the page.</strong> Only the pages you black out, and only when the surgical delete cannot safely be used, because covering text does not remove it.</li>
+  <li><strong>Make searchable reads a scan, and says it is reading.</strong> A scanned PDF is a photograph with no text in it, so &ldquo;searchable&rdquo; is optical recognition, not recovery: Tesseract reads the letters off each page and lays them back over the image invisibly, where you can select and search them. It downloads about eight megabytes the first time you ask, runs in this tab like everything else, and is slower than it looks: a page takes a few seconds. The result is every page as an image with a text layer, so a document that was already crisp vector text should just be saved normally, not run through this. And because every word came from a guess at a picture, proofread it before you trust it: recognition is good on a clean scan and poor on a bad one, and it only reads the Latin alphabet.</li>
   <li><strong>It downloads about 700&nbsp;KB</strong> the first time you open a file: <a href="https://mozilla.github.io/pdf.js/">pdf.js</a> to render pages, <a href="https://github.com/Hopding/pdf-lib">pdf-lib</a> to write them, plus font metrics for whatever your document uses. All served from this domain, because the security policy here forbids third-party scripts and a page handling your contracts is the wrong place to make an exception. The Pages tab shares it, so if you have used one the other is already cached.</li>
   <li><strong>Pages are copied, not redrawn.</strong> Fonts, images, form fields, links and annotations travel with the page. This is the difference between a rearranged document and a photograph of one: the text is still text, still selectable, still searchable, and the file does not balloon.</li>
   <li><strong>Turning a page is metadata, not pixels.</strong> A PDF page carries its own rotation, so a sideways scan is corrected by changing a number rather than by rotating an image. Nothing is re-encoded and nothing is lost. It also means the turn adds to whatever the page already had, which is what you want on a scan that was already sideways.</li>
