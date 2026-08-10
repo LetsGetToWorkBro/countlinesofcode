@@ -268,25 +268,57 @@
   function key() { return keyOf(ref()); }
   function docOf(ref2) { return sources[ref2.doc]; }
 
-  function analysePage(ref2) {
-    var id = keyOf(ref2);
+  /* The analysis is done in DISPLAY space, and cached per rotation.
+   *
+   * pdf.js reports text positions in the page's native, un-rotated user
+   * space; every click arrives in the rotated space the page is displayed
+   * in. On an upright page the two coincide, and that coincidence is what
+   * used to pass for correctness: a sideways scan, or one press of Turn,
+   * and delete/snap/auto-size were comparing a rotated point against
+   * un-rotated text and selecting the wrong word or none. Each item's
+   * native box is pushed through the same rotated viewport the page is
+   * drawn with, so hit-testing compares like with like; the native glyph
+   * height survives as fontSize, because a quarter turn must not change
+   * what size "the text nearby" is. */
+  function analysePage(ref2, rot) {
+    var id = keyOf(ref2) + '@' + rot;
     if (analysed[id]) return Promise.resolve(analysed[id]);
     var source = docOf(ref2);
     return source.doc.getPage(ref2.page + 1).then(function (page) {
+      var vp1 = page.getViewport({ scale: 1, rotation: rot });
       return page.getTextContent().then(function (content) {
         var items = [];
+        var rawItems = [];
         content.items.forEach(function (it) {
           if (!it.str || !it.str.trim()) return; // pdf.js emits blanks; they match nothing
+          var x = it.transform[4];
+          var y = it.transform[5];
+          var w = it.width;
+          var h = it.height || Math.abs(it.transform[3]) || 10;
+          // The operator matcher works in native space, same as the ops.
+          rawItems.push({ x: x, y: y });
+          // The four native corners, through the rotated viewport, back into
+          // the display-space "pdf points" every click is measured in.
+          var xs = [];
+          var ys = [];
+          [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].forEach(function (c) {
+            var v = vp1.convertToViewportPoint(c[0], c[1]);
+            xs.push(v[0]);
+            ys.push(vp1.height - v[1]);
+          });
+          var minX = Math.min.apply(null, xs);
+          var minY = Math.min.apply(null, ys);
           items.push({
             str: it.str,
-            x: it.transform[4],
-            y: it.transform[5],
-            width: it.width,
-            height: it.height || Math.abs(it.transform[3]) || 10,
+            x: minX,
+            y: minY,
+            width: Math.max.apply(null, xs) - minX,
+            height: Math.max.apply(null, ys) - minY,
+            fontSize: h,
           });
         });
         var ops = window.LOC1999_SIGN.pageTextOps(source.libDoc, ref2.page);
-        var report = window.LOC1999_SIGN.matchOpsToItems(ops, items);
+        var report = window.LOC1999_SIGN.matchOpsToItems(ops, rawItems);
         var opOf = {};
         report.matched.forEach(function (m) { opOf[m.itemIndex] = m.opIndex; });
         analysed[id] = { items: items, ops: ops, opOf: opOf, unmatched: report.unmatchedItems.length };
@@ -294,6 +326,9 @@
       });
     });
   }
+
+  /** The cache entry for the page on screen, at the rotation on screen. */
+  function analysisKey() { return key() + '@' + totalRotation(at); }
 
   // ---------------------------------------------------------------- rotation
   /* A page already carries a rotation of its own, which is how a sideways scan
@@ -408,7 +443,7 @@
       var hi = page.getViewport({ scale: viewport.scale * dpr, rotation: rotation });
       return page.render({ canvasContext: view.getContext('2d'), viewport: hi }).promise;
     }).then(function () {
-      return analysePage(ref());
+      return analysePage(ref(), totalRotation(at));
     }).then(function () {
       draw();
       markCurrentThumb();
@@ -622,7 +657,7 @@
   }
 
   function itemAt(point) {
-    var info = analysed[key()];
+    var info = analysed[analysisKey()];
     if (!info) return -1;
     var p = toPdf(point);
     for (var i = 0; i < info.items.length; i++) {
@@ -643,7 +678,7 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, viewW, viewH);
     var s = viewport.scale;
-    var info = analysed[key()] || { items: [], opOf: {} };
+    var info = analysed[analysisKey()] || { items: [], opOf: {} };
 
     // Text queued for deletion: struck through and tinted, so it is obvious
     // what will go without pretending it has already gone.
@@ -968,7 +1003,7 @@
     if (!order.length || tool() !== 'delete') return;
     var point = canvasPoint(event);
     var index = itemAt(point);
-    var info = analysed[key()];
+    var info = analysed[analysisKey()];
     if (index < 0 || !info) return;
     var it = info.items[index];
     if (!markForRemoval(index)) return;
@@ -978,13 +1013,13 @@
      * looking at the page while you do it. */
     var wasAuto = $('text-auto').checked;
     $('text-auto').checked = false;
-    $('text-size').value = Math.round(it.height * 10) / 10;
+    $('text-size').value = Math.round((it.fontSize || it.height) * 10) / 10;
     openCaret(toCanvas({ x: it.x, y: it.y }), it.str);
     $('text-auto').checked = wasAuto;
   });
 
   function markForRemoval(index) {
-    var info = analysed[key()];
+    var info = analysed[analysisKey()];
     var opIndex = info.opOf[index];
     if (opIndex === undefined) {
       fail(
@@ -1011,7 +1046,7 @@
 
   /** Snap a dragged position onto a nearby line, and remember the guide. */
   function snap(p) {
-    var info = analysed[key()];
+    var info = analysed[analysisKey()];
     snapLine = null;
     if (!info || !info.items.length || !$('snap').checked) return p;
 
@@ -1031,12 +1066,12 @@
 
   /** The size of nearby text, so what you type matches the form it goes on. */
   function sizeNear(p) {
-    var info = analysed[key()];
+    var info = analysed[analysisKey()];
     if (!info) return null;
     var best = null, bestDy = 24;
     info.items.forEach(function (it) {
       var dy = Math.abs(it.y - p.y);
-      if (dy < bestDy) { bestDy = dy; best = it.height; }
+      if (dy < bestDy) { bestDy = dy; best = it.fontSize || it.height; }
     });
     return best ? Math.round(best * 10) / 10 : null;
   }
