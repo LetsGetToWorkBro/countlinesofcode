@@ -39,6 +39,14 @@ export interface Coin {
   network: string;
   /** Network as ChangeNOW names it. */
   cnNetwork: string;
+  /** Network as Godex names it. Godex happens to use the same codes Exolix
+   *  does, but stated rather than shared: two providers agreeing today is not
+   *  a promise, and the coin that breaks the coincidence would send somebody's
+   *  USDT down the wrong chain. */
+  gxNetwork: string;
+  /** Network as Trocador names it: the chain's own name rather than a ticker,
+   *  and "Mainnet" for the coins that are their own chain. */
+  trNetwork: string;
   family: AddressFamily;
 }
 
@@ -53,13 +61,13 @@ export interface Coin {
  * wanting.
  */
 export const COINS: Coin[] = [
-  { id: 'xmr', ticker: 'xmr', label: 'Monero', network: 'XMR', cnNetwork: 'xmr', family: 'xmr' },
-  { id: 'btc', ticker: 'btc', label: 'Bitcoin', network: 'BTC', cnNetwork: 'btc', family: 'btc' },
-  { id: 'usdttrc', ticker: 'usdt', label: 'USDT (Tron)', network: 'TRX', cnNetwork: 'trx', family: 'tron' },
-  { id: 'usdteth', ticker: 'usdt', label: 'USDT (Ethereum)', network: 'ETH', cnNetwork: 'eth', family: 'evm' },
-  { id: 'eth', ticker: 'eth', label: 'Ethereum', network: 'ETH', cnNetwork: 'eth', family: 'evm' },
-  { id: 'usdc', ticker: 'usdc', label: 'USDC (Ethereum)', network: 'ETH', cnNetwork: 'eth', family: 'evm' },
-  { id: 'usdcsol', ticker: 'usdc', label: 'USDC (Solana)', network: 'SOL', cnNetwork: 'sol', family: 'sol' },
+  { id: 'xmr', ticker: 'xmr', label: 'Monero', network: 'XMR', cnNetwork: 'xmr', gxNetwork: 'XMR', trNetwork: 'Mainnet', family: 'xmr' },
+  { id: 'btc', ticker: 'btc', label: 'Bitcoin', network: 'BTC', cnNetwork: 'btc', gxNetwork: 'BTC', trNetwork: 'Mainnet', family: 'btc' },
+  { id: 'usdttrc', ticker: 'usdt', label: 'USDT (Tron)', network: 'TRX', cnNetwork: 'trx', gxNetwork: 'TRX', trNetwork: 'TRC20', family: 'tron' },
+  { id: 'usdteth', ticker: 'usdt', label: 'USDT (Ethereum)', network: 'ETH', cnNetwork: 'eth', gxNetwork: 'ETH', trNetwork: 'ERC20', family: 'evm' },
+  { id: 'eth', ticker: 'eth', label: 'Ethereum', network: 'ETH', cnNetwork: 'eth', gxNetwork: 'ETH', trNetwork: 'Mainnet', family: 'evm' },
+  { id: 'usdc', ticker: 'usdc', label: 'USDC (Ethereum)', network: 'ETH', cnNetwork: 'eth', gxNetwork: 'ETH', trNetwork: 'ERC20', family: 'evm' },
+  { id: 'usdcsol', ticker: 'usdc', label: 'USDC (Solana)', network: 'SOL', cnNetwork: 'sol', gxNetwork: 'SOL', trNetwork: 'Solana', family: 'sol' },
 ];
 
 export const XMR: Coin = COINS[0]!;
@@ -71,11 +79,13 @@ export function coin(id: string): Coin | null {
   return COINS.find((c) => c.id === id) ?? null;
 }
 
-export type ProviderId = 'exolix' | 'changenow';
+export type ProviderId = 'exolix' | 'changenow' | 'godex' | 'trocador';
 
 export const PROVIDERS: { id: ProviderId; label: string; note: string; needsKey: boolean }[] = [
   { id: 'exolix', label: 'Exolix', note: 'exolix.com', needsKey: false },
+  { id: 'godex', label: 'Godex', note: 'godex.io', needsKey: false },
   { id: 'changenow', label: 'ChangeNOW', note: 'changenow.io', needsKey: true },
+  { id: 'trocador', label: 'Trocador', note: 'trocador.app, an aggregator', needsKey: true },
 ];
 
 /** One provider's answer to "how much of that for this much of this". */
@@ -413,6 +423,231 @@ export function parseChangeNowStatus(json: unknown): SwapStatus {
   const raw = String(j['status'] ?? 'unknown');
   const status: SwapStatus = { stage: CHANGENOW_STAGES[raw] ?? 'failed', raw };
   if (j['payoutHash']) status.txId = String(j['payoutHash']);
+  return status;
+}
+
+// ---------------------------------------------------------------------------
+// Godex. https://godex.io/api
+// Rates, order creation and status all answer without an API key, which is why
+// it is here: it makes the board a comparison rather than a single price on
+// the machines of visitors who never set a secret.
+
+const GODEX = 'https://api.godex.io/api/v1';
+
+/** Godex takes its rate query as a POST body rather than a query string. */
+export function godexRateBody(pair: Pair, amount: number): { url: string; body: Record<string, unknown> } {
+  return {
+    url: `${GODEX}/info`,
+    body: {
+      from: pair.from.ticker.toUpperCase(),
+      to: pair.to.ticker.toUpperCase(),
+      amount: String(amount),
+      network_from: pair.from.gxNetwork,
+      network_to: pair.to.gxNetwork,
+    },
+  };
+}
+
+export function parseGodexRate(json: unknown): SwapQuote {
+  const j = (json ?? {}) as Record<string, unknown>;
+  const toAmount = Number(j['amount']);
+  const minAmount = Number(j['min_amount']);
+  const maxAmount = Number(j['max_amount']);
+  if (Number.isFinite(toAmount) && toAmount > 0) {
+    const quote: SwapQuote = { provider: 'godex', ok: true, toAmount };
+    if (Number.isFinite(minAmount) && minAmount > 0) quote.minAmount = minAmount;
+    if (Number.isFinite(maxAmount) && maxAmount > 0) quote.maxAmount = maxAmount;
+    return quote;
+  }
+  /* Under the minimum, Godex answers 200 with amount "0" and the minimum
+   * filled in rather than an error, so a zero is a refusal and the reason has
+   * to be built here. */
+  const stated = j['error'] ?? j['message'];
+  const reason = stated ? String(stated) : 'No quote at this amount.';
+  const quote: SwapQuote = { provider: 'godex', ok: false, reason };
+  if (Number.isFinite(minAmount) && minAmount > 0) quote.minAmount = minAmount;
+  if (Number.isFinite(maxAmount) && maxAmount > 0) quote.maxAmount = maxAmount;
+  return quote;
+}
+
+export function godexCreateBody(req: CreateRequest): { url: string; body: Record<string, unknown> } {
+  return {
+    url: `${GODEX}/transaction`,
+    body: {
+      coin_from: req.from.ticker.toUpperCase(),
+      coin_to: req.to.ticker.toUpperCase(),
+      deposit_amount: String(req.amount),
+      withdrawal: req.address,
+      return: req.refund ?? '',
+      coin_from_network: req.from.gxNetwork,
+      coin_to_network: req.to.gxNetwork,
+      /* Both extra-id fields must be *present* or Godex rejects the call with a
+       * validation error, even for chains that have no such thing. Empty is
+       * fine; absent is not. */
+      withdrawal_extra_id: '',
+      return_extra_id: '',
+    },
+  };
+}
+
+export function parseGodexCreate(json: unknown): SwapOrder | null {
+  const j = (json ?? {}) as Record<string, unknown>;
+  const id = String(j['transaction_id'] ?? '');
+  const payinAddress = String(j['deposit'] ?? '');
+  const payinAmount = Number(j['deposit_amount']);
+  const toAmount = Number(j['withdrawal_amount']);
+  if (!id || !payinAddress || !Number.isFinite(payinAmount)) return null;
+  return {
+    provider: 'godex',
+    id,
+    payinAddress,
+    payinExtra: j['deposit_extra_id'] ? String(j['deposit_extra_id']) : null,
+    payinAmount,
+    toAmount: Number.isFinite(toAmount) ? toAmount : 0,
+    payoutAddress: String(j['withdrawal'] ?? ''),
+  };
+}
+
+export function godexStatusUrl(id: string): string {
+  return `${GODEX}/transaction/${encodeURIComponent(id)}`;
+}
+
+const GODEX_STAGES: Record<string, SwapStage> = {
+  wait: 'waiting',
+  confirmation: 'confirming',
+  confirmed: 'confirming',
+  exchanging: 'exchanging',
+  sending: 'sending',
+  success: 'done',
+  overdue: 'expired',
+  refunded: 'refunded',
+  error: 'failed',
+};
+
+export function parseGodexStatus(json: unknown): SwapStatus {
+  const j = (json ?? {}) as Record<string, unknown>;
+  const raw = String(j['status'] ?? 'unknown');
+  const status: SwapStatus = { stage: GODEX_STAGES[raw] ?? 'failed', raw };
+  if (j['hash_out']) status.txId = String(j['hash_out']);
+  return status;
+}
+
+// ---------------------------------------------------------------------------
+// Trocador. https://trocador.app
+//
+// Not an exchange: an aggregator that shops one pair around roughly fifteen
+// no-KYC desks and hands back the best of them, which is why one adapter here
+// is worth more than one exchange. It is also the one the Monero community
+// actually uses, and it publishes a KYC rating per desk, which is the reason
+// to prefer it over shopping the same desks individually.
+//
+// READ THIS BEFORE TRUSTING IT. Every Trocador endpoint, and its API
+// documentation, is behind an API key, so unlike the other three adapters here
+// this one could not be checked against the live service while it was written.
+// The endpoint names, the `API-Key` header and the three response fields the
+// order depends on are confirmed; the rest, including the network spellings
+// above, is reconstruction. It is therefore built to fail closed rather than
+// to guess: `parseTrocadorCreate` refuses an order whose deposit address is
+// not a valid address on the chain the visitor is about to send, so a field
+// this code has misread cannot become an address somebody pays into. Nothing
+// here runs at all until TROCADOR_API_KEY is set.
+
+const TROCADOR = 'https://trocador.app/api';
+
+export function trocadorRateUrl(pair: Pair, amount: number): string {
+  const q = new URLSearchParams({
+    ticker_from: pair.from.ticker,
+    network_from: pair.from.trNetwork,
+    ticker_to: pair.to.ticker,
+    network_to: pair.to.trNetwork,
+    amount_from: String(amount),
+    payment: 'False',
+  });
+  return `${TROCADOR}/new_rate?${q}`;
+}
+
+export function parseTrocadorRate(json: unknown): SwapQuote {
+  const j = (json ?? {}) as Record<string, unknown>;
+  const toAmount = Number(j['amount_to']);
+  const minAmount = Number(j['min_amount']);
+  const maxAmount = Number(j['max_amount']);
+  if (Number.isFinite(toAmount) && toAmount > 0) {
+    const quote: SwapQuote = { provider: 'trocador', ok: true, toAmount };
+    if (Number.isFinite(minAmount) && minAmount > 0) quote.minAmount = minAmount;
+    if (Number.isFinite(maxAmount) && maxAmount > 0) quote.maxAmount = maxAmount;
+    return quote;
+  }
+  const stated = j['error'] ?? j['message'] ?? j['detail'];
+  const quote: SwapQuote = { provider: 'trocador', ok: false, reason: stated ? String(stated) : 'No quote.' };
+  if (Number.isFinite(minAmount) && minAmount > 0) quote.minAmount = minAmount;
+  return quote;
+}
+
+export function trocadorCreateUrl(req: CreateRequest): string {
+  const q = new URLSearchParams({
+    ticker_from: req.from.ticker,
+    network_from: req.from.trNetwork,
+    ticker_to: req.to.ticker,
+    network_to: req.to.trNetwork,
+    amount_from: String(req.amount),
+    address: req.address,
+    payment: 'False',
+  });
+  if (req.refund) q.set('refund', req.refund);
+  return `${TROCADOR}/new_trade?${q}`;
+}
+
+/**
+ * Read a created trade, and refuse it unless the deposit address is an address
+ * on the chain being sent.
+ *
+ * That check is the safety net described above, and it is not decoration: it is
+ * the difference between this adapter having misread a field and this adapter
+ * printing somebody else's address for a visitor to pay into. `from` is the
+ * coin being spent, so its family is the chain the deposit belongs on.
+ */
+export function parseTrocadorCreate(json: unknown, from: Coin): SwapOrder | null {
+  const j = (json ?? {}) as Record<string, unknown>;
+  const id = String(j['trade_id'] ?? '');
+  const payinAddress = String(j['address_provider'] ?? '');
+  const payinAmount = Number(j['amount_from']);
+  const toAmount = Number(j['amount_to']);
+  if (!id || !payinAddress || !Number.isFinite(payinAmount)) return null;
+  if (!addressLooksRight(from.family, payinAddress)) return null;
+  return {
+    provider: 'trocador',
+    id,
+    payinAddress,
+    payinExtra: j['address_provider_memo'] ? String(j['address_provider_memo']) : null,
+    payinAmount,
+    toAmount: Number.isFinite(toAmount) ? toAmount : 0,
+    payoutAddress: String(j['address_user'] ?? ''),
+  };
+}
+
+export function trocadorStatusUrl(id: string): string {
+  return `${TROCADOR}/trade?id=${encodeURIComponent(id)}`;
+}
+
+const TROCADOR_STAGES: Record<string, SwapStage> = {
+  new: 'waiting',
+  waiting: 'waiting',
+  confirming: 'confirming',
+  confirmation: 'confirming',
+  sending: 'sending',
+  exchanging: 'exchanging',
+  finished: 'done',
+  expired: 'expired',
+  refunded: 'refunded',
+  halted: 'failed',
+  failed: 'failed',
+};
+
+export function parseTrocadorStatus(json: unknown): SwapStatus {
+  const j = (json ?? {}) as Record<string, unknown>;
+  const raw = String(j['status'] ?? 'unknown');
+  const status: SwapStatus = { stage: TROCADOR_STAGES[raw.toLowerCase()] ?? 'failed', raw };
+  if (j['hash_out']) status.txId = String(j['hash_out']);
   return status;
 }
 

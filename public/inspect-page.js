@@ -26,6 +26,7 @@
 
   var engine = null;
   var pdfjs = null;
+  var cleanUrls = [];
 
   /* Rendering every page of a long document to check it is slow and, past a
    * point, pointless — the leaks repeat. This covers the front of the document,
@@ -178,7 +179,72 @@
       if (names.indexOf('xl/workbook.xml') >= 0) kind = 'xlsx';
       else if (names.some(function (n) { return n.indexOf('ppt/slides/') === 0; })) kind = 'pptx';
       else if (names.indexOf('word/document.xml') >= 0) kind = 'docx';
-      return engine.inspectOoxml(parts, kind);
+      // The parts and kind are kept so the clean copy can be written from the
+      // same parse rather than unzipping the file a second time.
+      return { report: engine.inspectOoxml(parts, kind), parts: parts, kind: kind };
+    });
+  }
+
+  // -------------------------------------------------------- the clean copy
+  var OFFICE_MIME = {
+    docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  };
+
+  function resetClean() {
+    cleanUrls.forEach(URL.revokeObjectURL);
+    cleanUrls = [];
+    $('clean-copy').className = 'hidden';
+    var dl = $('inspect-dl');
+    dl.className = 'dl-link hidden';
+    dl.removeAttribute('href');
+    dl.textContent = 'the clean copy';
+    $('clean-summary').textContent = '';
+  }
+
+  /** Join ["a","b","c"] as "a, b and c". */
+  function listPhrase(items) {
+    if (items.length <= 1) return items[0] || '';
+    return items.slice(0, -1).join(', ') + ' and ' + items[items.length - 1];
+  }
+
+  /**
+   * Build the clean copy from whatever was just inspected and offer it for
+   * download. Runs after the report is shown, so a slow write never holds it
+   * up, and a failure here leaves the report standing.
+   */
+  function prepareClean(ctx) {
+    setStatus('Preparing a clean copy…');
+    var build = ctx.type === 'pdf'
+      ? engine.cleanPdf(ctx.bytes).then(function (res) {
+        return { bytes: res.value, removed: res.removed, ext: 'pdf', mime: 'application/pdf' };
+      })
+      : Promise.resolve(engine.cleanOoxml(ctx.parts, ctx.kind)).then(function (res) {
+        return engine.zip(res.value).then(function (zipped) {
+          return { bytes: zipped, removed: res.removed, ext: ctx.kind, mime: OFFICE_MIME[ctx.kind] };
+        });
+      });
+    return build.then(function (out) {
+      setStatus('');
+      $('clean-copy').className = '';
+      if (!out.removed.length) {
+        $('clean-summary').textContent = 'This file carries nothing to remove; it is already clean.';
+        return;
+      }
+      var blob = new Blob([out.bytes], { type: out.mime });
+      var url = URL.createObjectURL(blob);
+      cleanUrls.push(url);
+      var outName = ctx.name.replace(/\.[^.]+$/, '') + '-clean.' + out.ext;
+      var dl = $('inspect-dl');
+      dl.href = url;
+      dl.setAttribute('download', outName);
+      dl.textContent = outName;
+      dl.className = 'dl-link';
+      $('clean-summary').textContent = 'Removed ' + listPhrase(out.removed) + '.';
+    }, function () {
+      // The report already stands; just leave the clean action unavailable.
+      setStatus('');
     });
   }
 
@@ -218,6 +284,7 @@
   function open(file) {
     clearError();
     reportEl.className = 'hidden';
+    resetClean();
     loadEngines()
       .then(function () { return file.arrayBuffer(); })
       .then(function (buf) {
@@ -225,8 +292,15 @@
         var isPdf = bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
         var isZip = bytes[0] === 0x50 && bytes[1] === 0x4b;
         setStatus('Reading…');
-        if (isPdf) return inspectPdfFile(bytes).then(show);
-        if (isZip) return inspectOfficeFile(bytes, file.name).then(function (r) { setStatus(''); show(r); });
+        if (isPdf) return inspectPdfFile(bytes).then(function (report) {
+          show(report);
+          return prepareClean({ type: 'pdf', bytes: bytes, name: file.name });
+        });
+        if (isZip) return inspectOfficeFile(bytes, file.name).then(function (res) {
+          setStatus('');
+          show(res.report);
+          return prepareClean({ type: 'office', parts: res.parts, kind: res.kind, name: file.name });
+        });
         throw new Error('This checks PDFs and Office files (.docx, .xlsx, .pptx). That is neither.');
       })
       .catch(function (err) {

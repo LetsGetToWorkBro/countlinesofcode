@@ -64,23 +64,28 @@ afterEach(() => {
 });
 
 describe('GET /api/swap/quote', () => {
-  it('quotes Exolix alone when no ChangeNOW key is configured', async () => {
+  it('quotes both keyless desks when no ChangeNOW key is configured', async () => {
+    /* The point of a second keyless provider: with no secret set anywhere, the
+     * board is still a comparison rather than one price with nothing to beat. */
     responses['https://exolix.com/api/v2/rate'] = () => json({ toAmount: 8.7, minAmount: 0.0008, maxAmount: 10 });
+    responses['https://api.godex.io/api/v1/info'] = () => json({ amount: '8.65', min_amount: '0.0009' });
     const response = await call('/api/swap/quote?from=btc&to=xmr&amount=0.05');
     expect(response.status).toBe(200);
-    const body = (await response.json()) as { quotes: unknown[] };
-    expect(body.quotes).toEqual([{ provider: 'exolix', ok: true, toAmount: 8.7, minAmount: 0.0008, maxAmount: 10 }]);
-    // The boundary: nothing but Exolix was fetched.
-    expect(fetched.every((f) => f.url.startsWith('https://exolix.com/api/v2/'))).toBe(true);
+    const body = (await response.json()) as { quotes: { provider: string; ok: boolean }[] };
+    expect(body.quotes.map((q) => q.provider).sort()).toEqual(['exolix', 'godex']);
+    expect(body.quotes.every((q) => q.ok)).toBe(true);
+    // The boundary: only the two keyless origins were fetched.
+    expect(fetched.every((f) => /^https:\/\/(exolix\.com|api\.godex\.io)\//.test(f.url))).toBe(true);
   });
 
   it('adds a ChangeNOW quote, with the key attached, when configured', async () => {
     responses['https://exolix.com/api/v2/rate'] = () => json({ toAmount: 8.7, minAmount: 0.0008 });
+    responses['https://api.godex.io/api/v1/info'] = () => json({ amount: '8.65' });
     responses['https://api.changenow.io/v2/exchange/estimated-amount'] = () => json({ toAmount: 8.75 });
     responses['https://api.changenow.io/v2/exchange/min-amount'] = () => json({ minAmount: 0.00013 });
     const response = await call('/api/swap/quote?from=btc&to=xmr&amount=0.05', {}, makeEnv({ CHANGENOW_API_KEY: 'k-123' }));
     const body = (await response.json()) as { quotes: { provider: string; toAmount?: number }[] };
-    expect(body.quotes.map((q) => q.provider).sort()).toEqual(['changenow', 'exolix']);
+    expect(body.quotes.map((q) => q.provider).sort()).toEqual(['changenow', 'exolix', 'godex']);
     const cnCalls = fetched.filter((f) => f.url.includes('changenow.io'));
     expect(cnCalls.length).toBe(2);
     for (const f of cnCalls) {
@@ -92,12 +97,14 @@ describe('GET /api/swap/quote', () => {
     responses['https://exolix.com/api/v2/rate'] = () => {
       throw new Error('connection reset');
     };
+    responses['https://api.godex.io/api/v1/info'] = () => json({ amount: '8.65' });
     responses['https://api.changenow.io/v2/exchange/estimated-amount'] = () => json({ toAmount: 8.75 });
     responses['https://api.changenow.io/v2/exchange/min-amount'] = () => json({ minAmount: 0.00013 });
     const response = await call('/api/swap/quote?from=btc&to=xmr&amount=0.05', {}, makeEnv({ CHANGENOW_API_KEY: 'k' }));
     expect(response.status).toBe(200);
     const body = (await response.json()) as { quotes: { provider: string; ok: boolean }[] };
     expect(body.quotes.find((q) => q.provider === 'exolix')!.ok).toBe(false);
+    expect(body.quotes.find((q) => q.provider === 'godex')!.ok).toBe(true);
     expect(body.quotes.find((q) => q.provider === 'changenow')!.ok).toBe(true);
   });
 
@@ -149,6 +156,50 @@ describe('POST /api/swap/create', () => {
     expect((fetched[0]!.init?.headers as Record<string, string>)['x-changenow-api-key']).toBe('k');
   });
 
+  it('refuses to create on Trocador when the server has no key', async () => {
+    const response = await post('/api/swap/create', { ...good, provider: 'trocador' });
+    expect(response.status).toBe(503);
+    expect(fetched).toHaveLength(0);
+  });
+
+  it('creates on Trocador with the key, and refuses a deposit address off-chain', async () => {
+    const trade = {
+      trade_id: 'TRC123456', address_provider: 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq',
+      amount_from: '0.05', amount_to: '8.19', address_user: XMR_ADDR,
+    };
+    responses['https://trocador.app/api/new_trade'] = () => json(trade);
+    const env = makeEnv({ TROCADOR_API_KEY: 'tk' });
+    const ok = await post('/api/swap/create', { ...good, provider: 'trocador' }, env);
+    expect(ok.status).toBe(200);
+    expect(await ok.json()).toMatchObject({ provider: 'trocador', id: 'TRC123456' });
+    expect((fetched[0]!.init?.headers as Record<string, string>)['API-Key']).toBe('tk');
+
+    /* The safety net at the boundary: a deposit address that is not on the
+     * chain being sent is a 502, never an order with an address on it. */
+    fetched = [];
+    responses['https://trocador.app/api/new_trade'] = () => json({ ...trade, address_provider: XMR_ADDR });
+    const bad502 = await post('/api/swap/create', { ...good, provider: 'trocador' }, env);
+    expect(bad502.status).toBe(502);
+  });
+
+  it('creates on Godex, which needs no key at all', async () => {
+    responses['https://api.godex.io/api/v1/transaction'] = () =>
+      json({
+        transaction_id: 'c6a79d666b28a7',
+        deposit: 'bc1qgx',
+        deposit_amount: '0.05',
+        withdrawal_amount: '8.02',
+        withdrawal: XMR_ADDR,
+      });
+    const response = await post('/api/swap/create', { ...good, provider: 'godex' });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      provider: 'godex', id: 'c6a79d666b28a7', payinAddress: 'bc1qgx', payinAmount: 0.05,
+    });
+    // No key header anywhere: the point of this desk.
+    expect(JSON.stringify(fetched[0]!.init?.headers ?? {})).not.toMatch(/api-key/i);
+  });
+
   it('relays the provider refusing, in words, as a 502', async () => {
     responses['https://exolix.com/api/v2/transactions'] = () => json({ error: 'Invalid withdrawal address' }, 422);
     const response = await post('/api/swap/create', good);
@@ -186,6 +237,27 @@ describe('GET /api/swap/status', () => {
       txId: 'cafe',
       line: expect.stringMatching(/done/i),
     });
+  });
+
+  it('normalises a Godex status', async () => {
+    responses['https://api.godex.io/api/v1/transaction/c6a79d666b28a7'] = () =>
+      json({ status: 'success', hash_out: 'f00d' });
+    const response = await call('/api/swap/status?provider=godex&id=c6a79d666b28a7');
+    expect(await response.json()).toEqual({
+      stage: 'done',
+      raw: 'success',
+      txId: 'f00d',
+      line: expect.stringMatching(/done/i),
+    });
+  });
+
+  it('reads Godex’s empty answer as an unknown order, not a failed swap', async () => {
+    /* Godex answers 200 with {} for an id it has never seen. Narrated blind
+     * that is stage "failed", which would tell somebody with a perfectly good
+     * order that their swap had broken. */
+    responses['https://api.godex.io/api/v1/transaction/nosuchorder'] = () => json({});
+    const response = await call('/api/swap/status?provider=godex&id=nosuchorder');
+    expect(response.status).toBe(404);
   });
 
   it('refuses an order id that could steer the path', async () => {

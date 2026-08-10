@@ -38,8 +38,16 @@
   color: #c8c8c8;
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 11px;
-  padding: 8px;
 }
+/* The gutter. The shell sets `padding: 0` on an application's body, for the
+   programs that lay themselves out in bands and bring their own spacing; this
+   one is content, and with no gutter every line starts hard against the tube.
+   A plain `[data-app] .app-body` loses to that shell rule, which carries an
+   element plus two classes, which is why the padding this asked for never
+   arrived. Naming the desk the window sits on wins on class count without
+   reaching outside the app. */
+[data-app="inspect"] .desk-shell .app-window > .app-body { padding: 8px 14px; }
+
 [data-app="inspect"] .app-body h3 {
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 12px;
@@ -186,9 +194,39 @@
 [data-app="inspect"] .error { color: #ff8080; }
 [data-app="inspect"] code { color: #00e8e8; }
 
+/* ---- THE CLEAN COPY ------------------------------------------------
+   The other half of the tool: having said what the file carries, offer one
+   that no longer carries it. A framed panel with the download drawn as the
+   action it is, in the cyan the report already uses to draw attention. */
+[data-app="inspect"] #clean-copy {
+  border: 1px solid #00a8a8;
+  padding: 2px 10px 10px 10px;
+  margin-top: 12px;
+  max-width: 820px;
+}
+[data-app="inspect"] #clean-copy h3 { color: #00e8e8; }
+[data-app="inspect"] .dl-link {
+  display: inline-block;
+  background: #00a8a8;
+  color: #001414;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 6px 16px;
+  border: 2px outset #4de0e0;
+  text-decoration: none;
+}
+[data-app="inspect"] .dl-link:hover { background: #1fc4c4; }
+[data-app="inspect"] .dl-link:active { border-style: inset; }
+/* The link is set at attribute-plus-class, which beats a bare .hidden, so it
+   would stay on screen when the page hides it (no metadata to remove). This
+   lets .hidden win again, the trap this project has hit before. */
+[data-app="inspect"] .dl-link.hidden { display: none; }
+[data-app="inspect"] .nu-caveat { font-style: italic; }
+
 /* ---- responsive ---------------------------------------------------- */
 @media (max-width: 700px) {
-  [data-app="inspect"] .app-body { padding: 6px; }
+  [data-app="inspect"] .desk-shell .app-window > .app-body { padding: 6px 10px; }
   [data-app="inspect"] .app-window > .nu-menu span { padding: 2px 5px; }
 }
 

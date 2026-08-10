@@ -92,6 +92,7 @@
 <span class="menu"><button type="button" class="menu-title">File</button>
   <span class="menu-drop">
     <button type="button" data-cmd="drop">Open...</button>
+    <button type="button" data-cmd="inspect-dl">Save a clean copy</button>
   </span></span>
 <span class="menu"><button type="button" class="menu-title">Help</button>
   <span class="menu-drop">
@@ -100,6 +101,8 @@
 </p>
 <div class="app-toolbar" role="toolbar" aria-label="Inspector">
 <button type="button" data-acts="drop">Open</button>
+<span class="tb-sep"></span>
+<button type="button" data-acts="inspect-dl">Save a clean copy</button>
 </div>
 <div class="app-body">
 <p class="nu-hint"><span class="nu-hint-mark">i</span>
@@ -136,6 +139,20 @@ comments that were never accepted or deleted, only hidden from view.
     <h3>Checks that came back clean</h3>
     <ul id="clean" class="plain"></ul>
   </div>
+
+  <div id="clean-copy" class="hidden">
+    <hr>
+    <h3>3. Save a clean copy</h3>
+    <p id="clean-summary" class="note"></p>
+    <p><a id="inspect-dl" class="dl-link" download>the clean copy</a></p>
+    <p class="note nu-caveat">
+    This takes out the metadata: the author, the software, the timestamps and,
+    in a Word file, the tracked changes (accepted) and the comments (removed).
+    It leaves the page content exactly as it is. Text hidden under a box is
+    content the author placed, not metadata, so a bad redaction is left for a
+    redaction tool to fix; the file is re-checked the moment you open the copy.
+    </p>
+  </div>
 </div>
 
 <hr>
@@ -164,6 +181,24 @@ tricks at once, without needing to know which one was used.
 </p>
 </section>
 
+<section data-step="Then save a clean copy">
+<p><strong>Reading the metadata back is half the tool. Taking it out is the other half.</strong></p>
+<p class="note">
+Once a file is open, it also writes you a clean copy: the same document with the
+metadata gone. For a PDF that is the author, the software, the timestamps, the
+XMP block and the reviewer names on any mark-up. For a Word file it is the
+document properties, and it accepts every tracked change and deletes every
+comment, so the copy holds the final text and nothing about who wrote it or what
+they argued over on the way there.
+</p>
+<p class="note">
+It does not touch the page itself. Text hidden under a black box is content the
+author placed, and only they know what was meant to go, so a bad redaction is
+left for the <a href="/sign.html">PDF editor</a> rather than guessed at here.
+Open the clean copy back into this tab to watch the findings disappear.
+</p>
+</section>
+
 <section data-step="Is this actually private?">
 <h3>Is this actually private?</h3>
 <div id="proof"></div>
@@ -176,7 +211,7 @@ tricks at once, without needing to know which one was used.
   <li><strong>The invisible-text check works from the rendered page.</strong> Every piece of extractable text is compared against the pixels where it should appear. Nearly-flat pixels mean nothing is visible there. That is why it catches black boxes, white-on-white and covered-by-image alike, but it means a page it cannot render is a page it cannot check.</li>
   <li><strong>It errs towards silence.</strong> The threshold is set well clear of ordinary text, because a tool that flags every normal document is one you learn to ignore. Very small or very faint text could in principle slip past.</li>
   <li><strong>Metadata is not always bad.</strong> A creation date on a public report is fine. The point is knowing it is there before you decide.</li>
-  <li><strong>To fix what it finds:</strong> delete text properly with the <a href="/sign.html">PDF editor</a>, which removes the instruction that drew it rather than covering it over. For Office files, accept or reject tracked changes and delete comments in Word before sending.</li>
+  <li><strong>To fix what it finds:</strong> use <em>Save a clean copy</em>, which strips the metadata and, in a Word file, accepts the tracked changes and removes the comments. It leaves the page content alone on purpose, so to delete text hidden under a box, remove it properly in the <a href="/sign.html">PDF editor</a>, which drops the instruction that drew it rather than covering it over.</li>
 </ul>
 </section>
 

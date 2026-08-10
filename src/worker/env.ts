@@ -8,8 +8,15 @@ export interface Env {
   /** The domain throwaway addresses are handed out on. */
   MAIL_DOMAIN?: string;
   /** Free partner key from changenow.io; unset means the swap page quotes
-   *  Exolix alone. Set with `npx wrangler secret put CHANGENOW_API_KEY`. */
+   *  the two keyless desks, Exolix and Godex. Set with
+   *  `npx wrangler secret put CHANGENOW_API_KEY`. */
   CHANGENOW_API_KEY?: string;
+  /** Trocador, an aggregator that shops the pair around about fifteen no-KYC
+   *  desks. Free key from trocador.app. Unset means it never appears, which is
+   *  the safe default: this adapter has not been checked against the live API,
+   *  because Trocador gates its documentation behind the key as well. Set with
+   *  `npx wrangler secret put TROCADOR_API_KEY`. */
+  TROCADOR_API_KEY?: string;
 
   APP_BASE_URL?: string;
   CANONICAL_ORIGIN?: string;

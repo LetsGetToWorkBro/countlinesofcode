@@ -31,6 +31,9 @@ import {
   exolixCreateBody,
   exolixRateUrl,
   exolixStatusUrl,
+  godexCreateBody,
+  godexRateBody,
+  godexStatusUrl,
   isPlausibleOrderId,
   parseAmount,
   parseChangeNowCreate,
@@ -40,7 +43,16 @@ import {
   parseExolixCreate,
   parseExolixRate,
   parseExolixStatus,
+  parseGodexCreate,
+  parseGodexRate,
+  parseGodexStatus,
   parsePair,
+  parseTrocadorCreate,
+  parseTrocadorRate,
+  parseTrocadorStatus,
+  trocadorCreateUrl,
+  trocadorRateUrl,
+  trocadorStatusUrl,
   STAGE_LINES,
   type SwapQuote,
   type SwapStatus,
@@ -88,6 +100,7 @@ async function upstream(
 }
 
 const cnHeaders = (key: string): Record<string, string> => ({ 'x-changenow-api-key': key });
+const trHeaders = (key: string): Record<string, string> => ({ 'API-Key': key });
 
 export async function swapApi(request: Request, env: Env, path: string): Promise<SwapReply> {
   if (path === '/api/swap/quote' && request.method === 'GET') return quote(request, env);
@@ -106,10 +119,18 @@ async function quote(request: Request, env: Env): Promise<SwapReply> {
   const amount = parseAmount(url.searchParams.get('amount'));
   if (amount === null) return bad(400, 'That amount is not a number this can send.');
 
+  const godexRate = godexRateBody(pair, amount);
   const asks: Promise<SwapQuote>[] = [
     upstream(exolixRateUrl(pair, amount))
       .then((r) => parseExolixRate(r.json))
       .catch(() => ({ provider: 'exolix', ok: false, reason: 'Exolix did not answer.' }) as SwapQuote),
+    upstream(godexRate.url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify(godexRate.body),
+    })
+      .then((r) => parseGodexRate(r.json))
+      .catch(() => ({ provider: 'godex', ok: false, reason: 'Godex did not answer.' }) as SwapQuote),
   ];
 
   const key = env.CHANGENOW_API_KEY;
@@ -121,6 +142,15 @@ async function quote(request: Request, env: Env): Promise<SwapReply> {
       ])
         .then(([est, min]) => parseChangeNowEstimate(est.json, min.json))
         .catch(() => ({ provider: 'changenow', ok: false, reason: 'ChangeNOW did not answer.' }) as SwapQuote),
+    );
+  }
+
+  const trKey = env.TROCADOR_API_KEY;
+  if (trKey) {
+    asks.push(
+      upstream(trocadorRateUrl(pair, amount), { headers: trHeaders(trKey) })
+        .then((r) => parseTrocadorRate(r.json))
+        .catch(() => ({ provider: 'trocador', ok: false, reason: 'Trocador did not answer.' }) as SwapQuote),
     );
   }
 
@@ -153,6 +183,29 @@ async function create(request: Request, env: Env): Promise<SwapReply> {
     return { status: 200, body: order };
   }
 
+  if (req.provider === 'trocador') {
+    const key = env.TROCADOR_API_KEY;
+    if (!key) return bad(503, 'Trocador is not configured on this server.');
+    const reply = await upstream(trocadorCreateUrl(req), { headers: trHeaders(key) });
+    /* The coin being spent is handed in so the parser can refuse a deposit
+     * address that is not on that chain. See the note in swapkit. */
+    const order = parseTrocadorCreate(reply.json, req.from);
+    if (!order) return bad(502, upstreamProblem(reply.json, 'Trocador'));
+    return { status: 200, body: order };
+  }
+
+  if (req.provider === 'godex') {
+    const { url, body: gxBody } = godexCreateBody(req);
+    const reply = await upstream(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify(gxBody),
+    });
+    const order = parseGodexCreate(reply.json);
+    if (!order) return bad(502, upstreamProblem(reply.json, 'Godex'));
+    return { status: 200, body: order };
+  }
+
   const { url, body: exBody } = exolixCreateBody(req);
   const reply = await upstream(url, {
     method: 'POST',
@@ -182,6 +235,23 @@ async function status(request: Request, env: Env): Promise<SwapReply> {
     const reply = await upstream(exolixStatusUrl(id));
     if (reply.status === 404) return bad(404, 'Exolix does not know that order.');
     return { status: 200, body: narrated(parseExolixStatus(reply.json)) };
+  }
+  if (provider === 'godex') {
+    const reply = await upstream(godexStatusUrl(id));
+    /* An order Godex has never heard of comes back 200 with an empty object
+     * rather than a 404, which would otherwise be narrated as a failed swap.
+     * No status field means no such order. */
+    const body = (reply.json ?? {}) as Record<string, unknown>;
+    if (reply.status === 404 || !body['status']) return bad(404, 'Godex does not know that order.');
+    return { status: 200, body: narrated(parseGodexStatus(reply.json)) };
+  }
+  if (provider === 'trocador') {
+    const key = env.TROCADOR_API_KEY;
+    if (!key) return bad(503, 'Trocador is not configured on this server.');
+    const reply = await upstream(trocadorStatusUrl(id), { headers: trHeaders(key) });
+    const body = (reply.json ?? {}) as Record<string, unknown>;
+    if (reply.status === 404 || !body['status']) return bad(404, 'Trocador does not know that order.');
+    return { status: 200, body: narrated(parseTrocadorStatus(reply.json)) };
   }
   if (provider === 'changenow') {
     const key = env.CHANGENOW_API_KEY;

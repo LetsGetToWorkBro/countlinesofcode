@@ -16,7 +16,8 @@
 import { describe, docText, tidy, type Doc, type Verdict } from './docmodel';
 import { readDocx, writeDocx } from './docx';
 import { inspectOoxml, inspectPdf, looksHidden, patchStats, pdfFeaturesFromBytes, textBox } from './inspect';
-import { unzip } from './zip';
+import { cleanOoxml, cleanPdf } from './clean';
+import { unzip, zip } from './zip';
 import { writePdf } from './docpdf';
 import { writeEpub } from './epub';
 import {
@@ -230,4 +231,9 @@ globalScope.LOC1999_CONVERT = {
   looksHidden,
   textBox,
   unzip,
+  // Writing the clean copy shares this bundle too: it re-uses the ZIP reader
+  // and writer, and pdf-lib is already here for the converter.
+  cleanPdf,
+  cleanOoxml,
+  zip,
 };

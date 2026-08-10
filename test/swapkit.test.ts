@@ -21,6 +21,18 @@ import {
   exolixCreateBody,
   exolixRateUrl,
   exolixStatusUrl,
+  godexCreateBody,
+  godexRateBody,
+  godexStatusUrl,
+  parseGodexCreate,
+  parseGodexRate,
+  parseGodexStatus,
+  parseTrocadorCreate,
+  parseTrocadorRate,
+  parseTrocadorStatus,
+  trocadorCreateUrl,
+  trocadorRateUrl,
+  trocadorStatusUrl,
   addressHint,
   addressLooksRight,
   coin,
@@ -397,6 +409,174 @@ describe('ChangeNOW', () => {
     ] as const) {
       expect(parseChangeNowStatus({ status: raw }).stage, raw).toBe(stage);
     }
+  });
+});
+
+describe('Godex', () => {
+  it('asks for a quote with both networks named', () => {
+    // The networks are the whole safety question on a multi-network coin, and
+    // Godex takes its query as a POST body rather than a query string.
+    const { url, body } = godexRateBody({ from: usdtTrc, to: xmr }, 200);
+    expect(url).toBe('https://api.godex.io/api/v1/info');
+    expect(body).toEqual({
+      from: 'USDT', to: 'XMR', amount: '200', network_from: 'TRX', network_to: 'XMR',
+    });
+  });
+
+  it('reads a quote, with the minimum and maximum it came with', () => {
+    const quote = parseGodexRate({ amount: '8.0261', min_amount: '0.0007', max_amount: '10' });
+    expect(quote).toEqual({ provider: 'godex', ok: true, toAmount: 8.0261, minAmount: 0.0007, maxAmount: 10 });
+  });
+
+  it('treats a zero amount as a refusal, because that is how Godex says no', () => {
+    /* Under the minimum it answers 200 with amount "0" and the minimum filled
+     * in, rather than an error. Read as a quote that would be a swap paying
+     * out nothing. */
+    const quote = parseGodexRate({ amount: '0', min_amount: '160' });
+    expect(quote.ok).toBe(false);
+    expect(quote.minAmount).toBe(160);
+    expect(quote.reason).toMatch(/no quote/i);
+    expect(parseGodexRate({ error: 'Pair is disabled' }).reason).toBe('Pair is disabled');
+  });
+
+  it('sends both extra-id fields, which Godex rejects the order without', () => {
+    const { url, body } = godexCreateBody(request({ provider: 'godex', refund: BTC_ADDR }));
+    expect(url).toBe('https://api.godex.io/api/v1/transaction');
+    expect(body['coin_from']).toBe('BTC');
+    expect(body['coin_to']).toBe('XMR');
+    expect(body['coin_from_network']).toBe('BTC');
+    expect(body['coin_to_network']).toBe('XMR');
+    expect(body['withdrawal']).toBe(XMR_ADDR);
+    expect(body['return']).toBe(BTC_ADDR);
+    // Present-but-empty is the requirement; absent is a validation error.
+    expect(body).toHaveProperty('withdrawal_extra_id', '');
+    expect(body).toHaveProperty('return_extra_id', '');
+  });
+
+  it('reads a created order into the common shape', () => {
+    const order = parseGodexCreate({
+      transaction_id: 'c6a79d666b28a7',
+      status: 'wait',
+      deposit: 'bc1qmpxvnu9ewncd274az5arzvdgrzwq0yzselsswn',
+      deposit_amount: '0.05',
+      withdrawal: XMR_ADDR,
+      withdrawal_amount: '8.02612525',
+      deposit_extra_id: null,
+    });
+    expect(order).toEqual({
+      provider: 'godex',
+      id: 'c6a79d666b28a7',
+      payinAddress: 'bc1qmpxvnu9ewncd274az5arzvdgrzwq0yzselsswn',
+      payinExtra: null,
+      payinAmount: 0.05,
+      toAmount: 8.02612525,
+      payoutAddress: XMR_ADDR,
+    });
+    // No deposit address is no order, however cheerful the rest of it looks.
+    expect(parseGodexCreate({ transaction_id: 'x', deposit_amount: '1' })).toBeNull();
+  });
+
+  it('builds a status url and maps every stage it reports', () => {
+    expect(godexStatusUrl('c6a79d')).toBe('https://api.godex.io/api/v1/transaction/c6a79d');
+    for (const [raw, stage] of [
+      ['wait', 'waiting'],
+      ['confirmation', 'confirming'],
+      ['exchanging', 'exchanging'],
+      ['sending', 'sending'],
+      ['success', 'done'],
+      ['overdue', 'expired'],
+      ['refunded', 'refunded'],
+      ['error', 'failed'],
+      ['who-knows', 'failed'],
+    ] as const) {
+      expect(parseGodexStatus({ status: raw }).stage, raw).toBe(stage);
+    }
+    expect(parseGodexStatus({ status: 'success', hash_out: 'abc' }).txId).toBe('abc');
+  });
+});
+
+describe('Trocador', () => {
+  it('asks the aggregator for the pair, by chain name rather than ticker', () => {
+    const url = new URL(trocadorRateUrl({ from: usdtTrc, to: xmr }, 500));
+    expect(url.origin + url.pathname).toBe('https://trocador.app/api/new_rate');
+    expect(url.searchParams.get('ticker_from')).toBe('usdt');
+    expect(url.searchParams.get('network_from')).toBe('TRC20');
+    expect(url.searchParams.get('ticker_to')).toBe('xmr');
+    expect(url.searchParams.get('network_to')).toBe('Mainnet');
+    expect(url.searchParams.get('amount_from')).toBe('500');
+  });
+
+  it('reads the best-of-the-desks quote it hands back', () => {
+    const quote = parseTrocadorRate({ amount_to: '8.19', min_amount: '0.001', max_amount: '12' });
+    expect(quote).toEqual({ provider: 'trocador', ok: true, toAmount: 8.19, minAmount: 0.001, maxAmount: 12 });
+    expect(parseTrocadorRate({ error: 'Pair not supported' }).ok).toBe(false);
+    expect(parseTrocadorRate({ error: 'Pair not supported' }).reason).toBe('Pair not supported');
+  });
+
+  it('puts the payout address and the refund on the create call', () => {
+    const url = new URL(trocadorCreateUrl(request({ provider: 'trocador', refund: BTC_ADDR })));
+    expect(url.origin + url.pathname).toBe('https://trocador.app/api/new_trade');
+    expect(url.searchParams.get('address')).toBe(XMR_ADDR);
+    expect(url.searchParams.get('refund')).toBe(BTC_ADDR);
+    expect(url.searchParams.get('network_from')).toBe('Mainnet');
+  });
+
+  it('reads a created trade into the common shape', () => {
+    const order = parseTrocadorCreate({
+      trade_id: 'TRC123456',
+      address_provider: BTC_ADDR,
+      amount_from: '0.05',
+      amount_to: '8.19',
+      address_user: XMR_ADDR,
+    }, btc);
+    expect(order).toEqual({
+      provider: 'trocador',
+      id: 'TRC123456',
+      payinAddress: BTC_ADDR,
+      payinExtra: null,
+      payinAmount: 0.05,
+      toAmount: 8.19,
+      payoutAddress: XMR_ADDR,
+    });
+  });
+
+  it('refuses a deposit address that is not on the chain being sent', () => {
+    /* The safety net, and the reason this adapter is allowed to exist without
+     * having been run against the live API. If a field name here is wrong, the
+     * value read into payinAddress will not be an address on the from-chain,
+     * and refusing it is the difference between "this desk did not work" and
+     * "somebody paid into an address we printed by mistake". */
+    const good = {
+      trade_id: 'TRC1', address_provider: BTC_ADDR, amount_from: '0.05', amount_to: '8', address_user: XMR_ADDR,
+    };
+    expect(parseTrocadorCreate(good, btc)).not.toBeNull();
+    // Same payload read for a Tron send: a bitcoin address is not a Tron one.
+    expect(parseTrocadorCreate(good, usdtTrc)).toBeNull();
+    // The classic misread: the visitor's own payout address handed back as the
+    // deposit address. Monero out, Bitcoin in; an XMR address cannot be both.
+    expect(parseTrocadorCreate({ ...good, address_provider: XMR_ADDR }, btc)).toBeNull();
+    // And nonsense in the field at all.
+    expect(parseTrocadorCreate({ ...good, address_provider: 'see-your-dashboard' }, btc)).toBeNull();
+    expect(parseTrocadorCreate({ ...good, trade_id: '' }, btc)).toBeNull();
+  });
+
+  it('builds a status url and maps the stages it reports', () => {
+    expect(trocadorStatusUrl('TRC1')).toBe('https://trocador.app/api/trade?id=TRC1');
+    for (const [raw, stage] of [
+      ['new', 'waiting'],
+      ['waiting', 'waiting'],
+      ['confirming', 'confirming'],
+      ['sending', 'sending'],
+      ['finished', 'done'],
+      ['expired', 'expired'],
+      ['refunded', 'refunded'],
+      ['halted', 'failed'],
+      ['who-knows', 'failed'],
+    ] as const) {
+      expect(parseTrocadorStatus({ status: raw }).stage, raw).toBe(stage);
+    }
+    // Trocador has been seen to title-case these; the map is asked in lower.
+    expect(parseTrocadorStatus({ status: 'Finished' }).stage).toBe('done');
   });
 });
 
