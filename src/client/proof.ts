@@ -233,6 +233,9 @@ export const SOURCES: Record<string, string[]> = {
   ],
   // The swap page: a thin client over the Worker's relay to the exchanges.
   '/swap.html': ['public/swap-page.js', 'src/worker/swap.ts', 'src/lib/swapkit.ts'],
+  // The payment-request page: the address checks and URI builder, and the QR
+  // encoder it shares with the code tool. No server half; it makes no request.
+  '/pay.html': ['public/pay-page.js', 'src/client/paykit.ts', 'src/client/qrkit.ts'],
   // Two tools on one page: the message checker, and the throwaway inbox (its
   // server half stores incoming mail for an hour).
   '/email.html': [

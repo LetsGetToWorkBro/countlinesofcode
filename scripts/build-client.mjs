@@ -118,6 +118,11 @@ export const BUNDLES = [
     outfile: 'public/qrkit.js',
     banner: '/* 1999.LOC QR encoder (ISO/IEC 18004, in-house). Built from src/client/qrkit.ts. Do not edit. */',
   },
+  {
+    entry: 'src/client/paykit.ts',
+    outfile: 'public/paykit.js',
+    banner: '/* 1999.LOC payment-request helpers. Built from src/client/paykit.ts. Do not edit. Bundles @noble/hashes (MIT) for the address checksums. */',
+  },
 ];
 
 /**

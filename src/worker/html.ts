@@ -146,6 +146,7 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
   // is its second tab. /monero.html redirects to /wallet.html#addresses.
   { href: '/wallet.html', label: 'wallet', id: 'wallet', group: 'money' },
   { href: '/swap.html', label: 'swap', id: 'swap', group: 'money' },
+  { href: '/pay.html', label: 'payment', id: 'pay', group: 'money' },
   { href: '/wallet.html#addresses', label: 'paper wallet', id: 'paper', group: 'money' },
 
   { href: '/compare.html', label: 'compare', id: 'compare', group: 'utilities' },
