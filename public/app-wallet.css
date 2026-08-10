@@ -57,11 +57,12 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   margin: 0;
-  padding: 4px 6px;
+  padding: 5px 7px;
   background: #d4d0c8;
   border-bottom: 1px solid #808080;
+  box-shadow: inset 0 1px 0 #ffffff;
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 11px;
   color: #000000;
@@ -79,8 +80,12 @@
   border-right: 1px solid #ffffff;
 }
 [data-app="wallet"] .wl-switch .sheet-tab {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
   border: 1px solid;
   border-color: #ffffff #808080 #808080 #ffffff;
+  border-radius: 3px;
   background: #d4d0c8;
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 11px;
@@ -88,10 +93,16 @@
   cursor: pointer;
   touch-action: manipulation;
 }
-[data-app="wallet"] .wl-switch .sheet-tab.is-active {
-  border-color: #808080 #ffffff #ffffff #808080;
-  background: #ffffff;
-  font-weight: bold;
+[data-app="wallet"] .wl-switch .sheet-tab:hover:not(.is-active) { background: #e2dfd8; }
+/* The selected coin lights up in that coin's own colour, the way the panel
+   tabs below already do, so the toolbar says which wallet you are in at a
+   glance rather than by a faint pressed-in bevel. */
+[data-app="wallet"] .wl-switch .sheet-tab.is-active { font-weight: bold; }
+[data-app="wallet"] .wl-switch .sheet-tab[data-tab="wallet"].is-active {
+  background: #ff6600; border-color: #c44f00; color: #201400;
+}
+[data-app="wallet"] .wl-switch .sheet-tab[data-tab="btc"].is-active {
+  background: #f7931a; border-color: #b96b0e; color: #201400;
 }
 [data-app="wallet"] .wl-switch .sheet-tab:focus-visible { outline: 1px dotted #000000; outline-offset: -3px; }
 
@@ -99,6 +110,11 @@
    never takes the pressed-in look the tabs do: it is a place to go, not a
    place you are. The arrow is the whole difference and it is enough. */
 [data-app="wallet"] .wl-switch .wl-go {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 3px 10px;
+  border-radius: 3px;
   color: #000000;
   text-decoration: none;
   line-height: 1.35;
