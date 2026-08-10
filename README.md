@@ -3,6 +3,16 @@
 **An airgapped signing device for Bitcoin and Monero, made out of the phone in
 your drawer.**
 
+> ### Do not put money on this yet
+>
+> There is no app. This repository is the libraries underneath one: the QR
+> wire, the key derivation, and the transaction reader. They are tested, and
+> that is not the same as being safe to hold your savings.
+>
+> Nothing here has been independently audited, and the confirmation screen that
+> the whole design rests on has not been built. Read it, break it, tell us what
+> is wrong with it. Do not trust it with a balance you would miss.
+
 The old phone you stopped using is a computer with a screen, a camera, a
 secure enclave and a battery. Take the SIM out, turn the radios off, install
 this, and it becomes a hardware wallet that cost you nothing and that no
@@ -61,6 +71,9 @@ output that says it is your change but pays somebody else, or a transaction
 that hides what its fee is, does not get a warning to scroll past. It does not
 get signed. See `src/keys/psbt.ts`, which is the shortest honest description of
 the threat model in the repository.
+
+See [NOTICE.md](NOTICE.md) for the word lists and test vectors copied from other
+projects, and why they are copied rather than imported.
 
 See [docs/airgap-protocol.md](docs/airgap-protocol.md) for the wire format, the
 fail-closed rules, and what the threat model does and does not cover.
