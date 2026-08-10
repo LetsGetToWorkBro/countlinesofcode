@@ -106,7 +106,10 @@ Bitcoin has a standard for exactly this, **BC-UR**, spoken by Sparrow,
 Electrum, Keystone, Passport and the rest, and it is implemented here in
 `src/airgap/ur.ts`. A scanner can tell it apart from our own format at the
 first character, so both are readable at once and a person never has to say
-which one they are about to show it.
+which one they are about to show it. `src/airgap/scanner.ts` is that scanner,
+and it keeps a collector for each wire running at the same time: giving up on
+one animation and pointing the camera at a different wallet should not be a
+restart, and there is no reason to make it one.
 
 A single-frame message looks like
 

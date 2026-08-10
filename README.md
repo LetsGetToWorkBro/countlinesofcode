@@ -55,6 +55,13 @@ Any build of this app that hides those details behind a friendly "Sign" button
 has thrown away the only defence it had. The checksum on the wire is there to
 catch a misread camera frame, and that is all it claims.
 
+There is one thing the vault can do beyond showing you, and it does it: it
+refuses outright in the cases where the screen would necessarily be lying. An
+output that says it is your change but pays somebody else, or a transaction
+that hides what its fee is, does not get a warning to scroll past. It does not
+get signed. See `src/keys/psbt.ts`, which is the shortest honest description of
+the threat model in the repository.
+
 See [docs/airgap-protocol.md](docs/airgap-protocol.md) for the wire format, the
 fail-closed rules, and what the threat model does and does not cover.
 
@@ -79,11 +86,41 @@ Early. What exists and is tested:
   exact output: the same frame strings, character for character, and the same
   fragment choices for the same frame numbers.
 
+- **A scanner** (`src/airgap/scanner.ts`) that reads either wire off one camera
+  loop without being told which, and keeps both going, so pointing it at a
+  different wallet mid-scan is not a restart.
+
+- **The keys** (`src/keys/`) — Monero seed phrases, addresses and view keys;
+  Bitcoin BIP84 derivation, addresses and watch-only export. Ported from the
+  sibling project with their tests, and deliberately not rewritten: the
+  derivation there has been checked against the official wallets, and tidying
+  it here would throw that away.
+
+- **The confirmation screen's contents** (`src/keys/psbt.ts`) — the part that
+  is actually the security. It reads an unsigned transaction and says what it
+  does, then signs it or refuses.
+
+  Three things it refuses over, each with tests that build the hostile
+  transaction rather than describing it:
+
+  - an output that claims to be your change but pays somebody else. Whether an
+    output is yours is re-derived from your own key, never read from the file;
+  - a transaction that will not say what its inputs are worth, because then the
+    fee is unknowable and there is no honest way to display it;
+  - bytes that are not the bytes that were approved. `signPsbt` takes the
+    summary that was shown to a person and checks its digest, so a UI that
+    describes one transaction and signs another fails instead of signing.
+
+- **No network code, as a test** (`test/no-network.test.ts`). The claim at the
+  top of this README is checked against the actual source on every run rather
+  than trusted to stay true.
+
 Next, in order:
 
-1. Port the Bitcoin and Monero key handling from the sibling project, which is
-   already DOM-free TypeScript with test coverage.
-2. The iOS shell, and the confirmation screen, which is the part to get right.
+1. The iOS shell, and the confirmation screen itself. The data behind it exists
+   and is tested; what does not exist is the screen.
+2. Monero transaction signing, which needs wallet2's unsigned-set format rather
+   than only the transport that carries it.
 
 ## Running the tests
 
@@ -96,7 +133,9 @@ npm run typecheck
 ## Design rules
 
 - **No network code.** Not "no network calls we know about": no networking
-  layer in the vault target at all, so there is nothing to review.
+  layer in the vault target at all, so there is nothing to review. The
+  TypeScript build loads no DOM library, so `fetch` does not typecheck, and a
+  test walks the source on every run to keep it that way.
 - **Nothing at rest that is not encrypted.** Keys live behind the device's own
   secure hardware and a passphrase, and the app has no cloud, no account and
   no backup service to lose.

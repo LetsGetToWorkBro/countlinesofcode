@@ -1,0 +1,742 @@
+/**
+ * Monero keys, addresses and seed phrases.
+ *
+ * ## Why this file argues against itself
+ *
+ * Key generation is a genuinely dangerous thing to write. Almost everything
+ * else fails loudly: a broken image encoder produces a broken image. This
+ * fails silently and expensively. A derivation that is wrong by one operation
+ * produces a perfectly well-formed address whose funds nobody can ever reach,
+ * and it is indistinguishable from a correct one until somebody has already
+ * sent money to it.
+ *
+ * Being offline does not fix that. An airgap protects a key from being
+ * exfiltrated; it does nothing about a key that was wrong when it was made.
+ * So the checks below exist so that "verify it yourself" is something a person
+ * can actually do rather than advice we give them.
+ *
+ * ## What is trusted, and what is checked
+ *
+ * No cryptography is written here. Keccak-256 comes from @noble/hashes and the
+ * ed25519 group arithmetic from @noble/curves, both audited. What is written
+ * here is the part that is Monero's rather than cryptography's: scalar
+ * reduction, the key derivation, the address encoding, and the seed phrase.
+ *
+ * Those are checked four ways, and `selfTest()` runs all of them on the device
+ * before it will make a key:
+ *
+ *   1. **Keccak-256 against published vectors.** If the hash is wrong every
+ *      view key and every checksum is wrong.
+ *   2. **The ed25519 base point.** G*1 has one correct encoding and everybody
+ *      publishes it.
+ *   3. **A real address, made by the official implementation.** Decoding a
+ *      known-good address, re-deriving its checksum and re-encoding it back to
+ *      the identical characters exercises base58 both ways and Keccak, and it
+ *      is a cross-check against software that is not ours.
+ *   4. **Round trips.** A phrase encodes and decodes to the same bytes; an
+ *      address encodes and decodes to the same keys.
+ *
+ * What none of that can prove is that the private-to-public step is right,
+ * because there is no published secret to test it against and inventing one
+ * proves nothing. So the instruction that goes with this code, and it is worth
+ * repeating wherever it surfaces, is to restore the phrase in the official
+ * Monero wallet and confirm it shows the same address **before** anything is
+ * sent to it. That check uses an independent implementation, which is the only
+ * kind of proof that counts.
+ *
+ * Ported from the sibling project, which is where the tests came from too. The
+ * derivation is deliberately unchanged: it has been checked against the
+ * official wallet, and "tidying" it here would throw that away.
+ */
+
+import { ed25519 } from '@noble/curves/ed25519.js';
+import { keccak_256 } from '@noble/hashes/sha3.js';
+import { MONERO_WORDS, PREFIX_LENGTH } from './monero-words';
+
+const Point = ed25519.Point;
+
+/** The order of the ed25519 prime-order subgroup. Scalars live below this. */
+const L = 2n ** 252n + 27742317777372353535851937790883648493n;
+
+// ---------------------------------------------------------------------------
+// Bytes
+// ---------------------------------------------------------------------------
+
+export function toHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+export function fromHex(hex: string): Uint8Array {
+  const clean = String(hex ?? '').trim().replace(/\s+/g, '');
+  if (!/^[0-9a-fA-F]*$/.test(clean) || clean.length % 2) throw new Error('That is not hexadecimal.');
+  const out = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+  return out;
+}
+
+/** Little-endian, because that is how Monero stores a scalar. */
+function toBigIntLE(bytes: Uint8Array): bigint {
+  let n = 0n;
+  for (let i = bytes.length - 1; i >= 0; i--) n = (n << 8n) | BigInt(bytes[i]!);
+  return n;
+}
+
+function fromBigIntLE(value: bigint, length: number): Uint8Array {
+  const out = new Uint8Array(length);
+  let n = value;
+  for (let i = 0; i < length; i++) {
+    out[i] = Number(n & 0xffn);
+    n >>= 8n;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Keys
+// ---------------------------------------------------------------------------
+
+/**
+ * `sc_reduce32`: 32 random bytes brought into the scalar field.
+ *
+ * Not optional and not cosmetic. An unreduced value is not a valid ed25519
+ * scalar, and a wallet that stores one will disagree with any implementation
+ * that reduces properly about which key it holds.
+ */
+export function reduceScalar(bytes: Uint8Array): Uint8Array {
+  if (bytes.length !== 32) throw new Error('A scalar is 32 bytes.');
+  return fromBigIntLE(toBigIntLE(bytes) % L, 32);
+}
+
+/** The public key for a secret scalar: secret * G, encoded the ed25519 way. */
+export function publicFromSecret(secret: Uint8Array): Uint8Array {
+  const scalar = toBigIntLE(secret) % L;
+  // multiply() rejects zero, and a zero scalar has no usable public key
+  // anyway. Astronomically unlikely from real randomness; still not a crash.
+  if (scalar === 0n) throw new Error('That secret key is zero, which is not usable.');
+  return Point.BASE.multiply(scalar).toBytes();
+}
+
+export interface KeyPair {
+  spendSecret: Uint8Array;
+  viewSecret: Uint8Array;
+  spendPublic: Uint8Array;
+  viewPublic: Uint8Array;
+}
+
+/**
+ * The whole derivation, from 32 bytes of randomness.
+ *
+ * The view secret is the hash of the spend secret rather than independent
+ * randomness, which is what makes one seed phrase enough to restore both.
+ */
+export function keysFromSeed(seed: Uint8Array): KeyPair {
+  if (seed.length !== 32) throw new Error('A seed is 32 bytes.');
+  const spendSecret = reduceScalar(seed);
+  const viewSecret = reduceScalar(keccak_256(spendSecret));
+  return {
+    spendSecret,
+    viewSecret,
+    spendPublic: publicFromSecret(spendSecret),
+    viewPublic: publicFromSecret(viewSecret),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Base58, the Monero variant
+// ---------------------------------------------------------------------------
+
+const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+
+/**
+ * Monero's base58 is not Bitcoin's. It works in blocks of 8 bytes, each
+ * becoming exactly 11 characters, with one shorter block at the end. Feeding a
+ * Monero address to a Bitcoin base58 decoder produces bytes, and they are the
+ * wrong bytes, which is the sort of failure worth naming in a comment.
+ */
+const FULL_BLOCK_BYTES = 8;
+const FULL_BLOCK_CHARS = 11;
+/** How many characters a block of N bytes encodes to, indexed by N. */
+const BLOCK_CHARS = [0, 2, 3, 5, 6, 7, 9, 10, 11];
+
+function encodeBlock(bytes: Uint8Array): string {
+  const chars = BLOCK_CHARS[bytes.length];
+  if (chars === undefined) throw new Error('Bad base58 block.');
+  let n = 0n;
+  for (const byte of bytes) n = (n << 8n) | BigInt(byte);
+  let out = '';
+  while (n > 0n) {
+    out = ALPHABET[Number(n % 58n)] + out;
+    n /= 58n;
+  }
+  return out.padStart(chars, ALPHABET[0]!);
+}
+
+function decodeBlock(text: string): Uint8Array {
+  const length = BLOCK_CHARS.indexOf(text.length);
+  if (length < 0) throw new Error('That is not a valid address: a block is the wrong length.');
+  let n = 0n;
+  for (const ch of text) {
+    const index = ALPHABET.indexOf(ch);
+    if (index < 0) throw new Error(`That is not a valid address: "${ch}" is not a base58 character.`);
+    n = n * 58n + BigInt(index);
+  }
+  if (n >= 1n << BigInt(length * 8)) throw new Error('That is not a valid address: a block overflows.');
+  const out = new Uint8Array(length);
+  for (let i = length - 1; i >= 0; i--) {
+    out[i] = Number(n & 0xffn);
+    n >>= 8n;
+  }
+  return out;
+}
+
+export function base58Encode(bytes: Uint8Array): string {
+  let out = '';
+  let at = 0;
+  for (; at + FULL_BLOCK_BYTES <= bytes.length; at += FULL_BLOCK_BYTES) {
+    out += encodeBlock(bytes.subarray(at, at + FULL_BLOCK_BYTES));
+  }
+  if (at < bytes.length) out += encodeBlock(bytes.subarray(at));
+  return out;
+}
+
+export function base58Decode(text: string): Uint8Array {
+  const parts: Uint8Array[] = [];
+  let at = 0;
+  for (; at + FULL_BLOCK_CHARS <= text.length; at += FULL_BLOCK_CHARS) {
+    parts.push(decodeBlock(text.slice(at, at + FULL_BLOCK_CHARS)));
+  }
+  if (at < text.length) parts.push(decodeBlock(text.slice(at)));
+  const total = parts.reduce((sum, p) => sum + p.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const part of parts) {
+    out.set(part, offset);
+    offset += part.length;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Addresses
+// ---------------------------------------------------------------------------
+
+export type Network = 'mainnet' | 'stagenet' | 'testnet';
+export type AddressKind = 'standard' | 'integrated' | 'subaddress';
+
+/** Prefix bytes from Monero's cryptonote_config.h. */
+export const PREFIXES: { byte: number; network: Network; kind: AddressKind }[] = [
+  { byte: 18, network: 'mainnet', kind: 'standard' },
+  { byte: 19, network: 'mainnet', kind: 'integrated' },
+  { byte: 42, network: 'mainnet', kind: 'subaddress' },
+  { byte: 24, network: 'stagenet', kind: 'standard' },
+  { byte: 25, network: 'stagenet', kind: 'integrated' },
+  { byte: 36, network: 'stagenet', kind: 'subaddress' },
+  { byte: 53, network: 'testnet', kind: 'standard' },
+  { byte: 54, network: 'testnet', kind: 'integrated' },
+  { byte: 63, network: 'testnet', kind: 'subaddress' },
+];
+
+/** The first four bytes of Keccak-256 over everything before them. */
+export function addressChecksum(body: Uint8Array): Uint8Array {
+  return keccak_256(body).slice(0, 4);
+}
+
+export function addressFor(spendPublic: Uint8Array, viewPublic: Uint8Array, network: Network = 'mainnet'): string {
+  const prefix = PREFIXES.find((p) => p.network === network && p.kind === 'standard');
+  if (!prefix) throw new Error('Unknown network.');
+  const body = new Uint8Array(1 + 32 + 32);
+  body[0] = prefix.byte;
+  body.set(spendPublic, 1);
+  body.set(viewPublic, 33);
+  const full = new Uint8Array(body.length + 4);
+  full.set(body);
+  full.set(addressChecksum(body), body.length);
+  return base58Encode(full);
+}
+
+export interface ParsedAddress {
+  valid: boolean;
+  /** Why it is not valid, in words, when it is not. */
+  problem: string | null;
+  network: Network | null;
+  kind: AddressKind | null;
+  spendPublic: string | null;
+  viewPublic: string | null;
+  /** The eight-byte payment id, integrated addresses only. */
+  paymentId: string | null;
+}
+
+const INVALID = (problem: string): ParsedAddress => ({
+  valid: false, problem, network: null, kind: null, spendPublic: null, viewPublic: null, paymentId: null,
+});
+
+/**
+ * Read an address and say what it is.
+ *
+ * Worth being clear about the limit, because it is the same limit the whole
+ * device has: a valid checksum proves the address was not corrupted in
+ * transit. It does not prove it is the address you meant to pay. Malware that
+ * swaps an address swaps in one that checksums perfectly, which is why the
+ * destination gets read by a person and not merely validated.
+ */
+export function parseAddress(text: string): ParsedAddress {
+  const address = String(text ?? '').trim();
+  if (!address) return INVALID('Nothing to check.');
+
+  let raw: Uint8Array;
+  try {
+    raw = base58Decode(address);
+  } catch (error) {
+    return INVALID((error as Error).message);
+  }
+
+  if (raw.length < 69) return INVALID('That is too short to be a Monero address.');
+
+  const prefix = PREFIXES.find((p) => p.byte === raw[0]);
+  if (!prefix) return INVALID(`Unknown address prefix (${raw[0]}). That is not a Monero address.`);
+
+  const expected = prefix.kind === 'integrated' ? 77 : 69;
+  if (raw.length !== expected) {
+    return INVALID(`A ${prefix.kind} address is ${expected} bytes and this is ${raw.length}.`);
+  }
+
+  const body = raw.subarray(0, raw.length - 4);
+  const given = raw.subarray(raw.length - 4);
+  const want = addressChecksum(body);
+  if (toHex(given) !== toHex(want)) {
+    return INVALID('The checksum does not match. Something in that address is mistyped or truncated.');
+  }
+
+  return {
+    valid: true,
+    problem: null,
+    network: prefix.network,
+    kind: prefix.kind,
+    spendPublic: toHex(body.subarray(1, 33)),
+    viewPublic: toHex(body.subarray(33, 65)),
+    paymentId: prefix.kind === 'integrated' ? toHex(body.subarray(65, 73)) : null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The seed phrase
+// ---------------------------------------------------------------------------
+
+const N = 1626;
+
+/**
+ * CRC-32, over UTF-8 bytes.
+ *
+ * Bytes rather than characters because that is what the C++ does. It makes no
+ * difference to English, whose word list is entirely ASCII, but it is what
+ * lets the Portuguese vector in the tests check this against Monero's own
+ * output rather than against itself.
+ */
+let crcTable: Uint32Array | null = null;
+export function crc32(text: string): number {
+  if (!crcTable) {
+    crcTable = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      crcTable[i] = c >>> 0;
+    }
+  }
+  let crc = 0xffffffff;
+  for (const byte of new TextEncoder().encode(text)) {
+    crc = (crc >>> 8) ^ crcTable[(crc ^ byte) & 0xff]!;
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+/**
+ * Which of the 24 words is repeated as the 25th.
+ *
+ * `prefixLength` is a parameter rather than the English constant so this can
+ * be checked against Monero's own published Portuguese vector, which uses four
+ * characters. Testing the algorithm against another language's real output is
+ * worth more than testing it against itself in ours.
+ */
+export function checksumIndex(words: string[], prefixLength = PREFIX_LENGTH): number {
+  const trimmed = words.map((w) => w.slice(0, prefixLength)).join('');
+  return crc32(trimmed) % words.length;
+}
+
+/**
+ * 32 bytes to 25 words.
+ *
+ * Three words per four bytes, then a checksum word which is one of the
+ * twenty-four repeated. Reading a phrase back and finding a word out of place
+ * is the point of that last word.
+ */
+export function mnemonicFromSeed(seed: Uint8Array): string[] {
+  if (seed.length !== 32) throw new Error('A seed is 32 bytes.');
+  const words: string[] = [];
+  for (let i = 0; i < seed.length; i += 4) {
+    const x = seed[i]! + seed[i + 1]! * 0x100 + seed[i + 2]! * 0x10000 + seed[i + 3]! * 0x1000000;
+    const w1 = x % N;
+    const w2 = (Math.floor(x / N) + w1) % N;
+    const w3 = (Math.floor(x / N / N) + w2) % N;
+    words.push(MONERO_WORDS[w1]!, MONERO_WORDS[w2]!, MONERO_WORDS[w3]!);
+  }
+  words.push(words[checksumIndex(words)]!);
+  return words;
+}
+
+export interface PhraseResult {
+  seed: Uint8Array | null;
+  problem: string | null;
+}
+
+/** 25 words back to 32 bytes, saying exactly which word is wrong when one is. */
+export function seedFromMnemonic(phrase: string | string[]): PhraseResult {
+  const words = (Array.isArray(phrase) ? phrase : String(phrase ?? '').split(/\s+/))
+    .map((w) => w.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (words.length !== 25) {
+    return { seed: null, problem: `A Monero seed is 25 words and this is ${words.length}.` };
+  }
+
+  const body = words.slice(0, 24);
+  const indexes: number[] = [];
+  for (const word of body) {
+    const index = MONERO_WORDS.indexOf(word);
+    if (index < 0) return { seed: null, problem: `"${word}" is not in the Monero word list.` };
+    indexes.push(index);
+  }
+
+  const expected = body[checksumIndex(body)];
+  if (words[24] !== expected) {
+    return {
+      seed: null,
+      problem: `The last word should be "${expected}" and it is "${words[24]}". One of the other words is probably mistyped.`,
+    };
+  }
+
+  const seed = new Uint8Array(32);
+  for (let i = 0; i < 8; i++) {
+    const w1 = indexes[i * 3]!;
+    const w2 = indexes[i * 3 + 1]!;
+    const w3 = indexes[i * 3 + 2]!;
+    const x = w1 + N * (((w2 - w1) % N + N) % N) + N * N * (((w3 - w2) % N + N) % N);
+    if (x >= 0x100000000) return { seed: null, problem: 'Those words do not encode a valid seed.' };
+    seed[i * 4] = x & 0xff;
+    seed[i * 4 + 1] = (x >>> 8) & 0xff;
+    seed[i * 4 + 2] = (x >>> 16) & 0xff;
+    seed[i * 4 + 3] = (x >>> 24) & 0xff;
+  }
+  return { seed, problem: null };
+}
+
+// ---------------------------------------------------------------------------
+// A wallet
+// ---------------------------------------------------------------------------
+
+export interface Wallet {
+  mnemonic: string[];
+  address: string;
+  spendSecret: string;
+  viewSecret: string;
+  spendPublic: string;
+  viewPublic: string;
+}
+
+/**
+ * A wallet from 32 bytes.
+ *
+ * The seed is reduced before the phrase is written, not after. Monero's phrase
+ * encodes the *reduced* spend key, so writing the phrase from raw randomness
+ * would produce words that restore to a different wallet than the address
+ * printed beside them. That is precisely the silent, expensive failure this
+ * file is careful about, and `test/monero.test.ts` checks it directly.
+ */
+export function walletFromSeed(seed: Uint8Array, network: Network = 'mainnet'): Wallet {
+  const keys = keysFromSeed(seed);
+  return {
+    mnemonic: mnemonicFromSeed(keys.spendSecret),
+    address: addressFor(keys.spendPublic, keys.viewPublic, network),
+    spendSecret: toHex(keys.spendSecret),
+    viewSecret: toHex(keys.viewSecret),
+    spendPublic: toHex(keys.spendPublic),
+    viewPublic: toHex(keys.viewPublic),
+  };
+}
+
+/** A wallet from randomness the caller supplies, so the source can be shown. */
+export function walletFromEntropy(entropy: Uint8Array, network: Network = 'mainnet'): Wallet {
+  if (entropy.length !== 32) throw new Error('Needs exactly 32 bytes of entropy.');
+  return walletFromSeed(entropy, network);
+}
+
+/**
+ * Fold whatever the person supplied into the system's randomness.
+ *
+ * Keccak over both, which is the property worth stating carefully: this cannot
+ * be *worse* than the system's bytes alone, because hashing a uniformly random
+ * 32 bytes leaves it uniformly random, and it can be better, because a system
+ * generator that is weak or tampered with is no longer sufficient on its own to
+ * predict the result. Somebody rolling real dice gets real benefit; somebody
+ * supplying nothing loses nothing.
+ *
+ * It is not a substitute for a good generator. If the system's CSPRNG is broken
+ * and the attacker also knows what you typed, this saves nobody. That is worth
+ * saying on a device chosen for being old: a phone that stopped getting
+ * security updates is exactly where "the platform's randomness is fine" is
+ * least obviously true, and dice are cheap.
+ */
+export function mixEntropy(system: Uint8Array, extra: Uint8Array = new Uint8Array(0)): Uint8Array {
+  if (system.length !== 32) throw new Error('The system must supply 32 bytes.');
+  if (!extra.length) return keccak_256(system);
+  const both = new Uint8Array(system.length + extra.length);
+  both.set(system);
+  both.set(extra, system.length);
+  return keccak_256(both);
+}
+
+/** Restore, for checking a phrase written down earlier. */
+export function walletFromMnemonic(phrase: string | string[], network: Network = 'mainnet'): Wallet | { problem: string } {
+  const result = seedFromMnemonic(phrase);
+  if (!result.seed) return { problem: result.problem! };
+  return walletFromSeed(result.seed, network);
+}
+
+// ---------------------------------------------------------------------------
+// Watching a wallet without being able to spend from it
+// ---------------------------------------------------------------------------
+
+/**
+ * A view key lets somebody see what arrives at an address and nothing else.
+ *
+ * That asymmetry is the entire reason a vault and a companion can be two
+ * different devices. The private *view* key finds incoming outputs; the
+ * private *spend* key authorises spending. The companion gets the view key,
+ * watches the chain and shows a balance, and cannot move a coin. The spend key
+ * never leaves this device.
+ *
+ * It is not free, and anyone showing this to a person should say so: whoever
+ * holds the view key sees every payment that address ever receives, forever.
+ * That is a smaller secret than the spend key, not a public one, and the
+ * companion phone is a networked device that has now been handed it.
+ */
+
+/** Monero's genesis block, 18 April 2014. */
+const GENESIS = Date.UTC(2014, 3, 18);
+/** Blocks were 60 seconds until the v2 fork at this height, and 120 after. */
+const FORK_HEIGHT = 1009827;
+const FORK_TIME = GENESIS + FORK_HEIGHT * 60_000;
+
+/**
+ * Roughly which block was current on a given date.
+ *
+ * Two eras, because Monero halved its block rate at the v2 fork and a single
+ * 120-second model is out by most of a million blocks. Checked against two
+ * landmarks: the fork lands on March 2016 and height 3,000,000 on October 2023,
+ * both of which are where they should be.
+ *
+ * An estimate, and deliberately never used as one directly: see restoreHeight.
+ */
+export function approximateHeight(when: number | Date = Date.now()): number {
+  const at = when instanceof Date ? when.getTime() : when;
+  if (at <= GENESIS) return 0;
+  if (at <= FORK_TIME) return Math.floor((at - GENESIS) / 60_000);
+  return FORK_HEIGHT + Math.floor((at - FORK_TIME) / 120_000);
+}
+
+/** A week of blocks, at two minutes each. */
+const WEEK_OF_BLOCKS = 7 * 24 * 30;
+
+/**
+ * Where a wallet created now should start scanning.
+ *
+ * The estimate, minus a margin, and the direction of that margin is the whole
+ * point. Start too early and the wallet scans for longer than it needed to,
+ * which costs patience. Start too *late* and it silently never sees the
+ * payments that arrived before that block: the balance reads zero and nothing
+ * says why. One of those is an inconvenience and the other looks exactly like
+ * money that did not arrive, so the arithmetic always errs early.
+ */
+export function restoreHeight(when: number | Date = Date.now(), marginBlocks = WEEK_OF_BLOCKS): number {
+  return Math.max(0, approximateHeight(when) - marginBlocks);
+}
+
+export interface WatchOnly {
+  address: string;
+  viewSecret: string;
+  height: number;
+  /** The JSON that `--generate-from-json` consumes. */
+  json: string;
+  /** What to type, in order, for the interactive route. */
+  steps: string[];
+  filename: string;
+}
+
+/**
+ * Everything needed to load this as a watch-only wallet elsewhere.
+ *
+ * Two routes because they suit different people: the interactive command is
+ * the one to trust, since it is the documented path and it prompts for each
+ * field so a typo is caught at the point of entry. The JSON file is for
+ * scripting, and is offered second.
+ */
+export function watchOnlyExport(
+  address: string,
+  viewSecret: string,
+  when: number | Date = Date.now(),
+  filename = 'watch-only',
+): WatchOnly {
+  const height = restoreHeight(when);
+  return {
+    address,
+    viewSecret,
+    height,
+    filename,
+    json: JSON.stringify(
+      { version: 1, filename, scan_from_height: height, password: '', viewkey: viewSecret, address },
+      null,
+      2,
+    ),
+    steps: [
+      `monero-wallet-cli --generate-from-view-key ${filename}`,
+      'Standard address: paste the address above',
+      'View key: paste the private view key above',
+      'Then choose a password for the wallet file, and set the restore height when asked.',
+    ],
+  };
+}
+
+/**
+ * Whether an address can be watched this way.
+ *
+ * `--generate-from-view-key` wants the primary address of the wallet. Handing
+ * it a subaddress produces a wallet that quietly watches the wrong thing, so
+ * the check is worth making before somebody spends an afternoon syncing.
+ */
+export function canWatch(parsed: ParsedAddress): { ok: boolean; problem: string | null } {
+  if (!parsed.valid) return { ok: false, problem: parsed.problem };
+  if (parsed.kind !== 'standard') {
+    return {
+      ok: false,
+      problem: `That is a ${parsed.kind} address. A watch-only wallet has to be built from the wallet's primary address, which starts with 4 on mainnet. A subaddress belongs to a wallet you would restore first.`,
+    };
+  }
+  return { ok: true, problem: null };
+}
+
+// ---------------------------------------------------------------------------
+// Proving it works, here, now
+// ---------------------------------------------------------------------------
+
+/**
+ * The Monero project's own donation address, used here as a test vector.
+ *
+ * The point of it is that it was not made by this code. It was made by the
+ * official Monero wallet and is published by the project itself, so decoding
+ * it, recomputing its checksum and re-encoding it to the identical 95
+ * characters checks our base58 and our Keccak against an implementation that
+ * is not ours. A vector generated by the code under test proves nothing except
+ * that the code agrees with itself.
+ *
+ * Deliberately somebody else's public address rather than one of ours: it is
+ * verifiable by anybody against getmonero.org, and a test vector should not
+ * require trusting whoever wrote the test.
+ */
+export const KNOWN_ADDRESS =
+  '44AFFq5kSiGBoZ4NMDwYtN18obc8AemS33DBLWs3H7otXft3XjrpDtQGv7SqSsaBYBb98uNbr2VBBEt7f2wfn3RVGQBEP3A';
+
+export interface Check {
+  name: string;
+  /** What it proves, for someone reading rather than trusting. */
+  proves: string;
+  ok: boolean;
+  detail: string;
+}
+
+/**
+ * Every check, run on the device that is about to hold the key.
+ *
+ * Nothing is generated unless all of them pass. A tampered or broken build
+ * fails here rather than at the point where somebody has already sent money to
+ * an address nobody holds the key for.
+ *
+ * Running them on the device rather than in CI is the point. A build that
+ * passed on a laptop months ago says nothing about the binary now sitting on
+ * this phone.
+ */
+export function selfTest(): Check[] {
+  const checks: Check[] = [];
+  const add = (name: string, proves: string, run: () => [boolean, string]) => {
+    try {
+      const [ok, detail] = run();
+      checks.push({ name, proves, ok, detail });
+    } catch (error) {
+      checks.push({ name, proves, ok: false, detail: (error as Error).message });
+    }
+  };
+
+  add('Keccak-256 of an empty input', 'The hash is the real Keccak, not SHA3-256, which differs and is a classic mix-up.', () => {
+    const got = toHex(keccak_256(new Uint8Array(0)));
+    const want = 'c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470';
+    return [got === want, got];
+  });
+
+  add('Keccak-256 of "abc"', 'The same, on input that is not empty.', () => {
+    const got = toHex(keccak_256(new TextEncoder().encode('abc')));
+    const want = '4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45';
+    return [got === want, got];
+  });
+
+  add('The ed25519 base point', 'Group arithmetic gives the one encoding of G that every implementation publishes.', () => {
+    const got = toHex(publicFromSecret(fromHex('01' + '00'.repeat(31))));
+    const want = '5866666666666666666666666666666666666666666666666666666666666666';
+    return [got === want, got];
+  });
+
+  add('A real address, read back', 'Base58 and the checksum agree with the official Monero wallet, which made this address.', () => {
+    const parsed = parseAddress(KNOWN_ADDRESS);
+    return [parsed.valid && parsed.network === 'mainnet' && parsed.kind === 'standard',
+      parsed.valid ? `${parsed.network} ${parsed.kind}` : parsed.problem!];
+  });
+
+  add('That address, written back out', 'Encoding is the exact inverse of decoding, to the character.', () => {
+    const round = base58Encode(base58Decode(KNOWN_ADDRESS));
+    return [round === KNOWN_ADDRESS, round === KNOWN_ADDRESS ? 'identical' : round];
+  });
+
+  add('A seed phrase, there and back', 'Words encode and decode to the same 32 bytes, and the checksum word agrees.', () => {
+    const seed = reduceScalar(keccak_256(new TextEncoder().encode('a fixed input, so this check never varies')));
+    const phrase = mnemonicFromSeed(seed);
+    const back = seedFromMnemonic(phrase);
+    const ok = phrase.length === 25 && !!back.seed && toHex(back.seed) === toHex(seed);
+    return [ok, ok ? `${phrase.length} words` : back.problem ?? 'bytes differ'];
+  });
+
+  add('A mistyped phrase is caught', 'The checksum word does its job rather than being decoration.', () => {
+    const seed = reduceScalar(keccak_256(new TextEncoder().encode('another fixed input')));
+    const phrase = mnemonicFromSeed(seed);
+    const broken = [...phrase];
+    broken[0] = MONERO_WORDS[(MONERO_WORDS.indexOf(broken[0]!) + 1) % N]!;
+    const result = seedFromMnemonic(broken);
+    return [result.seed === null, result.problem ?? 'accepted a broken phrase'];
+  });
+
+  add('An address and its keys agree', 'A wallet built from a seed produces an address that decodes to that wallet.', () => {
+    const seed = reduceScalar(keccak_256(new TextEncoder().encode('a third fixed input')));
+    const wallet = walletFromSeed(seed);
+    const parsed = parseAddress(wallet.address);
+    const ok = parsed.valid && parsed.spendPublic === wallet.spendPublic && parsed.viewPublic === wallet.viewPublic;
+    return [ok, ok ? 'keys match' : 'the address does not carry the keys it was built from'];
+  });
+
+  add('The word list is the right size', '1626 words, each unique in three characters, or every phrase is wrong.', () => {
+    const prefixes = new Set(MONERO_WORDS.map((w) => w.slice(0, PREFIX_LENGTH)));
+    const ok = MONERO_WORDS.length === 1626 && prefixes.size === 1626;
+    return [ok, `${MONERO_WORDS.length} words, ${prefixes.size} distinct prefixes`];
+  });
+
+  return checks;
+}
+
+export function allChecksPass(checks: Check[]): boolean {
+  return checks.length > 0 && checks.every((c) => c.ok);
+}
