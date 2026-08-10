@@ -312,20 +312,60 @@ ul.plain {
 /* ------------------------------------------------------- the PDF tool bits */
 
 .dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 128px;
   border: 2px dashed #808080;
   background: #f8f8f8;
-  padding: 12px;
+  padding: 20px 16px;
   margin: 8px 0;
   cursor: pointer;
   text-align: center;
 }
+/* .dropzone now sets a display, which would beat the global .hidden and keep a
+   dropzone on screen after the app hid it. This lets .hidden win again. */
+.dropzone.hidden { display: none; }
+
+/* Once a file is open (dropzone.js adds this), the big target slims to a plain
+   "open another" bar so it stops crowding the work below it. */
+.dropzone.dz-loaded {
+  min-height: 0;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 7px 12px;
+}
+.dropzone.dz-loaded strong { font-size: 12px; font-weight: normal; }
+.dropzone.dz-loaded span { display: none; }
+
+/* The file tools open with nothing but this zone, and the body they sit in
+   is already a full-height flex column (body[data-app] .app-body, far below).
+   Left at its content height the target was a band stranded over an empty
+   work area; grown, it is the whole screen, which is what a "drop a file
+   here" screen should be. The moment a file is in, dropzone.js adds
+   .dz-loaded, this stops matching, and the zone drops back to a bar so the
+   results take the room. Named per app rather than by shape: video and audio
+   also hang a #drop straight off the body but slim it their own way, and a
+   blanket rule would strand them at full height forever. */
+[data-app="convert"] .app-body > #drop.dropzone:not(.dz-loaded),
+[data-app="image"] .app-body > #drop.dropzone:not(.dz-loaded),
+[data-app="inspect"] .app-body > #drop.dropzone:not(.dz-loaded),
+[data-app="sheet"] .app-body > #drop.dropzone:not(.dz-loaded),
+[data-app="shrink"] .app-body > #drop.dropzone:not(.dz-loaded),
+[data-app="unlock"] .app-body > #drop.dropzone:not(.dz-loaded) {
+  flex: 1 1 auto;
+}
 
 .dropzone strong {
   display: block;
+  font-size: 15px;
 }
 
 .dropzone span {
-  font-size: 14px;
+  font-size: 13px;
   color: #333333;
 }
 

@@ -153,6 +153,13 @@
   padding: 10px;
   max-width: 620px;
 }
+/* The box ships holding three empty slots (result, perms, output), and the
+   page script fills one only once a PDF is open. Empty, it was an inset white
+   panel stranded under the drop zone reporting nothing; drawn only when a slot
+   has something in it, it arrives with the result and not before. */
+[data-app="unlock"] #result-box:not(:has(*:not(:empty))) {
+  display: none;
+}
 [data-app="unlock"] #result table,
 [data-app="unlock"] #result-box table {
   width: 100%;
