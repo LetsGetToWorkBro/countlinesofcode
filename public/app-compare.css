@@ -65,8 +65,16 @@
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 11px;
   color: #000000;
-  padding: 8px;
 }
+/* The gutter. The shell sets `padding: 0` on an application's body, for the
+   programs that lay themselves out in bands and bring their own spacing; this
+   one is content, and with no gutter every line starts hard against the tube.
+   A plain `[data-app] .app-body` loses to that shell rule, which carries an
+   element plus two classes, which is why the padding this asked for never
+   arrived. Naming the desk the window sits on wins on class count without
+   reaching outside the app. */
+[data-app="compare"] .desk-shell .app-window > .app-body { padding: 8px 14px; }
+
 [data-app="compare"] .app-body h3 { font-size: 12px; color: #0a246a; margin: 10px 0 5px 0; }
 [data-app="compare"] .app-body .note { color: #3a3a3a; }
 
