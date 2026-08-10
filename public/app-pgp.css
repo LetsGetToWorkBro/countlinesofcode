@@ -422,6 +422,9 @@
   align-items: center;
   gap: 6px;
 }
+/* The signing-passphrase field wears .kc-inline and is put away with .hidden
+   until "sign" is ticked; inline-flex would otherwise outrank the hide. */
+[data-app="pgp"] .kc-inline.hidden { display: none; }
 /* A user ID plus a key ID is a long option, and a select sized to its
    longest option pushes everything after it off the line. */
 [data-app="pgp"] #enc-to,

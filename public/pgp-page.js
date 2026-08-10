@@ -303,8 +303,12 @@
     var publics = keys.filter(function (k) { return k.kind === 'public'; });
     var privates = keys.filter(function (k) { return k.kind === 'private'; });
     // A private key carries its public half, so it can also be a recipient —
-    // encrypting something to yourself is a normal thing to want.
-    var recipients = publics.concat(privates);
+    // encrypting something to yourself is a normal thing to want. But if the
+    // public half was also imported on its own, the same fingerprint would
+    // list twice; the public entry wins and the private duplicate is dropped.
+    var seen = {};
+    publics.forEach(function (k) { seen[k.fingerprint] = true; });
+    var recipients = publics.concat(privates.filter(function (k) { return !seen[k.fingerprint]; }));
 
     fill($('enc-to'), recipients, 'no keys yet, import one');
     fill($('enc-as'), privates, 'you have no private key');
@@ -596,7 +600,7 @@
         if ($('enc-sign').checked) {
           var as = keyByValue($('enc-as').value);
           if (!as) throw new Error('To sign it you need a private key. Make one on the Keys tab.');
-          work.push(privateKeyFrom(as, prompt('Passphrase for "' + as.name + '" (leave blank if it has none)') || ''));
+          work.push(privateKeyFrom(as, $('enc-pass').value || ''));
         }
         return Promise.all(work);
       })
@@ -762,7 +766,13 @@
         return signature.verified
           .then(function () {
             var id = signature.keyID.toHex().toUpperCase();
-            var who = keys.find(function (k) { return k.fingerprint.toUpperCase().endsWith(id); });
+            // A v4 key's ID is the rightmost 16 hex of its fingerprint, a v6
+            // key's is the leftmost 16; match either end so a v6 signer is
+            // named, not printed as a bare key ID.
+            var who = keys.find(function (k) {
+              var fp = k.fingerprint.toUpperCase();
+              return fp.endsWith(id) || fp.startsWith(id);
+            });
             $('verify-output').innerHTML =
               '<p class="note sig-good"><strong>Good signature</strong> from ' + esc(who ? who.name : id) +
               '. The text below is exactly what they signed.</p>' +
@@ -956,6 +966,18 @@
       importFiles(e.dataTransfer && e.dataTransfer.files);
     });
     input.addEventListener('change', function () { importFiles(input.files); input.value = ''; });
+  })();
+
+  // The signing passphrase only makes sense once you have chosen to sign, so
+  // the masked field appears with the checkbox rather than a prompt() that
+  // would render it in the clear.
+  (function () {
+    var sign = $('enc-sign');
+    var row = $('enc-pass-row');
+    if (!sign || !row) return;
+    var sync = function () { row.classList.toggle('hidden', !sign.checked); };
+    sign.addEventListener('change', sync);
+    sync();
   })();
 
   $('key-pass').addEventListener('input', updateMeter);

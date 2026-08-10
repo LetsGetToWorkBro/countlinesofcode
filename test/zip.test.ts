@@ -427,3 +427,28 @@ describe('formatBytes', () => {
     expect(formatBytes(5 * 1024 * 1024)).toBe('5.0 MB');
   });
 });
+
+describe('the UTF-8 name flag', () => {
+  it('is set on a non-ASCII name and left off an ASCII one', async () => {
+    const enc = new TextEncoder();
+    const out = await zip([
+      { name: 'plain.txt', data: enc.encode('a') },
+      { name: 'résumé.txt', data: enc.encode('b') },
+    ] as ZipEntry[]);
+    // General-purpose bit 11 lives at local-header offset 6. Find each local
+    // header by its signature and read the flag two bytes in.
+    const view = new DataView(out.buffer, out.byteOffset, out.byteLength);
+    const flags: number[] = [];
+    for (let i = 0; i + 30 <= out.length; i++) {
+      if (view.getUint32(i, true) === 0x04034b50) flags.push(view.getUint16(i + 6, true) & 0x0800);
+    }
+    expect(flags).toEqual([0, 0x0800]); // plain: off, résumé: on
+  });
+
+  it('round-trips a non-ASCII name through unzip', async () => {
+    const enc = new TextEncoder();
+    const out = await zip([{ name: '日本語.txt', data: enc.encode('x') }] as ZipEntry[]);
+    const listed = await listZip(out);
+    expect(listed[0]!.name).toBe('日本語.txt');
+  });
+});
