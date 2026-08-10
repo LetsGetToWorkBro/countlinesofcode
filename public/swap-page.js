@@ -85,12 +85,13 @@
     var target = coinOf(toId());
     var source = coinOf(fromId());
     $('amount-unit').textContent = source.ticker;
-    $('dest-heading').textContent = 'Where should the ' + target.name + ' go?';
+    $('dest-coin-name').textContent = target.name;
     $('xmr-address').placeholder = target.hint;
     $('refund').placeholder = source.hint + ' (the coin you are sending)';
     // A pair change invalidates whatever was quoted for the old one.
     quotes = [];
     chosen = null;
+    $('recv-amount').textContent = 'take a quote';
     $('quotes-block').classList.add('hidden');
     clearMessages();
   }
@@ -158,10 +159,39 @@
     $('quotes').innerHTML = html;
     $('start-swap').disabled = !live.length;
     $('quotes-block').classList.remove('hidden');
+    showEstimate();
+  }
+
+  /* Put the picked desk's number back in the Receive box, so the two halves of
+   * the ticket read as one trade rather than a form and a table that happen to
+   * be about the same thing. */
+  function showEstimate() {
+    var picked = quotes.filter(function (q) { return q.ok && q.provider === chosen; })[0];
+    $('recv-amount').textContent = picked
+      ? trim(picked.toAmount) + ' ' + coinOf(toId()).ticker
+      : 'no quote';
   }
 
   $('quotes').addEventListener('change', function (event) {
-    if (event.target && event.target.name === 'quote') chosen = event.target.value;
+    if (event.target && event.target.name === 'quote') {
+      chosen = event.target.value;
+      showEstimate();
+    }
+  });
+
+  /* Paste, because the thing every visitor does here is paste an address they
+   * copied from a wallet, and on a phone the long-press menu is a nuisance. */
+  $('paste-dest').addEventListener('click', function () {
+    if (!navigator.clipboard || !navigator.clipboard.readText) {
+      note('This browser will not hand a page the clipboard; paste with the keyboard.');
+      return;
+    }
+    navigator.clipboard.readText().then(function (text) {
+      $('xmr-address').value = String(text || '').trim();
+      $('xmr-address').focus();
+    }, function () {
+      note('The browser refused the clipboard; paste with the keyboard.');
+    });
   });
 
   $('from-coin').addEventListener('change', function () { syncPair('from'); });
@@ -220,15 +250,56 @@
       .then(function () { button.disabled = false; });
   }
 
+  /* The deposit address, in groups of four.
+   *
+   * A swap address is sixty to ninety-five characters of base58 and the only
+   * thing standing between the money and somebody else's wallet, and the one
+   * check anybody actually performs is reading the first few and last few
+   * against what their wallet shows. An unbroken run of characters makes that
+   * hard and makes losing your place easy; in fours, with every other group
+   * dimmed, the eye keeps its position and a transposed pair stops hiding. */
+  function groupAddress(el, address) {
+    el.textContent = '';
+    var text = String(address || '');
+    for (var i = 0; i < text.length; i += 4) {
+      var span = document.createElement('span');
+      span.className = (i / 4) % 2 ? 'tick-g tick-g-alt' : 'tick-g';
+      span.textContent = text.slice(i, i + 4);
+      el.appendChild(span);
+    }
+  }
+
+  /* The code the phone scans. qrkit is this site's own encoder and is fetched
+   * only when there is an address to draw, because most visits never create an
+   * order. A failure here costs the picture and nothing else: the address is
+   * already on the page in text, which is what the payment actually needs. */
+  var qrkit = null;
+  function drawQr(address) {
+    var box = $('pay-qr');
+    if (!box) return;
+    function paint() {
+      try {
+        box.innerHTML = qrkit.qrSvg(qrkit.encodeQr(address, 'M'), { scale: 5, margin: 2 });
+      } catch (e) { box.textContent = ''; }
+    }
+    if (qrkit) return paint();
+    if (window.LOC1999_QR) { qrkit = window.LOC1999_QR; return paint(); }
+    var s = document.createElement('script');
+    s.src = '/qrkit.js';
+    s.onload = function () { qrkit = window.LOC1999_QR; if (qrkit) paint(); };
+    s.onerror = function () { box.textContent = ''; };
+    document.head.appendChild(s);
+  }
+
   function renderOrder() {
     if (!order) return;
     var o = order.o;
     var sent = coinOf(order.from).ticker;
     var got = coinOf(order.to).ticker;
     $('quotes-block').classList.add('hidden');
-    $('pay-line').innerHTML = 'Send exactly <strong>' + esc(o.payinAmount) + ' ' + esc(sent) +
-      '</strong> to this address, in one payment:';
-    $('pay-address').textContent = o.payinAddress;
+    $('pay-line').innerHTML = 'Send exactly <strong>' + esc(o.payinAmount) + ' ' + esc(sent) + '</strong>';
+    groupAddress($('pay-address'), o.payinAddress);
+    drawQr(o.payinAddress);
     $('order-meta').innerHTML =
       'Order <code>' + esc(o.id) + '</code> at ' + esc(PROVIDER_LABELS[o.provider] || o.provider) +
       ' &middot; about ' + esc(o.toAmount) + ' ' + esc(got) + ' to <code>' + esc(shorten(o.payoutAddress)) + '</code>' +
@@ -268,12 +339,23 @@
   $('start-swap').addEventListener('click', startSwap);
   $('check-status').addEventListener('click', checkStatus);
 
+  /* "I have sent it" is the same call as Check now. It exists because after
+   * paying, the question in somebody's head is "did that work", and answering
+   * it with a button that says what they just did beats one that says Check. */
+  $('sent-it').addEventListener('click', function () {
+    $('order-status').textContent = 'Looking for your deposit...';
+    checkStatus();
+  });
+
   $('new-swap').addEventListener('click', function () {
     stopPolling();
     order = null;
     forget();
     $('order-block').classList.add('hidden');
     $('order-status').textContent = '';
+    // The old code is a picture of a dead address; it does not outlive the order.
+    $('pay-qr').textContent = '';
+    $('pay-address').textContent = '';
     clearMessages();
   });
 
