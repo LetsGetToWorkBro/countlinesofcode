@@ -1624,8 +1624,20 @@ describe('a control that has been pressed looks pressed', () => {
   it('states the pressed look for the class as well as the pseudo-class', () => {
     for (const control of ['chin-dir', 'chin-key', 'chin-power']) {
       expect(css, `${control} has no :active state at all`).toMatch(new RegExp(`\\.${control}:active`));
-      expect(css, `${control} only goes down for a mouse`).toMatch(new RegExp(`\\.${control}\\.is-down`));
+      expect(css, `${control} only goes down for a mouse`).toMatch(new RegExp(`\\.${control}\\.is-held`));
     }
+  });
+
+  it('does not name the pressed state after a direction the pad already uses', () => {
+    // The pressed class was .is-down, which is also the down arrow's own
+    // direction class, so the down arrow sat there looking pressed forever.
+    // The held state is .is-held now; guard the two apart so it cannot come
+    // back: pressable() must add is-held, and the pressed rule must key off it
+    // rather than the direction is-down.
+    expect(js, 'the pressed class collides with the down direction again')
+      .toMatch(/classList\.add\('is-held'\)/);
+    expect(js, 'pressable still toggles is-down').not.toMatch(/classList\.add\('is-down'\)/);
+    expect(css).toMatch(/#page \.chin-dir\.is-held/);
   });
 
   it('holds the press long enough to be seen', () => {
@@ -1660,6 +1672,38 @@ describe('a control that has been pressed looks pressed', () => {
     const rest = 0xcb / 255;   // the top stop of the resting gradient
     expect(lum(rule![1]!), 'the pressed state is barely darker than the resting one')
       .toBeLessThan(rest - 0.15);
+  });
+});
+
+describe('the chin: a d-pad, three buttons, one selection', () => {
+  const js = readFileSync('public/start.js', 'utf8');
+  const css = readFileSync('public/style.css', 'utf8');
+
+  it('has no centre button on the pad, because a fingertip cannot hit it', () => {
+    // The middle of the d-pad was a 16px button doing what a tap on the icon
+    // does. It is moulded dish now.
+    expect(js, 'the pad grew its centre button back').not.toMatch(/chin-dir is-enter/);
+    expect(css, 'the enter-button geometry is back').not.toMatch(/\.chin-dir\.is-enter/);
+  });
+
+  it('offers three buttons beside the pad: back, info, forward', () => {
+    // Only three, centred, and honest: the chevrons are the history and the i
+    // tells you what the selected icon is.
+    expect(js).toMatch(/label: 'Back'/);
+    expect(js).toMatch(/label: 'Forward'/);
+    expect(js).toMatch(/window\.history\.back\(\)/);
+    expect(js).toMatch(/window\.history\.forward\(\)/);
+    // The old four-button, taskbar-wired cluster is gone.
+    expect(js, 'the chin still wires taskbar windows to buttons')
+      .not.toMatch(/targets\.push\(\{ label: btn\.textContent/);
+  });
+
+  it('makes the pad and the pointer share one selection', () => {
+    // A tap or a click on an icon moves the pad's cursor there, so the next
+    // press carries on from it rather than jumping back to a second highlight.
+    expect(js).toMatch(/function syncCursorTo/);
+    expect(js).toMatch(/addEventListener\('pointerdown', pointerToIcon\)/);
+    expect(js).toMatch(/addEventListener\('focusin', pointerToIcon\)/);
   });
 });
 
