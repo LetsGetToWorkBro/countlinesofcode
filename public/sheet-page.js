@@ -118,9 +118,9 @@
       var cells = [];
       for (var c = 0; c < Math.min(widest, PREVIEW_COLS); c++) {
         var value = row[c] === undefined ? '' : row[c];
-        cells.push(r === 0 ? '<th>' + esc(value) + '</th>' : '<td>' + esc(value) + '</td>');
+        cells.push(r === 0 ? '<th scope="col">' + esc(value) + '</th>' : '<td>' + esc(value) + '</td>');
       }
-      if (widest > PREVIEW_COLS) cells.push(r === 0 ? '<th>&hellip;</th>' : '<td>&hellip;</td>');
+      if (widest > PREVIEW_COLS) cells.push(r === 0 ? '<th scope="col">&hellip;</th>' : '<td>&hellip;</td>');
       return '<tr>' + cells.join('') + '</tr>';
     });
     $('preview').innerHTML = '<table><thead>' + (parts[0] || '') + '</thead><tbody>' +

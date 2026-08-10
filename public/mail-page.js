@@ -283,8 +283,14 @@
   function verdictBadge(verdict, trackerCount) {
     var parts = [];
     if (verdict) {
+      // Three states, not two. Green is only for a sender that affirmatively
+      // authenticated (DMARC passed); a failure is red; and "no auth results"
+      // or "not proven" is neither, so it gets an amber "unverified" rather
+      // than a reassuring green it has not earned.
       var bad = /fail|forg|spoof|mismatch|caution|suspicious/i.test(verdict);
-      parts.push('<span class="' + (bad ? 'pw-terrible' : 'pw-strong') + '">' + esc(shortVerdict(verdict)) + '</span>');
+      var good = /passed/i.test(verdict);
+      var cls = bad ? 'pw-terrible' : good ? 'pw-strong' : 'pw-fair';
+      parts.push('<span class="' + cls + '">' + esc(shortVerdict(verdict)) + '</span>');
     }
     if (trackerCount > 0) parts.push('<span class="pw-weak">' + trackerCount + ' tracker' + (trackerCount === 1 ? '' : 's') + '</span>');
     return parts.join(' ') || '<span class="note">ok</span>';
