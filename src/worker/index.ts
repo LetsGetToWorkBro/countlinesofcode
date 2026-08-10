@@ -28,7 +28,7 @@ import { handleIncomingEmail, mailApi, purgeExpired } from './mail';
 import { swapApi } from './swap';
 import { COUNTER_VERSION } from '../lib/version';
 import { handleCallback, handleLogin, handleLogout, handleMe, handleMyRepos, loadSession, oauthConfigured, scopesFor } from './auth';
-import { limitsFromEnv, rateLimitPerMinute, type Env } from './env';
+import { limitsFromEnv, proxyRateLimitPerMinute, rateLimitPerMinute, swapRateLimitPerMinute, type Env } from './env';
 import { boardPageHtml } from './board-html';
 import { EXACTLY_1999 } from './exact1999';
 import { challengePageHtml, golfIndexHtml } from './golf-html';
@@ -167,16 +167,19 @@ const routes = {
       if (path.startsWith('/api/resolve/') && request.method === 'GET') return await resolveOnly(request, env, path);
       if (path.startsWith('/api/archive/') && request.method === 'GET') return await streamArchive(request, env, path);
 
-      if (path === '/api/auth/login' && request.method === 'GET') return await handleLogin(request, env);
-      if (path === '/api/auth/callback' && request.method === 'GET') return await handleCallback(request, env);
-      if (path === '/api/auth/logout' && request.method === 'POST') return await handleLogout(request, env);
-      if (path === '/api/auth/me' && request.method === 'GET') return await handleMe(request, env);
-      if (path === '/api/auth/repos' && request.method === 'GET') return await handleMyRepos(request, env);
+      // The auth handlers build their own responses (cookies, redirects), so
+      // they are the one family that does not pass through jsonResponse and
+      // used to ship without the site policy set. Merged here instead.
+      if (path === '/api/auth/login' && request.method === 'GET') return withSecurityHeaders(await handleLogin(request, env));
+      if (path === '/api/auth/callback' && request.method === 'GET') return withSecurityHeaders(await handleCallback(request, env));
+      if (path === '/api/auth/logout' && request.method === 'POST') return withSecurityHeaders(await handleLogout(request, env));
+      if (path === '/api/auth/me' && request.method === 'GET') return withSecurityHeaders(await handleMe(request, env));
+      if (path === '/api/auth/repos' && request.method === 'GET') return withSecurityHeaders(await handleMyRepos(request, env));
 
       if (path.startsWith('/r/') && request.method === 'GET') return await resultPage(request, env, ctx, path);
 
-      if (path.startsWith('/api/xmr/')) return await proxyXmr(request, path);
-      if (path.startsWith('/api/btc/')) return await proxyBtc(request, path);
+      if (path.startsWith('/api/xmr/')) return await proxyXmr(request, env, path);
+      if (path.startsWith('/api/btc/')) return await proxyBtc(request, env, path);
 
       if (path.startsWith('/api/mail/')) {
         const reply = await mailApi(request, env, path);
@@ -185,6 +188,17 @@ const routes = {
       }
 
       if (path.startsWith('/api/swap/')) {
+        // These spend the deployment's provider key upstream; an anonymous
+        // flood would burn its quota for everyone. Own bucket, modest cap.
+        const swapCheck = await checkRateLimit(env.LOC_KV, clientIp(request), swapRateLimitPerMinute(env), 'swap');
+        if (!swapCheck.allowed) {
+          return jsonError({
+            status: 429,
+            code: 'rate_limited',
+            message: 'Too many swap requests from this address.',
+            hint: `Try again in ${swapCheck.resetSeconds}s.`,
+          });
+        }
         const reply = await swapApi(request, env, path);
         // Quotes go stale in seconds and orders are nobody else's business.
         return jsonResponse(reply.body, reply.status, { 'cache-control': 'no-store' });
@@ -999,6 +1013,16 @@ export default {
   },
 };
 
+/** Merge the site policy set onto a response a handler built by hand,
+ *  keeping everything it already set (cookies, redirects) intact. */
+export function withSecurityHeaders(response: Response): Response {
+  const out = new Response(response.body, response);
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+    if (!out.headers.has(name)) out.headers.set(name, value);
+  }
+  return out;
+}
+
 export function redirectRetiredPage(url: URL): Response | null {
   const to = RETIRED_PAGES[url.pathname];
   if (!to) return null;
@@ -1245,9 +1269,23 @@ const XMR_PROXY_HEADERS: Record<string, string> = {
  * endpoint). This function is only plumbing: stream the body across, hand back
  * the node's status and bytes, and let nothing be cached.
  */
-async function proxyXmr(request: Request, path: string): Promise<Response> {
+async function proxyXmr(request: Request, env: Env, path: string): Promise<Response> {
   if (request.method !== 'POST' && request.method !== 'GET') {
     return jsonError({ status: 405, code: 'method_not_allowed', message: 'Use GET or POST.' });
+  }
+
+  // The relay forwards to public nodes on the visitor's behalf, so it gets
+  // the same per-IP courtesy limit as everything else outbound — in its own
+  // bucket, with a ceiling sized for a wallet sync's bursts rather than for
+  // a page load.
+  const check = await checkRateLimit(env.LOC_KV, clientIp(request), proxyRateLimitPerMinute(env), 'proxy');
+  if (!check.allowed) {
+    return jsonError({
+      status: 429,
+      code: 'rate_limited',
+      message: 'Too many node requests from this address.',
+      hint: `Try again in ${check.resetSeconds}s.`,
+    });
   }
 
   const segments = path.replace(/^\/api\/xmr\//, '').split('/').filter(Boolean).map(decodeURIComponent);
@@ -1261,7 +1299,13 @@ async function proxyXmr(request: Request, path: string): Promise<Response> {
 
   // A generous but finite ceiling on a request body, so the proxy cannot be
   // pushed into forwarding something enormous. A real signed transaction is a
-  // few kilobytes; wallet sync requests are smaller.
+  // few kilobytes; wallet sync requests are smaller. The declared length is
+  // refused before buffering; the buffered size is checked again after,
+  // because Content-Length is optional and unverified.
+  const declared = Number(request.headers.get('content-length') ?? '0');
+  if (declared > 1_000_000) {
+    return jsonError({ status: 413, code: 'too_large', message: 'That request body is too large to forward.' });
+  }
   const body = request.method === 'POST' ? await request.arrayBuffer() : undefined;
   if (body && body.byteLength > 1_000_000) {
     return jsonError({ status: 413, code: 'too_large', message: 'That request body is too large to forward.' });
@@ -1318,9 +1362,21 @@ async function proxyXmr(request: Request, path: string): Promise<Response> {
  * same rules as the Monero proxy: allowlisted paths only, no visitor headers
  * forwarded, no redirects followed, everything validated in btcproxy.ts.
  */
-async function proxyBtc(request: Request, path: string): Promise<Response> {
+async function proxyBtc(request: Request, env: Env, path: string): Promise<Response> {
   if (request.method !== 'POST' && request.method !== 'GET') {
     return jsonError({ status: 405, code: 'method_not_allowed', message: 'Use GET or POST.' });
+  }
+
+  // Same relay, same rule as the Monero proxy: one shared per-IP bucket for
+  // node traffic, sized for wallet use and closed to flooding.
+  const check = await checkRateLimit(env.LOC_KV, clientIp(request), proxyRateLimitPerMinute(env), 'proxy');
+  if (!check.allowed) {
+    return jsonError({
+      status: 429,
+      code: 'rate_limited',
+      message: 'Too many node requests from this address.',
+      hint: `Try again in ${check.resetSeconds}s.`,
+    });
   }
 
   const segments = path.replace(/^\/api\/btc\//, '').split('/').filter(Boolean).map(decodeURIComponent);

@@ -110,16 +110,21 @@
       widest + ' column' + (widest === 1 ? '' : 's') + '.' +
       (rows.length > PREVIEW_ROWS ? ' Showing the first ' + PREVIEW_ROWS + '.' : '');
 
+    // The first row goes in a real <thead>: that is what lets the column
+    // headings stay put while the rows scroll under them. Left implicit, the
+    // browser wraps everything in one tbody and the sticky rule never sticks.
     var shown = rows.slice(0, PREVIEW_ROWS);
-    $('preview').innerHTML = '<table>' + shown.map(function (row, r) {
+    var parts = shown.map(function (row, r) {
       var cells = [];
       for (var c = 0; c < Math.min(widest, PREVIEW_COLS); c++) {
         var value = row[c] === undefined ? '' : row[c];
-        cells.push(r === 0 ? '<th>' + esc(value) + '</th>' : '<td>' + esc(value) + '</td>');
+        cells.push(r === 0 ? '<th scope="col">' + esc(value) + '</th>' : '<td>' + esc(value) + '</td>');
       }
-      if (widest > PREVIEW_COLS) cells.push(r === 0 ? '<th>&hellip;</th>' : '<td>&hellip;</td>');
+      if (widest > PREVIEW_COLS) cells.push(r === 0 ? '<th scope="col">&hellip;</th>' : '<td>&hellip;</td>');
       return '<tr>' + cells.join('') + '</tr>';
-    }).join('') + '</table>';
+    });
+    $('preview').innerHTML = '<table><thead>' + (parts[0] || '') + '</thead><tbody>' +
+      parts.slice(1).join('') + '</tbody></table>';
   }
 
   function save() {

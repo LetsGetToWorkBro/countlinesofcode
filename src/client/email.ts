@@ -293,6 +293,30 @@ export function domainOf(address: string | null): string | null {
   return at === -1 ? null : address.slice(at + 1).toLowerCase() || null;
 }
 
+/** A handful of two-part public suffixes, enough that the brand check reads
+ *  the right label for the domains most impersonation lands on. */
+const TWO_PART_TLDS = new Set([
+  'co.uk', 'org.uk', 'gov.uk', 'ac.uk', 'com.au', 'net.au', 'org.au',
+  'co.jp', 'co.nz', 'co.za', 'com.br', 'com.mx',
+]);
+
+/**
+ * The registrable name of a domain: the label a brand actually owns.
+ *
+ * For `email.paypal.com` this is `paypal`; for `paypal-secure.example` it is
+ * `paypal-secure`, and for `paypal.com.evil.ru` it is `evil`. That is the
+ * label the impersonation check compares a claimed brand against, because a
+ * brand appearing anywhere else in the name is exactly the trick.
+ */
+export function registrableName(domain: string | null): string | null {
+  if (!domain) return null;
+  const labels = domain.toLowerCase().split('.').filter(Boolean);
+  if (labels.length < 2) return labels[0] ?? null;
+  const lastTwo = labels.slice(-2).join('.');
+  const tldLabels = TWO_PART_TLDS.has(lastTwo) ? 2 : 1;
+  return labels[labels.length - 1 - tldLabels] ?? null;
+}
+
 export interface SenderCheck {
   /** What the mail client shows you. */
   displayName: string | null;
@@ -344,8 +368,13 @@ export function senderCheck(message: Message): SenderCheck {
     concerns.push(`The envelope sender is ${returnPath}, a different domain from the visible sender. This is normal for mailing lists and marketing platforms, and also normal for forgeries.`);
   }
 
-  if (displayName && /\b(bank|paypal|apple|microsoft|amazon|hmrc|irs|netflix|google)\b/i.test(displayName) &&
-      fromDomain && !new RegExp(`\\b${displayName.match(/\b(bank|paypal|apple|microsoft|amazon|hmrc|irs|netflix|google)\b/i)![0]}\\b`, 'i').test(fromDomain)) {
+  // A brand in the display name is only reassuring if it is the registrable
+  // name of the sending domain. A substring test waved through the exact
+  // trick it was meant to catch: "paypal-secure.example" and
+  // "paypal.com.evil.ru" both contain "paypal" at a word boundary, and both
+  // are the forgery. Compare the brand to the second-level label instead.
+  const brandMatch = displayName?.match(/\b(bank|paypal|apple|microsoft|amazon|hmrc|irs|netflix|google)\b/i);
+  if (brandMatch && fromDomain && registrableName(fromDomain) !== brandMatch[0].toLowerCase()) {
     concerns.push(`The name claims to be "${displayName}" but the message comes from ${fromDomain}, which does not look like that organisation.`);
   }
 

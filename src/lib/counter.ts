@@ -377,8 +377,10 @@ export async function runCount(
     }
   }
 
-  if (aggregator.totals.files >= limits.maxFiles) hitLimits.files = true;
-  if (aggregator.totals.bytes >= limits.maxTotalBytes) hitLimits.bytes = true;
+  // The flags are already set by the code paths that actually truncated
+  // (the early file cap, and the in-loop byte/file caps). Re-deriving them
+  // here with `>=` on the final totals cried "Totals are partial" at a repo
+  // that landed exactly on a cap with nothing dropped, so it is not redone.
   if (hitLimits.files) {
     warnings.push(`Stopped at the ${limits.maxFiles.toLocaleString()} file cap. Totals are partial.`);
   }

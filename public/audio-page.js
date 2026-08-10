@@ -102,13 +102,24 @@
     clearError();
     if (!files || !files.length) return;
     var list = Array.prototype.slice.call(files);
+    // Each file is opened on its own: one WMA in a folder of MP3s should cost
+    // that one file an error line, not the whole drop. Failures are collected
+    // and reported together once everything has been attempted.
+    var problems = [];
     ready().then(function () {
       var chain = Promise.resolve();
       list.forEach(function (file) {
-        chain = chain.then(function () { return openOne(file); });
+        chain = chain.then(function () {
+          return openOne(file).catch(function (err) {
+            problems.push((err && err.message) || String(err));
+          });
+        });
       });
       return chain;
+    }).then(function () {
+      if (problems.length) { setStatus(''); fail(problems.join(' ')); }
     }).catch(function (err) {
+      setStatus('');
       fail((err && err.message) || String(err));
     });
   }
@@ -152,8 +163,10 @@
     $('lamp-stereo').classList.toggle('is-lit', t.buffer.numberOfChannels > 1);
     var title = (index + 1) + '. ' + t.name + ' (' + kit.formatTime(dur) + ')';
     // The marquee: repeated with the era's separator so the loop has no seam,
-    // and only when it actually overflows would it move (CSS decides).
-    $('wa-title').textContent = title + '  ***  ' + title + '  ***  ';
+    // and only when it actually overflows would it move (CSS decides). With
+    // reduced motion the CSS stops the animation, so the doubled loop text
+    // would just sit there doubled; a still title gets the plain name once.
+    $('wa-title').textContent = REDUCED ? title : title + '  ***  ' + title + '  ***  ';
     $('wa-title').setAttribute('data-still', title);
 
     // Fresh file, fresh edits: a selection from the last song makes no sense

@@ -20,6 +20,8 @@ export interface Env {
   MAX_COUNT_BYTES?: string;
   FETCH_CONCURRENCY?: string;
   RATE_LIMIT_PER_MINUTE?: string;
+  PROXY_RATE_LIMIT_PER_MINUTE?: string;
+  SWAP_RATE_LIMIT_PER_MINUTE?: string;
 
   /** Optional server token used for anonymous requests. */
   GITHUB_TOKEN?: string;
@@ -54,6 +56,19 @@ export function limitsFromEnv(env: Env): CountLimits {
 
 export function rateLimitPerMinute(env: Env): number {
   return intVar(env.RATE_LIMIT_PER_MINUTE, 20);
+}
+
+/** The node proxies: a wallet sync legitimately makes a burst of RPC calls,
+ *  so the ceiling is high; it exists to stop request-flooding through the
+ *  relay, not to meter a wallet. */
+export function proxyRateLimitPerMinute(env: Env): number {
+  return intVar(env.PROXY_RATE_LIMIT_PER_MINUTE, 240);
+}
+
+/** The swap endpoints spend the deployment's ChangeNOW key upstream, so the
+ *  cap is conservative: quoting and a status poll fit well inside it. */
+export function swapRateLimitPerMinute(env: Env): number {
+  return intVar(env.SWAP_RATE_LIMIT_PER_MINUTE, 30);
 }
 
 /**

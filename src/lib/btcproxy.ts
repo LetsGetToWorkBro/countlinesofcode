@@ -115,6 +115,12 @@ export function validateCustomEsplora(raw: string): CustomEsploraResult {
   if (url.search || url.hash) {
     return { ok: false, problem: 'Give just the server address, with nothing after the path.' };
   }
+  // Refused, not silently stripped: the Monero validator refuses these too,
+  // and a user who pasted user:pass@host deserves to know the credentials
+  // would never have been sent rather than to believe they were.
+  if (url.username || url.password) {
+    return { ok: false, problem: 'Leave credentials out of the address; this proxy will not forward them.' };
+  }
 
   // The host and port go through the node validator, which owns the SSRF
   // rules; the path is checked separately since a node may not have one.

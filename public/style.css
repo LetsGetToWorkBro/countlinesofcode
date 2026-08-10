@@ -1112,7 +1112,9 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   line-height: 1.5;
   cursor: pointer;
 }
-.shutdown .shutdown-note { font-size: 13px; color: #806000; margin-top: 28px; }
+/* The line that tells you how to leave the joke screen has to be readable
+   on it: #c08000 on black is about 5:1, the old #806000 was 3.6:1. */
+.shutdown .shutdown-note { font-size: 13px; color: #c08000; margin-top: 28px; }
 
 /* With desk.js running the tools boot minimised too: an empty patch of desk
    with the app waiting on the taskbar. Flex pins the taskbar to the bottom
@@ -2387,7 +2389,7 @@ body {
     inset 0 -2px 3px rgba(0, 0, 0, 0.3),
     0 2px 3px rgba(0, 0, 0, 0.45);
 }
-#page .chin-power:active, #page .chin-power.is-down {
+#page .chin-power:active, #page .chin-power.is-held {
   /* Pressed in, and the shadow under it goes with it. A button that
      changes colour but does not move has not been pressed. */
   transform: translateY(1px);
@@ -2487,13 +2489,17 @@ body {
  * gives up -webkit-tap-highlight-color, which is the one cue the platform
  * supplies for nothing — so a tap on the pad did exactly what it was asked
  * and looked like the machine had ignored it. start.js therefore puts an
- * .is-down class on and holds it for a moment, and both spellings land here.
+ * .is-held class on and holds it for a moment, and both spellings land here.
+ *
+ * The held class is .is-held, not .is-down: the down arrow already carries
+ * .is-down as its direction, and naming the pressed state the same thing left
+ * the down arrow looking pressed the whole time it sat there.
  *
  * The pressed state is also a good deal darker than it was. The old one
  * moved the gradient by about 12% of its lightness, which is a change you
  * can find if you are looking for it and not one you notice mid-tap. */
 #page .chin-dir:active, #page .chin-key:active,
-#page .chin-dir.is-down, #page .chin-key.is-down {
+#page .chin-dir.is-held, #page .chin-key.is-held {
   background: linear-gradient(180deg, #6f6858 0%, #524c3f 100%);
   box-shadow:
     inset 0 2px 5px rgba(0, 0, 0, 0.65),
@@ -2502,7 +2508,7 @@ body {
 }
 /* The i on the Info key is dark ink on a light key, and the key just went
    dark. Both ends stated rather than one of them inherited. */
-#page .chin-key.is-info:active, #page .chin-key.is-info.is-down { color: #f2eee2; }
+#page .chin-key.is-info:active, #page .chin-key.is-info.is-held { color: #f2eee2; }
 #page .chin-key:disabled { opacity: 0.5; cursor: default; }
 #page .chin-dir:focus-visible, #page .chin-key:focus-visible { outline: 2px solid #7fd3ff; outline-offset: 1px; }
 
@@ -2543,23 +2549,28 @@ body {
     background: radial-gradient(circle at 50% 36%, #7f7867 0%, #6d6757 62%, #565042 100%);
     box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.3), inset 0 -3px 5px rgba(0, 0, 0, 0.45);
   }
-  /* Four arms and a centre, cut out of the dish. */
+  /* Four arms cut out of the dish; the middle is left as moulded plastic,
+     because the centre button was too small to hit and its job is a tap on
+     the icon. */
   #page .chin-dir { position: absolute; border-radius: 2px; }
   #page .chin-dir.is-up    { left: 16px; top: 3px;    width: 16px; height: 15px; }
   #page .chin-dir.is-down  { left: 16px; bottom: 3px; width: 16px; height: 15px; }
   #page .chin-dir.is-left  { top: 16px; left: 3px;    width: 15px; height: 16px; }
   #page .chin-dir.is-right { top: 16px; right: 3px;   width: 15px; height: 16px; }
-  #page .chin-dir.is-enter { top: 16px; left: 16px;   width: 16px; height: 16px; border-radius: 3px; }
 
   #page .chin-keys {
     display: flex;
-    gap: 5px;
+    gap: 6px;
+    align-items: center;
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
     bottom: 20px;
   }
   #page .chin-key { width: 29px; height: 17px; border-radius: 9px; }
+  /* The two chevrons read as chevrons: a touch bolder and larger than the
+     lowercase i between them. */
+  #page .chin-key.is-nav { font-weight: bold; font-size: 13px; line-height: 1; }
 
   #page .chin-power { right: 12px; bottom: 12px; width: 27px; height: 27px; }
   /* Directly over the button, not beside it: on the desktop machine the

@@ -539,6 +539,17 @@
     $('balance').textContent = '0';
     $('unlocked').textContent = '0';
     subaddressCount = 0;
+    // The Send tab belongs to the wallet that filled it. Left alone, the next
+    // wallet opened in this tab inherits the previous one's address, amount
+    // and even its armed confirm box, one click from sending.
+    $('send-address').value = '';
+    $('send-amount').value = '';
+    $('send-amount').placeholder = '0.00';
+    $('send-error').textContent = '';
+    $('confirm').classList.add('hidden');
+    $('confirm-detail').textContent = '';
+    maxMode = false;
+    showSection('overview');
     clearSetup();
   }
 

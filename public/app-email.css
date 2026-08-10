@@ -94,6 +94,12 @@
 [data-app="email"] .olbtn:disabled { opacity: 0.4; cursor: default; }
 [data-app="email"] .olbtn:focus-visible { outline: 1px dotted #000000; outline-offset: -3px; }
 [data-app="email"] .olbtn svg { display: block; }
+/* The two view buttons (Inbox, Check a message) light up to show which pane is
+   open, the pressed-in twin of the folder rail's highlight. */
+[data-app="email"] .olbtn.is-current {
+  border-color: #808080 #ffffff #ffffff #808080;
+  background: #c4c0b8;
+}
 
 /* ==================================================================
    THE TWO PANES
@@ -145,7 +151,8 @@
 /* The four that are drawn because a mail client has them and that hold
    nothing. Greyed rather than hidden: their absence is what would look
    wrong, and their being live is what would be a lie. */
-[data-app="email"] .ol-folders li.is-inert { color: #8a8a8a; cursor: default; }
+/* #767676 is the lightest grey that clears AA on white; still clearly muted. */
+[data-app="email"] .ol-folders li.is-inert { color: #767676; cursor: default; }
 [data-app="email"] .ol-folders li.is-inert .ol-ico { opacity: 0.5; }
 [data-app="email"] #ol-count { font-weight: bold; }
 
@@ -175,14 +182,17 @@
 }
 [data-app="email"] .ol-addr.hidden { display: none; }
 [data-app="email"] .ol-addr {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
   margin: 0 0 6px 0;
   padding: 4px 6px;
   background: #ece9d8;
   border: 1px solid #808080;
+}
+[data-app="email"] .ol-addr-active {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
 }
 [data-app="email"] .ol-addr label { font-weight: bold; }
 [data-app="email"] .ol-addr code {
@@ -194,6 +204,63 @@
   /* An address you cannot read is an address you cannot give out, so it
      wraps rather than being cut off by the pane. */
   overflow-wrap: anywhere;
+}
+[data-app="email"] #address[role="button"] { cursor: pointer; }
+
+/* The little clipboard button: beside the headline address, and one on each
+   row of the held-address list. A 3D bevel like everything else here. */
+[data-app="email"] .ol-clip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px;
+  width: 20px;
+  height: 20px;
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  background: #d4d0c8;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+[data-app="email"] .ol-clip:active { border-color: #808080 #ffffff #ffffff #808080; background: #c4c0b8; }
+[data-app="email"] .ol-clip:focus-visible { outline: 1px dotted #000000; outline-offset: 1px; }
+[data-app="email"] .ol-clip svg { display: block; }
+
+/* The wallet of addresses: every one this tab holds, the active one lit like
+   the current folder. Click a row to make it active and copy it. */
+[data-app="email"] .ol-addr-lead { margin: 6px 0 3px 0; }
+[data-app="email"] .ol-addr-lead.hidden { display: none; }
+[data-app="email"] .ol-addr-list { margin: 4px 0 0 0; padding: 0; }
+[data-app="email"] .ol-addr-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  border: 1px solid transparent;
+}
+[data-app="email"] .ol-addr-item.is-active {
+  background: #d8e4f4;
+  border-color: #a6c0e0;
+}
+[data-app="email"] .ol-addr-text {
+  flex: 1;
+  min-width: 0;
+  font-family: "Courier New", Courier, monospace;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+[data-app="email"] .ol-addr-item.is-active .ol-addr-text { font-weight: bold; }
+[data-app="email"] .ol-addr-text:focus-visible { outline: 1px dotted #000000; }
+[data-app="email"] .ol-addr-actions { margin: 6px 0 0 0; }
+
+/* A held address's short name, shown on each message row when more than one
+   address is in play, so it is clear which signup a message came from. */
+[data-app="email"] .mail-to {
+  padding: 0 4px;
+  border: 1px solid #a6c0e0;
+  background: #eef4fc;
+  color: #23557f;
+  font-family: "Courier New", Courier, monospace;
 }
 [data-app="email"] .ol-pane #inbox-status,
 [data-app="email"] .ol-pane #mail-error,

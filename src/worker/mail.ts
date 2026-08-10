@@ -101,14 +101,20 @@ function htmlToText(source: string): string {
   return String(source ?? '')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<(?:br|\/p|\/div|\/tr|\/li|\/h[1-6])\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
+    // Only strip things that are actually HTML tags: a name, then attributes
+    // or the close. `<https://example.com>` and `<name@host>` are how plain
+    // text writes a bare URL or address, and the old greedy `<[^>]+>` deleted
+    // both, so a verification link vanished from the readable body.
+    .replace(/<\/?[a-zA-Z][a-zA-Z0-9-]*(?:\s[^>]*)?>/g, '')
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
     .replace(/&lt;/gi, '<')
     .replace(/&gt;/gi, '>')
     .replace(/&quot;/gi, '"')
     .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&#x([0-9a-fA-F]+);/g, (_m, h: string) => { const n = parseInt(h, 16); return n >= 0 && n <= 0x10ffff ? String.fromCodePoint(n) : _m; })
     .replace(/&#(\d+);/g, (_m, d: string) => { const n = Number(d); return n >= 0 && n <= 0x10ffff ? String.fromCodePoint(n) : _m; })
     .replace(/[ \t]+/g, ' ')
     .replace(/\n{3,}/g, '\n\n')

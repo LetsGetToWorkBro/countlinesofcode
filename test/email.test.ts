@@ -18,6 +18,7 @@ import {
   decodeQuotedPrintable,
   displayBody,
   domainOf,
+  registrableName,
   findTrackers,
   header,
   headerValues,
@@ -489,5 +490,24 @@ describe('resilience to hostile input', () => {
     const checks = authChecks(parseMessage(CLEAN));
     expect(checks.map((c) => `${c.method}=${c.result}`)).toEqual(['spf=pass', 'dkim=pass', 'dmarc=pass']);
     expect(checks.find((c) => c.method === 'dmarc')!.domain).toBe('example.com');
+  });
+});
+
+describe('a brand in the display name', () => {
+  it('reads the registrable label, not any occurrence of the word', () => {
+    expect(registrableName('email.paypal.com')).toBe('paypal');
+    expect(registrableName('paypal.com')).toBe('paypal');
+    expect(registrableName('paypal-secure.example')).toBe('paypal-secure');
+    expect(registrableName('paypal.com.evil.ru')).toBe('evil');
+    expect(registrableName('login.hsbc.co.uk')).toBe('hsbc');
+  });
+
+  it('flags a lookalike sender, and clears a real one', () => {
+    const forged = senderCheck(parseMessage('From: "PayPal" <service@paypal-secure.example>\n\nx'));
+    expect(forged.concerns.join(' ')).toMatch(/does not look like that organisation/i);
+    const subdomainForge = senderCheck(parseMessage('From: "PayPal" <service@paypal.com.evil.ru>\n\nx'));
+    expect(subdomainForge.concerns.join(' ')).toMatch(/does not look like that organisation/i);
+    const real = senderCheck(parseMessage('From: "PayPal" <service@email.paypal.com>\n\nx'));
+    expect(real.concerns.join(' ')).not.toMatch(/does not look like that organisation/i);
   });
 });

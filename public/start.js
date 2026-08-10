@@ -740,15 +740,15 @@
       function down() {
         if (timer) { clearTimeout(timer); timer = null; }
         since = Date.now();
-        node.classList.add('is-down');
+        node.classList.add('is-held');
       }
       function up() {
-        if (!node.classList.contains('is-down')) return;
+        if (!node.classList.contains('is-held')) return;
         var left = HELD - (Date.now() - since);
-        if (left <= 0) { node.classList.remove('is-down'); return; }
+        if (left <= 0) { node.classList.remove('is-held'); return; }
         if (timer) clearTimeout(timer);
         timer = setTimeout(function () {
-          node.classList.remove('is-down');
+          node.classList.remove('is-held');
           timer = null;
         }, left);
       }
@@ -786,28 +786,27 @@
       setPower(page.classList.contains('is-off'));
     });
 
-    /* --- the four application buttons --------------------------------
-     * A palmtop of this age had a row of them under the screen, each
-     * hard-wired to one program. These are wired to what this machine
-     * actually runs: the menu, and the windows the taskbar carries. */
+    /* --- the three buttons beside the pad ----------------------------
+     * A palmtop of this age had a row of them under the screen. Three,
+     * centred: Back and Forward for the history, the way the browser
+     * chrome around it does them, with Info between the two chevrons. The
+     * i tells you what the selected icon is; the chevrons are the pages
+     * you have already been to. */
     var pad = el('div', 'chin-keys');
-    var targets = [{ label: 'Menu', start: true }, { label: 'Info', info: true }];
-    Array.prototype.forEach.call(bar.querySelectorAll('.task-btn'), function (btn) {
-      if (targets.length < 4) targets.push({ label: btn.textContent.trim(), el: btn });
-    });
-    while (targets.length < 4) targets.push({ label: '', dead: true });
+    var targets = [
+      { label: 'Back', glyph: '<', act: function () { window.history.back(); } },
+      { label: 'What this is', info: true, glyph: 'i', act: showInfo },
+      { label: 'Forward', glyph: '>', act: function () { window.history.forward(); } },
+    ];
 
     targets.forEach(function (target) {
-      var key = el('button', 'chin-key' + (target.info ? ' is-info' : ''));
+      var key = el('button', 'chin-key' + (target.info ? ' is-info' : ' is-nav'));
       key.type = 'button';
-      key.setAttribute('aria-label', target.label || 'Unassigned');
-      if (target.info) key.textContent = 'i';
-      if (target.dead) key.disabled = true;
+      key.setAttribute('aria-label', target.label);
+      key.textContent = target.glyph;
       key.addEventListener('click', function () {
         if (page.classList.contains('is-off')) return;   // nothing runs with the screen off
-        if (target.start) startBtn.click();
-        else if (target.info) showInfo();
-        else if (target.el) target.el.click();
+        target.act();
       });
       pad.appendChild(key);
     });
@@ -874,6 +873,32 @@
         return Math.abs(node.getBoundingClientRect().top - top) < 4;
       }).length || 1;
       pick(dir === 'down' ? cursor + perRow : cursor - perRow);
+    }
+
+    /* One selection, not two.
+     *
+     * The pad keeps its own cursor, and a finger or a mouse landing on an icon
+     * is the same act of choosing. Without saying so, the two drifted apart:
+     * the pad lit one icon and a tap lit another, and the next press on the pad
+     * jumped the highlight back to wherever the pad still thought it was rather
+     * than carrying on from the one you had just touched. So a pointer on an
+     * icon, and the focus a click brings with it, move the cursor there, and
+     * there is only ever the one highlight. */
+    function syncCursorTo(node) {
+      var all = icons();
+      var idx = all.indexOf(node);
+      if (idx < 0) return;
+      cursor = idx;
+      all.forEach(function (n, i) { n.classList.toggle('is-picked', i === cursor); });
+    }
+    function pointerToIcon(event) {
+      var node = event.target && event.target.closest
+        ? event.target.closest('.desk-icon, .desk-shortcut') : null;
+      if (node && desk.contains(node)) syncCursorTo(node);
+    }
+    if (desk) {
+      desk.addEventListener('pointerdown', pointerToIcon);
+      desk.addEventListener('focusin', pointerToIcon);
     }
 
     /* ---- Info -------------------------------------------------------
@@ -967,15 +992,18 @@
       back.appendChild(box);
       document.body.appendChild(back);
 
-      function shut() { back.remove(); }
+      // The Escape listener comes off in shut(), whichever way the box is
+      // closed; tearing it down only from its own handler left one document
+      // listener behind per mouse-closed box.
+      function onKey(e) { if (e.key === 'Escape') shut(); }
+      function shut() {
+        document.removeEventListener('keydown', onKey);
+        back.remove();
+      }
       x.addEventListener('click', shut);
       close.addEventListener('click', shut);
       back.addEventListener('click', function (e) { if (e.target === back) shut(); });
-      document.addEventListener('keydown', function once(e) {
-        if (e.key !== 'Escape') return;
-        document.removeEventListener('keydown', once);
-        shut();
-      });
+      document.addEventListener('keydown', onKey);
       go.focus();
     }
 
@@ -1008,17 +1036,9 @@
       });
       dpad.appendChild(arrow);
     });
-    var enter = el('button', 'chin-dir is-enter');
-    enter.type = 'button';
-    enter.setAttribute('aria-label', 'Open');
-    enter.addEventListener('click', function () {
-      if (page.classList.contains('is-off')) return;
-      if (revealDesk()) { pick(0); return; }
-      var all = icons();
-      if (cursor >= 0 && all[cursor]) all[cursor].click();
-      else pick(0);
-    });
-    dpad.appendChild(enter);
+    /* No centre button: it was smaller than a fingertip and the thing it
+     * did — open what is selected — is a tap on the icon itself, which is
+     * right there on the glass. The middle of the pad is moulded dish now. */
 
     chin.appendChild(dpad);
     chin.appendChild(pad);

@@ -100,11 +100,12 @@
   </span></span>
 <span class="menu"><button type="button" class="menu-title">Tools</button>
   <span class="menu-drop">
-    <button type="button" data-cmd="refresh">Send and receive</button>
+    <button type="button" data-cmd="refresh">Check for mail now</button>
   </span></span>
 <span class="menu menu-optional"><button type="button" class="menu-title">Message</button>
   <span class="menu-drop">
     <button type="button" data-cmd="burn">Delete this inbox</button>
+    <button type="button" data-cmd="burn-all">Delete every inbox</button>
   </span></span>
 <span class="menu"><button type="button" class="menu-title">Help</button>
   <span class="menu-drop">
@@ -116,11 +117,20 @@
     <svg width="24" height="22" viewBox="0 0 24 22" aria-hidden="true"><rect x="1.5" y="3.5" width="17" height="13" fill="#fff" stroke="#4a4a4a" stroke-width="1.4"/><path d="M1.5 3.5L10 11l8.5-7.5" fill="none" stroke="#4a4a4a" stroke-width="1.4"/><path d="M18 14v7M14.5 17.5h7" stroke="#c07000" stroke-width="2.6"/></svg>
     <span>New address</span>
   </button>
-  <button type="button" class="olbtn" id="refresh">
-    <svg width="24" height="22" viewBox="0 0 24 22" aria-hidden="true"><path d="M4 6h10l3 3v9H4z" fill="#f5d074" stroke="#7a5a12" stroke-width="1.3"/><path d="M19 4v8M15.5 8.5L19 12l3.5-3.5" fill="none" stroke="#1a5aaa" stroke-width="2.2"/></svg>
-    <span>Send/Recv</span>
+  <span class="olbar-sep"></span>
+  <button type="button" class="olbtn" data-view="inbox">
+    <svg width="24" height="22" viewBox="0 0 24 22" aria-hidden="true"><path d="M2.5 3.5h15v15h-15z" fill="#fff" stroke="#4a4a4a" stroke-width="1.4"/><path d="M2.5 12.5h4l1.5 2.5h4l1.5-2.5h4" fill="none" stroke="#23557f" stroke-width="1.4"/><path d="M10 4v6M7 7.5l3 3 3-3" fill="none" stroke="#6aa9e0" stroke-width="1.6"/></svg>
+    <span>Inbox</span>
+  </button>
+  <button type="button" class="olbtn" data-view="check">
+    <svg width="24" height="22" viewBox="0 0 24 22" aria-hidden="true"><rect x="1.5" y="4.5" width="15" height="11" fill="#fff" stroke="#4a4a4a" stroke-width="1.3"/><path d="M1.5 4.5L9 11l7.5-6.5" fill="none" stroke="#4a4a4a" stroke-width="1.3"/><circle cx="16.5" cy="15" r="4" fill="#fff" stroke="#5a3a7a" stroke-width="1.6"/><path d="M19.5 18l3 3" stroke="#5a3a7a" stroke-width="1.8"/></svg>
+    <span>Check a message</span>
   </button>
   <span class="olbar-sep"></span>
+  <button type="button" class="olbtn" id="refresh">
+    <svg width="24" height="22" viewBox="0 0 24 22" aria-hidden="true"><path d="M4 6h10l3 3v9H4z" fill="#f5d074" stroke="#7a5a12" stroke-width="1.3"/><path d="M19 4v8M15.5 8.5L19 12l3.5-3.5" fill="none" stroke="#1a5aaa" stroke-width="2.2"/></svg>
+    <span>Check now</span>
+  </button>
   <button type="button" class="olbtn" id="copy">
     <svg width="24" height="22" viewBox="0 0 24 22" aria-hidden="true"><rect x="2" y="2" width="13" height="15" fill="#fff" stroke="#4a4a4a" stroke-width="1.3"/><rect x="7" y="6" width="13" height="15" fill="#fff" stroke="#4a4a4a" stroke-width="1.3"/></svg>
     <span>Copy</span>
@@ -155,11 +165,19 @@
   <div class="ol-pane">
     <div data-view-panel="inbox">
 
-        <p class="ol-addr">
-          <label for="address">Your address</label>
-          <code id="address" class="xmr">open this tab to get one</code>
-          <span id="address-note" class="note"></span>
-        </p>
+        <div class="ol-addr">
+          <p class="ol-addr-active">
+            <label for="address">Your address</label>
+            <code id="address" class="xmr" role="button" tabindex="0" aria-label="Your address; click to copy">open this tab to get one</code>
+            <button type="button" id="address-copy" class="ol-clip" aria-label="Copy the address" title="Copy">
+              <svg width="15" height="15" viewBox="0 0 15 15" aria-hidden="true"><rect x="1" y="1" width="9" height="11" fill="#fff" stroke="#4a4a4a" stroke-width="1.1"/><rect x="4.5" y="3.5" width="9" height="11" fill="#fff" stroke="#4a4a4a" stroke-width="1.1"/></svg>
+            </button>
+            <span id="address-note" class="note"></span>
+          </p>
+          <p class="ol-addr-lead note">These addresses all land in the one inbox below. Click any to copy it and make it the one shown above.</p>
+          <ul id="ol-addr-list" class="ol-addr-list plain" aria-label="Your addresses"></ul>
+          <p class="ol-addr-actions"><button type="button" id="burn-all" class="small hidden">Delete every inbox</button></p>
+        </div>
         <p id="mail-error" class="error" role="alert"></p>
         <p id="inbox-status" class="status" role="status" aria-live="polite">Waiting for mail...</p>
         <div id="inbox" class="mail-client"></div>
@@ -205,7 +223,7 @@
 </div>
 
 <p class="ol-status">
-  <span id="model-note">This address belongs to this tab and survives a refresh. Only New address, Delete, or closing the tab hands you a different one. Each message deletes itself an hour after it arrives.</span>
+  <span id="model-note">These addresses belong to this tab and survive a refresh. New address adds another and keeps the old ones, all reading into the one inbox; Delete removes the one on top; closing the tab forgets them all. Each message deletes itself an hour after it arrives.</span>
 </p>
 
 <!-- What this program has to say about itself. Hidden here and shown by
@@ -280,7 +298,8 @@ near it.
   <li><strong>Nothing is rendered as a live web page.</strong> A message is reduced to plain text before it is stored, and shown as text. Remote images, scripts and trackers never load, so opening a message here cannot report back that you did, and cannot run anything.</li>
   <li><strong>It expires, and it is swept.</strong> A message carries a deletion time an hour out; a scheduled job deletes expired ones, and every read also filters them out, so an expired message is never shown even if the sweep is late. Burn removes everything for the address immediately.</li>
   <li><strong>The address is the only secret.</strong> There is no login. Fourteen random characters is about seventy bits, which is not guessable, but it is the whole of the protection: treat the address itself as the password, because it is.</li>
-  <li><strong>The tab remembers the address, and only the address.</strong> It is kept in this tab's session storage so a refresh does not lose a code that is mid-flight; closing the tab forgets it. No message content is ever stored in your browser.</li>
+  <li><strong>You can hold several at once, like a wallet holds addresses.</strong> New address does not throw the old one away: it keeps receiving, and every address you are holding reads into the same inbox, each message tagged with which one it arrived at. Up to eight at a time, so the tab is not polling forever; Delete removes the one on top, and Delete every inbox clears them all. It is the shape a disposable inbox wanted: one for each signup, all in one window.</li>
+  <li><strong>The tab remembers the addresses, and only the addresses.</strong> The list is kept in this tab's session storage so a refresh does not lose a code that is mid-flight; closing the tab forgets them. No message content is ever stored in your browser.</li>
   <li><strong>This half runs on a server, and says so.</strong> Receiving mail needs somewhere for it to land, so the inbox, alone among the tools here, stores data on this site's infrastructure for a short while. It is the reason it lives behind its own warning and holds nothing you would not shout across a room.</li>
 </ul>
 </section>

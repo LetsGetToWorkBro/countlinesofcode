@@ -20,7 +20,11 @@
   var rail = document.getElementById('ol-rail');
   if (!rail) return;
 
-  var entries = [].slice.call(rail.querySelectorAll('[data-view]'));
+  // The folder rail and the toolbar both offer the same two destinations now:
+  // the rail because a mail client has a folder tree, the toolbar because the
+  // two things that actually work deserve a button where the eye lands first.
+  // Both are just [data-view] triggers, so one handler drives them together.
+  var entries = [].slice.call(document.querySelectorAll('[data-view]'));
   var panels = [].slice.call(document.querySelectorAll('[data-view-panel]'));
   if (!entries.length || !panels.length) return;
 
@@ -39,6 +43,10 @@
      * account you are looking at, and a checker has no account. */
     var addr = document.querySelector('.ol-addr');
     if (addr) addr.classList.toggle('hidden', name !== 'inbox');
+    /* Say which view is up, so the inbox can stop polling the server while
+     * somebody is reading headers in the checker and pick it back up when
+     * they return. */
+    document.dispatchEvent(new CustomEvent('olview', { detail: { view: name } }));
   }
 
   entries.forEach(function (el) {

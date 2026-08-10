@@ -147,8 +147,10 @@
    Print Layout: white paper with a shadow, sitting on the grey desk that
    Word put behind a document. The preview is the only thing on screen
    that is not chrome, so it gets to be the thing you look at. */
-[data-app="convert"] #preview,
-[data-app="convert"] #preview-box {
+/* Only #preview is the grey desk. The heading and its caption used to sit
+   inside the same #808080 well, where their inks fell to 2.6:1 and 2.2:1;
+   they stay on the beige chrome now, where both clear AA. */
+[data-app="convert"] #preview {
   background: #808080;
   border: 2px inset #d4d0c8;
   padding: 14px;
@@ -168,7 +170,7 @@
 }
 /* A ruler along the top of the page area, which is the other thing Word
    always had and nothing else here does. */
-[data-app="convert"] #preview-box::before {
+[data-app="convert"] #preview::before {
   content: "";
   display: block;
   height: 14px;

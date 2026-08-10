@@ -100,6 +100,15 @@ describe('custom Esplora validation', () => {
     expect(validateCustomEsplora('https://x.example/api#frag').ok).toBe(false);
     expect(validateCustomEsplora('').ok).toBe(false);
   });
+
+  it('refuses credentials in the URL rather than silently stripping them', () => {
+    // The Monero validator refuses these; stripping here instead would let a
+    // user believe their user:pass was being forwarded when it never was.
+    const result = validateCustomEsplora('https://user:pass@esplora.example/api');
+    expect(result.ok).toBe(false);
+    expect(result.problem).toMatch(/credentials/i);
+    expect(validateCustomEsplora('https://user@esplora.example/api').ok).toBe(false);
+  });
 });
 
 describe('resolveBtcTarget', () => {

@@ -40,10 +40,17 @@
     liveUrls.push(url);
     return url;
   }
+  var offerUrls = [];   // the extract downloads on offer
+  var makeUrl = null;   // the archive built by the "make" side
   function releaseUrls() {
     liveUrls.forEach(function (u) { URL.revokeObjectURL(u); });
     liveUrls = [];
     if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
+    // The downloads offered for the previous archive too: opening a new one
+    // used to pin every old extract's blob for the life of the tab.
+    offerUrls.forEach(function (u) { URL.revokeObjectURL(u); });
+    offerUrls = [];
+    if (makeUrl) { URL.revokeObjectURL(makeUrl); makeUrl = null; }
   }
 
   // Previews replace one another, so only the current one is ever needed; the
@@ -207,16 +214,22 @@
 
     var done = 0;
     var collected = [];
+    var skipped = [];
     var taken = new Set();
 
     // One at a time: a hundred parallel inflates would hold the whole
     // uncompressed archive in memory at once, which is the thing to avoid.
+    // Each entry catches its own failure: one corrupt or encrypted record
+    // costs that record a line in the report, not the whole extraction.
     var chain = entries.reduce(function (promise, entry) {
       return promise.then(function () {
         return readEntry(entry).then(function (data) {
           var name = kit.uniqueName(kit.safeName(entry.name), taken);
           taken.add(name);
           collected.push({ name: name, data: data, original: entry.name });
+        }, function (err) {
+          skipped.push(entry.name + ' (' + ((err && err.message) || 'unreadable') + ')');
+        }).then(function () {
           done++;
           $('progress').textContent = 'Unpacking… ' + done + ' of ' + entries.length;
         });
@@ -226,6 +239,11 @@
     chain
       .then(function () {
         $('progress').textContent = '';
+        if (skipped.length) {
+          fail('Skipped ' + skipped.length + ' of ' + entries.length + ': ' + skipped.join('; ') +
+            '. Everything else was extracted.');
+        }
+        if (!collected.length) return undefined;
         if (!asArchive && collected.length === 1) {
           var one = collected[0];
           offer([{ name: one.name, blob: new Blob([one.data]) }]);
@@ -257,7 +275,6 @@
       });
   }
 
-  var offerUrls = [];
   function offer(files) {
     // Revoke the previous extract's download URLs before replacing them: a user
     // extracting several times over would otherwise pin one blob per extract.
@@ -282,6 +299,17 @@
 
     readEntry(entry).then(function (data) {
       var kind = kit.kindOf(entry.name);
+      // An SVG is a document that can carry script, so it is never handed to
+      // an <img> from an untrusted archive (mimeOf gives it text/plain for the
+      // same reason, which would only render a broken-image icon anyway).
+      // Its source is text, and that is what the preview shows.
+      if (kind === 'image' && /\.svg$/i.test(entry.name)) {
+        var svgText = kit.asText(data);
+        $('preview').innerHTML =
+          '<p class="note">SVG is shown as its source here: rendering one from an archive could run what it carries.</p>' +
+          (svgText === null ? '' : '<pre>' + esc(svgText.slice(0, 200000)) + '</pre>');
+        return;
+      }
       if (kind === 'image') {
         // Without a type the blob is octet-stream and the <img> refuses to
         // decode it — the preview came up blank until this was set.
@@ -331,7 +359,6 @@
     $('build-note').textContent = '';
   }
 
-  var makeUrl = null;
   function build() {
     if (!basket.length) return;
     $('make-error').textContent = '';

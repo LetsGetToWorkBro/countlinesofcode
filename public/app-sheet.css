@@ -151,9 +151,7 @@
 /* Column headings and row numbers: raised grey, centred, the way the real
    thing drew them. th[scope="row"] carries a light background from the base
    stylesheet, so both ends are stated here rather than half-inherited. */
-[data-app="sheet"] .sheet-preview thead th,
-[data-app="sheet"] .sheet-preview th[scope="row"],
-[data-app="sheet"] .sheet-preview tbody th {
+[data-app="sheet"] .sheet-preview thead th {
   background: #d4d0c8;
   color: #000000;
   border: 1px solid;
@@ -161,11 +159,12 @@
   font-weight: normal;
   text-align: center;
   padding: 1px 6px;
+  /* The renderer puts the first row in a real <thead>, which is what lets
+     this actually stick. The old rules also matched tbody th and then reset
+     them to static at equal specificity, so no header ever stuck. */
   position: sticky;
   top: 0;
 }
-[data-app="sheet"] .sheet-preview th[scope="row"],
-[data-app="sheet"] .sheet-preview tbody th { position: static; }
 
 /* A number in a spreadsheet sits on the right. That is not decoration: it
    is how you see at a glance that a column really is numeric. */
@@ -195,7 +194,8 @@
   border: 1px solid #808080;
   max-width: 820px;
 }
-[data-app="sheet"] .status { color: #0a6b3d; }
+/* #0a5c34 clears AA (5.0:1) on the beige body; the old #0a6b3d was 4.29:1. */
+[data-app="sheet"] .status { color: #0a5c34; }
 [data-app="sheet"] .error { color: #a01010; }
 
 /* ---- responsive ---------------------------------------------------- */

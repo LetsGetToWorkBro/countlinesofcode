@@ -54,7 +54,9 @@
   font-size: 11px;
   color: #c8c8c8;
 }
-[data-app="inspect"] .app-body .note { color: #8f8f8f; }
+/* #a0a0a0 on the #0000a8 body is 5.1:1; the #8f8f8f it replaced was 4.15:1,
+   under AA, on the paragraphs that carry the actual leak advice. */
+[data-app="inspect"] .app-body .note { color: #a0a0a0; }
 [data-app="inspect"] .app-body > p,
 [data-app="inspect"] .app-body > div > p { max-width: 620px; }
 

@@ -100,9 +100,15 @@
       var image = images[0];
       var w = image.get_width();
       var h = image.get_height();
+      // Free the wasm-side handles once the pixels are copied out; a burst of
+      // HEICs otherwise accumulates every decoded frame in wasm memory.
+      var freeAll = function () {
+        images.forEach(function (i) { try { if (i.free) i.free(); } catch (e) { /* already freed */ } });
+      };
       return new Promise(function (resolve, reject) {
         var data = { data: new Uint8ClampedArray(w * h * 4), width: w, height: h };
         image.display(data, function (out) {
+          freeAll();
           if (!out) return reject(new Error('The HEIC image could not be decoded.'));
           resolve(out);
         });
@@ -126,6 +132,9 @@
     canvas.width = bitmap.width;
     canvas.height = bitmap.height;
     canvas.getContext('2d').drawImage(bitmap, 0, 0);
+    // The bitmap's pixels now live in the canvas; holding the bitmap open too
+    // keeps a second full-size copy of every photo in memory.
+    if (bitmap.close) bitmap.close();
     return canvas;
   }
 
@@ -149,13 +158,20 @@
   }
 
   // -------------------------------------------------------------------- open
+  var openSeq = 0;
   function open(file) {
     clearError();
     resetOutput();
+    // Two quick opens race their decodes: HEIC via wasm is much slower than a
+    // JPEG via the browser, so the first file could finish last and replace
+    // the second. Every open takes a ticket, and a decode that comes back to
+    // find a newer ticket drops its result.
+    var ticket = ++openSeq;
     statusEl.textContent = 'Reading the image…';
     file.arrayBuffer().then(function (buf) {
       var bytes = new Uint8Array(buf);
       return decode(bytes, file).then(function (decoded) {
+        if (ticket !== openSeq) return;
         source = {
           canvas: decoded.canvas,
           width: decoded.canvas.width,
@@ -179,6 +195,7 @@
         $('convert').focus();
       });
     }).catch(function (err) {
+      if (ticket !== openSeq) return;
       source = null;
       fail((err && err.message) || 'Could not open that image.');
     });
@@ -204,7 +221,10 @@
   // ----------------------------------------------------------------- convert
   function targetSize() {
     if ($('keep-size').checked) return { w: source.width, h: source.height };
-    var longest = Number($('longest').value) || Math.max(source.width, source.height);
+    // The field documents a minimum of 16; typed input has to honour it or a
+    // "1" collapses the picture to a single pixel column.
+    var typed = Number($('longest').value) || Math.max(source.width, source.height);
+    var longest = Math.max(16, typed);
     var current = Math.max(source.width, source.height);
     // Never upscale: asking for bigger than the original just keeps the original.
     var scale = Math.min(1, longest / current);

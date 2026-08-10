@@ -88,32 +88,42 @@
     return '';
   }
 
+  var openSeq = 0;
   function open(file) {
     clearError();
     resetOutput();
     controls.className = 'hidden';
+    // The old document's decoded pages live in the pdf.js worker until it is
+    // told to let go; opening file after file used to keep them all.
+    if (doc && doc.destroy) doc.destroy().catch(function () {});
     doc = null;
     picture = null;
+    // Opening a picture while a PDF is still loading (or the reverse) must
+    // not leave both set: each loader checks its ticket before landing.
+    var ticket = ++openSeq;
 
     file.arrayBuffer().then(function (buf) {
+      if (ticket !== openSeq) return undefined;
       var kind = sniff(new Uint8Array(buf.slice(0, 16)));
-      if (kind === 'pdf') return openPdf(file);
+      if (kind === 'pdf') return openPdf(file, ticket);
       if (kind === 'gif') {
         throw new Error('A GIF would come back as a single frame, which is not a smaller version of what you gave it. Video tools is where a GIF belongs.');
       }
-      if (kind) return openPicture(file, kind);
+      if (kind) return openPicture(file, kind, ticket);
       throw new Error('That is not a PDF or a picture this can read. It takes PDF, JPEG, PNG, WebP and BMP.');
     }).catch(function (err) {
+      if (ticket !== openSeq) return;
       fail((err && err.message) || 'Could not open that file.');
     });
   }
 
-  function openPicture(file, mime) {
+  function openPicture(file, mime, ticket) {
     return new Promise(function (resolve, reject) {
       var url = URL.createObjectURL(file);
       var img = new Image();
       img.onload = function () {
         URL.revokeObjectURL(url);
+        if (ticket !== openSeq) return resolve();   // a newer open superseded this one
         picture = img;
         sourceSize = file.size;
         sourceName = file.name;
@@ -135,13 +145,14 @@
     });
   }
 
-  function openPdf(file) {
+  function openPdf(file, ticket) {
     $('keep-text-row').className = 'note';
     return window.LOC1999_RENDER.loadEngines(setStatus)
       .then(function () { return file.arrayBuffer(); })
       .then(function (buf) {
         setStatus('Opening…');
         return window.LOC1999_RENDER.open(new Uint8Array(buf)).then(function (opened) {
+          if (ticket !== openSeq) { if (opened.destroy) opened.destroy().catch(function () {}); return; }
           doc = opened;
           sourceSize = file.size;
           sourceName = file.name;

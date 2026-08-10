@@ -102,10 +102,17 @@ export async function zip(entries: ZipEntry[]): Promise<Uint8Array> {
     const deflated = !entry.store && compressed.length < entry.data.length;
     const body = deflated ? compressed : entry.data;
     const method = deflated ? 8 : 0;
+    // General-purpose bit 11 says the name is UTF-8, which it always is here
+    // (TextEncoder). Without it an extractor falls back to CP437 and an
+    // accented or CJK filename comes out garbled. Set it whenever the name
+    // carries a byte outside ASCII, so a plain name stays byte-identical.
+    const utf8 = name.some((b) => b >= 0x80);
+    const flag = utf8 ? 0x0800 : 0;
 
     const header = new DataView(new ArrayBuffer(30));
     header.setUint32(0, SIGNATURE.local, true);
     header.setUint16(4, 20, true); // version needed
+    header.setUint16(6, flag, true); // general purpose (bit 11 = UTF-8 name)
     header.setUint16(8, method, true);
     header.setUint32(14, crc, true);
     header.setUint32(18, body.length, true);
@@ -117,6 +124,7 @@ export async function zip(entries: ZipEntry[]): Promise<Uint8Array> {
     record.setUint32(0, SIGNATURE.central, true);
     record.setUint16(4, 20, true); // version made by
     record.setUint16(6, 20, true); // version needed
+    record.setUint16(8, flag, true); // general purpose (bit 11 = UTF-8 name)
     record.setUint16(10, method, true);
     record.setUint32(16, crc, true);
     record.setUint32(20, body.length, true);
