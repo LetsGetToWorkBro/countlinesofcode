@@ -118,21 +118,25 @@
     live.forEach(function (q) { if (!best || q.toAmount > best.toAmount) best = q; });
     chosen = best ? best.provider : null;
 
-    var html = '';
+    // The board: quotes as the amber dealing table the face was drawn for,
+    // one desk per row, the amount right-aligned where a terminal puts it.
+    // The radio rides in the first cell, so picking a desk is clicking its row.
+    var rows = '';
     quotes.forEach(function (q) {
       var label = PROVIDER_LABELS[q.provider] || q.provider;
       if (q.ok) {
-        html += '<p><label><input type="radio" name="quote" value="' + esc(q.provider) + '"' +
-          (q.provider === chosen ? ' checked' : '') + '> ' +
-          '<strong>' + esc(label) + '</strong>: about ' + esc(trim(q.toAmount)) + ' ' + esc(coinOf(toId()).ticker) +
+        rows += '<tr><td><label><input type="radio" name="quote" value="' + esc(q.provider) + '"' +
+          (q.provider === chosen ? ' checked' : '') + '> ' + esc(label) +
           (q === best && live.length > 1 ? ' <span class="note">(best)</span>' : '') +
-          '</label></p>';
+          '</label></td><td class="n">' + esc(trim(q.toAmount)) + ' ' + esc(coinOf(toId()).ticker) +
+          '</td></tr>';
       } else {
         var why = q.reason || 'no quote';
         if (q.minAmount) why += ' (minimum ' + trim(q.minAmount) + ' ' + coinOf(fromId()).ticker + ')';
-        html += '<p class="note">' + esc(label) + ': ' + esc(why) + '</p>';
+        rows += '<tr><td>' + esc(label) + '</td><td class="n">' + esc(why) + '</td></tr>';
       }
     });
+    var html = '<table><tr><th scope="col">Desk</th><th scope="col">You receive</th></tr>' + rows + '</table>';
     if (!live.length) {
       html += '<p class="note">No provider quoted this. Check the amount against the minimums above and try again.</p>';
     }

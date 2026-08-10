@@ -1112,7 +1112,9 @@ fieldset.tool-group table.tool-dir { margin: 0; }
   line-height: 1.5;
   cursor: pointer;
 }
-.shutdown .shutdown-note { font-size: 13px; color: #806000; margin-top: 28px; }
+/* The line that tells you how to leave the joke screen has to be readable
+   on it: #c08000 on black is about 5:1, the old #806000 was 3.6:1. */
+.shutdown .shutdown-note { font-size: 13px; color: #c08000; margin-top: 28px; }
 
 /* With desk.js running the tools boot minimised too: an empty patch of desk
    with the app waiting on the taskbar. Flex pins the taskbar to the bottom

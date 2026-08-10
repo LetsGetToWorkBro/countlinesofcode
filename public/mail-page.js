@@ -511,5 +511,13 @@
     if (panel && !panel.classList.contains('hidden')) activate();
   } else {
     beginInbox();   // folder-rail page: the inbox is the default view
+    // The rail says which view is up. There is no reason to keep asking the
+    // server for mail while somebody is reading headers in the checker; the
+    // addresses are kept, and the poll picks back up the moment they return.
+    document.addEventListener('olview', function (e) {
+      if (!e.detail) return;
+      if (e.detail.view === 'inbox') activate();
+      else stopPolling();
+    });
   }
 })();

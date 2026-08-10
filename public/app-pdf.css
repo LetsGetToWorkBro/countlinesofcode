@@ -452,7 +452,9 @@
   gap: 6px;
   flex: 1 1 auto;
   min-height: 0;
-  background: #808080;
+  /* Dark enough that the white call-to-action and its #e8e8e8 helper both
+     clear AA (7:1 and 5.7:1); on the old #808080 they were 3.9:1 and 3.2:1. */
+  background: #595959;
   color: #ffffff;
   text-align: center;
   cursor: pointer;
@@ -460,7 +462,7 @@
 [data-app="pdf"] .reader-open strong { font-size: 13px; }
 [data-app="pdf"] .reader-open span { color: #e8e8e8; }
 [data-app="pdf"] .reader-open.is-over {
-  background: #6d6d6d;
+  background: #4a4a4a;
   outline: 2px dashed #ffffff;
   outline-offset: -10px;
 }

@@ -43,6 +43,10 @@
      * account you are looking at, and a checker has no account. */
     var addr = document.querySelector('.ol-addr');
     if (addr) addr.classList.toggle('hidden', name !== 'inbox');
+    /* Say which view is up, so the inbox can stop polling the server while
+     * somebody is reading headers in the checker and pick it back up when
+     * they return. */
+    document.dispatchEvent(new CustomEvent('olview', { detail: { view: name } }));
   }
 
   entries.forEach(function (el) {

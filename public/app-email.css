@@ -151,7 +151,8 @@
 /* The four that are drawn because a mail client has them and that hold
    nothing. Greyed rather than hidden: their absence is what would look
    wrong, and their being live is what would be a lie. */
-[data-app="email"] .ol-folders li.is-inert { color: #8a8a8a; cursor: default; }
+/* #767676 is the lightest grey that clears AA on white; still clearly muted. */
+[data-app="email"] .ol-folders li.is-inert { color: #767676; cursor: default; }
 [data-app="email"] .ol-folders li.is-inert .ol-ico { opacity: 0.5; }
 [data-app="email"] #ol-count { font-weight: bold; }
 

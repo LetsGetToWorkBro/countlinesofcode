@@ -219,6 +219,16 @@
   color: #d0d0d0;
 }
 [data-app="code"] button:not(.notice-x):hover:not(:disabled) { background: #2c2c2c; }
+/* The site-wide focus ring is 2px solid black, which on this face's black
+   body marks the focused control with nothing at all. Phosphor green, like
+   everything else the terminal draws attention with. */
+[data-app="code"] button:focus-visible,
+[data-app="code"] select:focus-visible,
+[data-app="code"] input:focus-visible,
+[data-app="code"] a:focus-visible {
+  outline: 2px solid #00d000;
+  outline-offset: 1px;
+}
 [data-app="code"] .status { color: #00d000; }
 [data-app="code"] .error { color: #ffb000; }
 [data-app="code"] a { color: #00d0d0; }

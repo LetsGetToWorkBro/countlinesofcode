@@ -42,7 +42,8 @@
 [data-app="video"] .app-body h3 {
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
   font-size: 12px;
-  color: #3a8fd0;
+  /* #5aa6e0 is 5.2:1 on the #2b2b2b body; the darker #3a8fd0 was 4.06:1. */
+  color: #5aa6e0;
   margin: 12px 0 6px 0;
 }
 [data-app="video"] .app-body p,
@@ -78,7 +79,8 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #3a8fd0;
+  /* #1a5a8a keeps white ink at 5:1; the lighter #3a8fd0 was 3.49:1. */
+  background: #1a5a8a;
   color: #ffffff;
   font-weight: bold;
   font-style: italic;

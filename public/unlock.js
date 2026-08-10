@@ -39,6 +39,32 @@
     liveUrls = [];
     outputEl.innerHTML = '';
     resultEl.textContent = '';
+    $('perms').innerHTML = '';
+  }
+
+  /* The Acrobat "Document Security" grid: what the file allowed before, and
+   * that the rebuilt copy allows everything. pdf.js reports the granted
+   * permission flags; a flag that is absent is a restriction this removes. */
+  var PERMISSIONS = [
+    ['Printing', 4],
+    ['Copying text', 16],
+    ['Editing', 8],
+    ['Commenting', 32],
+  ];
+  function permissionsTable(flags) {
+    if (!flags) {
+      return '<p class="note">This file had no owner restrictions; ' +
+        'the copy below is the same document, rebuilt without its security dictionary.</p>';
+    }
+    var rows = PERMISSIONS.map(function (p) {
+      var allowed = flags.indexOf(p[1]) >= 0;
+      return '<tr><th scope="row">' + p[0] + '</th>' +
+        '<td class="' + (allowed ? 'is-allowed' : 'is-denied') + '">' + (allowed ? 'Allowed' : 'Not allowed') + '</td>' +
+        '<td class="is-allowed">Allowed</td></tr>';
+    }).join('');
+    return '<table>' +
+      '<tr><th scope="row"></th><td><strong>Before</strong></td><td><strong>Unlocked copy</strong></td></tr>' +
+      rows + '</table>';
   }
 
   /* Open with pdf.js, asking for a password only if the file truly needs one to
@@ -83,7 +109,9 @@
   function rebuild(doc, name) {
     var total = doc.numPages;
     var pages = [];
-    var chain = Promise.resolve();
+    var flags = null;
+    var chain = doc.getPermissions()
+      .then(function (got) { flags = got; }, function () { flags = null; });
     for (var i = 0; i < total; i++) {
       (function (index) {
         chain = chain.then(function () {
@@ -105,6 +133,7 @@
       var outName = (name || 'document').replace(/\.[^.]+$/, '') + '-unlocked.pdf';
       resultEl.innerHTML = '<strong>Unlocked.</strong> ' + total + ' page' + (total === 1 ? '' : 's') +
         ', ' + bytesLabel(blob.size) + '. No restrictions; Latin text stays selectable.';
+      $('perms').innerHTML = permissionsTable(flags);
       outputEl.innerHTML = '<ul class="plain"><li><a href="' + url + '" download="' + esc(outName) + '">' +
         esc(outName) + '</a></li></ul>';
     });
