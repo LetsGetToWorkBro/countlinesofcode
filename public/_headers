@@ -10,7 +10,7 @@
   Cross-Origin-Resource-Policy: same-origin
   Permissions-Policy: accelerometer=(), autoplay=(), browsing-topics=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), payment=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), usb=(), xr-spatial-tracking=()
   Content-Security-Policy: default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; media-src blob:; worker-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'
-  # Onion-Location: set by `npm run onion:set <address>.onion`
+  Onion-Location: http://notrackv3x6rwybom7ziqdnn66njkjc7zh5zoimy4meq26gx3spdyxid.onion/
 
 # The one page with a recorder gets the one permission it needs: microphone,
 # and only for this origin. Everything else in the policy stays denied, and
