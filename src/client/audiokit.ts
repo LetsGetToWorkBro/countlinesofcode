@@ -140,6 +140,47 @@ export function applyFades(
   }
 }
 
+/**
+ * Remove the centre: the karaoke trick, done honestly.
+ *
+ * A studio mix pans the lead vocal dead centre, which means the identical
+ * signal sits in both channels. Subtracting one channel from the other
+ * cancels everything the two share, so the vocal drops out. It is arithmetic,
+ * not magic, and its limits follow from the arithmetic: a mono file has no
+ * centre to remove, anything else mixed to the centre (bass, kick, snare)
+ * cancels with the vocal, and a vocal with a wide stereo reverb leaves its
+ * reverb behind. That is every "AI vocal remover" from before the AI, and on
+ * a typical mix it is genuinely most of the way there.
+ *
+ * `keepBassHz` mixes the low end of the mono sum back in, because losing the
+ * kick and bass is the cancellation's most audible casualty: a one-pole
+ * low-pass keeps what sits below the cutoff and lets the vocal's range stay
+ * cancelled. The result comes back as two identical channels, so it plays in
+ * both ears.
+ */
+export function removeCentre(
+  channels: Float32Array[],
+  sampleRate: number,
+  keepBassHz = 0,
+): Float32Array[] {
+  if (channels.length < 2) return channels;
+  const left = channels[0]!;
+  const right = channels[1]!;
+  const n = Math.min(left.length, right.length);
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i++) out[i] = (left[i]! - right[i]!) / 2;
+  if (keepBassHz > 0 && sampleRate > 0) {
+    const alpha = 1 - Math.exp((-2 * Math.PI * keepBassHz) / sampleRate);
+    let low = 0;
+    for (let i = 0; i < n; i++) {
+      const mono = (left[i]! + right[i]!) / 2;
+      low += alpha * (mono - low);
+      out[i]! += low;
+    }
+  }
+  return [out, new Float32Array(out)];
+}
+
 /** Several renders end to end, for the playlist's join. */
 export function concatSegments(segments: Float32Array[][]): Float32Array[] {
   if (!segments.length) return [];
@@ -353,6 +394,7 @@ globalScope.LOC1999_AUDIO = {
   normalize,
   applyGain,
   applyFades,
+  removeCentre,
   concatSegments,
   toInt16,
   encodeWav,

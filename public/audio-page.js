@@ -179,6 +179,14 @@
     $('gain-value').textContent = '+0 dB';
     $('normalize').checked = false;
     $('gain').disabled = false;
+    // The karaoke trick subtracts one channel from the other; a mono file has
+    // one channel and no centre, so the box is off and says why.
+    var stereo = t.buffer.numberOfChannels >= 2;
+    $('karaoke').disabled = !stereo;
+    if (!stereo) $('karaoke').checked = false;
+    $('karaoke-note').textContent = stereo
+      ? 'cancels what both channels share, which in most mixes is the lead vocal'
+      : 'needs a stereo file: this one is mono, so there is no centre to cancel';
     $('fade-in').value = '0';
     $('fade-out').value = '0';
     $('speed').value = '1';
@@ -390,6 +398,9 @@
       for (var ch = 0; ch < rendered.numberOfChannels; ch++) {
         channels.push(rendered.getChannelData(ch));
       }
+      if ($('karaoke').checked && channels.length >= 2) {
+        channels = kit.removeCentre(channels, rate, $('karaoke-bass').checked ? 120 : 0);
+      }
       if ($('normalize').checked) {
         kit.normalize(channels);
       } else {
@@ -562,6 +573,89 @@
     if (row) { event.preventDefault(); load(Number(row.dataset.index)); }
   });
 
+  // ----------------------------------------------------------- recording
+  /* The microphone, into the playlist. MediaRecorder writes whatever container
+   * this browser records natively, and the same browser then decodes it, so
+   * the pair can never disagree; from there a recording is a track like any
+   * other, with the whole trim-and-save path already built. */
+  var recorder = null;
+  var recStream = null;
+  var recChunks = [];
+  var recTimer = 0;
+  var recCount = 0;
+
+  function recStart() {
+    clearError();
+    if (recorder) return;   // already recording
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+      fail('This browser cannot record: it has no microphone API.');
+      return;
+    }
+    ready().then(function () {
+      return navigator.mediaDevices.getUserMedia({ audio: true });
+    }).then(function (stream) {
+      recStream = stream;
+      recChunks = [];
+      recorder = new MediaRecorder(stream);
+      recorder.ondataavailable = function (e) { if (e.data && e.data.size) recChunks.push(e.data); };
+      recorder.onstop = recFinish;
+      recorder.start();
+      var began = Date.now();
+      $('rec-start').classList.add('hidden');
+      $('rec-stop').classList.remove('hidden');
+      $('rec-row').classList.add('is-recording');
+      $('rec-note').textContent = 'Recording… 0:00';
+      recTimer = setInterval(function () {
+        $('rec-note').textContent = 'Recording… ' + kit.formatTime((Date.now() - began) / 1000);
+      }, 500);
+    }).catch(function (err) {
+      var name = err && err.name;
+      fail(name === 'NotAllowedError'
+        ? 'The microphone was refused. Nothing records without it; allow it in the address bar and try again.'
+        : name === 'NotFoundError'
+          ? 'No microphone was found on this machine.'
+          : (err && err.message) || String(err));
+    });
+  }
+
+  function recStop() {
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+  }
+
+  function recFinish() {
+    if (recTimer) { clearInterval(recTimer); recTimer = 0; }
+    $('rec-start').classList.remove('hidden');
+    $('rec-stop').classList.add('hidden');
+    $('rec-row').classList.remove('is-recording');
+    var mime = (recorder && recorder.mimeType) || '';
+    recorder = null;
+    if (recStream) {
+      recStream.getTracks().forEach(function (t) { t.stop(); });
+      recStream = null;
+    }
+    var blob = new Blob(recChunks, { type: mime || 'audio/webm' });
+    recChunks = [];
+    if (!blob.size) { $('rec-note').textContent = 'Nothing was recorded.'; return; }
+    var ext = /mp4/.test(mime) ? 'm4a' : /ogg/.test(mime) ? 'ogg' : 'webm';
+    var name = 'recording-' + (++recCount) + '.' + ext;
+    $('rec-note').textContent = 'Opening the recording…';
+    blob.arrayBuffer().then(function (buf) {
+      return context().decodeAudioData(buf);
+    }).then(function (buffer) {
+      tracks.push({ name: name, size: blob.size, buffer: buffer });
+      $('loaded').classList.remove('hidden');
+      renderPlaylist();
+      load(tracks.length - 1);
+      $('rec-note').textContent = 'In the playlist as ' + name + '. Trim it and save it like any other file.';
+    }).catch(function () {
+      $('rec-note').textContent = '';
+      fail('The recording could not be decoded, which should not happen; try recording again.');
+    });
+  }
+
+  $('rec-start').addEventListener('click', recStart);
+  $('rec-stop').addEventListener('click', recStop);
+
   // -------------------------------------------------------------- wiring
 
   var dropzone = $('drop');
@@ -622,8 +716,37 @@
     $('end-time').value = kit.formatTime(playing ? playhead() : playingFrom);
     syncFromFields();
   });
+  /* A rendered selection, played as-is. Used when the karaoke box is on,
+   * because playing the raw buffer would preview a vocal the save removes. */
+  function playScratch(channels, rate) {
+    stop();
+    var ctx = context();
+    if (ctx.state === 'suspended') ctx.resume();
+    var buf = ctx.createBuffer(channels.length, channels[0].length, rate);
+    for (var ch = 0; ch < channels.length; ch++) buf.copyToChannel(channels[ch], ch);
+    source = ctx.createBufferSource();
+    source.buffer = buf;
+    source.connect(gainNode);
+    source.start(0);
+    playingFrom = 0;
+    startedAt = ctx.currentTime;
+    playing = true;
+    source.onended = function () { if (playing) { playing = false; stopVis(); } };
+    startVis();
+  }
+
   $('play-clip').addEventListener('click', function () {
     if (!track()) return;
+    if ($('karaoke').checked) {
+      // Hearing the effect is the only way to judge it, so the preview runs
+      // the same render the save does.
+      setStatus('Rendering the preview…');
+      renderCurrent(track().buffer.sampleRate).then(function (rendered) {
+        setStatus('');
+        playScratch(rendered.channels, rendered.rate);
+      }, function (err) { fail((err && err.message) || String(err)); });
+      return;
+    }
     var range = selection();
     play(range.start, range.end);
   });
@@ -650,5 +773,7 @@
 
   window.addEventListener('pagehide', function () {
     liveUrls.forEach(function (u) { URL.revokeObjectURL(u); });
+    if (recorder && recorder.state !== 'inactive') { try { recorder.stop(); } catch (e) { /* gone */ } }
+    if (recStream) recStream.getTracks().forEach(function (t) { t.stop(); });
   });
 })();

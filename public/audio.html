@@ -88,6 +88,9 @@
 <span class="menu"><button type="button" class="menu-title">File</button>
   <span class="menu-drop">
     <button type="button" data-cmd="drop">Open...</button>
+    <button type="button" data-cmd="rec-start">Record from the microphone</button>
+    <button type="button" data-cmd="rec-stop">Stop recording</button>
+    <span class="menu-rule"></span>
     <button type="button" data-cmd="save">Save</button>
   </span></span>
 <span class="menu"><button type="button" class="menu-title">Playback</button>
@@ -126,6 +129,12 @@ it still works.
   <span>MP3, WAV, OGG, FLAC or M4A. Several at once go to the playlist. Nothing is uploaded</span>
   <input type="file" id="file-input" accept="audio/*,.mp3,.wav,.ogg,.oga,.opus,.flac,.m4a,.aac,.webm" multiple hidden>
 </div>
+
+<p class="wa-field" id="rec-row">
+  <button type="button" id="rec-start" class="small"><span class="wa-rec-dot" aria-hidden="true"></span> Record from the microphone</button>
+  <button type="button" id="rec-stop" class="small hidden">Stop recording</button>
+  <span id="rec-note" class="note">or record instead of opening a file: it lands in the playlist, ready to trim and save as MP3</span>
+</p>
 
 <p id="status" class="status" role="status" aria-live="polite"></p>
 <p id="error" class="error" role="alert"></p>
@@ -206,6 +215,11 @@ it still works.
   </select>
   <span class="note">changes the pitch with it, the way tape does</span>
 </p>
+<p class="wa-field">
+  <label class="inline"><input type="checkbox" id="karaoke"> Remove the vocals (karaoke)</label>
+  <label class="inline"><input type="checkbox" id="karaoke-bass" checked> keep the bass</label>
+  <span class="note" id="karaoke-note">cancels what both channels share, which in most mixes is the lead vocal</span>
+</p>
 
 <hr>
 <h3>3. Save it</h3>
@@ -255,8 +269,9 @@ this order, each one whole. Click a row to put it in the player.
 The face is drawn after the player everyone actually had in 1999, and the jobs
 are the ones people still search for every day: cut a song down to a ringtone,
 convert a recording to MP3, make a quiet file louder, fade the ends, stitch
-two recordings together. Each one is a couple of clicks, and the before and
-after never leave this tab.
+two recordings together, record straight from the microphone, pull the vocals
+out of a song. Each one is a couple of clicks, and the before and after never
+leave this tab.
 </p>
 </section>
 
@@ -277,6 +292,8 @@ after never leave this tab.
   <li><strong>The join takes each file whole,</strong> in playlist order, resampled to one rate, with a mono file lent to both sides of a stereo one. The cut-and-shape settings apply to the single file in the player, not to the join.</li>
   <li><strong>Whole files sit decoded in memory.</strong> Decoded audio is about 20&nbsp;MB a minute in stereo, so songs are nothing and a three-hour recording is real memory. If a tab dies on a huge file, that is where it went.</li>
   <li><strong>Tags do not survive.</strong> A decoded buffer has no idea what album it came from, so the output carries no ID3 tags. What you keep is the sound.</li>
+  <li><strong>The recorder uses your browser's own encoder.</strong> Record asks for the microphone, and only then: the permission prompt is the browser's, the sound goes into this tab and nowhere else, and stopping drops the recording into the playlist decoded, ready to trim and save as MP3 or WAV like anything else. Nothing records without the red dot showing.</li>
+  <li><strong>The vocal remover is centre cancellation, stated plainly.</strong> Most mixes pan the lead vocal identically into both channels; subtracting one channel from the other cancels whatever the two share. That is the whole trick: it needs a stereo file, it takes bass and kick with the vocal unless "keep the bass" mixes the low end back, and a vocal with a wide stereo reverb leaves its reverb behind. On a typical mix it works surprisingly well; on some it barely works at all, and no tool that runs on arithmetic can promise otherwise.</li>
   <li><strong>The spectrum is decoration with a pedigree.</strong> It is a real analyser on the playing audio, drawn the way the original drew it, and it does nothing to the file. With animations reduced in your system settings it stays dark.</li>
 </ul>
 </section>
