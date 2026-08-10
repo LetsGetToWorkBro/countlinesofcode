@@ -20,7 +20,11 @@
   var rail = document.getElementById('ol-rail');
   if (!rail) return;
 
-  var entries = [].slice.call(rail.querySelectorAll('[data-view]'));
+  // The folder rail and the toolbar both offer the same two destinations now:
+  // the rail because a mail client has a folder tree, the toolbar because the
+  // two things that actually work deserve a button where the eye lands first.
+  // Both are just [data-view] triggers, so one handler drives them together.
+  var entries = [].slice.call(document.querySelectorAll('[data-view]'));
   var panels = [].slice.call(document.querySelectorAll('[data-view-panel]'));
   if (!entries.length || !panels.length) return;
 

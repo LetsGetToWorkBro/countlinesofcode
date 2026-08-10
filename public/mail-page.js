@@ -5,17 +5,27 @@
  * and returns each message reduced to plain text plus the email checker's
  * verdict on it. Nothing here renders a message as live HTML: bodies are shown
  * as escaped text, so opening one cannot load a tracker or run a script.
+ *
+ * Addresses work like a wallet's: you can hold several at once. "New address"
+ * adds one and keeps the old ones, every held address reads into the one inbox,
+ * and each message is tagged with which address it arrived at. The server is
+ * stateless about this: every address is independent, so holding many is just
+ * the client polling each and merging, with no back end to change.
  */
 (function () {
   'use strict';
 
   var $ = function (id) { return document.getElementById(id); };
 
-  var address = null;
+  var MAX_ADDRESSES = 8;
+
+  var addresses = [];     // every address this tab holds, oldest first
+  var active = null;      // the one shown at the top and copied by default
   var pollTimer = null;
-  var expandedIds = {}; // id -> true while a message is open
-  var readIds = {};     // id -> true once a message has ever been opened
-  var msgCache = {};    // id -> the fetched message, so re-renders are free
+  var expandedIds = {};   // id -> true while a message is open
+  var readIds = {};       // id -> true once a message has ever been opened
+  var msgCache = {};      // id -> the fetched message, so re-renders are free
+  var msgInbox = {};      // id -> which held address received it
   var firstLoad = true;
 
   function esc(v) {
@@ -34,51 +44,90 @@
 
   function fail(m) { $('mail-error').textContent = m; }
   function clearError() { $('mail-error').textContent = ''; }
+  function setNote(m) { var n = $('address-note'); if (n) n.textContent = m || ''; }
 
   // ------------------------------------------------------------- addresses
 
-  // The address survives a refresh: a visitor pastes it into a signup, and an
+  // The addresses survive a refresh: a visitor pastes one into a signup, and an
   // accidental reload must not strand the verification code at an address they
-  // can no longer read. sessionStorage has exactly the right lifetime — it
-  // rides out refreshes and navigation within the tab, and dies when the tab
-  // closes, which is the ephemerality the page promises. Only "New address",
-  // "burn" or closing the tab hands out a different one.
-  var STORE_KEY = 'loc1999-mail-address';
-  function remember(value) { try { sessionStorage.setItem(STORE_KEY, value); } catch (e) { /* private browsing */ } }
-  function recall() { try { return sessionStorage.getItem(STORE_KEY) || null; } catch (e) { return null; } }
+  // can no longer read. sessionStorage has exactly the right lifetime: it rides
+  // out refreshes and navigation within the tab, and dies when the tab closes,
+  // which is the ephemerality the page promises.
+  var STORE_KEY = 'loc1999-mail-addresses';
+  var LEGACY_KEY = 'loc1999-mail-address';
 
-  function newAddress() {
+  function persist() {
+    try { sessionStorage.setItem(STORE_KEY, JSON.stringify({ addresses: addresses, active: active })); }
+    catch (e) { /* private browsing */ }
+  }
+  function recall() {
+    try {
+      var raw = sessionStorage.getItem(STORE_KEY);
+      if (raw) {
+        var o = JSON.parse(raw);
+        if (o && o.addresses && o.addresses.length) {
+          var list = o.addresses.filter(function (a) { return typeof a === 'string' && a.indexOf('@') > 0; });
+          if (list.length) return { addresses: list.slice(0, MAX_ADDRESSES), active: o.active };
+        }
+      }
+      // One address kept under the old single-value key: carry it forward.
+      var legacy = sessionStorage.getItem(LEGACY_KEY);
+      if (legacy && legacy.indexOf('@') > 0) return { addresses: [legacy], active: legacy };
+    } catch (e) { /* private browsing or bad JSON */ }
+    return null;
+  }
+
+  /** Short label for an address: the random part before the @, which is what
+   *  tells two held addresses apart in a tagged message row. */
+  function alias(addr) { return String(addr || '').split('@')[0]; }
+
+  function newAddress(opts) {
+    var initial = opts && opts.initial;
     clearError();
-    stopPolling();
-    $('address').textContent = 'setting up...';
-    $('inbox').innerHTML = '';
-    expandedIds = {};
-    readIds = {};
-    msgCache = {};
-    firstLoad = true;
+    if (addresses.length >= MAX_ADDRESSES) {
+      setNote('You are holding the most this will (' + MAX_ADDRESSES + '). Delete one before adding another.');
+      return Promise.resolve();
+    }
+    if (initial) { $('address').textContent = 'setting up...'; }
     return api('new').then(function (data) {
-      address = data.address;
-      remember(address);
-      $('address').textContent = address;
+      addresses.push(data.address);
+      active = data.address;
+      persist();
+      renderAddresses();
       $('inbox-status').textContent = 'Waiting for mail...';
-      startPolling();
+      if (!initial) {
+        // A user asked for this one, so it is almost certainly what they are
+        // about to paste: copy it, and reassure them the others still work.
+        copyText(active);
+        var kept = addresses.length - 1;
+        setNote(kept
+          ? 'New address ready and copied. Your other ' + kept + ' still receive.'
+          : 'New address ready and copied.');
+      }
+      ensurePolling();
+      poll();
     }).catch(function (err) {
-      $('address').textContent = 'unavailable';
+      if (initial) $('address').textContent = 'unavailable';
       fail(readableSetupError(err));
     });
   }
 
-  /** Resume the tab's existing address if it has one, else mint. */
+  /** Resume the tab's held addresses if it has any, else mint the first. */
   function beginInbox() {
     var saved = recall();
-    if (saved && saved.indexOf('@') > 0) {
-      address = saved;
-      $('address').textContent = saved;
+    if (saved && saved.addresses.length) {
+      addresses = saved.addresses;
+      active = (saved.active && addresses.indexOf(saved.active) >= 0)
+        ? saved.active
+        : addresses[addresses.length - 1];
+      persist();
+      renderAddresses();
       $('inbox-status').textContent = 'Waiting for mail...';
-      startPolling();
+      ensurePolling();
+      poll();
       return;
     }
-    newAddress();
+    newAddress({ initial: true });
   }
 
   function readableSetupError(err) {
@@ -89,24 +138,76 @@
     return m;
   }
 
+  // ------------------------------------------------------- address display
+
+  function renderAddresses() {
+    $('address').textContent = active || 'open this tab to get one';
+
+    var list = $('ol-addr-list');
+    if (list) {
+      list.innerHTML = addresses.map(function (a) {
+        var current = a === active;
+        return '<li class="ol-addr-item' + (current ? ' is-active' : '') + '" data-addr="' + esc(a) + '">' +
+          '<span class="ol-addr-text" role="button" tabindex="0" aria-label="Use and copy ' + esc(a) + '">' + esc(a) + '</span>' +
+          '<button type="button" class="ol-clip ol-addr-copy" data-addr="' + esc(a) + '" aria-label="Copy ' + esc(a) + '" title="Copy">' +
+          '<svg width="15" height="15" viewBox="0 0 15 15" aria-hidden="true"><rect x="1" y="1" width="9" height="11" fill="#fff" stroke="#4a4a4a" stroke-width="1.1"/><rect x="4.5" y="3.5" width="9" height="11" fill="#fff" stroke="#4a4a4a" stroke-width="1.1"/></svg>' +
+          '</button></li>';
+      }).join('');
+    }
+
+    var burnAll = $('burn-all');
+    if (burnAll) burnAll.classList.toggle('hidden', addresses.length < 2);
+    var lead = document.querySelector('.ol-addr-lead');
+    if (lead) lead.classList.toggle('hidden', addresses.length < 2);
+  }
+
+  function setActive(addr) {
+    if (addresses.indexOf(addr) < 0) return;
+    active = addr;
+    persist();
+    renderAddresses();
+    copyText(addr);
+    selectAddress();
+    setNote('Copied. This is the address shown above now.');
+  }
+
   // ------------------------------------------------------------- polling
 
-  function startPolling() {
-    poll();
-    pollTimer = setInterval(poll, 4000);
+  function ensurePolling() {
+    if (!pollTimer) pollTimer = setInterval(poll, 4000);
   }
   function stopPolling() {
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   }
 
+  // Poll every held address at once and merge, so the inbox is the union of
+  // them all. An address that fails this round contributes nothing rather than
+  // wiping what the others returned; only if every one fails on the very first
+  // load is that surfaced, because that is the "not configured" case.
   function poll() {
-    if (!address) return;
-    api('inbox?address=' + encodeURIComponent(address)).then(function (data) {
-      renderInbox(data.messages || []);
-    }).catch(function (err) {
-      // A transient poll error should not wipe the inbox; just note it quietly.
-      if (firstLoad) fail(readableSetupError(err));
-      else $('inbox-status').textContent = 'Could not check just now; it will try again in a few seconds.';
+    if (!addresses.length) return;
+    var held = addresses.slice();
+    Promise.all(held.map(function (a) {
+      return api('inbox?address=' + encodeURIComponent(a))
+        .then(function (data) { return { addr: a, messages: data.messages || [] }; })
+        .catch(function (err) { return { addr: a, messages: null, err: err }; });
+    })).then(function (results) {
+      var merged = [];
+      var firstErr = null;
+      var failures = 0;
+      results.forEach(function (r) {
+        if (r.messages === null) { failures++; if (!firstErr) firstErr = r.err; return; }
+        r.messages.forEach(function (m) { m.inbox = r.addr; merged.push(m); });
+      });
+      if (failures === held.length) {
+        if (firstLoad) fail(readableSetupError(firstErr));
+        else $('inbox-status').textContent = 'Could not check just now; it will try again in a few seconds.';
+        return;
+      }
+      merged.sort(function (x, y) { return y.receivedAt - x.receivedAt; });
+      msgInbox = {};
+      merged.forEach(function (m) { msgInbox[m.id] = m.inbox; });
+      renderInbox(merged);
     });
   }
 
@@ -117,21 +218,25 @@
   function renderInbox(messages) {
     firstLoad = false;
     if (!messages.length) {
-      $('inbox-status').textContent = 'Waiting for mail. Anything sent to the address above shows up here within a few seconds.';
+      $('inbox-status').textContent = 'Waiting for mail. Anything sent to the address' +
+        (addresses.length > 1 ? 'es' : '') + ' above shows up here within a few seconds.';
       $('inbox').innerHTML = '';
       return;
     }
-    $('inbox-status').textContent = messages.length + (messages.length === 1 ? ' message' : ' messages') + '. Auto-refreshing.';
+    var many = addresses.length > 1;
+    $('inbox-status').textContent = messages.length + (messages.length === 1 ? ' message' : ' messages') +
+      (many ? ' across ' + addresses.length + ' addresses' : '') + '. Auto-refreshing.';
     $('inbox').innerHTML = messages.map(function (m) {
       var open = !!expandedIds[m.id];
       var unread = !readIds[m.id];
+      var toTag = many ? '<span class="mail-to" title="arrived at ' + esc(m.inbox) + '">to ' + esc(alias(m.inbox)) + '</span>' : '';
       return '<div class="mail-msg' + (open ? ' open' : '') + (unread ? ' unread' : '') + '" data-id="' + esc(m.id) + '">' +
         '<div class="mail-head" role="button" tabindex="0" aria-expanded="' + (open ? 'true' : 'false') + '">' +
-          '<span class="mail-toggle">' + (open ? '[\u2212]' : '[+]') + '</span>' +
+          '<span class="mail-toggle">' + (open ? '[−]' : '[+]') + '</span>' +
           '<span class="mail-from">' + esc(shortSender(m.sender)) + '</span>' +
           '<span class="mail-when">' + esc(ago(m.receivedAt)) + '</span>' +
           '<span class="mail-subj">' + esc(m.subject || '(no subject)') + '</span>' +
-          '<span class="mail-badges">' + verdictBadge(m.verdict, m.trackerCount) + '</span>' +
+          '<span class="mail-badges">' + toTag + verdictBadge(m.verdict, m.trackerCount) + '</span>' +
         '</div>' +
         '<div class="mail-open-area' + (open ? '' : ' hidden') + '"></div>' +
       '</div>';
@@ -148,8 +253,9 @@
     var slot = bodySlot(id);
     if (!slot) return;
     if (msgCache[id]) { slot.innerHTML = messageHtml(msgCache[id]); return; }
-    slot.innerHTML = '<p class="note">Opening\u2026</p>';
-    api('message?address=' + encodeURIComponent(address) + '&id=' + encodeURIComponent(id)).then(function (m) {
+    slot.innerHTML = '<p class="note">Opening…</p>';
+    var addr = msgInbox[id] || active;
+    api('message?address=' + encodeURIComponent(addr) + '&id=' + encodeURIComponent(id)).then(function (m) {
       msgCache[id] = m;
       var s = bodySlot(id);
       if (s) s.innerHTML = messageHtml(m);
@@ -169,7 +275,7 @@
     msg.classList.remove('unread');
     var head = msg.querySelector('.mail-head');
     head.setAttribute('aria-expanded', open ? 'true' : 'false');
-    msg.querySelector('.mail-toggle').textContent = open ? '[\u2212]' : '[+]';
+    msg.querySelector('.mail-toggle').textContent = open ? '[−]' : '[+]';
     msg.querySelector('.mail-open-area').classList.toggle('hidden', !open);
     if (open) fillBody(id);
   }
@@ -185,11 +291,11 @@
   }
 
   function shortVerdict(v) {
-    return String(v).length > 28 ? String(v).slice(0, 27) + '\u2026' : v;
+    return String(v).length > 28 ? String(v).slice(0, 27) + '…' : v;
   }
   function shortSender(s) {
     s = String(s || 'unknown');
-    return s.length > 40 ? s.slice(0, 39) + '\u2026' : s;
+    return s.length > 40 ? s.slice(0, 39) + '…' : s;
   }
 
   // ----------------------------------------------------- one open message
@@ -234,13 +340,12 @@
     return 'in about an hour';
   }
 
-  // ------------------------------------------------------------- wiring
+  // ------------------------------------------------------------- copying
 
   // Copy with a real fallback chain, because the async clipboard API is the
   // least reliable part of the modern web on a phone: try it, then the
   // textarea + execCommand trick, and only if both fail select the address so
-  // a long-press copy is one step. Feedback lands on the button itself, which
-  // is where the visitor is already looking.
+  // a long-press copy is one step.
   function fallbackCopy(text) {
     var area = document.createElement('textarea');
     area.value = text;
@@ -265,46 +370,111 @@
     } catch (e) { return false; }
   }
 
-  $('copy').addEventListener('click', function () {
-    if (!address) return;
-    var button = $('copy');
-    var done = function () {
-      button.textContent = 'Copied';
-      setTimeout(function () { button.textContent = 'Copy'; }, 1500);
-    };
-    var fallen = function () {
-      if (fallbackCopy(address)) return done();
-      $('address-note').textContent = selectAddress()
+  /** Copy a string, trying every path, and land feedback in the note line. */
+  function copyText(text, done) {
+    if (!text) return;
+    var ok = function () { if (done) done(); };
+    var fell = function () {
+      if (fallbackCopy(text)) return ok();
+      setNote(selectAddress()
         ? 'copying is blocked here; the address is selected, copy it by hand'
-        : 'copying is blocked here; select the address and copy it by hand';
+        : 'copying is blocked here; select the address and copy it by hand');
     };
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(address).then(done, fallen);
+      navigator.clipboard.writeText(text).then(ok, fell);
     } else {
-      fallen();
+      fell();
     }
+  }
+
+  // ------------------------------------------------------------- wiring
+
+  $('copy').addEventListener('click', function () {
+    if (!active) return;
+    var button = $('copy');
+    var label = button.querySelector('span') || button;
+    var was = label.textContent;
+    copyText(active, function () {
+      label.textContent = 'Copied';
+      setTimeout(function () { label.textContent = was; }, 1500);
+    });
   });
 
-  // Tapping the address selects it whole, so the long-press-copy path on a
-  // phone is one gesture instead of a fiddly drag across fourteen characters.
-  $('address').addEventListener('click', function () { if (address) selectAddress(); });
+  var addrCopy = $('address-copy');
+  if (addrCopy) addrCopy.addEventListener('click', function () { if (active) { copyText(active); selectAddress(); setNote('Copied.'); } });
 
-  $('new').addEventListener('click', newAddress);
+  // Tapping the headline address copies it and selects it, so the long-press
+  // path on a phone is one gesture and the tap did something on a desktop.
+  $('address').addEventListener('click', function () {
+    if (!active) return;
+    copyText(active);
+    selectAddress();
+    setNote('Copied.');
+  });
+  $('address').addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    if (active) { copyText(active); selectAddress(); setNote('Copied.'); }
+  });
+
+  // The address list: click a row (or its copy button) to make that address the
+  // active one and copy it.
+  var addrList = $('ol-addr-list');
+  if (addrList) {
+    addrList.addEventListener('click', function (event) {
+      var t = event.target;
+      var copyBtn = t.closest ? t.closest('.ol-addr-copy') : null;
+      if (copyBtn) { copyText(copyBtn.getAttribute('data-addr')); setNote('Copied.'); return; }
+      var item = t.closest ? t.closest('.ol-addr-item') : null;
+      if (item) setActive(item.getAttribute('data-addr'));
+    });
+    addrList.addEventListener('keydown', function (event) {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      var text = event.target.closest ? event.target.closest('.ol-addr-text') : null;
+      if (!text) return;
+      event.preventDefault();
+      var item = text.closest('.ol-addr-item');
+      if (item) setActive(item.getAttribute('data-addr'));
+    });
+  }
+
+  $('new').addEventListener('click', function () { newAddress(); });
 
   // The poll runs itself every few seconds, but a button that checks right now
   // is the difference between trusting the page and watching it.
   $('refresh').addEventListener('click', function () {
-    if (!address) return;
+    if (!addresses.length) return;
     clearError();
     $('inbox-status').textContent = 'Checking...';
     poll();
   });
 
   $('burn').addEventListener('click', function () {
-    if (!address) return;
-    var gone = address;
+    if (!active) return;
+    var gone = active;
     api('burn?address=' + encodeURIComponent(gone), { method: 'POST' }).catch(function () {});
-    newAddress();
+    addresses = addresses.filter(function (a) { return a !== gone; });
+    // Forget the state that belonged only to the burned address.
+    Object.keys(msgInbox).forEach(function (id) {
+      if (msgInbox[id] === gone) { delete msgCache[id]; delete expandedIds[id]; delete readIds[id]; }
+    });
+    if (!addresses.length) { active = null; $('inbox').innerHTML = ''; newAddress({ initial: true }); return; }
+    active = addresses[addresses.length - 1];
+    persist();
+    renderAddresses();
+    setNote('Deleted. ' + addresses.length + ' address' + (addresses.length === 1 ? '' : 'es') + ' left.');
+    poll();
+  });
+
+  var burnAll = $('burn-all');
+  if (burnAll) burnAll.addEventListener('click', function () {
+    if (addresses.length < 2) return;
+    addresses.forEach(function (a) { api('burn?address=' + encodeURIComponent(a), { method: 'POST' }).catch(function () {}); });
+    addresses = [];
+    active = null;
+    expandedIds = {}; readIds = {}; msgCache = {}; msgInbox = {};
+    $('inbox').innerHTML = '';
+    newAddress({ initial: true });
   });
 
   // One listener for the whole inbox: rows are re-rendered every poll, and a
@@ -324,24 +494,22 @@
 
   window.addEventListener('pagehide', stopPolling);
 
-  // On the merged /email.html this inbox lives in a tab beside the message
-  // checker. Most visitors come for the checker, so don't mint an address or
-  // poll the server until someone actually opens the inbox. tabs.js fires
-  // 'tab:shown'/'tab:hidden' as the panel appears and disappears.
+  // On the merged /email.html this inbox lives beside the message checker. Most
+  // visitors come for the checker, so if there is a tab driver do not mint an
+  // address or poll until the inbox is opened. With the folder-rail navigation
+  // (no data-tabs) the inbox is the default view, so it begins at load.
   var started = false;
   function activate() {
     if (!started) { started = true; beginInbox(); return; }
-    if (address && !pollTimer) startPolling();   // resume where we left off
+    if (addresses.length && !pollTimer) ensurePolling();   // resume where we left off
   }
   var tabs = document.querySelector('[data-tabs]');
   if (tabs) {
     tabs.addEventListener('tab:shown', function (e) { if (e.detail && e.detail.tab === 'inbox') activate(); });
     tabs.addEventListener('tab:hidden', function (e) { if (e.detail && e.detail.tab === 'inbox') stopPolling(); });
-    // Belt and suspenders: if the panel is already visible by the time this
-    // runs (script order changed), start it without waiting for the event.
     var panel = tabs.querySelector('[data-panel="inbox"]');
     if (panel && !panel.classList.contains('hidden')) activate();
   } else {
-    beginInbox();   // standalone page with no tabs: behave as before
+    beginInbox();   // folder-rail page: the inbox is the default view
   }
 })();
