@@ -92,7 +92,18 @@
   }
 
   function amountTyped() {
-    var n = parseFloat(String($('amount').value).replace(',', '.'));
+    // Money parsing has one rule: never guess small. "1,5" is a European
+    // decimal and becomes 1.5; "1,000" or "1,234.56" is grouped thousands,
+    // and parseFloat would silently read those as 1 and 1.234. Any string
+    // with more than one separator, or a comma alongside a dot, is refused
+    // so the person retypes it rather than swaps a thousandth of it.
+    var raw = String($('amount').value).trim();
+    var commas = (raw.match(/,/g) || []).length;
+    var dots = (raw.match(/\./g) || []).length;
+    if (commas + dots > 1) return null;
+    var cleaned = raw.replace(',', '.');
+    if (!/^\d*\.?\d*$/.test(cleaned)) return null;
+    var n = parseFloat(cleaned);
     return isFinite(n) && n > 0 ? n : null;
   }
 

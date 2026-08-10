@@ -200,6 +200,9 @@
     loadKit().then(function () {
       var opened = kit.openWatch($('btc-zpub-in').value);
       if (!opened.ok) { setupFail(opened.problem); return; }
+      // An xpub is ambiguous about its address type; the kit says so, and
+      // the warning has to be on screen before an empty balance misleads.
+      if (opened.caution) setupFail(opened.caution);
       openWallet(opened.wallet, null);
     }).catch(function (err) { setupFail(kit ? kit.prettyBtcError(err) : String(err.message || err)); });
   });
@@ -452,8 +455,18 @@
     var block = $('btc-paper');
     if (!button || !out || !block) return;
 
+    // The same gate the Monero generator has always had: the engine
+    // re-derives the test vector published in BIP84 in this browser, and the
+    // Generate button only exists while every line of it matches.
+    var check = kit.selfTest();
+    button.disabled = !check.ok;
+    if (!check.ok) {
+      $('btc-generate-note').textContent = check.problem + ' The generator is switched off.';
+    }
+
     button.addEventListener('click', function () {
       if (!kit) { $('btc-generate-note').textContent = 'The engine has not loaded yet.'; return; }
+      if (!kit.selfTest().ok) { $('btc-generate-note').textContent = 'The self-check has not passed, so nothing will be generated.'; return; }
       var typed = ($('extra') && $('extra').value.trim()) || '';
       var words, wallet, address;
       try {

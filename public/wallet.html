@@ -413,8 +413,11 @@ Secrets holds the seed words. Transactions are logged beside the wallet.</p>
 
   <div id="bmode-watch" class="hidden">
     <p class="note">
-      Paste a zpub (or xpub) extended public key to watch a wallet: balance and
-      history, no spending, no secrets on this machine at all.
+      Paste a zpub extended public key to watch a wallet: balance and
+      history, no spending, no secrets on this machine at all. An xpub works
+      only if it is a native-segwit (BIP84) account key; a legacy wallet's
+      xpub would show an empty balance here, because this derives bc1q
+      addresses.
     </p>
     <p><textarea id="btc-zpub-in" rows="3" spellcheck="false" placeholder="zpub6..."></textarea></p>
     <p><span id="btc-zpub-check" class="addr-check" role="status" aria-live="polite"></span></p>

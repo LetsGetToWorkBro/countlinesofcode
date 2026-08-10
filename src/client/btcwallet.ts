@@ -121,8 +121,48 @@ export function openFromMnemonic(words: string): BtcWallet {
   return { kind: 'full', account, zpub: account.publicExtendedKey };
 }
 
-/** Open watch-only from a zpub (BIP84) or xpub (same key, older clothes). */
-export function openWatch(text: string): { ok: boolean; wallet?: BtcWallet; problem?: string } {
+/**
+ * Re-derive the test vector published in BIP84 itself and compare every step.
+ *
+ * This is the same discipline the Monero generator has had from the start: a
+ * paper wallet is money on a sheet of paper, so the machinery that derives it
+ * proves itself against known answers in this browser before the Generate
+ * button is allowed to do anything. If any line here stops matching, the
+ * generator stays off, which is the only honest response to a wallet engine
+ * that cannot reproduce the spec.
+ */
+export function selfTest(): { ok: boolean; problem?: string } {
+  const VECTOR = {
+    words: 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+    zpub: 'zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs',
+    receive0: 'bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu',
+    receive1: 'bc1qnjg0jd8228aq7egyzacy8cys3knf9xvrerkf9g',
+    change0: 'bc1q8c6fshw2dlwun7ekn9qwf37cu2rn755upcp6el',
+  };
+  try {
+    const wallet = openFromMnemonic(VECTOR.words);
+    if (wallet.zpub !== VECTOR.zpub) {
+      return { ok: false, problem: 'The account key derived from the BIP84 test words does not match the published vector.' };
+    }
+    if (addressAt(wallet, 0, 0).address !== VECTOR.receive0 ||
+        addressAt(wallet, 0, 1).address !== VECTOR.receive1 ||
+        addressAt(wallet, 1, 0).address !== VECTOR.change0) {
+      return { ok: false, problem: 'An address derived from the BIP84 test vector does not match the published one.' };
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, problem: 'The self-check itself failed: ' + String((err as Error)?.message ?? err) };
+  }
+}
+
+/** Open watch-only from a zpub (BIP84) or xpub (same key, older clothes).
+ *
+ * A zpub can only be a native-segwit account key, so it is safe. An xpub is
+ * ambiguous: this tool always derives bc1q (BIP84) addresses from it, and a
+ * BIP44 legacy account xpub holds real pubkeys, so the derivation would
+ * produce valid-looking bech32 addresses that belong to no funded wallet.
+ * The caution says so before anyone watches the wrong addresses. */
+export function openWatch(text: string): { ok: boolean; wallet?: BtcWallet; problem?: string; caution?: string } {
   const key = String(text ?? '').trim();
   try {
     if (key.startsWith('zpub')) {
@@ -131,7 +171,14 @@ export function openWatch(text: string): { ok: boolean; wallet?: BtcWallet; prob
     }
     if (key.startsWith('xpub')) {
       const account = HDKey.fromExtendedKey(key);
-      return { ok: true, wallet: { kind: 'watch', account, zpub: key } };
+      return {
+        ok: true,
+        wallet: { kind: 'watch', account, zpub: key },
+        caution: 'An xpub only works here if it is a native-segwit (BIP84) account key. ' +
+          'This derives bc1q addresses from it; if your wallet uses 1... or 3... addresses, ' +
+          'the balance shown will be empty even though the wallet is funded. ' +
+          'Export the zpub instead if your wallet offers one.',
+      };
     }
   } catch {
     return { ok: false, problem: 'That extended key does not decode. Check it and paste it again.' };
@@ -401,8 +448,9 @@ export async function scanWallet(get: EsploraFetch, wallet: BtcWallet, options: 
 // ------------------------------------------------------------------ fees
 
 /** Esplora's /fee-estimates: { "1": satPerVb, "3": ..., "144": ... }.
- *  Pick the rate for the nearest documented target at or above ours, floor
- *  1 sat/vB, so a sparse map still answers. */
+ *  Pick the rate for the nearest documented target at or below ours, so the
+ *  requested confirmation speed is never under-paid; floor 1 sat/vB, so a
+ *  sparse map still answers. */
 export function pickFeeRate(estimates: unknown, targetBlocks: number): number {
   const map = (estimates ?? {}) as Record<string, number>;
   const targets = Object.keys(map).map(Number).filter((n) => Number.isFinite(n)).sort((a, b) => a - b);
@@ -609,6 +657,7 @@ globalScope.LOC1999_BTC = {
   checkMnemonic,
   openFromMnemonic,
   openWatch,
+  selfTest,
   addressAt,
   isBtcAddress,
   checkBtcAddress,

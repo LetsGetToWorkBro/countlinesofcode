@@ -467,3 +467,13 @@ describe('a paper wallet seed folds in whatever you typed', () => {
     expect(newMnemonic().split(' ')).toHaveLength(12);
   });
 });
+
+describe('the paper-wallet self-check', () => {
+  it('reproduces the test vector published in BIP84', async () => {
+    // The same numbers the spec prints: if the bundled bip39/bip32/btc-signer
+    // stack ever stops reproducing them, the Generate button stays off, and
+    // this test fails first.
+    const { selfTest } = await import('../src/client/btcwallet');
+    expect(selfTest()).toEqual({ ok: true });
+  });
+});
