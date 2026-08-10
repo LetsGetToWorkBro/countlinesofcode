@@ -108,6 +108,36 @@ describe('public/xmrlib.js', () => {
   });
 });
 
+describe('every committed bundle is a current build of its source', () => {
+  /* wrangler deploy ships public/ verbatim with no build step, so a committed
+   * bundle that has drifted from its .ts source is what actually reaches the
+   * browser. The named blocks above check five bundles and also assert extra
+   * properties (globals present, size budgets); this loop covers all fifteen
+   * for freshness alone. The gap it closes was real: public/proof.js shipped
+   * stale for a while — missing the /audio.html proof-panel entry that
+   * src/client/proof.ts already had — because nothing rebuilt it, and an audit
+   * caught it rather than a test. */
+  for (const spec of BUNDLES) {
+    it(`${spec.outfile} matches a fresh build of ${spec.entry}`, async () => {
+      const fresh = await freshBuild(spec.outfile);
+      const committed = readFileSync(spec.outfile, 'utf8');
+      expect(fresh.length).toBeGreaterThan(200);
+      expect(
+        committed,
+        `${spec.outfile} is stale — run \`npm run build:client\` and commit the result`,
+      ).toBe(fresh);
+    });
+  }
+
+  it('checks the whole build list, not a hand-picked subset', () => {
+    // The staleness that shipped got past a test that only named five bundles.
+    // This loop covers all fourteen in BUNDLES; xmrlib is the fifteenth and has
+    // its own eval-patched freshness check above. If the build list grows, the
+    // loop grows with it — this asserts it has not silently shrunk.
+    expect(BUNDLES.length).toBeGreaterThanOrEqual(14);
+  });
+});
+
 /**
  * The other way a bundle goes wrong.
  *
