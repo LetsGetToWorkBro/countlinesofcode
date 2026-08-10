@@ -51,11 +51,18 @@
     var isField = (tag === 'INPUT' && type !== 'checkbox' && type !== 'radio' &&
                    type !== 'button' && type !== 'submit' && type !== 'reset' && type !== 'file') ||
                   tag === 'SELECT' || tag === 'TEXTAREA';
+    var isPressable = tag === 'BUTTON' || tag === 'A' || tag === 'INPUT' ||
+                      control.getAttribute('role') === 'button';
     if (isField) {
       if (control.scrollIntoView) control.scrollIntoView({ block: 'nearest' });
       if (control.focus) control.focus();
-    } else {
+    } else if (isPressable) {
       control.click();
+    } else if (control.scrollIntoView) {
+      /* A panel rather than a control: "Convert to..." names the block of
+       * format options, not a button. Bring it into view so the item still
+       * goes somewhere; its own controls are inside it. */
+      control.scrollIntoView({ block: 'nearest' });
     }
   }
 
