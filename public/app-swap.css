@@ -243,6 +243,109 @@
 [data-app="swap"] .error { color: #ff8a5a; }
 [data-app="swap"] a { color: #ffce7a; }
 
+/* ---- THE TICKET ----------------------------------------------------
+   What you send and what you get back, as two halves of one trade with
+   the direction switch between them, rather than two pickers and an
+   amount box that happen to be near each other. */
+[data-app="swap"] .tick-ticket { max-width: 620px; margin: 0 0 10px 0; }
+[data-app="swap"] .tick-side {
+  border: 1px solid #3a2a10;
+  background: #0a0a0a;
+  padding: 8px 10px 9px 10px;
+}
+[data-app="swap"] .tick-side-head {
+  margin: 0 0 5px 0;
+  color: #ff9d1c;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-size: 10.5px;
+}
+[data-app="swap"] .tick-side-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+[data-app="swap"] .tick-side-main input[type="text"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 20px;
+  padding: 2px 6px;
+}
+[data-app="swap"] .tick-side-main select { flex: 0 0 auto; min-height: 30px; }
+/* The estimate sits where the amount sits on the other half, so the eye
+   reads one number against the other. */
+[data-app="swap"] .tick-est {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 20px;
+  color: #ff9d1c;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-app="swap"] .app-body .tick-side-foot { margin: 5px 0 0 0; font-size: 10.5px; }
+[data-app="swap"] .tick-dest-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 7px 0 0 0;
+}
+[data-app="swap"] .tick-dest-row input[type="text"] { flex: 1 1 auto; min-width: 0; }
+[data-app="swap"] .tick-paste { flex: 0 0 auto; min-height: 28px; }
+/* The direction switch, on the seam between the two halves. */
+[data-app="swap"] .tick-flip-row { margin: 0; text-align: center; }
+[data-app="swap"] .tick-flip-row #flip {
+  min-width: 34px;
+  min-height: 26px;
+  margin: -1px 0;
+  position: relative;
+  z-index: 1;
+  font-size: 14px;
+}
+
+/* ---- THE DEPOSIT SCREEN --------------------------------------------
+   The one screen where getting it wrong costs money, so the address is
+   drawn twice: as a code a phone can scan, and as text in groups the eye
+   can check. */
+[data-app="swap"] .tick-pay {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 0 0 10px 0;
+}
+[data-app="swap"] .tick-qr {
+  flex: 0 0 auto;
+  background: #ffffff;
+  padding: 6px;
+  border: 1px solid #3a2a10;
+  line-height: 0;
+}
+[data-app="swap"] .tick-qr svg { display: block; width: 168px; height: 168px; }
+[data-app="swap"] .tick-pay-side { flex: 1 1 260px; min-width: 0; }
+[data-app="swap"] .app-body .tick-pay-cap { margin: 0 0 5px 0; }
+/* Groups of four, every other one dimmed. Selectable as one run, because
+   the text nodes carry no separator: what you copy is the address. */
+[data-app="swap"] .tick-addr {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #ffcf7a;
+  word-break: break-all;
+  margin: 0 0 8px 0;
+  cursor: pointer;
+}
+[data-app="swap"] .tick-addr .tick-g { padding: 0 1px; }
+[data-app="swap"] .tick-addr .tick-g-alt { color: #b98a3e; }
+[data-app="swap"] .tick-pay-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; }
+[data-app="swap"] .app-body .tick-warn {
+  border-left: 3px solid #ff9d1c;
+  padding-left: 9px;
+  max-width: 620px;
+}
+
 /* ---- responsive ---------------------------------------------------- */
 @media (max-width: 700px) {
   /* Same weight as the rule above, or the phone keeps the desktop gutter and

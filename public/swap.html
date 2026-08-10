@@ -122,56 +122,63 @@
 Pick what you are sending and what you want back, take a quote, and send to the address it gives you. No account here, and none at the exchange.</p>
 
 
-<h3>What are you swapping?</h3>
-<p>
-  <label>From
-    <select id="from-coin">
-      <option value="btc" selected>Bitcoin</option>
-      <option value="usdttrc">USDT (Tron)</option>
-      <option value="usdteth">USDT (Ethereum)</option>
-      <option value="eth">Ethereum</option>
-      <option value="usdc">USDC (Ethereum)</option>
-      <option value="usdcsol">USDC (Solana)</option>
-      <option value="xmr">Monero</option>
-    </select>
-  </label>
-  <button type="button" id="flip" title="Swap the direction">&#8646;</button>
-  <label>To
-    <select id="to-coin">
-      <option value="xmr" selected>Monero</option>
-      <option value="btc">Bitcoin</option>
-      <option value="usdttrc">USDT (Tron)</option>
-      <option value="usdteth">USDT (Ethereum)</option>
-      <option value="eth">Ethereum</option>
-      <option value="usdc">USDC (Ethereum)</option>
-      <option value="usdcsol">USDC (Solana)</option>
-    </select>
-  </label>
-</p>
-<p class="note" id="pair-note">Every swap here has Monero on one side. Picking Monero on both is the one thing it will not do.</p>
-<p>
-  <label>Amount
-    <input id="amount" type="text" inputmode="decimal" size="12" placeholder="0.05" autocomplete="off">
-    <span class="note" id="amount-unit">BTC</span>
-  </label>
-  <button type="button" id="get-quotes">Get quotes</button>
-</p>
+<div class="tick-ticket">
+  <div class="tick-side">
+    <p class="tick-side-head">You send</p>
+    <p class="tick-side-main">
+      <input id="amount" type="text" inputmode="decimal" placeholder="0.05" autocomplete="off" aria-label="Amount to send">
+      <select id="from-coin" aria-label="Coin to send">
+        <option value="btc" selected>Bitcoin</option>
+        <option value="usdttrc">USDT (Tron)</option>
+        <option value="usdteth">USDT (Ethereum)</option>
+        <option value="eth">Ethereum</option>
+        <option value="usdc">USDC (Ethereum)</option>
+        <option value="usdcsol">USDC (Solana)</option>
+        <option value="xmr">Monero</option>
+      </select>
+    </p>
+    <p class="note tick-side-foot">in <span id="amount-unit">BTC</span>, from any wallet you control</p>
+    <p class="tick-dest-row">
+      <input id="refund" type="text" spellcheck="false" autocomplete="off" aria-label="Refund address" placeholder="an address of the coin you are sending">
+    </p>
+    <p class="note tick-side-foot">Refund address: optional, but wise. Where the deposit goes back to if the swap fails.</p>
+  </div>
 
-<h3 id="dest-heading">Where should the Monero go?</h3>
-<p>
-  <input id="xmr-address" type="text" spellcheck="false" autocomplete="off" aria-labelledby="dest-heading" aria-describedby="dest-note" placeholder="4... or 8..., a mainnet Monero address">
-</p>
+  <p class="tick-flip-row">
+    <button type="button" id="flip" title="Swap the direction" aria-label="Swap the direction">&#8646;</button>
+  </p>
+
+  <div class="tick-side">
+    <p class="tick-side-head">You receive</p>
+    <p class="tick-side-main">
+      <span id="recv-amount" class="tick-est">take a quote</span>
+      <select id="to-coin" aria-label="Coin to receive">
+        <option value="xmr" selected>Monero</option>
+        <option value="btc">Bitcoin</option>
+        <option value="usdttrc">USDT (Tron)</option>
+        <option value="usdteth">USDT (Ethereum)</option>
+        <option value="eth">Ethereum</option>
+        <option value="usdc">USDC (Ethereum)</option>
+        <option value="usdcsol">USDC (Solana)</option>
+      </select>
+    </p>
+    <p class="tick-dest-row">
+      <input id="xmr-address" type="text" spellcheck="false" autocomplete="off" aria-labelledby="dest-heading" aria-describedby="dest-note" placeholder="4... or 8..., a mainnet Monero address">
+      <button type="button" id="paste-dest" class="tick-paste" title="Paste from the clipboard">Paste</button>
+    </p>
+    <p class="note tick-side-foot" id="dest-heading">Where the <span id="dest-coin-name">Monero</span> goes</p>
+  </div>
+</div>
+
 <p class="note" id="dest-note">
-Paste an address from your own wallet. The <a href="/wallet.html">wallets on
-this site</a> can make you a Monero or a Bitcoin address that never leaves your
-browser, and the <a href="/wallet.html#addresses">address checker</a> will
-confirm what you pasted is really an address before anything moves.
+Every swap here has Monero on one side. Paste a destination from your own
+wallet: the <a href="/wallet.html">wallets on this site</a> can make you a
+Monero or a Bitcoin address that never leaves your browser, and the
+<a href="/wallet.html#addresses">address checker</a> will confirm what you
+pasted is really an address before anything moves.
 </p>
-<p>
-  <label>Refund address <span class="note">(optional, but wise: where the deposit goes back to if the swap fails)</span>
-    <input id="refund" type="text" spellcheck="false" autocomplete="off" placeholder="an address of the coin you are sending">
-  </label>
-</p>
+<p class="note hidden" id="pair-note">Every swap here has Monero on one side. Picking Monero on both is the one thing it will not do.</p>
+<p><button type="button" id="get-quotes">Get quotes</button></p>
 
 <p id="swap-error" class="error" role="alert"></p>
 <p id="swap-status" class="status" role="status" aria-live="polite"></p>
@@ -188,15 +195,27 @@ which it will refuse.
 </div>
 
 <div id="order-block" class="hidden">
-<h3>Your swap</h3>
-<p id="pay-line"></p>
-<p>
-  <code id="pay-address" class="xmr"></code>
+<h3 id="pay-line">Your swap</h3>
+
+<div class="tick-pay">
+  <div id="pay-qr" class="tick-qr" aria-hidden="true"></div>
+  <div class="tick-pay-side">
+    <p class="note tick-pay-cap">Send to this address, in one payment:</p>
+    <p id="pay-address" class="tick-addr"></p>
+    <p class="tick-pay-acts">
+      <button type="button" id="copy-pay">Copy address</button>
+      <button type="button" id="sent-it" class="small">I have sent it</button>
+      <span id="copy-note" class="note"></span>
+    </p>
+  </div>
+</div>
+
+<p class="note tick-warn">
+Send the amount above and nothing else: a different amount is a different swap,
+and the exchange prices what actually arrives. The deposit window closes if
+nothing comes, and an address from a closed order is dead.
 </p>
-<p>
-  <button type="button" id="copy-pay">Copy address</button>
-  <span id="copy-note" class="note"></span>
-</p>
+
 <p class="note" id="order-meta"></p>
 <p id="order-status" class="status" role="status" aria-live="polite"></p>
 <p>
