@@ -102,22 +102,63 @@ wrong bytes, and each has a test:
 
 ## Interoperating with other wallets
 
-Bitcoin has a standard for exactly this, **BC-UR** (`ur:crypto-psbt`), spoken
-by Sparrow, Electrum, Keystone and the rest. An airgapped signer that only
-talks to its own companion is worth much less than one a person can point at
-the desktop wallet they already use, so BC-UR is a target rather than an
-afterthought.
+Bitcoin has a standard for exactly this, **BC-UR**, spoken by Sparrow,
+Electrum, Keystone, Passport and the rest, and it is implemented here in
+`src/airgap/ur.ts`. A scanner can tell it apart from our own format at the
+first character, so both are readable at once and a person never has to say
+which one they are about to show it.
 
-It is an *encoder over this same core*, not a different design: the chunking,
-the ordering tolerance and the verify-before-handing-over all stay. What
-changes is the frame's clothes. The order of work is: this format first,
-because it is complete and testable and unblocks the app; BC-UR next, because
-interop is what makes it useful; and both readable at once, since a scanner
-can tell them apart from the first character.
+A single-frame message looks like
 
-Monero has no equivalent standard. Cake and Monerujo each animate their own
-multi-part format, so talking to them means implementing theirs specifically,
-and that is a separate piece of work with its own document.
+```
+ur:crypto-psbt/hdonjojkidjyzmadaekpaoaeaeaeaddslyjsemck...
+```
+
+and an animated one like
+
+```
+ur:crypto-psbt/1-3/lpadaxcsoscyjnbdzevdhdethdonjojkidjy...
+ur:crypto-psbt/2-3/lpaoaxcsoscyjnbdzevdhdetaoteurykahae...
+```
+
+Three pieces sit under it, and all three are transcriptions of somebody else's
+decisions rather than designs of ours:
+
+- **Bytewords** — bytes as a fixed list of 256 four-letter English words, no
+  two sharing both first and last letter, so "minimal" style spends two
+  characters a byte and stays inside QR's alphanumeric mode.
+- **CBOR**, in a deliberately small subset: unsigned integers, byte strings,
+  and one five-item array. Maps, tags, text, floats and indefinite lengths are
+  refused, because a signer that accepts a richer grammar than it needs is
+  offering a parser to whoever is holding the other screen.
+- **A fountain code.** After the first pass, each frame is the XOR of a random
+  handful of fragments, chosen by a PRNG both sides seed identically from the
+  frame number and the payload checksum. That is what lets a scan that dropped
+  frame 5 finish anyway, which matters because a UR animation never comes back
+  round to frame 5.
+
+That last one is why the tests are shaped the way they are. Nothing in a mixed
+frame says which fragments went into it: get one bit of the PRNG wrong and the
+frames still assemble, still pass every checksum, and contain different bytes
+than the sender meant. Round-tripping our own encoder through our own decoder
+would pass regardless. So the fixtures come from the reference implementation
+and the tests compare frame strings character for character.
+
+### The difference between the two formats
+
+**Our own format is not obsolete.** It carries a payload kind on the wire, so
+the vault can refuse a thing it does not understand rather than guess, and it
+is the one used between the two halves of Labyrinth. BC-UR is what gets spoken
+to everybody else.
+
+### Monero
+
+Monero has no standard of its own, but Cake's Cupcake animates wallet2
+payloads in BC-UR frames, which means the transport above is the whole
+transport. What is *not* pinned down here is the UR type name Cupcake uses for
+each payload, so the reader keeps whatever type it was given and hands it up
+rather than asserting a name we have not verified against a real device.
+Monerujo animates its own format and would need its own reader.
 
 ## What this protocol does not do
 
