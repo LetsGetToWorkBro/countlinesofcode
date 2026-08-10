@@ -2106,11 +2106,17 @@ body {
   box-sizing: border-box;
   width: 18px;
   height: 16px;
-  padding: 0;
+  /* The underscore is a low glyph, so the button centres it and lifts it a
+     couple of pixels off the bottom bevel, which is where Windows drew the
+     minimise bar. line-height 9px with no vertical centring parked it above
+     the top edge and the button read as blank. */
+  padding: 0 0 3px 0;
   font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
-  font-size: 12px;
-  line-height: 9px;
-  text-align: center;
+  font-size: 13px;
+  line-height: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
   align-self: center;
 }
 .win-min:active { border-style: inset; }
