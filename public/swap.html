@@ -194,8 +194,17 @@ which it will refuse.
 <p><button type="button" id="start-swap">Start the swap</button></p>
 </div>
 
+<div id="swaps-block" class="hidden">
+<h3>Swaps this session</h3>
+<div id="swap-list"></div>
+<p class="note">Pick one to see its deposit address and where it stands. This
+list lives in the tab: close it and the site forgets, which is why the order id
+is worth keeping somewhere of your own.</p>
+</div>
+
 <div id="order-block" class="hidden">
 <h3 id="pay-line">Your swap</h3>
+<p class="tick-stage-row"><span id="order-stage" class="tick-stage">Waiting</span></p>
 
 <div class="tick-pay">
   <div id="pay-qr" class="tick-qr" aria-hidden="true"></div>
