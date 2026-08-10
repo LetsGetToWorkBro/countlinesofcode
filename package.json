@@ -1,0 +1,15 @@
+{
+  "name": "labyrinth-vault",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An airgapped signing device for Bitcoin and Monero. Keys are made and signatures are given on a phone that never touches a network; QR codes are the only wire.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^4.1.0"
+  }
+}
