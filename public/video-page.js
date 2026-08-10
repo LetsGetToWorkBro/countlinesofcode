@@ -270,6 +270,7 @@
     planner.OUTPUT_FORMATS.forEach(function (format) {
       var fit = planner.fitFormat(format, encodable, { source: info });
       if (format.kind === 'video' && !info.video) return;   // no picture to write
+      if (format.kind === 'gif' && !info.video) return;     // a GIF of no picture is nothing
       if (format.kind === 'audio' && !info.audio) return;   // no sound to extract
       var option = document.createElement('option');
       option.value = format.id;

@@ -96,6 +96,26 @@
       if (event.key === 'Escape') { event.preventDefault(); dismiss(); }
       if (event.key === 'ArrowRight' && at < steps.length - 1) go(at + 1);
       if (event.key === 'ArrowLeft' && at > 0) go(at - 1);
+      /* aria-modal promises the reader that focus stays inside; the promise
+       * has to be kept for the keyboard too, or Tab walks out into a page
+       * the modal is covering. Wrap at both ends. */
+      if (event.key === 'Tab') {
+        var focusable = [].slice.call(sheet.querySelectorAll('button, a[href], [tabindex="0"]'))
+          .filter(function (el) { return !el.disabled && el.offsetParent !== null; });
+        if (!focusable.length) return;
+        var first = focusable[0];
+        var last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        } else if (!sheet.contains(document.activeElement)) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
     });
   }
 
@@ -109,7 +129,10 @@
     body.scrollTop = 0;
   }
 
+  var opener = null;   // where focus was when the dialog took it
+
   function open() {
+    opener = document.activeElement;
     dialog.classList.remove('hidden');
     go(0);
     next.focus();
@@ -118,6 +141,10 @@
   function dismiss() {
     dialog.classList.add('hidden');
     try { localStorage.setItem(KEY, '1'); } catch (e) { /* private mode */ }
+    // Hand focus back to the Help item that opened it, so closing the dialog
+    // does not drop a keyboard user at the top of the page.
+    if (opener && opener.focus && document.contains(opener)) opener.focus();
+    opener = null;
   }
 
   function seen() {

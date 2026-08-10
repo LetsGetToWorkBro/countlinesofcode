@@ -389,6 +389,11 @@
     clearError();
     resetOutput();
     reportEl.className = 'hidden';
+    // Let the pdf.js worker drop the previous document's decoded pages;
+    // without this every opened PDF stays resident until the tab closes.
+    if (source && source.pdfDoc && source.pdfDoc.destroy) {
+      source.pdfDoc.destroy().catch(function () {});
+    }
     source = null;
     loadEngines()
       .then(function () { return file.arrayBuffer(); })

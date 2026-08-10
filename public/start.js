@@ -992,15 +992,18 @@
       back.appendChild(box);
       document.body.appendChild(back);
 
-      function shut() { back.remove(); }
+      // The Escape listener comes off in shut(), whichever way the box is
+      // closed; tearing it down only from its own handler left one document
+      // listener behind per mouse-closed box.
+      function onKey(e) { if (e.key === 'Escape') shut(); }
+      function shut() {
+        document.removeEventListener('keydown', onKey);
+        back.remove();
+      }
       x.addEventListener('click', shut);
       close.addEventListener('click', shut);
       back.addEventListener('click', function (e) { if (e.target === back) shut(); });
-      document.addEventListener('keydown', function once(e) {
-        if (e.key !== 'Escape') return;
-        document.removeEventListener('keydown', once);
-        shut();
-      });
+      document.addEventListener('keydown', onKey);
       go.focus();
     }
 
