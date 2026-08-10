@@ -151,6 +151,7 @@ export const SITE_TOOLS: { href: string; label: string; id: string; group: ToolG
 
   { href: '/compare.html', label: 'compare', id: 'compare', group: 'utilities' },
   { href: '/qr.html', label: 'qr code', id: 'qr', group: 'utilities' },
+  { href: '/invoice.html', label: 'invoice', id: 'invoice', group: 'utilities' },
 
   { href: '/code.html', label: 'count code', id: 'count', group: 'code' },
   { href: '/golf', label: 'golf', id: 'golf', group: 'code' },

@@ -257,6 +257,8 @@ export const SOURCES: Record<string, string[]> = {
   '/audio.html': ['public/audio-page.js', 'src/client/audiokit.ts', 'public/vendor/lame/lame.min.js'],
   // The QR page: the in-house encoder and reader are both in one module.
   '/qr.html': ['public/qr-page.js', 'src/client/qrkit.ts'],
+  // The invoice page: the totals and the three PDF templates.
+  '/invoice.html': ['public/invoice-page.js', 'src/client/invoicekit.ts'],
   '/code.html': ['public/app.js', 'src/client/bigcount.ts', 'src/lib/counter.ts'],
 };
 

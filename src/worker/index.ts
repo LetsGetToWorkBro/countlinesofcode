@@ -920,6 +920,7 @@ async function sitemap(request: Request, env: Env): Promise<Response> {
     `<url><loc>${escapeXml(origin)}/audio.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
     `<url><loc>${escapeXml(origin)}/compare.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
     `<url><loc>${escapeXml(origin)}/qr.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
+    `<url><loc>${escapeXml(origin)}/invoice.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>`,
     `<url><loc>${escapeXml(origin)}/security.html</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`,
     `<url><loc>${escapeXml(origin)}/board</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`,
     `<url><loc>${escapeXml(origin)}/golf</loc><changefreq>daily</changefreq><priority>0.9</priority></url>`,

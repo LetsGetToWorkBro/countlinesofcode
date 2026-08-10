@@ -123,6 +123,11 @@ export const BUNDLES = [
     outfile: 'public/paykit.js',
     banner: '/* 1999.LOC payment-request helpers. Built from src/client/paykit.ts. Do not edit. Bundles @noble/hashes (MIT) for the address checksums. */',
   },
+  {
+    entry: 'src/client/invoicekit.ts',
+    outfile: 'public/invoicekit.js',
+    banner: '/* 1999.LOC invoice engine. Built from src/client/invoicekit.ts. Do not edit. Bundles pdf-lib (MIT). */',
+  },
 ];
 
 /**
