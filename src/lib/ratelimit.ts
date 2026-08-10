@@ -22,13 +22,17 @@ export async function checkRateLimit(
   kv: KVNamespace | undefined,
   ip: string,
   limit: number,
+  scope = '',
 ): Promise<RateLimitResult> {
   if (!kv || limit <= 0) {
     return { allowed: true, remaining: limit, limit, resetSeconds: 0 };
   }
   const now = Math.floor(Date.now() / 1000);
   const window = Math.floor(now / WINDOW_SECONDS);
-  const key = `rl:${window}:${ip}`;
+  // A scope keeps buckets apart: a wallet syncing through the node proxy has
+  // a much higher ceiling than counting, and burning one must not 429 the
+  // other for the same visitor.
+  const key = scope ? `rl:${scope}:${window}:${ip}` : `rl:${window}:${ip}`;
   const resetSeconds = (window + 1) * WINDOW_SECONDS - now;
 
   const current = Number((await kv.get(key, 'text')) ?? '0');
