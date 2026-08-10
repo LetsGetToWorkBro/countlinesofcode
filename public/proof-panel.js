@@ -351,7 +351,11 @@
       forget.addEventListener('click', function () {
         if (!confirm('Delete everything this site has stored in your browser? Saved signatures and PGP keys go too.')) return;
         try {
-          Object.keys(proof.KNOWN_STORAGE).forEach(function (key) { localStorage.removeItem(key); });
+          // Delete exactly what was listed, not the three documented keys:
+          // the shell also writes loc1999:seen/read/warned flags, and a button
+          // that says "delete all of it" has to leave the list empty. storage()
+          // reads them straight back out of localStorage.
+          storage().forEach(function (item) { localStorage.removeItem(item.key); });
         } catch (e) { /* nothing else to try */ }
         render();
       });

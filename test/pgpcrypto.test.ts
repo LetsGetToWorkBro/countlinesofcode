@@ -73,7 +73,7 @@ describe('the compatible profile', () => {
     expect(priv.isDecrypted()).toBe(false);
     expect(priv.keyPacket.s2k.type).toBe('iterated');
     // The page prints 16,777,216 rounds. That number is this byte, expanded.
-    expect(priv.keyPacket.s2k.getCount()).toBe(16_777_216);
+    expect(priv.keyPacket.s2k.getCount()).toBe(65_011_712);
     expect(priv.keyPacket.symmetric).toBe(openpgp.enums.symmetric.aes256);
   }, 30_000);
 

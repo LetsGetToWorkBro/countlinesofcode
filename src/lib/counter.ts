@@ -139,11 +139,20 @@ export class TooLargeError extends GitHubError {
   ) {
     const mb = (n: number) => `${(n / (1024 * 1024)).toFixed(1)} MiB`;
     const seconds = (bytes / BYTES_PER_CPU_MS / 1000).toFixed(1);
+    // The estimated case comes from GitHub's repository size — binaries and
+    // packed history included — used only when the file tree was truncated and
+    // the actual countable text could not be measured. Calling that figure
+    // "countable text" over-refused a small-source, large-asset repo. Only the
+    // exact case, summed from the file list, is genuinely countable text.
     super(
       'too_large',
-      `This repository has ${estimated ? 'about ' : ''}${mb(bytes)} of countable text, ` +
-        `above this deployment's ${mb(limit)} limit. Counting it would need roughly ` +
-        `${seconds}s of CPU, which would be terminated mid-count.`,
+      estimated
+        ? `This repository's git size is about ${mb(bytes)} (binaries and history included), ` +
+          `and GitHub truncated its file tree, so the countable text cannot be measured without ` +
+          `exceeding this deployment's ${mb(limit)} limit.`
+        : `This repository has ${mb(bytes)} of countable text, ` +
+          `above this deployment's ${mb(limit)} limit. Counting it would need roughly ` +
+          `${seconds}s of CPU, which would be terminated mid-count.`,
     );
   }
 }

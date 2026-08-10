@@ -430,10 +430,13 @@ describe('profiles', () => {
     expect(profileFor('modern').id).toBe('modern');
   });
 
-  it('leaves the compatible profile on the library defaults', () => {
-    // Pinning today's defaults into a config object would freeze them, so this
-    // profile deliberately says nothing.
-    expect(PROFILES.compatible.config).toEqual({});
+  it('pins the compatible profile to the format-maximum passphrase stretch', () => {
+    // The page tells users compatible keys use "the most the older format
+    // allows". OpenPGP.js otherwise defaults to count octet 224 (16,777,216
+    // rounds); 255 is the maximum the one-byte count encodes, 65,011,712
+    // rounds. test/pgpcrypto.test.ts generates a real key and reads getCount()
+    // back to prove the claim is true rather than trusting this object.
+    expect(PROFILES.compatible.config).toEqual({ s2kIterationCountByte: 255 });
   });
 
   it('asks for Argon2, AEAD and v6 in the modern one', () => {

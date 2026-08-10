@@ -123,6 +123,21 @@ describe('storage', () => {
     expect(storageVerdict(things)).toMatch(/worth reporting/i);
   });
 
+  it('recognises the shell\'s own per-program flags instead of accusing them', () => {
+    // loc1999:seen/read/warned are written by the first-run dialog, the
+    // dismiss-a-note code and the one-time warnings. Before prefix matching,
+    // the honest-arbiter panel red-flagged them as "worth reporting" the moment
+    // you dismissed the auto-opening first-run dialog — accusing the site's own
+    // UI state.
+    const things = describeStorage([
+      { key: 'loc1999:seen:audio', size: 4 },
+      { key: 'loc1999:read:zip:1a2b', size: 2 },
+      { key: 'loc1999:warned:send', size: 1 },
+    ]);
+    expect(things.every((t) => t.purpose), 'a shell flag went undocumented').toBe(true);
+    expect(storageVerdict(things)).not.toMatch(/report/i);
+  });
+
   it('says nothing is stored when nothing is', () => {
     expect(storageVerdict([])).toMatch(/stored no data/i);
   });

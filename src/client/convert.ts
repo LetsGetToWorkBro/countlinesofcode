@@ -170,10 +170,14 @@ export interface Conversion {
 /** Convert a PDF into the model, choosing the best available tier. */
 export function convertPdf(input: PdfInput, options: GeometryOptions = {}): Conversion {
   const survey = surveyPdf(input);
-  const verdict = grade(survey);
 
   let doc: Doc;
   let tier: 'tags' | 'geometry';
+  // What the verdict is graded against. It starts as the raw survey, but if a
+  // tagged file falls back to geometry the graded survey drops the tag, so the
+  // UI does not show the confident "a translation rather than a guess" banner
+  // over a reconstruction it actually guessed.
+  let graded = survey;
 
   if (survey.tagged) {
     const blocks = input.trees.flatMap((tree, index) => {
@@ -187,12 +191,14 @@ export function convertPdf(input: PdfInput, options: GeometryOptions = {}): Conv
     if (!docText(doc).trim()) {
       doc = fromPages(input.pages, options);
       tier = 'geometry';
+      graded = { ...survey, tagged: false };
     }
   } else {
     doc = fromPages(input.pages, options);
     tier = 'geometry';
   }
 
+  const verdict = grade(graded);
   if (input.title) doc.title = input.title;
   return { doc, verdict, survey, counts: describe(doc), tier };
 }

@@ -82,7 +82,7 @@ a repository is. A twelve-line project with no stars can top a board on the day
 it is written.
 </p>
 <p class="note">
-${num(counted)} repositories counted so far. Forks are excluded. Counting one on the
+${num(counted)} repositories counted so far. Counting one on the
 <a href="/code.html">counter page</a> adds it; calling the API does not.
 </p>
 <p>

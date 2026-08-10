@@ -117,8 +117,14 @@
       })
       .then(function (message) {
         // `passwords` is symmetric mode: no keys involved, the password itself
-        // is stretched into the key that protects the session key.
-        return pgp.encrypt({ message: message, passwords: [password], format: armored ? 'armored' : 'binary' });
+        // is stretched into the key that protects the session key. The S2K
+        // count octet is pinned to 255 (65,011,712 rounds), the format's
+        // maximum, which is what the page promises; OpenPGP.js would otherwise
+        // default to a quarter of that.
+        return pgp.encrypt({
+          message: message, passwords: [password], format: armored ? 'armored' : 'binary',
+          config: { s2kIterationCountByte: 255 },
+        });
       })
       .then(function (result) {
         var blob = armored

@@ -134,7 +134,7 @@ export function buildBoards(raw: BoardEntry[]): Board[] {
       'nineteen-ninety-nine',
       'Nearest 1999',
       'lines away',
-      'Whose code lands closest to the number in the name. Nobody has hit it exactly. Somebody could.',
+      'Whose code lands closest to the number in the name. Land on it exactly and you own the top of this board.',
       entries,
       () => true,
       distanceFrom1999,

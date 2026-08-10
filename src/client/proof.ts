@@ -118,11 +118,38 @@ export const KNOWN_STORAGE: Record<string, string> = {
     'PGP keys you made or imported. Private keys are here if you made one, protected by their passphrase if you set one.',
 };
 
+/**
+ * The shell also writes one flag per program under these prefixes, with the
+ * program's name appended: loc1999:seen:audio, loc1999:read:zip:<hash>,
+ * loc1999:warned:<key>. They hold no content, only "you have seen / dismissed
+ * this once". Matching by exact key missed them, so the panel meant to be the
+ * honest arbiter of storage was red-flagging the site's own UI-state flags as
+ * undocumented and "worth reporting" the moment you dismissed the first-run
+ * dialog. These are that documentation.
+ */
+export const KNOWN_STORAGE_PREFIXES: Record<string, string> = {
+  'loc1999:seen:':
+    "A flag that you have seen a program's first-run dialog, so it does not reopen every visit. One per program, no content.",
+  'loc1999:read:':
+    'A flag that you dismissed a specific note or warning, so it stays dismissed. No content, just that you closed it.',
+  'loc1999:warned:':
+    'A flag that a one-time warning has been shown, so it is not shown again. No content.',
+};
+
+/** What a stored key is for: an exact match first, then a known prefix. */
+export function purposeOf(key: string): string | null {
+  if (key in KNOWN_STORAGE) return KNOWN_STORAGE[key]!;
+  for (const prefix of Object.keys(KNOWN_STORAGE_PREFIXES)) {
+    if (key.startsWith(prefix)) return KNOWN_STORAGE_PREFIXES[prefix]!;
+  }
+  return null;
+}
+
 export function describeStorage(entries: { key: string; size: number }[]): StoredThing[] {
   return entries.map((entry) => ({
     key: entry.key,
     size: entry.size,
-    purpose: KNOWN_STORAGE[entry.key] ?? null,
+    purpose: purposeOf(entry.key),
   }));
 }
 
@@ -269,6 +296,8 @@ globalScope.LOC1999_PROOF = {
   sourcesFor,
   sourceLink,
   networkNote,
+  purposeOf,
   KNOWN_STORAGE,
+  KNOWN_STORAGE_PREFIXES,
   REPO,
 };

@@ -423,7 +423,7 @@ export function grade(survey: Survey): Verdict {
   findings.push({ label: 'This PDF is not tagged, so structure has to be inferred from the layout', good: false });
   findings.push({ label: 'Text, headings, paragraphs and lists are usually recovered well', good: true });
   if (survey.columns) findings.push({ label: 'More than one column detected: check the reading order', good: false });
-  if (survey.ruledTables) findings.push({ label: 'Ruled tables detected: check every table before you rely on it', good: false });
+  if (survey.ruledTables) findings.push({ label: 'Drawn lines detected, which may be ruled tables: check any table before you rely on it (a plain rule or a boxed logo can trigger this too)', good: false });
   else findings.push({ label: 'Tables without drawn borders may come out as plain paragraphs', good: false });
 
   return {

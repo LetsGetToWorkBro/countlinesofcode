@@ -150,11 +150,14 @@ people, on their own machines, and the strongest version is two people who have
 never spoken running it independently and getting the same hashes.
 </p>
 <p class="note">
-The five third-party libraries served here (pdf.js, OpenPGP.js, mediabunny,
-Tesseract and libheif) are pinned by hash in
+The third-party libraries served here whole (pdf.js, OpenPGP.js, mediabunny,
+Tesseract, libheif, libarchive, LAME, and the Monero wallet worker) are pinned
+by hash in
 <a href="https://github.com/letsgettoworkbro/countlinesofcode/blob/main/src/lib/vendor-hashes.ts"><code>src/lib/vendor-hashes.ts</code></a>,
-and the test suite fails if any of them changes. They are the only code here
-that nobody on this project wrote, which makes them the place worth watching.
+and the test suite fails if any of them changes. There is other third-party
+code too: the <code>@noble</code> and <code>@scure</code> cryptography is
+bundled into the wallet and PGP scripts. But these eight are the large ones
+served as their own files, which makes them the place worth watching.
 </p>
 
 <h2>Revoking</h2>

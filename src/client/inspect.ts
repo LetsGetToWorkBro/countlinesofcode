@@ -111,7 +111,12 @@ export function pdfFeaturesFromBytes(bytes: Uint8Array): PdfFeatures {
   const links = [...raw.matchAll(/\/URI\s*\(([^)]{1,120})\)/g)].map((m) => m[1]!);
   return {
     hasXmp: /<x:xmpmeta/.test(raw),
-    hasJavaScript: /\/JavaScript|\/JS[\s/[]|\/OpenAction/.test(raw),
+    // /OpenAction is left out on purpose: its overwhelmingly common form is a
+    // view/destination action carrying no script (open at page 3, zoom to
+    // fit), and flagging every one as "contains JavaScript" cried wolf on
+    // ordinary PDFs. Real script is /JavaScript or /JS, and inspect-page also
+    // asks pdf.js getJSActions() for the authoritative answer.
+    hasJavaScript: /\/JavaScript|\/JS[\s/[]/.test(raw),
     hasEmbeddedFiles: /\/EmbeddedFiles|\/Filespec/.test(raw),
     hasLayers: /\/OCProperties/.test(raw),
     externalLinks: [...new Set(links)],

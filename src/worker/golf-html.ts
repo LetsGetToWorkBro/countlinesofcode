@@ -46,7 +46,7 @@ function houseRules(): string {
 Ranked by lines of code, with comments and blank lines excluded, so nobody
 has to strip their comments to compete and nobody gains by it. Bytes break ties,
 which is also why putting a whole program on one line wins the line column and
-looks absurd in the byte column beside it. Minimum ${num(MIN_CODE_LINES)} lines,
+looks absurd in the byte column beside it. Minimum ${num(MIN_CODE_LINES)} lines of code,
 one entry per repository, counted at whatever commit was current when you
 submitted: push an improvement and submit again to replace it.
 </p>

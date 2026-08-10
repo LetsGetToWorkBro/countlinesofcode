@@ -72,12 +72,15 @@ export const PROFILES: Record<ProfileId, Profile> = {
     id: 'compatible',
     label: 'Compatible',
     algorithms: 'Ed25519 to sign, X25519 to encrypt, in the packet encoding that predates RFC 9580',
-    protection: 'AES-256, unlocked by putting your passphrase through 16,777,216 rounds of SHA-256',
+    protection: 'AES-256, unlocked by putting your passphrase through 65,011,712 rounds of SHA-256',
     message: 'AES-256 with a modification-detection code, so a tampered message fails to open',
     opens: 'Anything that speaks OpenPGP: GnuPG, Thunderbird, Kleopatra, GPG Suite, and this page.',
-    // Deliberately empty. The defaults are the long-established format, and
-    // pinning today's values here would freeze them into the file.
-    config: {},
+    // s2kIterationCountByte 255 is the count octet's maximum: RFC 4880's
+    // Iterated-and-Salted S2K encodes the round count in one byte, and 255
+    // means 31 << 21 = 65,011,712 rounds of SHA-256 — the most the older
+    // format allows. OpenPGP.js otherwise defaults to byte 224 (16,777,216),
+    // a quarter of that; the page claims the maximum, so we pin the maximum.
+    config: { s2kIterationCountByte: 255 },
   },
   modern: {
     id: 'modern',
