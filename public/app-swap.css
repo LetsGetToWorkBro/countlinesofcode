@@ -30,6 +30,35 @@
 }
 [data-app="swap"] .client-title { background: linear-gradient(90deg,#1a1200 0%,#3a2600 60%,#7a5410 100%); color: #ffffff; }
 
+/* ---- the toolbar: the terminal's function keys -------------------- */
+[data-app="swap"] .app-window > .tick-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 5px 7px;
+  background: #1a1710;
+  border-bottom: 1px solid #7a5410;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+}
+[data-app="swap"] .tick-tb {
+  min-height: 26px;
+  padding: 3px 12px;
+  border: 1px solid #7a5410;
+  border-radius: 3px;
+  background: #2a2214;
+  color: #ffcf7a;
+  cursor: pointer;
+}
+[data-app="swap"] .tick-tb:hover:not(:disabled) { background: #362b18; }
+[data-app="swap"] .tick-tb:active:not(:disabled) { background: #221b0f; }
+[data-app="swap"] .tick-tb:disabled { opacity: 0.4; cursor: default; }
+[data-app="swap"] .tick-tb-go { background: #ff9d1c; border-color: #a5650c; color: #201400; font-weight: bold; }
+[data-app="swap"] .tick-tb-go:hover:not(:disabled) { background: #ffb347; }
+[data-app="swap"] .tick-tb-sep { width: 0; height: 20px; border-left: 1px solid #4a3a1a; margin: 0 2px; }
+[data-app="swap"] .tick-tb-spacer { flex: 1 1 auto; }
+
 /* ---- the body ------------------------------------------------------ */
 [data-app="swap"] .app-body {
   background: #101010;
