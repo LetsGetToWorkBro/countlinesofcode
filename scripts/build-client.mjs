@@ -108,6 +108,11 @@ export const BUNDLES = [
     outfile: 'public/btcwallet.js',
     banner: '/* 1999.LOC Bitcoin wallet engine. Built from src/client/btcwallet.ts. Do not edit. Bundles @scure/bip39, @scure/bip32 and @scure/btc-signer (MIT). */',
   },
+  {
+    entry: 'src/client/diffkit.ts',
+    outfile: 'public/diffkit.js',
+    banner: '/* 1999.LOC text-compare engine (Myers diff). Built from src/client/diffkit.ts. Do not edit. */',
+  },
 ];
 
 /**

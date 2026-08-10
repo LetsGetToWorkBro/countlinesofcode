@@ -1,0 +1,191 @@
+/* 1999.LOC — the compare tool's face: WinMerge.
+ *
+ * WinMerge, the diff program everyone on Windows reached for, was three
+ * things: two file panes side by side with a hairline down the middle, a
+ * colour code you learned once and never forgot (a changed line tinted, the
+ * differing words inside it a stronger shade), and a grey line-number gutter
+ * down each side. That is what this draws.
+ *
+ * The palette is WinMerge's own: a soft yellow for a changed line, green for
+ * a line only on the right, and the deeper tints for the characters that
+ * actually differ. Scoped entirely under [data-app="compare"].
+ */
+
+/* ---- the menu bar, pinned to the window --------------------------- */
+[data-app="compare"] .app-window > .wm-menu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0;
+  padding: 2px 4px;
+  background: #d4d0c8;
+  border-bottom: 1px solid #808080;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  line-height: 1.3;
+  color: #000000;
+}
+[data-app="compare"] .app-window > .wm-menu .menu-title {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  min-height: 26px;
+}
+
+/* ---- the toolbar --------------------------------------------------- */
+[data-app="compare"] .app-window > .wm-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: #d4d0c8;
+  border-bottom: 1px solid #808080;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+}
+[data-app="compare"] .wm-bar button {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  padding: 2px 8px;
+  min-height: 24px;
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  background: #d4d0c8;
+  cursor: pointer;
+}
+[data-app="compare"] .wm-bar button:active:not(:disabled) { border-color: #808080 #ffffff #ffffff #808080; }
+[data-app="compare"] .wm-bar button:disabled { opacity: 0.5; cursor: default; }
+[data-app="compare"] .wm-bar .wm-sep {
+  width: 0; height: 22px; margin: 0 2px;
+  border-left: 1px solid #808080; border-right: 1px solid #ffffff;
+}
+[data-app="compare"] .wm-bar label { display: inline-flex; align-items: center; gap: 3px; }
+
+[data-app="compare"] .app-body {
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11px;
+  color: #000000;
+  padding: 8px;
+}
+[data-app="compare"] .app-body h3 { font-size: 12px; color: #0a246a; margin: 10px 0 5px 0; }
+[data-app="compare"] .app-body .note { color: #3a3a3a; }
+
+/* ---- the two source panes ----------------------------------------- */
+[data-app="compare"] .wm-inputs {
+  display: flex;
+  gap: 8px;
+}
+[data-app="compare"] .wm-input {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+[data-app="compare"] .wm-input-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  background: #0a246a;
+  color: #ffffff;
+  font-weight: bold;
+}
+[data-app="compare"] .wm-input-head button {
+  font-size: 10px;
+  padding: 0 5px;
+  min-height: 18px;
+  border: 1px solid;
+  border-color: #ffffff #808080 #808080 #ffffff;
+  background: #d4d0c8;
+  color: #000000;
+  cursor: pointer;
+}
+[data-app="compare"] .wm-input textarea {
+  width: 100%;
+  box-sizing: border-box;
+  height: 220px;
+  resize: vertical;
+  border: 2px inset #d4d0c8;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 4px 6px;
+  white-space: pre;
+  overflow: auto;
+}
+[data-app="compare"] .wm-input textarea.is-over { outline: 2px dashed #0a246a; outline-offset: -4px; }
+
+/* ---- the verdict line --------------------------------------------- */
+[data-app="compare"] #wm-verdict {
+  margin: 8px 0 0 0;
+  padding: 4px 8px;
+  background: #ece9d8;
+  border: 1px solid #808080;
+  font-weight: bold;
+}
+[data-app="compare"] #wm-verdict.is-same { background: #d8f0d8; border-color: #2c5f2c; }
+[data-app="compare"] #wm-verdict.is-diff { background: #fff4c8; border-color: #a6842c; }
+
+/* ---- the result: two panes with a gutter, WinMerge's colours ------ */
+[data-app="compare"] #wm-result {
+  margin-top: 8px;
+  border: 2px inset #d4d0c8;
+  background: #ffffff;
+  overflow: auto;
+  max-height: 60vh;
+}
+[data-app="compare"] .wm-diff {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 12px;
+  table-layout: fixed;
+}
+[data-app="compare"] .wm-diff col.wm-gutter { width: 44px; }
+[data-app="compare"] .wm-diff td {
+  padding: 0 6px;
+  vertical-align: top;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid #f0f0f0;
+}
+[data-app="compare"] .wm-diff td.wm-no {
+  width: 44px;
+  text-align: right;
+  color: #808080;
+  background: #ece9d8;
+  border-right: 1px solid #c0c0c0;
+  -webkit-user-select: none;
+  user-select: none;
+}
+[data-app="compare"] .wm-diff td.wm-mid {
+  width: 1px;
+  padding: 0;
+  background: #808080;
+}
+/* The colour code, learned once. A whole line that changed is tinted; the
+   characters that differ within it are a stronger shade of the same colour. */
+[data-app="compare"] .wm-diff tr.wm-change td.wm-text { background: #fff4c8; }
+[data-app="compare"] .wm-diff tr.wm-delete td.wm-text-left { background: #ffd9d9; }
+[data-app="compare"] .wm-diff tr.wm-insert td.wm-text-right { background: #d9f0d9; }
+[data-app="compare"] .wm-diff tr.wm-delete td.wm-text-right,
+[data-app="compare"] .wm-diff tr.wm-insert td.wm-text-left { background: #f4f4f4; }
+[data-app="compare"] .wm-diff .wm-span-change { background: #ffcf5a; }
+[data-app="compare"] .wm-diff tr.wm-delete .wm-span-change { background: #ffb0b0; }
+[data-app="compare"] .wm-diff tr.wm-insert .wm-span-change { background: #a8e0a8; }
+
+[data-app="compare"] .status { color: #0a5c34; }
+[data-app="compare"] .error { color: #a01010; }
+[data-app="compare"] .app-body a { color: #0a3fa0; }
+
+/* ---- responsive ---------------------------------------------------- */
+@media (max-width: 700px) {
+  [data-app="compare"] .app-window > .wm-menu span { padding: 2px 5px; }
+  /* The two source boxes stack on a phone, but the result stays side by side:
+     a diff read as one column over the other is not a diff. */
+  [data-app="compare"] .wm-inputs { flex-direction: column; }
+  [data-app="compare"] .wm-input textarea { height: 150px; }
+  [data-app="compare"] .wm-diff { font-size: 11px; }
+  [data-app="compare"] .wm-diff td { padding: 0 3px; }
+}
