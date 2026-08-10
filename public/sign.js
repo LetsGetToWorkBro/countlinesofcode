@@ -813,10 +813,26 @@
   function commitCaret() {
     if (!caret) return;
     var live = caret;
-    caret = null;                        // before the DOM work: blur re-enters
     var value = live.el.value.replace(/\s+$/, '');
+    if (!value) { caret = null; live.el.remove(); return; }
+
+    /* The editor's font is Helvetica, which is Latin-only (WinAnsi). A glyph it
+     * cannot draw used to abort the entire save and lose every edit; it is now
+     * skipped at save time, but that would still drop the text silently. So the
+     * caret is kept open and the problem named here, at the moment you commit,
+     * while the text is still in front of you to fix. */
+    var bad = window.LOC1999_SIGN.winAnsiUnsupported(value);
+    if (bad.length) {
+      var shown = bad.slice(0, 6).map(function (c) { return '"' + c + '"'; }).join(', ');
+      fail('The editor’s font can only draw the Latin alphabet, so it cannot place ' + shown +
+        (bad.length > 6 ? ' and others' : '') + '. Remove ' +
+        (bad.length > 1 ? 'those characters' : 'that character') + ', or type the text in Latin letters.');
+      live.el.focus();
+      return;   // leave the caret open so nothing typed is lost
+    }
+
+    caret = null;                        // before the DOM work: blur re-enters
     live.el.remove();
-    if (!value) return;
     var obj = {
       id: nextId++, kind: 'text', key: key(),
       x: live.at.x, y: live.at.y, size: live.size, value: value,

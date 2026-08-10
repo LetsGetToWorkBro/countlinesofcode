@@ -201,13 +201,18 @@
   border: 1px solid #202020;
 }
 [data-app="code"] .app-body td.n { text-align: right; color: #ffffff; }
-[data-app="code"] input[type="text"] {
+[data-app="code"] input[type="text"],
+[data-app="code"] select {
   background: #000000;
   color: #00d000;
   border: 1px solid #00a800;
   font-family: "Courier New", Courier, monospace;
   font-size: 13px;
 }
+/* Without this line the golf-challenge dropdown inherited the grouped
+   black-on-black rule above and was invisible (1:1) on every load — the
+   readable override named only input[type="text"]. #00d000 on #000000 is
+   about 9:1. */
 [data-app="code"] button:not(.notice-x):not(.menu-title):not(.win-min) {
   border: 1px solid #505050;
   background: #202020;

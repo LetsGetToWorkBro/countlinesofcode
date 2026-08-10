@@ -27,6 +27,7 @@ import {
   readContentStream,
   readFormFields,
   usefulRedactions,
+  winAnsiUnsupported,
   type Edit,
 } from '../src/client/pdfedit';
 
@@ -226,6 +227,39 @@ describe('applyEdits: surgical removal', () => {
     const page1 = await streamOf(out, 0);
     expect(page1).not.toContain('SUPERSECRETCODEWORD');
     expect(page1).toContain('REDACTED BY REQUEST');
+  });
+
+  it('does not lose the whole save to one non-Latin text edit', async () => {
+    // The bug this exists for: Helvetica throws on any glyph it cannot encode,
+    // and the text branch had no guard, so typing 'Владимир' or an emoji threw
+    // WinAnsi-cannot-encode and aborted the entire save — signature, cuts and
+    // all. The undrawable line is now skipped; every other edit survives.
+    const edits: Edit[] = [
+      { kind: 'text', page: 0, at: { x: 60, y: 700 }, value: 'Владимир 北京 😀', size: 18 },
+      { kind: 'text', page: 0, at: { x: 60, y: 660 }, value: 'KEPT THIS ONE', size: 18 },
+    ];
+    let out: Uint8Array | undefined;
+    await expect(
+      (async () => { out = await applyEdits(await fixture(), edits, [], [{ page: 0, opIndices: [1] }]); })(),
+    ).resolves.not.toThrow();
+    expect(out!.length).toBeGreaterThan(200);
+    const page1 = await streamOf(out!, 0);
+    expect(page1, 'the cut still happened').not.toContain('SUPERSECRETCODEWORD');
+    expect(page1, 'the drawable edit still landed').toContain('KEPT THIS ONE');
+  });
+});
+
+describe('winAnsiUnsupported', () => {
+  it('passes the Latin text the editor can draw', () => {
+    expect(winAnsiUnsupported('Hello, World! 2024')).toEqual([]);
+    // Latin-1 accents and the CP1252 curly quotes/dashes/euro are all drawable.
+    expect(winAnsiUnsupported('café façade – “quote” €50')).toEqual([]);
+  });
+
+  it('names each character the editor cannot draw, once', () => {
+    expect(winAnsiUnsupported('Владимир')).toEqual(['В', 'л', 'а', 'д', 'и', 'м', 'р']);
+    expect(winAnsiUnsupported('北京')).toEqual(['北', '京']);
+    expect(winAnsiUnsupported('a😀b😀')).toEqual(['😀']);
   });
 });
 

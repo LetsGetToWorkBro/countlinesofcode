@@ -582,14 +582,24 @@ export async function applyEdits(
         const lines = edit.value.split('\n');
         lines.forEach((line, offset) => {
           const spot = place(edit.at.x, edit.at.y - offset * edit.size * 1.2);
-          page.drawText(line, {
-            x: spot.x,
-            y: spot.y,
-            size: edit.size,
-            font,
-            color: rgb(0, 0, 0),
-            rotate: degrees(spot.angle),
-          });
+          try {
+            page.drawText(line, {
+              x: spot.x,
+              y: spot.y,
+              size: edit.size,
+              font,
+              color: rgb(0, 0, 0),
+              rotate: degrees(spot.angle),
+            });
+          } catch {
+            /* Helvetica is WinAnsi and throws on any glyph it cannot encode
+             * (Cyrillic, CJK, emoji). This branch used to have no guard, so one
+             * such character aborted the entire save and lost the signature,
+             * the cuts, the page order and every other edit. The editor warns
+             * at the moment such text is committed (see winAnsiUnsupported), so
+             * this is a backstop: skip the undrawable line, keep everything
+             * else. The sibling buildPdfFromPages already does the same. */
+          }
         });
       } else if (edit.kind === 'stamp') {
         const image = await embed(edit.bytes);
@@ -680,6 +690,36 @@ export interface RenderedPage {
 }
 
 /**
+ * The characters pdf-lib's standard fonts (Helvetica, used for typed text and
+ * for the invisible selectable layer) can actually draw: WinAnsi, i.e. CP1252.
+ * Anything outside it throws when drawn, so the editor checks before it commits
+ * a text edit rather than discovering it at save time and losing the document.
+ *
+ * The set is Latin-1 (0x20-0x7E and 0xA0-0xFF) plus the 27 codepoints CP1252
+ * places in 0x80-0x9F (the curly quotes, dashes, euro, and a few letters).
+ */
+const WINANSI_EXTRA = new Set<number>([
+  0x20ac, 0x201a, 0x0192, 0x201e, 0x2026, 0x2020, 0x2021, 0x02c6, 0x2030,
+  0x0160, 0x2039, 0x0152, 0x017d, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022,
+  0x2013, 0x2014, 0x02dc, 0x2122, 0x0161, 0x203a, 0x0153, 0x017e, 0x0178,
+]);
+
+/** The distinct characters in `text` that Helvetica cannot draw, in order. */
+export function winAnsiUnsupported(text: string): string[] {
+  const bad: string[] = [];
+  for (const ch of text) {
+    const cp = ch.codePointAt(0)!;
+    const ok =
+      cp === 0x09 || cp === 0x0a || cp === 0x0d ||
+      (cp >= 0x20 && cp <= 0x7e) ||
+      (cp >= 0xa0 && cp <= 0xff) ||
+      WINANSI_EXTRA.has(cp);
+    if (!ok && bad.indexOf(ch) === -1) bad.push(ch);
+  }
+  return bad;
+}
+
+/**
  * Assemble rendered pages into one fresh, unencrypted PDF.
  *
  * The document is built from scratch, so nothing of the original's encryption,
@@ -730,6 +770,7 @@ const globalScope = globalThis as unknown as {
     matchOpsToItems: typeof matchOpsToItems;
     imageFormat: typeof imageFormat;
     readFormFields: typeof readFormFields;
+    winAnsiUnsupported: typeof winAnsiUnsupported;
     buildPdfFromPages: typeof buildPdfFromPages;
     canvasToPdf: typeof canvasToPdf;
     canvasRectToPdf: typeof canvasRectToPdf;
@@ -747,6 +788,7 @@ globalScope.LOC1999_SIGN = {
   matchOpsToItems,
   imageFormat,
   readFormFields,
+  winAnsiUnsupported,
   buildPdfFromPages,
   canvasToPdf,
   canvasRectToPdf,

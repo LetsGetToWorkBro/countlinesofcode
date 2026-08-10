@@ -104,7 +104,7 @@
       liveUrls.push(url);
       var outName = (name || 'document').replace(/\.[^.]+$/, '') + '-unlocked.pdf';
       resultEl.innerHTML = '<strong>Unlocked.</strong> ' + total + ' page' + (total === 1 ? '' : 's') +
-        ', ' + bytesLabel(blob.size) + '. No restrictions, text still selectable.';
+        ', ' + bytesLabel(blob.size) + '. No restrictions; Latin text stays selectable.';
       outputEl.innerHTML = '<ul class="plain"><li><a href="' + url + '" download="' + esc(outName) + '">' +
         esc(outName) + '</a></li></ul>';
     });
