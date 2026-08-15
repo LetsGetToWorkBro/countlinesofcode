@@ -102,6 +102,7 @@
     <button type="button" data-pick=".wl-switch [data-tab=&quot;btc&quot;]">Open the Bitcoin wallet</button>
     <span class="menu-rule"></span>
     <button type="button" data-tab="addresses">Open the paper wallet tools</button>
+    <button type="button" data-tab="vault">Show a Monero file to a vault</button>
     <span class="menu-rule"></span>
     <a href="/swap.html">Swap one coin for another</a>
   </span></span>
@@ -120,6 +121,12 @@
 <span class="wl-switch-label">Wallet</span>
 <button type="button" class="sheet-tab is-active" data-tab="wallet" role="tab" aria-selected="true">Monero</button>
 <button type="button" class="sheet-tab" data-tab="btc" role="tab" aria-selected="false">Bitcoin</button>
+<!-- Not a third wallet, and labelled so it cannot read as one: this panel
+     holds no keys and watches no chain. It turns a file another Monero
+     wallet wrote into codes an offline Labyrinth Vault can read. It sits
+     in this row because the file is a Monero file, and this window is
+     where Monero lives on this site. -->
+<button type="button" class="sheet-tab" data-tab="vault" role="tab" aria-selected="false">Vault</button>
 <span class="wl-switch-sep"></span>
 <!-- Swap is not a panel of this window, it is the next program along, so
      it is a link rather than a tab. Somebody holding both of these wallets
@@ -574,6 +581,73 @@ Secrets holds the seed words. Transactions are logged beside the wallet.</p>
 
 </div>
 
+<!-- ======================= SHOW A FILE TO A VAULT ======================= -->
+<!-- The one panel here that holds nothing and asks for nothing. A file goes
+     in, codes come out, and the whole transaction is between your screen and
+     a camera on a phone with no radio in it. The file never leaves the tab:
+     there is no endpoint to send it to, and the Content-Security-Policy on
+     this site would refuse one. -->
+<div data-panel="vault" class="hidden">
+
+<p class="wl-hint"><span class="wl-hint-mark">i</span>
+If your Monero wallet on this computer wrote an <code>unsigned_monero_tx</code>,
+a Labyrinth Vault can open it and tell you what the payment says it does. This
+turns the file into codes for the vault's camera. Nothing is uploaded and
+nothing comes back.</p>
+
+<div class="notice-box">
+<p><strong>The vault reads these. It does not sign them.</strong></p>
+<p class="note">
+Everything inside one of these files is the sending wallet's own account of its
+own transaction: the amounts, the ring, the destination, the claim that one
+output is your change. A signature has to be over a destination the vault
+rebuilt from its own keys, and a file cannot be checked that way. So the vault
+opens it, shows you what it claims, and stops. What comes back is you having
+read a screen.
+</p>
+</div>
+
+<p>
+<label class="wl-file" for="vw-file">Choose the file
+<input type="file" id="vw-file" accept="*/*">
+</label>
+</p>
+
+<p id="vw-error" class="error" role="alert"></p>
+<p id="vw-status" class="status" role="status" aria-live="polite"></p>
+
+<div id="vw-play" class="hidden">
+  <p class="wl-vw-head">
+    <button type="button" id="vw-pause" class="sheet-tab">Pause</button>
+    <button type="button" id="vw-slower" class="sheet-tab">Slower</button>
+    <button type="button" id="vw-faster" class="sheet-tab">Faster</button>
+    <span class="note" id="vw-cadence">220 ms a frame</span>
+  </p>
+  <div id="vw-code" class="wl-vw-code"></div>
+  <p class="note" id="vw-count">Frame 1 of 1</p>
+  <p class="note">
+    The codes repeat until you leave this tab. There is no way for the vault to
+    say it has seen enough, so the loop is what makes a scan finish: a camera
+    that misses a frame catches it on the next pass.
+  </p>
+</div>
+
+<details class="notice-box">
+<summary><strong>Where do these codes come from?</strong> <span class="note">A format with two implementations, and a test that holds them together.</span></summary>
+<p class="note">
+The frames are the Labyrinth Vault's own airgap format: the file cut into
+pieces, each one base32 with a CRC-32 of the whole payload on every frame, so a
+misread or a half-finished scan fails rather than assembling the wrong bytes.
+The vault has its own encoder and this page has a second one, which is a debt
+rather than a design. It is serviced by
+<code>test/vaultwire.test.ts</code>, which checks this page's frames against
+frames the vault's own encoder produced, over payload sizes chosen to break a
+careless port. If the two disagree, this page is the one that is wrong.
+</p>
+</details>
+
+</div>
+
 <!-- ======================= ADDRESSES & PAPER WALLETS ======================= -->
 <div data-panel="addresses" class="hidden">
 
@@ -998,6 +1072,7 @@ You can
 <script src="/wallet-page.js"></script>
 <script src="/monero-page.js"></script>
 <script src="/btc-page.js"></script>
+<script src="/vault-page.js"></script>
 <script src="/warn.js"></script>
 <script src="/tabs.js"></script>
 <script src="/desk.js"></script>

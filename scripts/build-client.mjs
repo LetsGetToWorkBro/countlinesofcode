@@ -119,6 +119,11 @@ export const BUNDLES = [
     banner: '/* 1999.LOC QR encoder (ISO/IEC 18004, in-house). Built from src/client/qrkit.ts. Do not edit. */',
   },
   {
+    entry: 'src/client/vaultwire.ts',
+    outfile: 'public/vaultwire.js',
+    banner: '/* 1999.LOC Labyrinth Vault wire (LV1 frames, wallet2 headers). Built from src/client/vaultwire.ts. Do not edit. Checked against the vault\'s own encoder by test/vaultwire.test.ts. */',
+  },
+  {
     entry: 'src/client/paykit.ts',
     outfile: 'public/paykit.js',
     banner: '/* 1999.LOC payment-request helpers. Built from src/client/paykit.ts. Do not edit. Bundles @noble/hashes (MIT) for the address checksums. */',
