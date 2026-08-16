@@ -678,3 +678,48 @@
   padding-top: 10px;
   border-top: 1px solid #808080;
 }
+
+/* ---------------------------------------------------------------- vault tab
+ *
+ * The panel that holds nothing. A file picker, a code, and three buttons that
+ * change how fast it plays. Styled as plainly as the rest of the window
+ * because it is not a wallet and should not look like one.
+ */
+[data-app="wallet"] .wl-file {
+  display: inline-block;
+  padding: 8px 10px;
+  border: 1px solid #808080;
+  border-top-color: #dfdfdf;
+  border-left-color: #dfdfdf;
+  background: #d4d0c8;
+  font-family: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
+  font-size: 11.5px;
+}
+[data-app="wallet"] .wl-file input { display: block; margin-top: 6px; }
+
+[data-app="wallet"] .wl-vw-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 8px 0;
+}
+
+/* The code itself. White behind it always, whatever the window's chrome does:
+ * a QR on a grey ground reads worse, and a phone camera pointed at a monitor
+ * across a room is already the hard case. Sized in `min()` so it fills a
+ * narrow screen and stops growing on a wide one, because a code larger than
+ * the camera's frame is a code that has to be backed away from. */
+[data-app="wallet"] .wl-vw-code {
+  display: inline-block;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid #808080;
+  line-height: 0;
+}
+[data-app="wallet"] .wl-vw-code svg {
+  display: block;
+  width: min(360px, 78vw);
+  height: auto;
+  image-rendering: pixelated;
+}
